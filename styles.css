@@ -1,0 +1,120 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  margin: 0;
+  background: #111;
+  color: #fff;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 12px auto;
+  padding: 8px;
+  background: #fff;
+  color: #000;
+  border-radius: 8px;
+}
+
+.map-viewport {
+  width: 100%;
+  height: 108vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.map-inner {
+  position: relative;
+  width: 100%;
+  height: auto;
+  transform-origin: 0 0;
+  box-sizing: border-box;
+}
+
+.map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+.zone {
+  position: absolute;
+  display: block;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  pointer-events: auto;
+  z-index: 999;
+  cursor: pointer;
+}
+
+.zone:hover {
+  background: transparent;
+}
+
+.zone { left: 0%; top: 31.728173%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 3.305125%; top: 36.566157%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 6.386716%; top: 40.729073%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 9.532173%; top: 45.567057%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 12.821332%; top: 50.090009%; width: 9.771675%; height: 4.635464%; }
+.zone { left: 16.078557%; top: 54.592979%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 19.239981%; top: 58.853375%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 25.818298%; top: 63.591359%; width: 9.723775%; height: 6.818182%; }
+.zone { left: 32.157113%; top: 59.023402%; width: 9.771675%; height: 4.635464%; }
+.zone { left: 51.556762%; top: 45.454545%; width: 9.867476%; height: 4.612961%; }
+.zone { left: 58.087179%; top: 50.000000%; width: 9.723775%; height: 6.818182%; }
+.zone { left: 64.394060%; top: 45.454545%; width: 9.867476%; height: 4.612961%; }
+.zone { left: 67.810953%; top: 41.066607%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 70.876577%; top: 36.318632%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 74.197669%; top: 31.840684%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 77.391027%; top: 27.340234%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 33.833626%; top: 0.045005%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 33.801692%; top: 4.387939%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 33.721859%; top: 8.843384%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 33.801692%; top: 13.613861%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 37.138751%; top: 18.001800%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 40.284209%; top: 22.592259%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 43.541434%; top: 27.182718%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 41.801054%; top: 58.843384%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 45.042312%; top: 63.253825%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 48.443238%; top: 68.024302%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 45.026345%; top: 72.682268%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 41.880888%; top: 77.025203%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 37.026984%; top: 81.548155%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 35.382405%; top: 86.071107%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 32.205014%; top: 91.021602%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 29.011656%; top: 95.522052%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 25.818298%; top: 27.160216%; width: 9.755708%; height: 4.815482%; }
+.zone { left: 28.963755%; top: 31.570657%; width: 9.755708%; height: 4.815482%; }
+.zone[href*="G.Lukianivska.html"] { left: 32.205014%; top: 36.341134%; width: 9.691841%; height: 4.342934%; }
+.zone[href*="G.Klovska.html"] { left: 51.636596%; top: 59.045905%; width: 9.755708%; height: 4.815482%; }
+.zone[href*="G.Pecherska.html"] { left: 54.670286%; top: 63.433843%; width: 9.855708%; height: 4.815482%; }
+.zone[href*="G.Zvirynetska.html"] { left: 57.911544%; top: 68.024302%; width: 9.755708%; height: 4.815482%; }
+.zone[href*="G.Vydubychi.html"] { left: 61.264570%; top: 72.794779%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 67.667252%; top: 77.160216%; width: 9.723775%; height: 6.818182%; }
+.zone[href*="G.Osokorky.html"] { left: 74.197669%; top: 72.682268%; width: 9.755708%; height: 4.815482%; }
+.zone[href*="G.Pozniaky.html"] { left: 77.391027%; top: 68.294329%; width: 9.691841%; height: 4.342934%; }
+.zone[href*="G.Kharkivska.html"] { left: 80.552451%; top: 63.658866%; width: 9.755708%; height: 4.815482%; }
+.zone[href*="G.Vyrlytsia.html"] { left: 83.777742%; top: 59.293429%; width: 9.691841%; height: 4.342934%; }
+.zone { left: 87.130768%; top: 54.592979%; width: 9.691841%; height: 4.642934%; }
+.zone[href*="G.Chervonyi_khutir.html"] { left: 90.264458%; top: 50.092529%; width: 9.691841%; height: 4.642934%; }
+.zone { left: 45.154080%; top: 31.695680%; width: 6.514450%; height: 9.315932%; }
+.zone { left: 45.170046%; top: 40.819082%; width: 6.578317%; height: 9.315932%; }
+.zone[href*="G.Zoloti_vorota.html"] { left: 38.655596%; top: 40.819082%; width: 6.578317%; height: 9.315932%; }
+.zone { left: 38.655596%; top: 50.112511%; width: 6.514450%; height: 9.068407%; }
+.zone { left: 45.106179%; top: 50.112511%; width: 6.578317%; height: 9.068407%; }
+.zone[href*="G.Palats_sportu.html"] { left: 51.556762%; top: 50.045005%; width: 6.514450%; height: 9.315932%; }
+
+.card {
+  border: 1px solid #ddd;
+  padding: 12px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-top: 12px;
+}
