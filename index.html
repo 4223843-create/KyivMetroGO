@@ -1,239 +1,333 @@
 <!doctype html>
 <html lang="uk">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>KyivMetroGo</title>
-<style>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>KyivMetroGo</title>
+  <style>
+    /* Загальні */
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
+      margin:0;
+      background:#111;
+      color:#fff;
+    }
+    .container{
+      max-width:1100px;
+      margin:12px auto;
+      padding:8px;
+      background:#fff;
+      color:#000;
+      border-radius:8px;
+    }
 
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;margin:0;background:#111;color:#fff}
-  .container{max-width:1100px;margin:12px auto;padding:8px;background:#fff;color:#000;border-radius:8px}
-  .map-wrap{position:relative;width:100%}
-  img.map{display:block;width:100%;height:auto}
+    /* VIEWPORT / INNER */
+    #mapViewport {
+      width: 100%;
+      height: 78vh;                /* висота вікна перегляду — можна підкоригувати */
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      background: #fff;
+      border-radius:6px;
+      box-sizing: border-box;
+    }
+    #mapInner {
+      position: relative;          /* абсолютні .zone будуть відноситись до цього контейнера */
+      width: 100%;
+      height: auto;
+      transform-origin: 0 0;
+      box-sizing: border-box;
+    }
+    img.map {
+      display: block;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+      -webkit-user-drag: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+    }
 
-</style>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#ff8800">
-</head><body>
-<main class="container">
-<div class="map-wrap">
+    /* Зони: невидимі, але клікабельні */
+    .zone {
+      position: absolute; /* лишається, але важливо, щоб вони були всередині #mapInner */
+      display: block;
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      outline: none !important;
+      pointer-events: auto !important;
+      z-index: 999;
+      /* cursor показувати, щоб було зрозуміло що це клік */
+      cursor: pointer;
+    }
+    .zone:hover { background: transparent !important; }
 
-<img class="map" src="kvadraty priam lnk.png" alt="map" id="mapImg">
-
-
-
+    /* Дрібні стилі для читабельності (опціонально) */
+    .card { border:1px solid #ddd; padding:12px; border-radius:8px; display:inline-block; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <!-- START: інтерактивний viewport для мобільного -->
+    <div id="mapViewport" class="map-viewport">
+      <div id="mapInner">
+        <img id="mapImg" class="map" src="kvadraty priam lnk.png" alt="map">
+        <!-- ---- ВСІ ЗОНИ ПОВИННІ БУТИ СЮДИ ---- -->
 <a class="zone" href="R.Akademmistechko.html"
-style="position:absolute; left:0%; top:31.728173%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:0%; top:31.728173%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="R.Zhytomyrska.html"
-style="position:absolute; left:3.305125%; top:36.566157%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:3.305125%; top:36.566157%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="R.Sviatoshyn.html"
-style="position:absolute; left:6.386716%; top:40.729073%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:6.386716%; top:40.729073%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="R.Nyvky.html"
-style="position:absolute; left:9.532173%; top:45.567057%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:9.532173%; top:45.567057%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="R.Beresteiska.html"
-style="position:absolute; left:12.821332%; top:50.090009%; width:9.771675%; height:4.635464%; display:block;">
-</a>
+style="left:12.821332%; top:50.090009%; width:9.771675%; height:4.635464%;"></a>
 
 <a class="zone" href="R.Shuliavska.html"
-style="position:absolute; left:16.078557%; top:54.592979%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:16.078557%; top:54.592979%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="R.Politekhnychnyi_instytut.html"
-style="position:absolute; left:19.239981%; top:58.853375%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:19.239981%; top:58.853375%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="R.Vokzalna.html"
-style="position:absolute; left:25.818298%; top:63.591359%; width:9.723775%; height:6.818182%; display:block;">
-</a>
+style="left:25.818298%; top:63.591359%; width:9.723775%; height:6.818182%;"></a>
 
 <a class="zone" href="R.Universytet.html"
-style="position:absolute; left:32.157113%; top:59.023402%; width:9.771675%; height:4.635464%; display:block;">
-</a>
+style="left:32.157113%; top:59.023402%; width:9.771675%; height:4.635464%;"></a>
 
 <a class="zone" href="R.Arsenalna.html"
-style="position:absolute; left:51.556762%; top:45.454545%; width:9.867476%; height:4.612961%; display:block;">
-</a>
+style="left:51.556762%; top:45.454545%; width:9.867476%; height:4.612961%;"></a>
 
 <a class="zone" href="R.Dnipro.html"
-style="position:absolute; left:58.087179%; top:50.000000%; width:9.723775%; height:6.818182%; display:block;">
-</a>
-
+style="left:58.087179%; top:50.000000%; width:9.723775%; height:6.818182%;"></a>
 
 <a class="zone" href="R.Hidropark.html"
-style="position:absolute; left:64.394060%; top:45.454545%; width:9.867476%; height:4.612961%; display:block;">
-</a>
+style="left:64.394060%; top:45.454545%; width:9.867476%; height:4.612961%;"></a>
 
 <a class="zone" href="R.Livoberezhna.html"
-style="position:absolute; left:67.810953%; top:41.066607%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:67.810953%; top:41.066607%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="R.Darnytsia.html"
-style="position:absolute; left:70.876577%; top:36.318632%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:70.876577%; top:36.318632%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="R.Chernihivska.html"
-style="position:absolute; left:74.197669%; top:31.840684%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:74.197669%; top:31.840684%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="R.Lisova.html"
-style="position:absolute; left:77.391027%; top:27.340234%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:77.391027%; top:27.340234%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="B.Heroiv_Dnipra.html"
-style="position:absolute; left:33.833626%; top:0.045005%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:33.833626%; top:0.045005%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Minska.html"
-style="position:absolute; left:33.801692%; top:4.387939%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:33.801692%; top:4.387939%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="B.Obolon.html"
-style="position:absolute; left:33.721859%; top:8.843384%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:33.721859%; top:8.843384%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Pochaina.html"
-style="position:absolute; left:33.801692%; top:13.613861%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:33.801692%; top:13.613861%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="B.Tarasa_Shevchenko.html"
-style="position:absolute; left:37.138751%; top:18.001800%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:37.138751%; top:18.001800%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Kontraktova_ploshcha.html"
-style="position:absolute; left:40.284209%; top:22.592259%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:40.284209%; top:22.592259%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Poshtova_ploshcha.html"
-style="position:absolute; left:43.541434%; top:27.182718%; width:9.755708%; height:4.815482%; display:block;">
-</a>
-
+style="left:43.541434%; top:27.182718%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Olimpiiska.html"
-style="position:absolute; left:41.801054%; top:58.843384%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:41.801054%; top:58.843384%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Palats_Ukraina.html"
-style="position:absolute; left:45.042312%; top:63.253825%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:45.042312%; top:63.253825%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Lybidska.html"
-style="position:absolute; left:48.443238%; top:68.024302%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:48.443238%; top:68.024302%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Demiivska.html"
-style="position:absolute; left:45.026345%; top:72.682268%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:45.026345%; top:72.682268%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Holosiivska.html"
-style="position:absolute; left:41.880888%; top:77.025203%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:41.880888%; top:77.025203%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Vasylkivska.html"
-style="position:absolute; left:37.026984%; top:81.548155%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:37.026984%; top:81.548155%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Vystavkovyi_tsentr.html"
-style="position:absolute; left:35.382405%; top:86.071107%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:35.382405%; top:86.071107%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="B.Ipodrom.html"
-style="position:absolute; left:32.205014%; top:91.021602%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:32.205014%; top:91.021602%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="B.Teremky.html"
-style="position:absolute; left:29.011656%; top:95.522052%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:29.011656%; top:95.522052%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="G.Syrets.html"
-style="position:absolute; left:25.818298%; top:27.160216%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:25.818298%; top:27.160216%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="G.Dorohozhychi.html"
-style="position:absolute; left:28.963755%; top:31.570657%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:28.963755%; top:31.570657%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="G.Lukianivska.html"
-style="position:absolute; left:32.205014%; top:36.341134%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:32.205014%; top:36.341134%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="G.Klovska.html"
-style="position:absolute; left:51.636596%; top:59.045905%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:51.636596%; top:59.045905%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="G.Pecherska.html"
-style="position:absolute; left:54.670286%; top:63.433843%; width:9.855708%; height:4.815482%; display:block;">
-</a>
+style="left:54.670286%; top:63.433843%; width:9.855708%; height:4.815482%;"></a>
 
 <a class="zone" href="G.Zvirynetska.html"
-style="position:absolute; left:57.911544%; top:68.024302%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:57.911544%; top:68.024302%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="G.Vydubychi.html"
-style="position:absolute; left:61.264570%; top:72.794779%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:61.264570%; top:72.794779%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="G.Slavutych.html"
-style="position:absolute; left:67.667252%; top:77.160216%; width:9.723775%; height:6.818182%; display:block;">
-</a>
+style="left:67.667252%; top:77.160216%; width:9.723775%; height:6.818182%;"></a>
 
 <a class="zone" href="G.Osokorky.html"
-style="position:absolute; left:74.197669%; top:72.682268%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:74.197669%; top:72.682268%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="G.Pozniaky.html"
-style="position:absolute; left:77.391027%; top:68.294329%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:77.391027%; top:68.294329%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="G.Kharkivska.html"
-style="position:absolute; left:80.552451%; top:63.658866%; width:9.755708%; height:4.815482%; display:block;">
-</a>
+style="left:80.552451%; top:63.658866%; width:9.755708%; height:4.815482%;"></a>
 
 <a class="zone" href="G.Vyrlytsia.html"
-style="position:absolute; left:83.777742%; top:59.293429%; width:9.691841%; height:4.342934%; display:block;">
-</a>
+style="left:83.777742%; top:59.293429%; width:9.691841%; height:4.342934%;"></a>
 
 <a class="zone" href="G.Boryspilska.html"
-style="position:absolute; left:87.130768%; top:54.592979%; width:9.691841%; height:4.642934%; display:block;">
-</a>
+style="left:87.130768%; top:54.592979%; width:9.691841%; height:4.642934%;"></a>
 
 <a class="zone" href="G.Chervonyi_khutir.html"
-style="position:absolute; left:90.264458%; top:50.092529%; width:9.691841%; height:4.642934%; display:block;">
-</a>
+style="left:90.264458%; top:50.092529%; width:9.691841%; height:4.642934%;"></a>
 
 <a class="zone" href="B.Maidan_Nezalezhnosti.html"
-style="position:absolute; left:45.154080%; top:31.695680%; width:6.514450%; height:9.315932%; display:block;">
-</a>
+style="left:45.154080%; top:31.695680%; width:6.514450%; height:9.315932%;"></a>
 
 <a class="zone" href="R.Khreshchatyk.html"
-style="position:absolute; left:45.170046%; top:40.819082%; width:6.578317%; height:9.315932%; display:block;">
-</a>
+style="left:45.170046%; top:40.819082%; width:6.578317%; height:9.315932%;"></a>
 
 <a class="zone" href="G.Zoloti_vorota.html"
-style="position:absolute; left:38.655596%; top:40.819082%; width:6.578317%; height:9.315932%; display:block;">
-</a>
+style="left:38.655596%; top:40.819082%; width:6.578317%; height:9.315932%;"></a>
 
 <a class="zone" href="R.Teatralna.html"
-style="position:absolute; left:38.655596%; top:50.112511%; width:6.514450%; height:9.068407%; display:block;">
-</a>
+style="left:38.655596%; top:50.112511%; width:6.514450%; height:9.068407%;"></a>
 
 <a class="zone" href="B.Ploshcha_Ukrainskikh_heroiv.html"
-style="position:absolute; left:45.106179%; top:50.112511%; width:6.578317%; height:9.068407%; display:block;">
-</a>
+style="left:45.106179%; top:50.112511%; width:6.578317%; height:9.068407%;"></a>
 
 <a class="zone" href="G.Palats_sportu.html"
-style="position:absolute; left:51.556762%; top:50.045005%; width:6.514450%; height:9.315932%; display:block;">
-</a>
+style="left:51.556762%; top:50.045005%; width:6.514450%; height:9.315932%;"></a>
+        <!-- ---- КІНЕЦЬ ЗОН ---- -->
+      </div>
+    </div>
+    <!-- END -->
+  </main>
 
-</div>
-</main>
+  <!-- JS: масштабування + центрування -->
+  <script>
+  (function(){
+    const vp = document.getElementById('mapViewport');
+    const inner = document.getElementById('mapInner');
+    const img = document.getElementById('mapImg');
 
-<script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js').catch(()=>{});} 
-</script>
-</body></html>
+    // Налаштування
+    const PHONE_BREAKPOINT = 700;
+    const mobileScaleFactor = 3;
+    const desktopScaleFactor = 3;
+    let centerX = 0.50;
+    let centerY = 0.36;
+
+    function computeParams(){
+      const w = Math.min(window.innerWidth, document.documentElement.clientWidth);
+      return { targetScaleFactor: (w <= PHONE_BREAKPOINT) ? mobileScaleFactor : desktopScaleFactor,
+               centerX, centerY };
+    }
+
+    function applyZoomAndCenter(){
+      const natW = img.naturalWidth || img.width;
+      const natH = img.naturalHeight || img.height;
+      if (!natW || !natH) return;
+
+      const { targetScaleFactor, centerX, centerY } = computeParams();
+      const desiredDisplayWidth = Math.round(vp.clientWidth * targetScaleFactor);
+      let zoom = desiredDisplayWidth / natW;
+
+      const MIN_ZOOM = 0.09, MAX_ZOOM = 2.0;
+      zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+
+      inner.style.width  = Math.round(natW * zoom) + 'px';
+      inner.style.height = Math.round(natH * zoom) + 'px';
+
+      img.style.width  = '100%';
+      img.style.height = '100%';
+    // ---- Після того, як inner/client розраховано ----
+    requestAnimationFrame(() => {
+      const alignmentMode = 'bottom'; // 'center' | 'lower' | 'bottom' | 'offset'
+      const offsetPx = 120;          // використовують при mode === 'offset'
+      // якщо хочеш просто трохи змістити вниз від центру — використай 'lower' і змінюй centerY (0..1)
+
+      // безпечна функція для обчислення top
+      function computeTopForMode(mode) {
+        const innerH = inner.clientHeight;
+        const vpH = vp.clientHeight;
+
+        if (innerH <= vpH) return 0; // якщо картинка менша — скролити не треба
+
+        if (mode === 'center') {
+          return Math.round(innerH * centerY - vpH / 2);
+        }
+        if (mode === 'lower') {
+          // трохи нижче центру, використовуємо centerY (можеш підкоригувати centerY)
+          return Math.round(innerH * centerY - vpH / 2);
+        }
+        if (mode === 'bottom') {
+          // показати нижню частину — максимально можливий top
+          return Math.max(0, innerH - vpH);
+        }
+        if (mode === 'offset') {
+          // показати з відступом offsetPx від верхнього краю
+          return Math.max(0, Math.min(innerH - vpH, offsetPx));
+        }
+        // default — center
+        return Math.round(innerH * centerY - vpH / 2);
+      }
+
+      const left = Math.round(inner.clientWidth * centerX - vp.clientWidth / 2);
+      let top = computeTopForMode(alignmentMode);
+
+      // захист від виходу за межі
+      if (top < 0) top = 0;
+      if (top > inner.clientHeight - vp.clientHeight) top = Math.max(0, inner.clientHeight - vp.clientHeight);
+
+      vp.scrollLeft = Math.max(0, left);
+      vp.scrollTop  = top;
+    });
+
+    }
+
+    if (img.complete) applyZoomAndCenter();
+    else img.addEventListener('load', applyZoomAndCenter);
+
+    let resizeTimer;
+    function onResize(){ clearTimeout(resizeTimer); resizeTimer = setTimeout(applyZoomAndCenter, 120); }
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+
+    // для ручної корекції з консолі
+    window.metroSetCenter = function(x,y){ centerX = Math.max(0,Math.min(1,Number(x))); centerY = Math.max(0,Math.min(1,Number(y))); applyZoomAndCenter(); };
+  })();
+  </script>
+</body>
+</html>
