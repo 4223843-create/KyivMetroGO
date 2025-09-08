@@ -4,7 +4,7 @@
   const img = document.getElementById('mapImg');
 
   const PHONE_BREAKPOINT = 700;
-  const mobileScaleFactor = 5;
+  const mobileScaleFactor = 3;
   const desktopScaleFactor = 3;
   let centerX = 0.50;
   let centerY = 0.36;
