@@ -4,19 +4,10 @@
   const img = document.getElementById('mapImg');
 
   const PHONE_BREAKPOINT = 700;
-  const mobileScaleFactor = 5;
+  let mobileScaleFactor = 5;
   const desktopScaleFactor = 5;
   let centerX = 0.50;
   let centerY = 0.36;
-
-  function computeParams() {
-    const w = Math.min(window.innerWidth, document.documentElement.clientWidth);
-    return {
-      targetScaleFactor: (w <= PHONE_BREAKPOINT)? mobileScaleFactor : desktopScaleFactor,
-      centerX,
-      centerY
-    };
-  }
 
   function handleLayout() {
     // 1. Спочатку обчислюємо та встановлюємо висоту вікна перегляду
@@ -29,28 +20,33 @@
     }
     vp.style.height = available + 'px';
 
-    // 2. Потім розраховуємо та застосовуємо масштабування і центрування
-    const natW = img.naturalWidth |
+    // 2. Потім, в наступному кадрі анімації, розраховуємо та застосовуємо масштабування і центрування
+    requestAnimationFrame(() => {
+      const w = Math.min(window.innerWidth, document.documentElement.clientWidth);
+      const targetScaleFactor = (w <= PHONE_BREAKPOINT)? mobileScaleFactor : desktopScaleFactor;
+      
+      const natW = img.naturalWidth |
 
 | img.width;
-    const natH = img.naturalHeight |
+      const natH = img.naturalHeight |
 
 | img.height;
-    if (!natW ||!natH) return;
+      if (!natW ||!natH) return;
 
-    const { targetScaleFactor, centerX, centerY } = computeParams();
-    const desiredDisplayWidth = Math.round(vp.clientWidth * targetScaleFactor);
-    let zoom = desiredDisplayWidth / natW;
+      const desiredDisplayWidth = Math.round(vp.clientWidth * targetScaleFactor);
+      let zoom = desiredDisplayWidth / natW;
 
-    const MIN_ZOOM = 0.09, MAX_ZOOM = 2.0;
-    zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+      const MIN_ZOOM = 0.09, MAX_ZOOM = 2.0;
+      zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
 
-    inner.style.width = Math.round(natW * zoom) + 'px';
-    inner.style.height = Math.round(natH * zoom) + 'px';
-    img.style.width = '100%';
-    img.style.height = '100%';
+      inner.style.width = Math.round(natW * zoom) + 'px';
+      inner.style.height = Math.round(natH * zoom) + 'px';
+      
+      // На відміну від попереднього коду, ми видалили дублювання
+      img.style.width = '100%';
+      img.style.height = '100%';
 
-    requestAnimationFrame(() => {
+      // 3. Застосовуємо прокрутку для центрування мапи
       const alignmentMode = 'bottom';
       const offsetPx = 120;
 
@@ -92,7 +88,6 @@
 
   const onDebouncedLayout = debounce(handleLayout);
 
-  // Слухачі подій для початкового завантаження та зміни розміру
   if (img.complete) {
     handleLayout();
   } else {
@@ -102,7 +97,6 @@
   window.addEventListener('resize', onDebouncedLayout);
   window.addEventListener('orientationchange', onDebouncedLayout);
 
-  // Для ручної корекції з консолі
   window.metroSetCenter = function(x, y) {
     centerX = Math.max(0, Math.min(1, Number(x)));
     centerY = Math.max(0, Math.min(1, Number(y)));
