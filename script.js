@@ -5,8 +5,8 @@
 
   // Налаштування
   const PHONE_BREAKPOINT = 700;
-  const mobileScaleFactor = 3;
-  const desktopScaleFactor = 3;
+  const mobileScaleFactor = 6;
+  const desktopScaleFactor = 6;
   let centerX = 0.50;
   let centerY = 0.36;
 
