@@ -9,7 +9,17 @@
   let centerX = 0.50;
   let centerY = 0.36;
 
-  function adjustViewportHeight() {
+  function computeParams() {
+    const w = Math.min(window.innerWidth, document.documentElement.clientWidth);
+    return {
+      targetScaleFactor: (w <= PHONE_BREAKPOINT)? mobileScaleFactor : desktopScaleFactor,
+      centerX,
+      centerY
+    };
+  }
+
+  function handleLayout() {
+    // 1. Спочатку обчислюємо та встановлюємо висоту вікна перегляду
     if (!vp) return;
     const top = vp.getBoundingClientRect().top;
     const bottomGap = 8;
@@ -18,9 +28,8 @@
       available = Math.max(120, Math.floor(window.visualViewport.height - top - bottomGap));
     }
     vp.style.height = available + 'px';
-  }
 
-  function applyZoomAndCenter() {
+    // 2. Потім розраховуємо та застосовуємо масштабування і центрування
     const natW = img.naturalWidth |
 
 | img.width;
@@ -38,9 +47,6 @@
 
     inner.style.width = Math.round(natW * zoom) + 'px';
     inner.style.height = Math.round(natH * zoom) + 'px';
-
-    img.style.width = '100%';
-    img.style.height = '100%';
 
     requestAnimationFrame(() => {
       const alignmentMode = 'bottom';
@@ -72,20 +78,6 @@
     });
   }
 
-  function handleResizeAndLoad() {
-    adjustViewportHeight();
-    applyZoomAndCenter();
-  }
-
-  function computeParams() {
-    const w = Math.min(window.innerWidth, document.documentElement.clientWidth);
-    return {
-      targetScaleFactor: (w <= PHONE_BREAKPOINT)? mobileScaleFactor : desktopScaleFactor,
-      centerX,
-      centerY
-    };
-  }
-
   function debounce(func, timeout = 120) {
     let timer;
     return (...args) => {
@@ -96,23 +88,22 @@
     };
   }
 
-  const onDebouncedResize = debounce(handleResizeAndLoad);
+  const onDebouncedLayout = debounce(handleLayout);
 
-  // Initial call
+  // Слухачі подій для початкового завантаження та зміни розміру
   if (img.complete) {
-    handleResizeAndLoad();
+    handleLayout();
   } else {
-    img.addEventListener('load', handleResizeAndLoad);
+    img.addEventListener('load', handleLayout);
   }
 
-  // Event listeners
-  window.addEventListener('resize', onDebouncedResize);
-  window.addEventListener('orientationchange', onDebouncedResize);
+  window.addEventListener('resize', onDebouncedLayout);
+  window.addEventListener('orientationchange', onDebouncedLayout);
 
-  // Manual control from console
+  // Для ручної корекції з консолі
   window.metroSetCenter = function(x, y) {
     centerX = Math.max(0, Math.min(1, Number(x)));
     centerY = Math.max(0, Math.min(1, Number(y)));
-    applyZoomAndCenter();
+    handleLayout();
   };
 })();
