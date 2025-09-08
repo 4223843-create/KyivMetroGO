@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>KyivMetroGo</title>
   <style>
-    /* Загальні */
     body{
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
       margin:0;
@@ -20,11 +19,9 @@
       color:#000;
       border-radius:8px;
     }
-
-    /* VIEWPORT / INNER */
     #mapViewport {
       width: 100%;
-      height: 78vh;                /* висота вікна перегляду — можна підкоригувати */
+      height: 108vh;
       overflow: auto;
       -webkit-overflow-scrolling: touch;
       background: #fff;
@@ -32,7 +29,7 @@
       box-sizing: border-box;
     }
     #mapInner {
-      position: relative;          /* абсолютні .zone будуть відноситись до цього контейнера */
+      position: relative;
       width: 100%;
       height: auto;
       transform-origin: 0 0;
@@ -68,8 +65,7 @@
   </style>
 </head>
 <body>
-  <main class="container">
-    <!-- START: інтерактивний viewport для мобільного -->
+    <main class="container">
     <div id="mapViewport" class="map-viewport">
       <div id="mapInner">
         <img id="mapImg" class="map" src="kvadraty priam lnk.png" alt="map">
@@ -256,6 +252,7 @@ style="left:51.556762%; top:50.045005%; width:6.514450%; height:9.315932%;"></a>
     }
 
     function applyZoomAndCenter(){
+      window.applyZoomAndCenter = applyZoomAndCenter;
       const natW = img.naturalWidth || img.width;
       const natH = img.naturalHeight || img.height;
       if (!natW || !natH) return;
@@ -319,15 +316,49 @@ style="left:51.556762%; top:50.045005%; width:6.514450%; height:9.315932%;"></a>
 
     if (img.complete) applyZoomAndCenter();
     else img.addEventListener('load', applyZoomAndCenter);
-
+    window.applyZoomAndCenter = applyZoomAndCenter;
     let resizeTimer;
     function onResize(){ clearTimeout(resizeTimer); resizeTimer = setTimeout(applyZoomAndCenter, 120); }
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
+window.applyZoomAndCenter = applyZoomAndCenter;
 
     // для ручної корекції з консолі
     window.metroSetCenter = function(x,y){ centerX = Math.max(0,Math.min(1,Number(x))); centerY = Math.max(0,Math.min(1,Number(y))); applyZoomAndCenter(); };
   })();
   </script>
+<script>
+(function(){
+  const vp = document.getElementById('mapViewport');
+
+  function adjustViewportHeight(){
+    if(!vp) return;
+    // top карти відносно вікна
+    const top = vp.getBoundingClientRect().top;
+    // відступ від низу, якщо потрібно (наприклад, залишити 8px для padding)
+    const bottomGap = 8;
+    // доступна висота = висота вікна - відстань від верху контейнера - gap
+    let available = Math.max(120, Math.floor(window.innerHeight - top - bottomGap));
+    // деякі браузери (iOS) мають "відступи безпеки" — враховуємо їх
+    if (typeof window.visualViewport !== 'undefined') {
+      // іноді visualViewport.height краще відображає доступний простір на мобільних
+      available = Math.max(120, Math.floor(window.visualViewport.height - top - bottomGap));
+    }
+    vp.style.height = available + 'px';
+  }
+  adjustViewportHeight();
+  window.addEventListener('resize', () => { adjustViewportHeight(); });
+  window.addEventListener('orientationchange', () => { setTimeout(adjustViewportHeight, 120); });
+  if (window.applyZoomAndCenter) {
+    window.applyZoomAndCenter = applyZoomAndCenter;
+    adjustViewportHeight();
+    setTimeout(() => { window.applyZoomAndCenter(); }, 60);
+  }
+  const img = document.getElementById('mapImg');
+  if(img) img.addEventListener('load', () => { adjustViewportHeight(); if(window.applyZoomAndCenter) window.applyZoomAndCenter(); });
+
+})();
+</script>
+
 </body>
 </html>
