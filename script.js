@@ -30,7 +30,7 @@
     const desiredDisplayWidth = Math.round(vp.clientWidth * targetScaleFactor);
     let zoom = desiredDisplayWidth / natW;
 
-    const MIN_ZOOM = 0.09, MAX_ZOOM = 2.0;
+    const MIN_ZOOM = 0.09, MAX_ZOOM = 6.0;
     zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
 
     inner.style.width  = Math.round(natW * zoom) + 'px';
@@ -39,7 +39,7 @@
     img.style.width  = '100%';
     img.style.height = '100%';
     requestAnimationFrame(() => {
-      const alignmentMode = 'bottom';
+      const alignmentMode = 'center';
       const offsetPx = 120;
       function computeTopForMode(mode) {
         const innerH = inner.clientHeight;
