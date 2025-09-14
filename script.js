@@ -6,7 +6,7 @@
   // Налаштування
   const PHONE_BREAKPOINT = 500;
   const mobileScaleFactor = 4.5;
-  const desktopScaleFactor = 3;
+  const desktopScaleFactor = 1.5;
   let centerX = 0.485;
   let centerY = 0.5;
 
@@ -95,5 +95,39 @@ window.applyZoomAndCenter = applyZoomAndCenter;
     setTimeout(() => { window.applyZoomAndCenter(); }, 60);
   }
   if(img) img.addEventListener('load', () => { adjustViewportHeight(); if(window.applyZoomAndCenter) window.applyZoomAndCenter(); });
+function wrapPNumbersMinimal() {
+  const ps = document.querySelectorAll('p');
+  // регулярний вираз: "N вагон..., M двер..." для усього рядка
+  const re = /^\s*(\d+)\s*вагон[^\s,]*\s*,\s*(\d+)\s*двер[^\s,]*\s*$/iu;
+
+  ps.forEach(p => {
+    const txt = (p.textContent || '').trim();
+    const m = txt.match(re);
+    if (!m) return; // не підходить — нічого не змінюємо
+
+    const wagNum = m[1];
+    const doorNum = m[2];
+
+    // Безпечне виведення чисел (тут числа, але все одно екранізуємо)
+    const escapeHtml = s => String(s).replace(/[&<>"']/g, ch => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[ch]));
+
+    p.innerHTML = `<span class="big-number" aria-label="Номер вагона ${escapeHtml(wagNum)}">` +
+                  `${escapeHtml(wagNum)}</span> вагон, ` +
+                  `<span class="big-number" aria-label="Кількість дверей ${escapeHtml(doorNum)}">` +
+                  `${escapeHtml(doorNum)}</span> двері`;
+  });
+}
+
+// Виклик при готовності DOM
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', wrapPNumbersMinimal);
+} else {
+  wrapPNumbersMinimal();
+}
+
+// (опціонально) викликати вручну з консолі:
+// wrapPNumbersMinimal();
 
 })();

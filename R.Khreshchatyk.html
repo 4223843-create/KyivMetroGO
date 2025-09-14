@@ -1,77 +1,34 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Хрещатик</title>
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      padding: 18px;
-      text-align: center;
-      background: #fff;
-      color: #000;
-    }
-    h1 { font-size:1.6rem; margin:0; font-weight:700; }
-    h2 { font-size:1.05rem; margin:0; font-weight:600; color:#333; }
-    p { margin:0; }
-    a.back { display:inline-block; color:#0077cc; text-decoration:none; margin-bottom:8px; }
-    a.back:hover { text-decoration:underline; }
-    :root { --gap:16px; }
-    .stack { display:flex; flex-direction:column; align-items:center; gap:var(--gap); max-width:720px; margin:0 auto; }
-    .card {
-      border:1px solid #ddd;
-      padding:12px;
-      border-radius:8px;
-      display:inline-block;
-      margin-top: calc(var(--gap) * 0.5);
-    }
-    @media (max-width:480px){
-      :root { --gap:14px; }
-      h1 { font-size:1.4rem; }
-    }
-  </style>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Хрещатик</title>
+    <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <a class="back" href="index.html">&#8592; Назад до карти</a>
-
-  <h1>🟥 Хрещатик 🟥</h1>
-  <p>   </p>
-  <h1>попередня Театральна</h1>
-  <h2>🔀 Короткий перехід на ст. м. Майдан Незалежності 🟦</h2>
-  <h2>2 вагон, 2-3 двері</h2>
-  <h2>Довгий перехід на ст. м. Майдан Незалежності 🟦</h2>
-  <h2>🔀 🔀 🔀 2 вагон, 4 двері чи 3 вагон, 3 двері</h2>
-  <h2>Вихід в місто (Майдан Незалежності, Хрещатик)</h2>
-  <h2>4 вагон, 2 двері</h2>
-  <h2>Вихід в місто (Героїв Небесної сотні)</h2>
-  <h2>2 вагон, 2 двері</h2>
-  <p>   </p>
-  <h1>попередня Арсенальна</h1>
-  <h2>Короткий перехід на ст. м. Майдан Незалежності 🟦</h2>
-  <h2>🔀 5 вагон, 3 двері чи 3 вагон, 4 двері</h2>
-  <h2>Довгий перехід на ст. м. Майдан Незалежності 🟦</h2>
-  <h2>🔀🔀🔀 3 вагон, 4 двері</h2>
-  <h2>Вихід в місто (Майдан Незалежності, Хрещатик)</h2>
-  <h2>2 вагон, 4 двері</h2>
-  <h2>Вихід в місто (Героїв Небесної сотні)</h2>
-  <h2>5 вагон, 4 двері</h2>
-  <script>
-    (function() {
-      function build() {
-        if (document.querySelector('.stack')) return;
-        const sel = 'a.back, h1, h2, p, .card';
-        const nodes = Array.from(document.querySelectorAll(sel));
-        if (!nodes.length) return;
-        const stack = document.createElement('div');
-        stack.className = 'stack';
-        document.body.insertBefore(stack, document.body.firstChild);
-        nodes.forEach(n => stack.appendChild(n));
-      }
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', build);
-      } else build();
-    })();
-  </script>
+    <div class="stack">
+  <a href="index.html">до карти</a>
+        <h1>🟥 Хрещатик 🟥</h1>
+        <h2>попередня Театральна</h2>
+        <h3>короткий перехід на 🟦 ст. м. Майдан Незалежності 🟦</h3>
+        <p>2 вагон, 2-3 двері</p>
+        <h3>довгий перехід на 🟦 ст. м. Майдан Незалежності 🟦</h3>
+        <p>2 вагон, 4 двері чи <br>3 вагон, 3 двері</br></p>
+        <h3>Вихід в місто (Майдан Незалежності, Хрещатик)</h3>
+        <p>4 вагон, 2 двері</p>
+        <h3>вихід в місто (Героїв Небесної сотні)</h3>
+        <p>2 вагон, 2 двері</p>
+        <h2>попередня Арсенальна</h2>
+        <h3>короткий перехід на 🟦 ст. м. Майдан Незалежності 🟦</h3>
+        <p>5 вагон, 3 двері чи 3 вагон, 4 двері</p>
+        <h3>довгий перехід на 🟦 ст. м. Майдан Незалежності 🟦</h3>
+        <p>3 вагон, 4 двері</p>
+        <h3>вихід в місто (Майдан Незалежності, Хрещатик)</h3>
+        <p>2 вагон, 4 двері</p>
+        <h3>вихід в місто (Героїв Небесної сотні)</h3>
+        <p>5 вагон, 4 двері</p>
+    </div>
+    <script src="wrap-numbers.js" defer></script>
 </body>
 </html>
