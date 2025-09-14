@@ -7,9 +7,13 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192x192.png">
+  <meta name="theme-color" content="#ffffff" id="meta-theme-color">
 </head>
 <body>
   <main class="container">
+    <div id="theme-toggle" style="position:fixed; right:12px; bottom:12px; z-index:9999;">
+  <button id="btnTheme" aria-label="Тема">Тема</button>
+</div>
     <div id="mapViewport" class="map-viewport">
       <div id="mapInner" class="map-inner">
         <img id="mapImg" class="map" src="KyivMetroScheme.svg" alt="Карта метро">
