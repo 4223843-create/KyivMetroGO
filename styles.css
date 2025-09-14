@@ -1,7 +1,12 @@
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  padding: 18px;
-  text-align: center;
+
+@font-face {
+  font-family: "ProbaNav2-Medium";
+  src: url("/fonts/ProbaNav2-Medium.woff2") format("woff2"),
+       url("/fonts/ProbaNav2-Medium.woff")  format("woff");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;                      /* рекомендовано: swap / optional / fallback */
 }
 
 .card {
@@ -81,6 +86,9 @@ p {
 .zone:hover {
   background: transparent;
 }
+
+
+
 
 .zone[href*="R.Akademmistechko.html"] { left: 0%; top: 31.728173%; width: 9.55%; height: 4.342934%; }
 .zone[href*="R.Zhytomyrska.html"] { left: 3.105125%; top: 36.341134%; width: 9.55%; height: 4.342934%; }
