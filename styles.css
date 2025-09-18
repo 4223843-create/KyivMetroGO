@@ -6,10 +6,10 @@ body {
 
 .card {
   border: 1px solid #ddd;
-  padding: 12px;
+  padding: 0px;
   border-radius: 8px;
   display: inline-block;
-  margin-top: 20px;
+  margin-top: 0px;
 }
 
 .map-viewport {
