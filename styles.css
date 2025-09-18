@@ -2,6 +2,8 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   padding: 18px;
   text-align: center;
+  background-color: #000000; /* чорний фон */
+  color-scheme: dark;
 }
 
 .card {
@@ -17,7 +19,7 @@ body {
   height: 108vh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  background: #fff;
+  background: #000000; /* чорний */
   border-radius: 6px;
   box-sizing: border-box;
 }
@@ -39,7 +41,7 @@ p {
 
 h2 {
   margin-top: 42px;
-  line-top: 42px;
+  line-height: 42px;
 }
 
 p {
@@ -140,6 +142,3 @@ p {
 .zone[href*="R.Teatralna.html"] { left: 38.655596%; top: 50.045005%; width: 6.35%; height: 8.8%; }
 .zone[href*="B.Ploshcha_Ukrainskikh_heroiv.html"] { left: 45.106179%; top: 50.045005%; width: 6.35%; height: 8.8%; }
 .zone[href*="G.Palats_sportu.html"] { left: 51.556762%; top: 50.045005%; width: 6.35%; height: 8.8%; }
-
-
-}
