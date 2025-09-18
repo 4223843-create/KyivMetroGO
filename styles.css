@@ -1,91 +1,101 @@
-body {
+/* --------------------
+   KyivMetroGO - clean dark stylesheet
+   -------------------- */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: #000000;      /* повний чорний фон для всього документа */
+  color: #ffffff;           /* білий текст за замовчуванням */
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* контейнер в index.html (якщо є) */
+main, .container {
+  background: transparent;
+  box-sizing: border-box;
   padding: 18px;
   text-align: center;
-  background-color: #000000; /* чорний фон */
-  color-scheme: dark;
 }
 
-.card {
-  border: 1px solid #ddd;
-  padding: 12px;
-  border-radius: 8px;
-  display: inline-block;
-  margin-top: 20px;
-}
-
+/* карти і viewport */
 .map-viewport {
   width: 100%;
-  height: 108vh;
+  /* висота регулюється скриптом; на випадок, коли скрипт не працює, даємо мінімум */
+  min-height: 120px;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  background: #000000; /* чорний */
+  background: #000000;
   border-radius: 6px;
   box-sizing: border-box;
 }
 
-a {
+/* зручності для вмісту */
+.card {
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 12px;
+  border-radius: 8px;
   display: inline-block;
-  margin-bottom: 20px;
+  margin-top: 20px;
+  background: rgba(255,255,255,0.02);
+  color: inherit;
+}
+
+/* посилання — зробимо читабельними на темному фоні */
+a {
+  color: #4ea0ff;
   text-decoration: none;
-  color: #0077cc;
 }
+a:hover { text-decoration: underline; }
 
-a:hover {
-  text-decoration: underline;
+/* заголовки і текст */
+h1, h2, h3, p {
+  color: inherit;
 }
-
-p {
-  margin-top: -12px;
-}
-
 h2 {
   margin-top: 42px;
-  line-height: 42px;
+  line-height: 1.1; /* якщо хочеш фіксовану висоту, постав line-height у px */
 }
 
+/* параграфи і великі цифри */
 p {
+  margin-top: -12px;
   font-size: 1.5em;
+  color: inherit;
 }
 
 .wagon-number,
-.door-number {
+.door-number,
+.big-number {
   font-size: 1.5em;
-  font-weight: 550;
+  font-weight: 700;
+  color: inherit;
 }
 
-
-
-
-
+/* map inner та зони — прозорі, нас цікавить фон сторінки */
 .map-inner {
   position: relative;
   width: 100%;
   height: auto;
   transform-origin: 0 0;
   box-sizing: border-box;
+  background: transparent;
 }
 
-
-
+/* інтерактивні зони — фон прозорий, щоб не перекривати карту */
 .zone {
   position: absolute;
   display: block;
   border: none;
   background: transparent;
-  box-shadow: none;
   outline: none;
   pointer-events: auto;
   z-index: 999;
   cursor: pointer;
 }
-
-.zone:hover {
-  background: transparent;
-}
-
-
-
 
 .zone[href*="R.Akademmistechko.html"] { left: 0%; top: 31.728173%; width: 9.55%; height: 4.342934%; }
 .zone[href*="R.Zhytomyrska.html"] { left: 3.105125%; top: 36.341134%; width: 9.55%; height: 4.342934%; }
