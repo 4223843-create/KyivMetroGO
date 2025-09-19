@@ -17,8 +17,9 @@ body {
   background-color: black;
 }
 
-body.loading { visibility: hidden; }
-body.loaded { visibility: visible; }
+body.loading {
+  visibility: hidden;
+}
 
 body.loaded {
   visibility: visible;
@@ -45,12 +46,23 @@ a:hover { text-decoration: underline !important; }
   height: 100vh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  background: #000;
-  border-radius: 0;
+  background: black;
+  border-radius: 0px;
   box-sizing: border-box;
 }
 
+a {
+  display: inline-block;
+  margin-bottom: 20px;
+  text-decoration: none;
+  color: -webkit-link;
+  -webkit-text-fill-color: -webkit-link;
+}
 
+a:visited {
+  color: -webkit-visited-link;
+  -webkit-text-fill-color: -webkit-visited-link;
+}
 
 a:hover {
   text-decoration: underline;
@@ -69,7 +81,7 @@ h2 {
 .wagon-number,
 .door-number {
   font-size: 1.5em;
-  font-weight: 500;
+  font-weight: 550;
 }
 
 .map-inner {
@@ -95,8 +107,6 @@ h2 {
 .zone:hover {
   background: transparent;
 }
-
-
 
 .zone[href*="R.Akademmistechko.html"] { left: 0%; top: 31.728173%; width: 9.55%; height: 4.342934%; }
 .zone[href*="R.Zhytomyrska.html"] { left: 3.105125%; top: 36.341134%; width: 9.55%; height: 4.342934%; }
