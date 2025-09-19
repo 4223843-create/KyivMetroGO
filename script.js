@@ -15,6 +15,12 @@
               centerX, centerY };
   }
 
+  document.addEventListener("DOMContentLoaded", () => {
+  document.body.classList.remove("loading");
+  document.body.classList.add("loaded");
+});
+
+
   function applyZoomAndCenter(){
     window.applyZoomAndCenter = applyZoomAndCenter;
     const natW = img.naturalWidth || img.width;
