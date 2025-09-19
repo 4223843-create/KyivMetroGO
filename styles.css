@@ -27,11 +27,18 @@ html, body {
   box-sizing: border-box;
 }
 
+/* --- посилання --- */
 a {
   display: inline-block;
   margin-bottom: 20px;
   text-decoration: none;
-  color: #0077cc !important;
+  color: -webkit-link;
+  -webkit-text-fill-color: -webkit-link;
+}
+
+a:visited {
+  color: -webkit-visited-link;
+  -webkit-text-fill-color: -webkit-visited-link;
 }
 
 a:hover {
