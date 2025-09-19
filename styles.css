@@ -31,7 +31,7 @@ a {
   display: inline-block;
   margin-bottom: 20px;
   text-decoration: none;
-  color: #0077cc;
+  color: #0077cc !important;
 }
 
 a:hover {
