@@ -96,11 +96,13 @@ h2 {
   background: transparent;
 }
 
+/* Загальні стилі для темної теми (за замовчуванням) */
 body {
   background-color: #000;
   color: #fff;
 }
 
+/* Стилі для світлої теми */
 @media (prefers-color-scheme: light) {
   body {
     background-color: #fff;
