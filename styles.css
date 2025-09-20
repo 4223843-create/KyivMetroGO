@@ -2,7 +2,7 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #000;
+  background: #1c1c1e;
   color: #fff;
   font-family: Arial, Helvetica, sans-serif;
   text-align: center;
@@ -30,7 +30,7 @@ body.loaded { visibility: visible; }
   height: 100vh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  background: #000;
+  background: #1c1c1e;
   border-radius: 0;
   box-sizing: border-box;
 }
@@ -74,7 +74,7 @@ h2 {
 /* Стилі для світлої теми */
 @media (prefers-color-scheme: light) {
   body {
-    background-color: #fff;
+    background-color: #f2f2f7;
     color: #000;
   }
 }
@@ -89,7 +89,7 @@ h2 {
 .zone[href*="R.Vokzalna.html"] { left: 25.818298%; top: 63.633843%; width: 9.55%; height: 6.6%; }
 .zone[href*="R.Universytet.html"] { left: 32.157113%; top: 59.023402%; width: 9.55%; height: 4.342934%; }
 .zone[href*="R.Arsenalna.html"] { left: 51.656762%; top: 45.454545%; width: 9.55%; height: 4.342934%; }
-.zone[href*="R.Dnipro.html"] { left: 58.087179%; top: 50.000000%; width: 9.55%; height: 6.6%; }
+.zone[href*="R.Dnipro.html"] { left: 58.087179%; top: 50%; width: 9.55%; height: 6.6%; }
 .zone[href*="R.Hidropark.html"] { left: 64.394060%; top: 45.454545%; width: 9.55%; height: 4.342934%; }
 .zone[href*="R.Livoberezhna.html"] { left: 67.610953%; top: 40.819082%; width: 9.55%; height: 4.342934%; }
 .zone[href*="R.Darnytsia.html"] { left: 70.876577%; top: 36.318632%; width: 9.55%; height: 4.342934%; }
