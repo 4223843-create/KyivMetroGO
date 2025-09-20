@@ -1,3 +1,15 @@
+.wagon-number,
+.door-number {
+  font-size: 1.5em;
+  font-weight: 600;
+}
+
+  a, a:visited, a:active, a:focus {
+    color: #4ea0ff !important;
+    text-decoration: none !important;
+  }
+  a:hover { text-decoration: underline !important; }
+  
 html, body {
   margin: 0;
   padding: 0;
@@ -13,7 +25,7 @@ body.loaded { visibility: visible; }
 
 .back-link {
   display: inline-block;
-  margin-top: 20px; /* відступ згори */
+  margin-top: 20px;
   font-size: 1.2em;
 }
 
@@ -71,7 +83,6 @@ h2 {
   background: transparent;
 }
 
-/* Стилі для світлої теми */
 @media (prefers-color-scheme: light) {
   body {
     background-color: #f2f2f7;
