@@ -30,7 +30,11 @@ a, a:visited, a:active, a:focus {
 }
 a:hover { text-decoration: underline !important; }
 
-
+.back-link {
+  display: inline-block;
+  margin-top: 20px; /* відступ згори */
+  font-size: 1.2em;
+}
 
 .card {
   border: 1px solid #ddd;
