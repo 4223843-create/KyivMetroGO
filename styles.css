@@ -88,8 +88,10 @@ h2 {
   }
 }
 
-main {
-  padding-bottom: calc(1000px + env(safe-area-inset-bottom));
+main::after {
+  content: "";
+  display: block;
+  height: calc(100px + env(safe-area-inset-bottom));
 }
 
 .zone[href*="R.Akademmistechko.html"] { left: 0%; top: 31.728173%; width: 9.55%; height: 4.342934%; }
