@@ -21,7 +21,7 @@ html, body {
 
 main {
   min-height: 100vh;
-  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  padding-bottom: calc(300px + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -92,12 +92,6 @@ h2 {
     background-color: #f2f2f7;
     color: #000;
   }
-}
-
-main::after {
-  content: "";
-  display: block;
-  height: calc(1000px + env(safe-area-inset-bottom));
 }
 
 .zone[href*="R.Akademmistechko.html"] { left: 0%; top: 31.728173%; width: 9.55%; height: 4.342934%; }
