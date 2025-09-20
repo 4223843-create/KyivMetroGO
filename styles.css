@@ -69,14 +69,6 @@ h2 {
   background: transparent;
 }
 
-/* Стилі для світлої теми */
-@media (prefers-color-scheme: light) {
-  body {
-    background-color: #fff;
-    color: #000;
-  }
-}
-
 .zone[href*="R.Akademmistechko.html"] { left: 0%; top: 31.728173%; width: 9.55%; height: 4.342934%; }
 .zone[href*="R.Zhytomyrska.html"] { left: 3.105125%; top: 36.341134%; width: 9.55%; height: 4.342934%; }
 .zone[href*="R.Sviatoshyn.html"] { left: 6.386716%; top: 40.819082%; width: 9.55%; height: 4.342934%; }
