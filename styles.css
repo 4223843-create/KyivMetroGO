@@ -45,6 +45,8 @@ h2 {
   line-height: 42px;
 }
 
+
+
 .map-inner {
   position: relative;
   width: 100%;
@@ -67,6 +69,14 @@ h2 {
 
 .zone:hover {
   background: transparent;
+}
+
+/* Стилі для світлої теми */
+@media (prefers-color-scheme: light) {
+  body {
+    background-color: #fff;
+    color: #000;
+  }
 }
 
 .zone[href*="R.Akademmistechko.html"] { left: 0%; top: 31.728173%; width: 9.55%; height: 4.342934%; }
