@@ -45,12 +45,6 @@ h2 {
   line-height: 42px;
 }
 
-.wagon-number,
-.door-number {
-  font-size: 1.5em;
-  font-weight: 500; /* критичні стилі в HTML мають 550 */
-}
-
 .map-inner {
   position: relative;
   width: 100%;
