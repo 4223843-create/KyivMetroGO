@@ -27,7 +27,6 @@ body {
   box-sizing: border-box;
   padding-bottom: 96px; /* fallback */
   padding-bottom: calc(96px + env(safe-area-inset-bottom));
-    background: rgba(255,0,0,0.2); /* тимчасово для дебагу */
 
 }
 
