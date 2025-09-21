@@ -9,6 +9,10 @@ html, body {
 
 main {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
 }
 
 body {
@@ -50,16 +54,14 @@ h2 {
 
 .back-link {
   display: inline-block;
-  margin-top: 20px;
   font-size: 1.2em;
 }
 
 .card {
   border: 1px solid #c6c6c8;
-  padding: 0px;
+  padding: 0;
   border-radius: 8px;
   display: inline-block;
-  margin-top: 0px;
 }
 
 .map-viewport {
@@ -99,8 +101,8 @@ h2 {
 .zone.R,
 .zone.B,
 .zone.G {
-    width: 9.55%;
-    height: 4.342934%;
+  width: 9.55%;
+  height: 4.342934%;
 }
 
 .zone.R[href*="R.Vokzalna.html"],
@@ -129,8 +131,8 @@ h2 {
 .zone[href*="R.Zhytomyrska.html"] { left: 3.105125%; top: 36.341134%; }
 .zone[href*="R.Sviatoshyn.html"] { left: 6.386716%; top: 40.819082%; }
 .zone[href*="R.Nyvky.html"] { left: 9.532173%; top: 45.454545%; }
-.zone[href*="R.Beresteiska.html"] { left: 12.821332%; top: 50%; height: 4.342934%; }
-.zone[href*="R.Shuliavska.html"] { left: 16.078557%; top: 54.592979%; height: 4.342934%; }
+.zone[href*="R.Beresteiska.html"] { left: 12.821332%; top: 50%; }
+.zone[href*="R.Shuliavska.html"] { left: 16.078557%; top: 54.592979%; }
 .zone[href*="R.Politekhnychnyi_instytut.html"] { left: 19.239981%; top: 59.023402%; }
 .zone[href*="R.Vokzalna.html"] { left: 25.818298%; top: 63.633843%; }
 .zone[href*="R.Universytet.html"] { left: 32.157113%; top: 59.023402%; }
