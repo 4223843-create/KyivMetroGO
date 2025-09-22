@@ -1,0 +1,5 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target" : { "namespace": "android_app", "package_name": "com.github.kyivmetrogo",
+               "sha256_cert_fingerprints": ["F4:7C:DC:2A:97:49:EE:99:BE:5A:73:91:79:93:07:F6:CD:4C:28:2C:FA:84:0C:1B:DE:5B:FD:85:97:7B:84:A0"] }
+}]
