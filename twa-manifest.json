@@ -1,0 +1,52 @@
+"navigation": {
+  "include": [
+    "https://vermillion-eclair-b71162.netlify.app/*"
+  ]
+}
+{
+  "packageId": "com.github.kyivmetrogo",
+  "host": "vermillion-eclair-b71162.netlify.app",
+  "name": "KyivMetroGO",
+  "launcherName": "MetroGO",
+  "display": "standalone",
+  "themeColor": "#1C1C1E",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#1C1C1E",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/icon-512x512.png",
+  "maskableIconUrl": "https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/icon-512x512.png",
+  "monochromeIconUrl": "https://raw.githubusercontent.com/4223843-create/KyivMetroGO/6692861188f0ae780e05d53e4bafa741cf5a3c6d/icon-512x512-mono.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "C:\\Users\\Sever\\Desktop\\v.0.35\\android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/",
+  "minSdkVersion": 21,
+  "orientation": "portrait-primary",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "appVersion": "1"
+}
