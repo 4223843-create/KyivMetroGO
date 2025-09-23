@@ -1,7 +1,7 @@
 {
 "name": "KyivMetroGO",
 "short_name": "MetroGO",
-"description": "Інтерактивна карта виходів з київського метро", 
+"description": "Інтерактивна карта виходів з київського метро",
 "start_url": "./",
 "display": "standalone",
 "background_color": "#000000",
