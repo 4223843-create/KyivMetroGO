@@ -1,13 +1,13 @@
 {
 "name": "KyivMetroGO",
 "short_name": "MetroGO",
-"description": "Exit strategy from Kyiv metro",
-"start_url": "/",
-"display": "standalone",
+"description": "Інтерактивна карта виходів з київського метро",
+"start_url": "index.html",
+"display": "fullscreen",
 "background_color": "#000000",
 "theme_color": "#ffffff",
 "orientation": "portrait-primary",
-"scope": "/",
+"scope": "./",
 "icons": [
 {
 "src": "icon-72x72.png",
