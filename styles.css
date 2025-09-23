@@ -51,6 +51,7 @@ h1, h2 {
 .back-link {
   display: inline-block;
   font-size: 1.2em;
+  margin-top: 21px;
 }
 
 .card {
