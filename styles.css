@@ -141,8 +141,9 @@ h1, h2 {
 .zone[href*="R.Chernihivska.html"] { left: 74.197669%; top: 31.840684%; }
 .zone[href*="R.Lisova.html"] { left: 77.391027%; top: 27.340234%; }
 
-.zone[href*="B.Heroiv_Dnipra.html"] { left: 32.157113%; top: 0%; }
-.zone[href*="B.Minska.html"] { left: 32.157113%; top: 4.387939%; }
+.zone[href*="B.Heroiv_Dnipra.html"] { left: 7.826759%; top: 0%; width:2.150039%; height:1.530153%}
+.zone[href*="B.Minska.html"] { left: 7.161640%; top: 1.507651%; width:2.119103%; height:1.057606%}
+
 .zone[href*="B.Obolon.html"] { left: 32.157113%; top: 8.843384%; }
 .zone[href*="B.Pochaina.html"] { left: 32.157113%; top: 13.513861%; }
 .zone[href*="B.Tarasa_Shevchenko.html"] { left: 35.398751%; top: 18.1%; }
