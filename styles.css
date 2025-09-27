@@ -15,7 +15,7 @@ main {
   gap: 20px;
 }
 
-body {
+body#station-page {
   box-sizing: border-box;
   padding-bottom: 96px;
   padding-bottom: calc(96px + env(safe-area-inset-bottom));
@@ -99,84 +99,98 @@ h1, h2 {
 .zone.B,
 .zone.G {
   width: 9.55%;
-  height: 4.342934%;
+  height: 4.28%;
 }
 
 .zone.R[href*="R.Vokzalna.html"],
+.zone[href*="B.Heroiv_Dnipra.html"],
+.zone[href*="B.Teremky.html"],
 .zone.R[href*="R.Dnipro.html"],
+.zone[href*="R.Arsenalna.html"],
+.zone[href*="R.Akademmistechko.html"],
+.zone[href*="R.Lisova.html"],
+.zone[href*="G.Chervonyi_khutir.html"],
+.zone[href*="G.Syrets.html"],
 .zone.G[href*="G.Slavutych.html"] {
-  height: 6.6%;
+  height: 6.4%;
 }
 
 .zone.transfer {
-  width: 6.35%;
+  width: 6.4%;
 }
 
 .zone.transfer[href*="B.Maidan_Nezalezhnosti.html"],
 .zone.transfer[href*="R.Khreshchatyk.html"],
-.zone.transfer[href*="G.Zoloti_vorota.html"] {
-  height: 9.1%;
-}
-
+.zone.transfer[href*="R.Teatralna.html"],
 .zone.transfer[href*="B.Ploshcha_Ukrainskikh_heroiv.html"],
 .zone.transfer[href*="G.Palats_sportu.html"],
-.zone.transfer[href*="R.Teatralna.html"] {
-  height: 8.8%;
+
+.zone.transfer[href*="G.Zoloti_vorota.html"] {
+  height: 8.6%;
 }
 
-.zone[href*="R.Akademmistechko.html"] { left: 0%; top: 31.728173%; }
-.zone[href*="R.Zhytomyrska.html"] { left: 3.105125%; top: 36.341134%; }
-.zone[href*="R.Sviatoshyn.html"] { left: 6.386716%; top: 40.819082%; }
-.zone[href*="R.Nyvky.html"] { left: 9.532173%; top: 45.454545%; }
-.zone[href*="R.Beresteiska.html"] { left: 12.821332%; top: 50%; }
-.zone[href*="R.Shuliavska.html"] { left: 16.078557%; top: 54.592979%; }
-.zone[href*="R.Politekhnychnyi_instytut.html"] { left: 19.239981%; top: 59.023402%; }
-.zone[href*="R.Vokzalna.html"] { left: 25.818298%; top: 63.633843%; }
-.zone[href*="R.Universytet.html"] { left: 32.157113%; top: 59.023402%; }
-.zone[href*="R.Arsenalna.html"] { left: 51.656762%; top: 45.454545%; }
-.zone[href*="R.Dnipro.html"] { left: 58.087179%; top: 50%; }
-.zone[href*="R.Hidropark.html"] { left: 64.394060%; top: 45.454545%; }
-.zone[href*="R.Livoberezhna.html"] { left: 67.610953%; top: 40.819082%; }
-.zone[href*="R.Darnytsia.html"] { left: 70.876577%; top: 36.318632%; }
-.zone[href*="R.Chernihivska.html"] { left: 74.197669%; top: 31.840684%; }
-.zone[href*="R.Lisova.html"] { left: 77.391027%; top: 27.340234%; }
+.zone[href*="R.Akademmistechko.html"] { left: 0%; top: 30.4%; }
+.zone[href*="R.Zhytomyrska.html"] { left: 3.3%; top: 36.9%; }
+.zone[href*="R.Sviatoshyn.html"] { left: 6.5%; top: 41.2%; }
+.zone[href*="R.Nyvky.html"] { left: 9.7%; top: 45.6%; }
+.zone[href*="R.Beresteiska.html"] { left: 12.9%; top: 49.9%; }
+.zone[href*="R.Shuliavska.html"] { left: 16.1%; top: 54.3%; }
+.zone[href*="R.Politekhnychnyi_instytut.html"].v3 { left: 19.4%; top: 58.7%; width: 9.55%; height: 4.3% }
+.zone[href*="R.Politekhnychnyi_instytut.html"].v4 { left:22.6%; top:58.8%; width:3%; height:6.3%; }
 
-.zone[href*="B.Heroiv_Dnipra.html"] { left: 7.826759%; top: 0%; width:2.150039%; height:1.530153%}
-.zone[href*="B.Minska.html"] { left: 7.161640%; top: 1.507651%; width:2.119103%; height:1.057606%}
 
-.zone[href*="B.Obolon.html"] { left: 32.157113%; top: 8.843384%; }
-.zone[href*="B.Pochaina.html"] { left: 32.157113%; top: 13.513861%; }
-.zone[href*="B.Tarasa_Shevchenko.html"] { left: 35.398751%; top: 18.1%; }
-.zone[href*="B.Kontraktova_ploshcha.html"] { left: 38.655596%; top: 22.592259%; }
-.zone[href*="B.Poshtova_ploshcha.html"] { left: 41.901054%; top: 27.182718%; }
-.zone[href*="B.Olimpiiska.html"] { left: 41.930888%; top: 59.023402%; }
-.zone[href*="B.Palats_Ukraina.html"] { left: 45.042312%; top: 63.633843%; }
-.zone[href*="B.Lybidska.html"] { left: 48.343238%; top: 68.124302%; }
-.zone[href*="B.Holosiivska.html"] { left: 41.930888%; top: 77.225203%; }
-.zone[href*="B.Vystavkovyi_tsentr.html"] { left: 35.382405%; top: 86.271107%; }
-.zone[href*="B.Ipodrom.html"] { left: 32.205014%; top: 90.9%; }
-.zone[href*="B.Teremky.html"] { left: 29.011656%; top: 95.522052%; }
-.zone[href*="B.Vasylkivska.html"] { left: 38.655596%; top: 81.705698%; }
-.zone[href*="B.Demiivska.html"] { left: 45.122146%; top: 72.727273%; }
 
-.zone[href*="G.Syrets.html"] { left: 25.818298%; top: 27.182718%; }
-.zone[href*="G.Dorohozhychi.html"] { left: 29%; top: 31.798200%; }
-.zone[href*="G.Lukianivska.html"] { left: 32.257113%; top: 36.341134%; }
-.zone[href*="G.Klovska.html"] { left: 51.636596%; top: 59.023402%; }
-.zone[href*="G.Pecherska.html"] { left: 54.670286%; top: 63.633843%; }
-.zone[href*="G.Zvirynetska.html"] { left: 57.911544%; top: 68.124302%; }
-.zone[href*="G.Vydubychi.html"] { left: 61.264570%; top: 72.682268%; }
-.zone[href*="G.Slavutych.html"] { left: 67.667252%; top: 77.160216%; }
-.zone[href*="G.Osokorky.html"] { left: 74.197669%; top: 72.682268%; }
-.zone[href*="G.Pozniaky.html"] { left: 77.391027%; top: 68.124302%; }
-.zone[href*="G.Kharkivska.html"] { left: 80.652451%; top: 63.633843%; }
-.zone[href*="G.Vyrlytsia.html"] { left: 83.877742%; top: 59.023402%; }
-.zone[href*="G.Boryspilska.html"] { left: 87.130768%; top: 54.592979%; }
-.zone[href*="G.Chervonyi_khutir.html"] { left: 90.264458%; top: 50%; }
+.zone[href*="R.Vokzalna.html"] { left: 25.8%; top: 63%; }
+.zone[href*="R.Universytet.html"].v1 { left: 32.3%; top: 58.7%; width: 9.55%; height: 4.3%; }
+.zone[href*="R.Universytet.html"].v2 { left: 35.6%; top: 56.5%; width:3%; height:8.7%; }
+.zone[href*="R.Arsenalna.html"] { left: 51.6%; top: 43.5%; }
+.zone[href*="R.Dnipro.html"] { left: 58%; top: 50%; }
+.zone[href*="R.Hidropark.html"].v5 { left: 64.5%; top: 45.6%; width: 9.55%; height: 4.3%; }
+.zone[href*="R.Hidropark.html"].v6 { left:67.7%; top:45.7%; width:3%; height:6.3%; }  
+.zone[href*="R.Livoberezhna.html"] { left: 67.7%; top: 41.3%; }
+.zone[href*="R.Darnytsia.html"] { left: 70.9%; top: 36.9%; }
+.zone[href*="R.Chernihivska.html"] { left: 74.2%; top: 32.6%; }
+.zone[href*="R.Lisova.html"] { left: 77.5%; top: 26%; }
 
-.zone[href*="B.Maidan_Nezalezhnosti.html"] { left: 45.070046%; top: 31.595680%; }
-.zone[href*="R.Khreshchatyk.html"] { left: 45.070046%; top: 40.8%; }
-.zone[href*="G.Zoloti_vorota.html"] { left: 38.655596%; top: 40.8%; }
-.zone[href*="R.Teatralna.html"] { left: 38.655596%; top: 50.045005%; }
-.zone[href*="B.Ploshcha_Ukrainskikh_heroiv.html"] { left: 45.106179%; top: 50.045005%; }
-.zone[href*="G.Palats_sportu.html"] { left: 51.556762%; top: 50.045005%; }
+.zone[href*="B.Heroiv_Dnipra.html"] { left: 35.5%; top: 0%; }
+.zone[href*="B.Minska.html"] { left: 32.3%; top: 6.4%; }
+.zone[href*="B.Obolon.html"] { left: 35.5%; top: 10.8%; }
+.zone[href*="B.Pochaina.html"] { left: 32.3%; top: 15.2%; } 
+.zone[href*="B.Tarasa_Shevchenko.html"] { left: 35.5%; top: 19.45%; }
+.zone[href*="B.Kontraktova_ploshcha.html"] { left: 38.7%; top: 23.9%; }
+
+.zone[href*="B.Poshtova_ploshcha.html"] { left: 42%; top: 28.2%; }
+.zone[href*="B.Olimpiiska.html"] { left: 42%; top: 58.7%; }
+.zone[href*="B.Palats_Ukraina.html"] { left: 45.2%; top: 63%; }
+.zone[href*="B.Lybidska.html"] { left: 48.4%; top: 67.4%; }
+.zone[href*="B.Demiivska.html"] { left: 45.2%; top: 71.7%; }
+.zone[href*="B.Holosiivska.html"] { left: 42%; top: 76.1%; }
+.zone[href*="B.Vasylkivska.html"] { left: 38.7%; top: 80.4%; }
+.zone[href*="B.Vystavkovyi_tsentr.html"] { left: 35.5%; top: 84.7%; }
+.zone[href*="B.Ipodrom.html"] { left: 32.3%; top: 89.1%; }
+.zone[href*="B.Teremky.html"] { left: 29%; top: 93.6%; }
+
+.zone[href*="G.Syrets.html"] { left: 25.9%; top: 26%; }
+.zone[href*="G.Dorohozhychi.html"] { left: 29.1%; top: 32.6%; }
+.zone[href*="G.Lukianivska.html"].v11 { left: 32.3%; top: 36.9%; width: 9.55%; height: 4.3%; }
+.zone[href*="G.Lukianivska.html"].v12 { left: 35.6%; top: 36.9%; width: 3%; height:6.3%; }
+.zone[href*="G.Klovska.html"] { left: 51.6%; top: 58.7%; }
+.zone[href*="G.Pecherska.html"] { left: 54.9%; top: 63%; }
+.zone[href*="G.Zvirynetska.html"] { left: 58.1%; top: 67.4%; }
+.zone[href*="G.Vydubychi.html"].v7 { left: 61.3%; top: 71.7%; width: 9.55%; height: 4.3%; }
+.zone[href*="G.Vydubychi.html"].v8 { left: 64.6%; top: 71.7%;  width:3%; height:6.3%; }
+.zone[href*="G.Slavutych.html"] { left: 67.7%; top: 76.1%; }
+.zone[href*="G.Osokorky.html"].v9 { left: 74.2%; top: 71.7%; width: 9.55%; height: 4.3%; }
+.zone[href*="G.Osokorky.html"].v10 { left: 77.4%; top: 71.7%; width: 3%; height: 6.3%; }
+.zone[href*="G.Pozniaky.html"] { left: 77.4%; top: 67.4%; }
+.zone[href*="G.Kharkivska.html"] { left: 80.6%; top: 63%; }
+.zone[href*="G.Vyrlytsia.html"] { left: 83.9%; top: 58.7%; }
+.zone[href*="G.Boryspilska.html"] { left: 87.1%; top: 54.3%; }
+.zone[href*="G.Chervonyi_khutir.html"] { left: 90.3%; top: 47.9%; }
+
+.zone[href*="B.Maidan_Nezalezhnosti.html"] { left: 45.2%; top: 32.6%; }
+.zone[href*="B.Ploshcha_Ukrainskikh_heroiv.html"] { left: 45.2%; top: 50%; }
+.zone[href*="R.Khreshchatyk.html"] { left: 45.2%; top: 41.4%; }
+.zone[href*="R.Teatralna.html"] { left: 38.7%; top: 50%; }
+.zone[href*="G.Palats_sportu.html"] { left: 51.6%; top: 50%; }
+.zone[href*="G.Zoloti_vorota.html"] { left: 38.7%; top: 41.4%; }
