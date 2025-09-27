@@ -42,6 +42,10 @@ h1, h2 {
   line-height: 42px;
 }
 
+.h2-second {
+  margin-bottom: 42px;
+}
+
 .wagon-number,
 .door-number {
   font-size: 1.5em;
@@ -137,9 +141,6 @@ h1, h2 {
 .zone[href*="R.Shuliavska.html"] { left: 16.1%; top: 54.3%; }
 .zone[href*="R.Politekhnychnyi_instytut.html"].v3 { left: 19.4%; top: 58.7%; width: 9.55%; height: 4.3% }
 .zone[href*="R.Politekhnychnyi_instytut.html"].v4 { left:22.6%; top:58.8%; width:3%; height:6.3%; }
-
-
-
 .zone[href*="R.Vokzalna.html"] { left: 25.8%; top: 63%; }
 .zone[href*="R.Universytet.html"].v1 { left: 32.3%; top: 58.7%; width: 9.55%; height: 4.3%; }
 .zone[href*="R.Universytet.html"].v2 { left: 35.6%; top: 56.5%; width:3%; height:8.7%; }
@@ -158,7 +159,6 @@ h1, h2 {
 .zone[href*="B.Pochaina.html"] { left: 32.3%; top: 15.2%; } 
 .zone[href*="B.Tarasa_Shevchenko.html"] { left: 35.5%; top: 19.45%; }
 .zone[href*="B.Kontraktova_ploshcha.html"] { left: 38.7%; top: 23.9%; }
-
 .zone[href*="B.Poshtova_ploshcha.html"] { left: 42%; top: 28.2%; }
 .zone[href*="B.Olimpiiska.html"] { left: 42%; top: 58.7%; }
 .zone[href*="B.Palats_Ukraina.html"] { left: 45.2%; top: 63%; }
