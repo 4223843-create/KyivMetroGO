@@ -7,6 +7,13 @@ html, body {
   text-align: center;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+
 main {
   min-height: 100vh;
   display: flex;
@@ -16,8 +23,6 @@ main {
 }
 
 body#station-page {
-  box-sizing: border-box;
-  padding-bottom: 96px;
   padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
@@ -70,9 +75,6 @@ h1, h2 {
   height: 100vh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  background: #1c1c1e;
-  border-radius: 0;
-  box-sizing: border-box;
 }
 
 .map-inner {
@@ -80,7 +82,6 @@ h1, h2 {
   width: 100%;
   height: auto;
   transform-origin: 0 0;
-  box-sizing: border-box;
 }
 
 .zone {
@@ -145,14 +146,11 @@ body#map-page main.container {
   gap: 0;                 /* прибираємо додаткові проміжки, що зсувають висоту */
   min-height: 100vh;
   height: 100vh;
-  box-sizing: border-box;
 }
 
-/* map-viewport має займати весь вільний простір всередині main */
 body#map-page .map-viewport {
   flex: 1 1 auto;
-  min-height: 0;   /* критично — дозволяє flex-елементу скорочуватись правильно */
-  height: auto !important; /* скасувати 100vh якщо було */
+  min-height: 0;
   overflow: auto;
 }
 
