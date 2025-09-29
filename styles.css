@@ -133,6 +133,30 @@ h1, h2 {
   height: 8.6%;
 }
 
+/* Налаштування ТІЛЬКИ для map page */
+body#map-page {
+  min-height: 100vh;
+}
+
+body#map-page main.container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;   /* важливо: щоб child розтягувався по ширині */
+  gap: 0;                 /* прибираємо додаткові проміжки, що зсувають висоту */
+  min-height: 100vh;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+/* map-viewport має займати весь вільний простір всередині main */
+body#map-page .map-viewport {
+  flex: 1 1 auto;
+  min-height: 0;   /* критично — дозволяє flex-елементу скорочуватись правильно */
+  height: auto !important; /* скасувати 100vh якщо було */
+  overflow: auto;
+}
+
+
 .zone[href*="R.Akademmistechko.html"] { left: 0%; top: 30.4%; }
 .zone[href*="R.Zhytomyrska.html"] { left: 3.3%; top: 36.9%; }
 .zone[href*="R.Sviatoshyn.html"] { left: 6.5%; top: 41.2%; }
