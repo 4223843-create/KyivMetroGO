@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+  <title>KyivMetroGO</title>
+  <style id="critical-theme">
+    html,body{margin:0;padding:0;min-height:30%;background:#1c1c1e;color:#fff;-webkit-text-size-adjust:100%;}
+  </style>
+  <link rel="stylesheet" href="styles.css?v=26">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192x192.png">
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body id="map-page">
+  <main class="container">
+    <div id="mapViewport" class="map-viewport">
+      <div id="mapInner" class="map-inner">
+        <img id="mapImg" class="map" src="KyivMetroScheme.svg" alt="Карта метро">
+        <a class="zone R" data-slug="R.Akademmistechko"></a>
+        <a class="zone R" data-slug="R.Zhytomyrska"></a>
+        <a class="zone R" data-slug="R.Sviatoshyn"></a>
+        <a class="zone R" data-slug="R.Nyvky"></a>
+        <a class="zone R" data-slug="R.Beresteiska"></a>
+        <a class="zone R" data-slug="R.Shuliavska"></a>
+        <a data-slug="R.Politekhnychnyi_instytut" class="zone v3"></a>
+        <a data-slug="R.Politekhnychnyi_instytut" class="zone v4"></a>
+        <a class="zone R" data-slug="R.Vokzalna"></a>
+        <a data-slug="R.Universytet" class="zone v1"></a>
+        <a data-slug="R.Universytet" class="zone v2"></a>
+        <a class="zone R" data-slug="R.Arsenalna"></a>
+        <a class="zone R" data-slug="R.Dnipro"></a>
+        <a data-slug="R.Hidropark" class="zone v5"></a>
+        <a data-slug="R.Hidropark" class="zone v6"></a>
+        <a class="zone R" data-slug="R.Livoberezhna"></a>
+        <a class="zone R" data-slug="R.Darnytsia"></a>
+        <a class="zone R" data-slug="R.Chernihivska"></a>
+        <a class="zone R" data-slug="R.Lisova"></a>
+        <a class="zone B" data-slug="B.Heroiv_Dnipra"></a>
+        <a class="zone B" data-slug="B.Minska"></a>
+        <a class="zone B" data-slug="B.Obolon"></a>
+        <a class="zone B" data-slug="B.Pochaina"></a>
+        <a class="zone B" data-slug="B.Tarasa_Shevchenko"></a>
+        <a class="zone B" data-slug="B.Kontraktova_ploshcha"></a>
+        <a class="zone B" data-slug="B.Poshtova_ploshcha"></a>
+        <a class="zone B" data-slug="B.Olimpiiska"></a>
+        <a class="zone B" data-slug="B.Palats_Ukraina"></a>
+        <a class="zone B" data-slug="B.Lybidska"></a>
+        <a class="zone B" data-slug="B.Demiivska"></a>
+        <a class="zone B" data-slug="B.Holosiivska"></a>
+        <a class="zone B" data-slug="B.Vasylkivska"></a>
+        <a class="zone B" data-slug="B.Vystavkovyi_tsentr"></a>
+        <a class="zone B" data-slug="B.Ipodrom"></a>
+        <a class="zone B" data-slug="B.Teremky"></a>
+        <a class="zone G" data-slug="G.Syrets"></a>
+        <a class="zone G" data-slug="G.Dorohozhychi"></a>
+        <a data-slug="G.Lukianivska" class="zone v11"></a>
+        <a data-slug="G.Lukianivska" class="zone v12"></a>
+        <a class="zone G" data-slug="G.Klovska"></a>
+        <a class="zone G" data-slug="G.Pecherska"></a>
+        <a class="zone G" data-slug="G.Zvirynetska"></a>
+        <a data-slug="G.Vydubychi" class="zone v7"></a>
+        <a data-slug="G.Vydubychi" class="zone v8"></a>
+        <a class="zone G" data-slug="G.Slavutych"></a>
+        <a data-slug="G.Osokorky" class="zone v9"></a>
+        <a data-slug="G.Osokorky" class="zone v10"></a>
+        <a class="zone G" data-slug="G.Pozniaky"></a>
+        <a class="zone G" data-slug="G.Kharkivska"></a>
+        <a class="zone G" data-slug="G.Vyrlytsia"></a>
+        <a class="zone G" data-slug="G.Boryspilska"></a>
+        <a class="zone G" data-slug="G.Chervonyi_khutir"></a>
+        <a class="zone transfer" data-slug="B.Maidan_Nezalezhnosti"></a>
+        <a class="zone transfer" data-slug="R.Khreshchatyk"></a>
+        <a class="zone transfer" data-slug="G.Zoloti_vorota"></a>
+        <a class="zone transfer" data-slug="R.Teatralna"></a>
+        <a class="zone transfer" data-slug="B.Ploshcha_Ukrainskikh_heroiv"></a>
+        <a class="zone transfer" data-slug="G.Palats_sportu"></a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Меню три крапки -->
+  <button id="menuBtn" class="theme-btn-top menu-btn" aria-label="Меню">⋮</button>
+  <div id="dropMenu" class="drop-menu" hidden>
+    <button class="drop-item drop-item-icon" id="themeToggleItem" aria-label="Перемкнути тему">
+      <span id="themeIcon">🌙</span>
+    </button>
+    <button class="drop-item drop-item-icon" id="feedbackItem" aria-label="Запропонувати зміни">
+      <span>✏️</span>
+    </button>
+    <button class="drop-item drop-item-icon" id="aboutItem" aria-label="Про додаток">
+      <span>ⓘ</span>
+    </button>
+  </div>
+
+  <!-- FAV button -->
+  <div class="ui-buttons">
+    <button id="favListBtn" class="ui-btn" aria-label="Обрані станції"><svg width="22" height="20" viewBox="0 0 24 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+  </div>
+
+  <!-- Overlay -->
+  <div id="sheetOverlay" class="sheet-overlay"></div>
+
+  <!-- Station bottom sheet -->
+  <div id="stationSheet" class="station-sheet">
+    <div class="sheet-handle-bar">
+      <button class="fav-btn-bar" aria-label="Обране">♡</button>
+      <div class="sheet-handle"></div>
+      <button id="sheetClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
+    </div>
+    <div id="sheetBody" class="sheet-body"></div>
+  </div>
+
+  <!-- Favourites bottom sheet -->
+  <div id="favSheet" class="station-sheet">
+    <div class="sheet-handle-bar">
+      <div class="sheet-handle"></div>
+      <span class="sheet-sheet-title">Обрані станції</span>
+      <button id="favClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
+    </div>
+    <div id="favBody" class="sheet-body"></div>
+  </div>
+
+  <script src="stations_form.js"></script>
+  <script src="feedback.js?v=26"></script>
+  <script src="script.js?v=26"></script>
+</body>
+</html>

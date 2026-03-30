@@ -1,0 +1,1314 @@
+/* 1. Підключаємо твій файл шрифту */
+@font-face {
+  font-family: 'ProbaNav2';
+  src: url('ProbaNav2-Medium.woff2') format('woff2');
+  font-weight: 500; /* Medium зазвичай відповідає жирності 500 */
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 2. Застосовуємо до всього тіла документа */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #1c1c1e;
+  color: #fff;
+  font-family: 'ProbaNav2', Arial, Helvetica, sans-serif;
+  text-align: center;
+}
+
+/* 3. Примусово кажемо кнопкам та інпутам використовувати цей же шрифт */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+
+main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+body#station-page {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
+body.loading { visibility: hidden; }
+body.loaded { visibility: visible; }
+
+a, a:visited, a:active, a:focus {
+  color: #0a84ff;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+p {
+  margin-top: -12px;
+  font-size: 1.5em;
+}
+
+h1, h2 {
+  margin-top: 42px;
+  line-height: 42px;
+}
+
+.h2-second {
+  margin-bottom: 42px;
+}
+
+.wagon-number,
+.door-number {
+  font-size: 1.5em;
+  font-weight: 600;
+}
+
+.back-link {
+  display: inline-block;
+  font-size: 1.2em;
+  margin-top: 21px;
+}
+
+.card {
+  border: 1px solid #c6c6c8;
+  padding: 0;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.map-viewport {
+  width: 100%;
+  height: 100vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.map-inner {
+  position: relative;
+  width: 100%;
+  height: auto;
+  transform-origin: 0 0;
+}
+
+.zone {
+  position: absolute;
+  display: block;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  pointer-events: auto;
+  z-index: 999;
+  cursor: pointer;
+}
+
+.zone:hover {
+  background: transparent;
+}
+
+.zone.R,
+.zone.B,
+.zone.G {
+  width: 9.55%;
+  height: 4.28%;
+}
+
+.zone.R[data-slug="R.Vokzalna"],
+.zone[data-slug="B.Heroiv_Dnipra"],
+.zone[data-slug="B.Teremky"],
+.zone.R[data-slug="R.Dnipro"],
+.zone[data-slug="R.Arsenalna"],
+.zone[data-slug="R.Akademmistechko"],
+.zone[data-slug="R.Lisova"],
+.zone[data-slug="G.Chervonyi_khutir"],
+.zone[data-slug="G.Syrets"],
+.zone.G[data-slug="G.Slavutych"] {
+  height: 6.4%;
+}
+
+.zone.transfer {
+  width: 6.4%;
+}
+
+.zone.transfer[data-slug="B.Maidan_Nezalezhnosti"],
+.zone.transfer[data-slug="R.Khreshchatyk"],
+.zone.transfer[data-slug="R.Teatralna"],
+.zone.transfer[data-slug="B.Ploshcha_Ukrainskikh_heroiv"],
+.zone.transfer[data-slug="G.Palats_sportu"],
+
+.zone.transfer[data-slug="G.Zoloti_vorota"] {
+  height: 8.6%;
+}
+
+/* Налаштування ТІЛЬКИ для map page */
+body#map-page {
+  min-height: 100vh;
+}
+
+body#map-page main.container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;   /* важливо: щоб child розтягувався по ширині */
+  gap: 0;                 /* прибираємо додаткові проміжки, що зсувають висоту */
+  min-height: 100vh;
+  height: 100vh;
+}
+
+body#map-page .map-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+
+.zone[data-slug="R.Akademmistechko"] { left: 0%; top: 30.4%; }
+.zone[data-slug="R.Zhytomyrska"] { left: 3.3%; top: 36.9%; }
+.zone[data-slug="R.Sviatoshyn"] { left: 6.5%; top: 41.2%; }
+.zone[data-slug="R.Nyvky"] { left: 9.7%; top: 45.6%; }
+.zone[data-slug="R.Beresteiska"] { left: 12.9%; top: 49.9%; }
+.zone[data-slug="R.Shuliavska"] { left: 16.1%; top: 54.3%; }
+.zone[data-slug="R.Politekhnychnyi_instytut"].v3 { left: 19.4%; top: 58.7%; width: 9.55%; height: 4.3% }
+.zone[data-slug="R.Politekhnychnyi_instytut"].v4 { left:22.6%; top:58.8%; width:3%; height:6.3%; }
+.zone[data-slug="R.Vokzalna"] { left: 25.8%; top: 63%; }
+.zone[data-slug="R.Universytet"].v1 { left: 32.3%; top: 58.7%; width: 9.55%; height: 4.3%; }
+.zone[data-slug="R.Universytet"].v2 { left: 35.6%; top: 56.5%; width:3%; height:8.7%; }
+.zone[data-slug="R.Arsenalna"] { left: 51.6%; top: 43.5%; }
+.zone[data-slug="R.Dnipro"] { left: 58%; top: 50%; }
+.zone[data-slug="R.Hidropark"].v5 { left: 64.5%; top: 45.6%; width: 9.55%; height: 4.3%; }
+.zone[data-slug="R.Hidropark"].v6 { left:67.7%; top:45.7%; width:3%; height:6.3%; }  
+.zone[data-slug="R.Livoberezhna"] { left: 67.7%; top: 41.3%; }
+.zone[data-slug="R.Darnytsia"] { left: 70.9%; top: 36.9%; }
+.zone[data-slug="R.Chernihivska"] { left: 74.2%; top: 32.6%; }
+.zone[data-slug="R.Lisova"] { left: 77.5%; top: 26%; }
+
+.zone[data-slug="B.Heroiv_Dnipra"] { left: 35.5%; top: 0%; }
+.zone[data-slug="B.Minska"] { left: 32.3%; top: 6.4%; }
+.zone[data-slug="B.Obolon"] { left: 35.5%; top: 10.8%; }
+.zone[data-slug="B.Pochaina"] { left: 32.3%; top: 15.2%; } 
+.zone[data-slug="B.Tarasa_Shevchenko"] { left: 35.5%; top: 19.45%; }
+.zone[data-slug="B.Kontraktova_ploshcha"] { left: 38.7%; top: 23.9%; }
+.zone[data-slug="B.Poshtova_ploshcha"] { left: 42%; top: 28.2%; }
+.zone[data-slug="B.Olimpiiska"] { left: 42%; top: 58.7%; }
+.zone[data-slug="B.Palats_Ukraina"] { left: 45.2%; top: 63%; }
+.zone[data-slug="B.Lybidska"] { left: 48.4%; top: 67.4%; }
+.zone[data-slug="B.Demiivska"] { left: 45.2%; top: 71.7%; }
+.zone[data-slug="B.Holosiivska"] { left: 42%; top: 76.1%; }
+.zone[data-slug="B.Vasylkivska"] { left: 38.7%; top: 80.4%; }
+.zone[data-slug="B.Vystavkovyi_tsentr"] { left: 35.5%; top: 84.7%; }
+.zone[data-slug="B.Ipodrom"] { left: 32.3%; top: 89.1%; }
+.zone[data-slug="B.Teremky"] { left: 29%; top: 93.6%; }
+
+.zone[data-slug="G.Syrets"] { left: 25.9%; top: 26%; }
+.zone[data-slug="G.Dorohozhychi"] { left: 29.1%; top: 32.6%; }
+.zone[data-slug="G.Lukianivska"].v11 { left: 32.3%; top: 36.9%; width: 9.55%; height: 4.3%; }
+.zone[data-slug="G.Lukianivska"].v12 { left: 35.6%; top: 36.9%; width: 3%; height:6.3%; }
+.zone[data-slug="G.Klovska"] { left: 51.6%; top: 58.7%; }
+.zone[data-slug="G.Pecherska"] { left: 54.9%; top: 63%; }
+.zone[data-slug="G.Zvirynetska"] { left: 58.1%; top: 67.4%; }
+.zone[data-slug="G.Vydubychi"].v7 { left: 61.3%; top: 71.7%; width: 9.55%; height: 4.3%; }
+.zone[data-slug="G.Vydubychi"].v8 { left: 64.6%; top: 71.7%;  width:3%; height:6.3%; }
+.zone[data-slug="G.Slavutych"] { left: 67.7%; top: 76.1%; }
+.zone[data-slug="G.Osokorky"].v9 { left: 74.2%; top: 71.7%; width: 9.55%; height: 4.3%; }
+.zone[data-slug="G.Osokorky"].v10 { left: 77.4%; top: 71.7%; width: 3%; height: 6.3%; }
+.zone[data-slug="G.Pozniaky"] { left: 77.4%; top: 67.4%; }
+.zone[data-slug="G.Kharkivska"] { left: 80.6%; top: 63%; }
+.zone[data-slug="G.Vyrlytsia"] { left: 83.9%; top: 58.7%; }
+.zone[data-slug="G.Boryspilska"] { left: 87.1%; top: 54.3%; }
+.zone[data-slug="G.Chervonyi_khutir"] { left: 90.3%; top: 47.9%; }
+
+.zone[data-slug="B.Maidan_Nezalezhnosti"] { left: 45.2%; top: 32.6%; }
+.zone[data-slug="B.Ploshcha_Ukrainskikh_heroiv"] { left: 45.2%; top: 50%; }
+.zone[data-slug="R.Khreshchatyk"] { left: 45.2%; top: 41.4%; }
+.zone[data-slug="R.Teatralna"] { left: 38.7%; top: 50%; }
+.zone[data-slug="G.Palats_sportu"] { left: 51.6%; top: 50%; }
+.zone[data-slug="G.Zoloti_vorota"] { left: 38.7%; top: 41.4%; }
+/* ══════════════════════════════════════
+
+
+/* ══ THEME VARIABLES ══ */
+:root {
+  --bg:         #1c1c1e;
+  --bg-sheet:   #2c2c2e;
+  --bg-card:    #3a3a3c;
+  --bg-pill:    #1c1c1e;
+  --text:       #ffffff;
+  --text-muted: #ababab;
+  --text-exit:  #8e8e93;
+  --border:     rgba(255,255,255,0.08);
+  --overlay:    rgba(0,0,0,0.55);
+}
+[data-theme="light"] {
+  --bg:         #e5e5ea;
+  --bg-sheet:   #d0d0d5;
+  --bg-card:    #e0e0e6;
+  --bg-pill:    #cacace;
+  --text:       #1c1c1e;
+  --text-muted: #2c2c2e;
+  --text-exit:  #3a3a3c;
+  --border:     rgba(0,0,0,0.14);
+  --overlay:    rgba(0,0,0,0.35);
+}
+html { background: var(--bg); color: var(--text); }
+body { background: var(--bg); }
+
+/* ══ UI BUTTONS ══ */
+.ui-buttons {
+  position: fixed;
+  right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 1010;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ui-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-card);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  color: var(--text);
+}
+#favListBtn { color: #ffcc00; font-size: 22px; }
+
+/* ══ THEME BUTTON TOP ══ */
+.theme-btn-top {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 14px;
+  z-index: 1055;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-card);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+
+/* ══ OVERLAY ══ */
+.sheet-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: var(--overlay);
+  z-index: 1020;
+}
+.sheet-overlay.overlay-visible { display: block; }
+
+/* ══ BOTTOM SHEET ══ */
+.station-sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 1030;
+  background: var(--bg-sheet);
+  border-radius: 20px 20px 0 0;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.station-sheet.sheet-open { transform: translateY(0); }
+/* ══ Хрещатик: повноекранне вікно перекриває кнопку меню ══ */
+.station-sheet.sheet-fullscreen {
+  z-index: 1060;
+}
+
+
+.sheet-handle-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 8px;
+  flex-shrink: 0;
+  background: var(--bg-sheet);
+}
+.sheet-handle {
+  width: 40px; height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  transition: background 0.25s;
+}
+.sheet-sheet-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-muted);
+  position: absolute;
+  left: 50%;
+  top: 50%; /* Центрування по вертикалі */
+  transform: translate(-50%, -50%); /* Корегування для ідеального центру */
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none; /* Щоб клік пробивав наскрізь до handle-bar */
+}
+.sheet-close-btn {
+  margin-left: auto;
+  background: none; border: none;
+  color: var(--text-muted);
+  font-size: 18px; cursor: pointer;
+  padding: 4px 8px; line-height: 1;
+}
+
+/* ══ SHEET BODY — скролиться ══ */
+.sheet-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  padding: 0 16px 32px; /* Прибрали відступ зверху, щоб текст підходив впритул */
+}
+
+/* ══ SHEET HEADER ══ */
+.sheet-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 16px;
+  padding: 0 48px 8px;
+  position: relative;
+}
+
+
+/* п.1: назви станцій — сірі на всіх гілках */
+.sheet-title {
+  font-size: 20px; font-weight: 600;
+  color: var(--text-muted);
+  text-align: center; line-height: 1.2;
+}
+
+.fav-btn {
+  position: absolute;
+  right: 0; top: 6px;
+  background: none; border: none;
+  font-size: 26px; cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  transition: transform 0.15s;
+}
+.fav-btn:active { transform: scale(1.3); }
+.fav-btn.fav-active { color: #ffcc00; }
+
+/* ══ DIRECTION BLOCKS ══ */
+.direction-block {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.direction-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+/* "вихід праворуч" — вертикально відцентрований */
+.direction-exit-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+.direction-exit-right .direction-label { margin-bottom: 0; }
+
+/* ══ EXIT LABEL ══ */
+.exit-label {
+  text-align: center;
+  margin: 10px 0 4px;
+}
+.exit-label-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.transfer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+.transfer-line {
+  display: inline-block;
+  width: 2px; height: 14px;
+  border-radius: 1px;
+  flex-shrink: 0; opacity: 0.85;
+}
+.transfer-text { color: var(--text-muted); font-size: 13px; }
+
+/* ══ POSITION ROWS ══ */
+.position-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 0.5px solid var(--border);
+}
+.position-row:first-of-type { border-top: none; }
+
+.position-row-multi {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 4px;
+}
+.pos-multi-sep {
+  color: var(--text-muted);
+  font-size: 18px; padding: 0 2px;
+}
+
+/* ══ PILLS ══ */
+.pos-pill {
+  background: var(--bg-pill);
+  border-radius: 8px;
+  padding: 5px 14px;
+  text-align: center;
+  min-width: 64px;
+}
+.pos-pill-label {
+  font-size: 9px;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 1px;
+}
+.pos-pill-num {
+  font-size: 26px; font-weight: 700; line-height: 1;
+}
+
+/* ══ FAVOURITES LIST ══ */
+.fav-station-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 14px 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  text-align: left;
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+.fav-station-name { font-size: 16px; font-weight: 500; color: var(--text); }
+.fav-station-line { font-size: 12px; font-weight: 500; margin-left: 8px; }
+
+/* ══ ХРЕЩАТИК: компактний блок довгого переходу ══ */
+.long-transfer-block {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 10px 14px 12px;
+  margin-bottom: 10px;
+}
+.long-transfer-title {
+  text-align: center;
+  margin-bottom: 10px;
+}
+.long-transfer-title .transfer-text {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+}
+.long-transfer-exit {
+  margin-top: 8px;
+}
+.long-transfer-exit-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 4px;
+}
+.long-transfer-pos-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+.long-transfer-arrow {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+.long-transfer-pos-row .pos-pill {
+  padding: 4px 12px;
+  min-width: 56px;
+}
+.long-transfer-pos-row .pos-pill-num {
+  font-size: 22px;
+}
+
+/* ══ FAV LIST з drag-and-drop ══ */
+.fav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  cursor: default;
+}
+.fav-drag-handle {
+  font-size: 22px;
+  color: var(--text-muted);
+  cursor: grab;
+  padding: 4px 6px;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.fav-drag-handle:active { cursor: grabbing; }
+.fav-item.fav-dragging { opacity: 0.4; }
+.fav-item.fav-over { outline: 1px dashed var(--text-muted); border-radius: 12px; }
+.fav-drag-handle {
+  font-size: 20px;
+  color: var(--text-muted);
+  cursor: grab;
+  padding: 4px 6px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.fav-drag-handle:active { cursor: grabbing; }
+.fav-open-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 14px 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+.fav-station-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ══ СЕРЦЕ В HANDLE-BAR ══ */
+.fav-btn-bar {
+  background: none; border: none;
+  font-size: 22px; cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+.fav-btn-bar:active { transform: scale(1.3); }
+.fav-btn-bar.fav-active { color: #ffcc00; }
+
+/* ══ КЛІКАБЕЛЬНІ НАЗВИ СТАНЦІЙ ══ */
+.nav-link {
+  cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none !important;
+  outline: none;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 1px;
+  background: var(--text-muted);
+  transition: width 0.2s;
+}
+.nav-link:hover::after { width: 80%; }
+
+/* ══ ШТРИХОВАНИЙ ФОН КАРТИ (світла тема) ══ */
+[data-theme="light"] .map-viewport {
+  background-color: #d0d0d5;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.07) 0px,
+    rgba(0,0,0,0.07) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+/* ══ ШТРИХОВАНИЙ ФОН КАРТИ (темна тема) ══ */
+[data-theme="dark"] .map-viewport {
+  background-color: #111113;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255,255,255,0.03) 0px,
+    rgba(255,255,255,0.03) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+
+/* ══ ШТРИХУВАННЯ sheet-body У СВІТЛІЙ ТЕМІ ══ */
+[data-theme="light"] .station-sheet .sheet-body {
+  background-color: #d0d0d5;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(0,0,0,0.055) 0px,
+    rgba(0,0,0,0.055) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+/* ══ DROP MENU EMOJI ══ */
+.drop-item-icon span {
+  display: block;
+  filter: grayscale(1) brightness(0.15);
+  font-size: 20px;
+  line-height: 1;
+}
+[data-theme="dark"] .drop-item-icon span {
+  filter: grayscale(1) brightness(10);
+}
+/* ══ DROPDOWN MENU ══ */
+.drop-menu {
+  position: fixed;
+  top: calc(56px + env(safe-area-inset-top));
+  right: 14px;
+  z-index: 1050;
+  background: var(--bg-sheet);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  min-width: 180px;
+  overflow: hidden;
+  border: 0.5px solid var(--border);
+}
+.drop-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  text-align: left;
+  border-bottom: 0.5px solid var(--border);
+}
+.drop-item:last-child { border-bottom: none; }
+.drop-item:active { background: var(--bg-card); }
+.drop-item span:first-child { font-size: 18px; width: 24px; text-align: center; }
+
+/* ══ ABOUT SHEET ══ */
+.about-content {
+  padding: 0 0 8px; 
+  margin-top: -6px; /* Чим більший мінус, тим сильніше текст "втягнеться" вгору */
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.about-content p { margin: 0 0 14px; }
+.about-content h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin: 20px 0 8px;
+  opacity: 0.7;
+}
+.about-version {
+  font-size: 13px;
+  opacity: 0.5;
+  margin-bottom: 16px !important;
+}
+.about-footer {
+  margin-top: 24px !important;
+  text-align: center;
+  opacity: 0.4;
+  font-size: 13px;
+}
+
+/* ══ FAV EMPTY TEXT ══ */
+.fav-empty-text {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 8px;
+  line-height: 1.7;
+  font-size: 15px;
+  margin: 0;
+}
+
+/* ══ MENU BUTTON — три крапки ══ */
+.menu-btn {
+  font-size: 24px;
+  color: #ffcc00;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  letter-spacing: 0;
+}
+
+/* ══ DROPDOWN — тільки іконки ══ */
+.drop-menu {
+  min-width: auto !important;
+}
+.drop-item-icon {
+  padding: 12px 16px !important;
+  justify-content: center !important;
+  font-size: 22px !important;
+}
+.drop-item-icon span { width: auto !important; font-size: 22px; }
+
+/* ══ FEEDBACK FORM ══ */
+.fb-selectors { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.fb-select-wrap { display: flex; flex-direction: column; gap: 4px; }
+.fb-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.fb-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  text-align: center;
+  text-align-last: center;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 15px;
+  width: 100%;
+}
+
+
+/* ══ КАСТОМНИЙ DROPDOWN для Android ══ */
+.fb-custom-select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 36px 10px 36px;
+  font-size: 15px;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+.fb-custom-select.fb-select-open {
+  border-color: var(--text-muted);
+}
+.fb-custom-select span:first-child {
+  flex: 1;
+  text-align: center;
+}
+.fb-select-arrow {
+  font-size: 18px;
+  color: var(--text-muted);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.fb-dropdown {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  margin-top: -6px;
+  margin-bottom: 8px;
+  overflow-y: auto;
+  max-height: 220px;
+}
+.fb-dropdown-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  padding: 11px 14px;
+  text-align: center;
+  cursor: pointer;
+}
+.fb-dropdown-item:last-child { border-bottom: none; }
+.fb-dropdown-item:active { background: var(--bg-sheet); }
+.fb-dropdown-item.fb-dropdown-selected { font-weight: 600; }
+.fb-pos-row {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.fb-pos-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  text-align: center;
+}
+.fb-pos-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 44px;
+}
+.fb-pos-inputs {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+.fb-close-exit {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+/* ══ ПІЛЮЛІ У ФОРМІ ЗМІН (стилізовані під основні) ══ */
+.fb-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-pill);
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-width: 80px;
+}
+.fb-input-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 2px; }
+
+/* Старий інпут про всяк випадок залишаємо, щоб нічого не зламати */
+.fb-input { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 22px; font-weight: 700; width: 70px; text-align: center; }
+.fb-input:focus { border-color: var(--text-muted); outline: none; }
+
+/* КНОПКА ТА ПОВІДОМЛЕННЯ (Без змін) */
+.fb-send-btn { width: 100%; margin: 16px 0 8px; padding: 13px; background: var(--bg-card); color: var(--text); border: 0.5px solid var(--border); border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.fb-send-btn:disabled { opacity: 0.4; cursor: default; }
+.fb-send-btn:not(:disabled):active { opacity: 0.7; }
+.fb-note { font-size: 14px; color: var(--text-muted); text-align: center; padding: 12px 0; margin: 0; }
+.fb-success { color: #5aaa6a !important; }
+.fb-confirm { background: var(--bg-card); border-radius: 12px; padding: 16px; margin-top: 8px; }
+.fb-confirm p { font-size: 15px; color: var(--text-muted); text-align: center; margin: 0 0 14px; }
+.fb-confirm-btns { display: flex; gap: 10px; }
+.fb-confirm-btn { flex: 1; padding: 11px; border-radius: 10px; border: 0.5px solid var(--border); font-size: 15px; font-weight: 600; cursor: pointer; }
+.fb-yes { background: #5aaa6a; color: #fff; border-color: #5aaa6a; }
+.fb-no  { background: var(--bg); color: var(--text-muted); }
+
+/* ══ STEPPER (Оновлений для пілюль) ══ */
+.fb-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+}
+.fb-step {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 24px;
+  width: 32px; height: 32px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.fb-step:active { opacity: 0.6; background: transparent; }
+.fb-step-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 28px;
+  text-align: center;
+  user-select: none;
+}
+
+/* ══ П.2: олівець на відредагованих рядках ══ */
+.fb-edited-mark {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+/* Олівець в position-row при рендері станції */
+.pos-edited-mark {
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* ══ П.4-5: центр у select ══ */
+.fb-select { text-align: center; }
+
+/* ══ П.6: тло кнопок у світлій темі ══ */
+[data-theme="light"] .theme-btn-top,
+[data-theme="light"] .ui-btn {
+  background: #b8b8bf;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* ══ П.7: більший ⓘ ══ */
+#aboutItem span { font-size: 26px !important; line-height:1; }
+
+/* ══ П.8: штрихування на шітах (протилежний напрям) у світлій темі ══ */
+
+
+/* ══ П.10: скидання локальних змін ══ */
+.fb-reset-btn {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 12px 0 4px;
+  text-align: center;
+  opacity: 0.7;
+}
+.fb-reset-btn:active { opacity: 1; }
+
+/* ══ П.4: олівець у position-row — не зміщує пілюлі ══ */
+.position-row { position: relative; }
+.pos-edited-mark {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: var(--text-muted);
+  opacity: 0.55;
+  cursor: default;
+  user-select: none;
+}
+
+/* ══ П.6: центр у fb-select ══ */
+.fb-select option { text-align: center; }
+
+/* ══ П.3: закрити вихід ══ */
+.fb-close-exit {
+  background: none;
+  border: none;
+  color: #c8523a;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.fb-close-exit:active { background: rgba(200,82,58,0.1); }
+.fb-pos-closed { opacity: 0.5; }
+.fb-closed-note { font-size: 13px; color: #c8523a; text-align: center; padding: 6px 0; }
+
+/* ══ П.10: nav-link — прибрати підкреслення при tap (iOS) ══ */
+.nav-link, .nav-link:visited, .nav-link:active {
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  outline: none !important;
+}
+
+/* ══ П.11: Android select — кастомний вигляд ══ */
+.fb-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  padding-left: 32px;
+}
+
+/* ══ П.1: форматування label у формі ══ */
+.fb-dir-label {
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 4px;
+}
+.fb-exit-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 8px;
+}
+.fb-transfer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+
+/* ══ П.2: чорний колір іконок меню ══ */
+.menu-btn { color: #1c1c1e !important; }
+[data-theme="dark"] .menu-btn { color: #ffffff !important; }
+.ui-btn svg path { fill: #1c1c1e !important; }
+[data-theme="dark"] .ui-btn svg path { fill: #ffffff !important; }
+#favListBtn { color: #1c1c1e; }
+[data-theme="dark"] #favListBtn { color: #ffffff; }
+
+/* ══ П.3: штрихування на drop-menu ══ */
+.drop-menu {
+  background-color: #D0D0D5;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #C1C1C6 0px,
+    #C1C1C6 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+[data-theme="dark"] .drop-menu {
+  background-color: #2c2c2e;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255,255,255,0.04) 0px,
+    rgba(255,255,255,0.04) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+/* ══ П.4: Обрані станції по центру блоків ══ */
+.sheet-handle-bar { position: relative; }
+.sheet-sheet-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* ══ П.4 (nav): прибрати підкреслення при tap ══ */
+.nav-link, span.nav-link {
+  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+  text-decoration: none !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.nav-link::after { transition: none !important; }
+.nav-link:active::after { width: 0 !important; }
+
+/* ══ П.5: Android select — без нативних радіокнопок ══ */
+select, select option {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  font-size: 15px;
+}
+
+/* ══ П.8: більший ⓘ ══ */
+#aboutItem span { font-size: 28px !important; line-height:1; }
+
+.fb-transfer-bar {
+  display: inline-block;
+  width: 2px; height: 14px;
+  border-radius: 1px;
+  flex-shrink: 0;
+  opacity: 0.9;
+  vertical-align: middle;
+}
+
+/* ══ П.10: штрихування в about ══ */
+.about-station-sheet {
+  background-color: #D0D0D5;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #C1C1C6 0px,
+    #C1C1C6 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+[data-theme="dark"] .about-station-sheet {
+  background-color: #2c2c2e;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255,255,255,0.04) 0px,
+    rgba(255,255,255,0.04) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+/* about-content має білий фон щоб текст читався ══ */
+.about-station-sheet .sheet-body {
+  background: transparent;
+}
+
+.fb-transfer-prefix {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+/* ══ П.7: штрихування handle-bar в about (світла тема) ══ */
+[data-theme="light"] .about-station-sheet .sheet-handle-bar {
+  background-color: #d0d0d5;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.07) 0px,
+    rgba(0,0,0,0.07) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+/* Основний контент — без штрихування */
+[data-theme="light"] .about-station-sheet .sheet-body {
+  background: #d0d0d5;
+}
+
+.about-heart {
+  color: #1c1c1e;
+}
+[data-theme="dark"] .about-heart {
+  color: #ffffff;
+}
+
+.fb-dir-caps {
+  font-size: 11px !important;
+  letter-spacing: .06em !important;
+}
+/* ══ ШТРИХОВКА ДЛЯ ТІЛА МЕНЮ ЗМІН ══ */
+#feedbackSheet .sheet-body {
+  background-color: #D0D0D5;
+  background-image: repeating-linear-gradient(-45deg, #C1C1C6 0px, #C1C1C6 1px, transparent 1px, transparent 8px);
+}
+[data-theme="dark"] #feedbackSheet .sheet-body {
+  background-color: #2c2c2e;
+  background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 8px);
+}
+/* ══ ТЕМАТИЧНІ ЕМОДЖІ-СЕРЦЯ В "ПРО ДОДАТОК" ══ */
+
+/* За замовчуванням ховаємо обидва емоджі */
+.about-heart-icon-wrapper span {
+  display: none;
+}
+
+/* Якщо тема світла, показуємо чорне серце (🖤) */
+[data-theme="light"] .about-heart-icon-wrapper .heart-light-emoji {
+  display: inline;
+}
+
+/* Якщо тема темна, показуємо біле серце (🤍) */
+[data-theme="dark"] .about-heart-icon-wrapper .heart-dark-emoji {
+  display: inline;
+}
+
+[data-theme="light"] .about-station-sheet .sheet-body,
+[data-theme="light"] #feedbackSheet .sheet-body {
+  background-color: #D0D0D5 !important;
+  background-image: repeating-linear-gradient(-45deg, #C1C1C6 0px, #C1C1C6 1px, transparent 1px, transparent 8px) !important;
+}
+
+[data-theme="dark"] .about-station-sheet,
+[data-theme="dark"] .about-station-sheet .sheet-body,
+[data-theme="dark"] #feedbackSheet,
+[data-theme="dark"] #feedbackSheet .sheet-body {
+  background-image: none !important;
+  background-color: var(--bg-sheet) !important;
+}
+[data-theme="dark"] .drop-menu {
+  background-image: none !important;
+  background-color: var(--bg-sheet) !important;
+}
+/* --- ВІДСТУПИ ДЛЯ ТЕКСТУ ВЕРСІЇ --- */
+/* ══ ФІНАЛЬНИЙ БЛОК: ШТРИХОВКА, ПОВЗУНОК ТА ВІДСТУПИ ══ */
+
+/* 1. Опускаємо текст версії ближче до основного тексту */
+.about-version-title {
+  text-transform: none; 
+  letter-spacing: normal; 
+  font-weight: normal; 
+  opacity: 0.5; 
+  top: 18px; /* Підняли текст ще вище (було 26px) */
+}
+
+/* 2. Повзунок на самий верх */
+.sheet-handle {
+  top: 8px;
+}
+
+/* 3. ШТРИХОВКА: Тільки для СВІТЛОЇ теми (векторна SVG-ялинка) */
+[data-theme="light"] .about-station-sheet,
+[data-theme="light"] #feedbackSheet {
+  background-image: none !important;
+  background-color: #D0D0D5 !important; 
+}
+
+[data-theme="light"] .about-station-sheet .sheet-handle-bar,
+[data-theme="light"] #feedbackSheet .sheet-handle-bar {
+  background-color: #D0D0D5 !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: bottom left !important; 
+}
+
+[data-theme="light"] .about-station-sheet .sheet-body,
+[data-theme="light"] #feedbackSheet .sheet-body {
+  background-color: #D0D0D5 !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: top left !important;
+}
+
+/* 4. ВАЖЛИВО: Вимикаємо будь-яку штриховку для ТЕМНОЇ теми (це те, що злетіло минулого разу) */
+[data-theme="dark"] .about-station-sheet,
+[data-theme="dark"] .about-station-sheet .sheet-body,
+[data-theme="dark"] #feedbackSheet,
+[data-theme="dark"] #feedbackSheet .sheet-body,
+[data-theme="dark"] .drop-menu {
+  background-image: none !important;
+  background-color: var(--bg-sheet) !important;
+}
+
+/* 5. Двоколірний повзунок для вікна "Про додаток" */
+.about-station-sheet .sheet-handle {
+  background: linear-gradient(to right, #5b9bd5 50%, #5aaa6a 50%) !important;
+}
+
+/* 6. НАЛАШТУВАННЯ ВІДСТУПІВ ШАПКИ */
+/* Робимо однаковий компактний відступ для обох вікон */
+.about-station-sheet .sheet-handle-bar,
+#feedbackSheet .sheet-handle-bar {
+  padding-bottom: 0px !important;
+}
+
+/* =========================================
+   ІНДИВІДУАЛЬНІ ВІДСТУПИ ДЛЯ КОЖНОГО ВІКНА
+   ========================================= */
+
+/* --- 1. ВІКНО "ЗАПРОПОНУВАТИ ЗМІНИ" (залишаємо твої ідеальні значення) --- */
+#feedbackSheet .sheet-handle-bar {
+  padding-bottom: 28px !important; /* Відстань ПІД текстом до слова "ГІЛКА" */
+}
+#feedbackSheet .sheet-sheet-title {
+  top: 32px !important; /* Відстань НАД текстом від повзунка */
+}
