@@ -71,6 +71,7 @@ function changeText(p, nw, nd, closed) {
 }
 
 function openFeedbackSheet(stationsData) {
+  try {
   let sheet = document.getElementById('feedbackSheet');
   if (!sheet) {
     sheet = document.createElement('div');
@@ -202,12 +203,28 @@ function openFeedbackSheet(stationsData) {
       const open = !stationDD.hidden; closeAllDD();
       if (!open) { buildStationDD(); stationDD.hidden = false; stationBtn.classList.add('fb-select-open'); }
     });
-    document.addEventListener('click', closeAllDD);
+    setTimeout(() => document.addEventListener('click', closeAllDD), 0);
 
   } else {
     // iOS / desktop — нативні select
     lineEl    = document.getElementById('fbLine');
     stationEl = document.getElementById('fbStation');
+
+    lineEl.addEventListener('change', () => {
+      stationEl.innerHTML = stationOptions(lineEl.value);
+      stationEl.value = '';
+      posEl.innerHTML = '';
+      sendBtn.disabled = true;
+    });
+
+    stationEl.addEventListener('change', () => {
+      const slug = stationEl.value;
+      if (!slug) { posEl.innerHTML = ''; sendBtn.disabled = true; return; }
+      const s = STATIONS_FOR_FORM[slug];
+      if (s && !lineEl.value) lineEl.value = s.line;
+      renderPositions(slug);
+    });
+  } // end platform if
 
   function renderResetBtn() {
     resetWrap.innerHTML = hasLocalEdits()
@@ -320,21 +337,7 @@ function openFeedbackSheet(stationsData) {
     renderResetBtn();
   }
 
-    lineEl.addEventListener('change', () => {
-      stationEl.innerHTML = stationOptions(lineEl.value);
-      stationEl.value = '';
-      posEl.innerHTML = '';
-      sendBtn.disabled = true;
-    });
-
-    stationEl.addEventListener('change', () => {
-      const slug = stationEl.value;
-      if (!slug) { posEl.innerHTML = ''; sendBtn.disabled = true; return; }
-      const s = STATIONS_FOR_FORM[slug];
-      if (s && !lineEl.value) lineEl.value = s.line;
-      renderPositions(slug);
-    });
-  } // end else (iOS/desktop)
+  // change listeners — вище в else блоці
 
   sendBtn.addEventListener('click', async () => {
     const slug = stationEl.value;
@@ -394,6 +397,7 @@ function openFeedbackSheet(stationsData) {
   let swY = 0;
   sheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; }, { passive: true });
   sheet.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - swY > 60) closeFeedbackSheet(); });
+  } catch(err) { console.error('[FeedbackSheet ERROR]', err); alert('Помилка: ' + err.message); }
 }
 
 function closeFeedbackSheet() {
