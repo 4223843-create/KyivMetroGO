@@ -90,7 +90,7 @@ function openFeedbackSheet(stationsData) {
       list.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
   }
 
-  const isAndroid = /android/i.test(navigator.userAgent);
+  const isAndroid = true; // кастомний dropdown для всіх платформ
 
   // На Android — кастомні dropdown, на iOS/інших — нативний <select>
   const lineSelectHtml = isAndroid
@@ -121,14 +121,18 @@ function openFeedbackSheet(stationsData) {
     <div class="sheet-body" id="feedbackBody">
       <div class="fb-selectors">
         <div class="fb-select-wrap">
-          <label class="fb-label">Гілка</label>
-          ${lineSelectHtml}
-          ${isAndroid ? '<div id="fbLineDropdown" class="fb-dropdown" hidden></div>' : ''}
+          <div id="fbLineDropdown" class="fb-dropdown" hidden></div>
+          <div class="fb-select-inner">
+            <label class="fb-label">Гілка</label>
+            ${lineSelectHtml}
+          </div>
         </div>
         <div class="fb-select-wrap">
-          <label class="fb-label">Станція</label>
-          ${stationSelectHtml}
-          ${isAndroid ? '<div id="fbStationDropdown" class="fb-dropdown" hidden></div>' : ''}
+          <div id="fbStationDropdown" class="fb-dropdown" hidden></div>
+          <div class="fb-select-inner">
+            <label class="fb-label">Станція</label>
+            ${stationSelectHtml}
+          </div>
         </div>
       </div>
       <div id="fbPositions"></div>

@@ -783,7 +783,8 @@ body { background: var(--bg); }
 
 /* ══ FEEDBACK FORM ══ */
 .fb-selectors { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-.fb-select-wrap { display: flex; flex-direction: column; gap: 4px; position: relative; }
+.fb-select-wrap { display: flex; flex-direction: column-reverse; gap: 0; }
+.fb-select-inner { display: flex; flex-direction: column; gap: 4px; }
 .fb-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
 .fb-select {
   -webkit-appearance: none;
@@ -838,11 +839,8 @@ body { background: var(--bg); }
   border: 0.5px solid var(--border);
   border-radius: 10px;
   overflow-y: auto;
-  max-height: 50vh;
-  position: absolute;
-  left: 0; right: 0;
-  bottom: calc(100% + 4px);
-  z-index: 100;
+  max-height: 55vh;
+  margin-bottom: 4px;
 }
 .fb-dropdown-item {
   display: block;
