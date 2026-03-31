@@ -174,7 +174,7 @@ function openFeedbackSheet(stationsData) {
       lineDD.innerHTML = items.map(it =>
         `<button type="button" class="fb-dropdown-item${it.value === lineEl.value ? ' fb-dropdown-selected' : ''}" data-value="${it.value}">${it.label}</button>`
       ).join('');
-      lineDD.querySelectorAll('.fb-dropdown-item').forEach(b => b.addEventListener('click', () => {
+      lineDD.querySelectorAll('.fb-dropdown-item').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation();
         lineEl.value = b.dataset.value;
         lineLbl.textContent = b.textContent;
         closeAllDD();
@@ -188,7 +188,7 @@ function openFeedbackSheet(stationsData) {
       stationDD.innerHTML = list.map(s =>
         `<button type="button" class="fb-dropdown-item${s.slug === stationEl.value ? ' fb-dropdown-selected' : ''}" data-value="${s.slug}">${s.name}</button>`
       ).join('');
-      stationDD.querySelectorAll('.fb-dropdown-item').forEach(b => b.addEventListener('click', () => {
+      stationDD.querySelectorAll('.fb-dropdown-item').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation();
         stationEl.value = b.dataset.value;
         stationLbl.textContent = b.textContent;
         closeAllDD();
@@ -198,6 +198,8 @@ function openFeedbackSheet(stationsData) {
       }));
     }
 
+    lineDD.addEventListener('click', e => e.stopPropagation());
+    stationDD.addEventListener('click', e => e.stopPropagation());
     lineBtn.addEventListener('click', e => {
       e.stopPropagation();
       const open = !lineDD.hidden; closeAllDD();
@@ -208,7 +210,8 @@ function openFeedbackSheet(stationsData) {
       const open = !stationDD.hidden; closeAllDD();
       if (!open) { buildStationDD(); stationDD.hidden = false; stationBtn.classList.add('fb-select-open'); }
     });
-    setTimeout(() => document.addEventListener('click', closeAllDD), 0);
+    setTimeout(() => { document.addEventListener('click', closeAllDD); }, 0);
+    sheet._closeAllDD = closeAllDD; // зберігаємо для cleanup
 
   } else {
     // iOS / desktop — нативні select
@@ -406,8 +409,9 @@ function openFeedbackSheet(stationsData) {
 }
 
 function closeFeedbackSheet() {
-  document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
-  // Ховаємо overlay тільки якщо жодне інше вікно не відкрите
+  const s = document.getElementById('feedbackSheet');
+  if (s?._closeAllDD) { document.removeEventListener('click', s._closeAllDD); s._closeAllDD = null; }
+  s?.classList.remove('sheet-open');
   const anyOpen = document.querySelectorAll('.station-sheet.sheet-open').length > 0;
   if (!anyOpen) document.getElementById('sheetOverlay')?.classList.remove('overlay-visible');
 }
