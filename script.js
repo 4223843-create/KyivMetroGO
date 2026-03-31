@@ -43,21 +43,65 @@
   document.addEventListener('DOMContentLoaded', () => { document.body.classList.remove('loading'); document.body.classList.add('loaded'); });
 
   /* ── Pinch zoom ── */
-  let pinchScale = 1, lastPinchDist = null;
+  let lastPinchDist = null;
+  let lastPinchMidX = 0, lastPinchMidY = 0;
+
   document.addEventListener('touchmove', e => {
     if (e.touches.length !== 2) return;
+    // Не зумити якщо відкрите будь-яке вікно
+    if (document.querySelector('.station-sheet.sheet-open')) return;
     e.preventDefault();
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    const t0 = e.touches[0], t1 = e.touches[1];
+    const dx = t0.clientX - t1.clientX;
+    const dy = t0.clientY - t1.clientY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Середня точка між пальцями (у координатах вікна)
+    const midX = (t0.clientX + t1.clientX) / 2;
+    const midY = (t0.clientY + t1.clientY) / 2;
+
     if (lastPinchDist) {
-      pinchScale = Math.min(2, Math.max(0.5, pinchScale * dist / lastPinchDist));
-      inner.style.transform = `scale(${pinchScale})`;
-      inner.style.transformOrigin = '0 0';
+      const ratio = dist / lastPinchDist;
+
+      // Поточний розмір inner
+      const oldW = inner.offsetWidth;
+      const oldH = inner.offsetHeight;
+
+      // Нові розміри з обмеженням
+      const natW = img.naturalWidth || img.width;
+      const natH = img.naturalHeight || img.height;
+      const minW = Math.round(natW * 0.09);
+      const maxW = Math.round(natW * 4.0);
+      const newW = Math.max(minW, Math.min(maxW, Math.round(oldW * ratio)));
+      const newH = Math.round(newW * oldH / oldW);
+
+      // Точка кліку у координатах вмісту (до масштабування)
+      const vpRect = vp.getBoundingClientRect();
+      const contentX = vp.scrollLeft + (midX - vpRect.left);
+      const contentY = vp.scrollTop  + (midY - vpRect.top);
+
+      // Коефіцієнт відносної позиції точки в контенті
+      const relX = contentX / oldW;
+      const relY = contentY / oldH;
+
+      // Застосовуємо новий розмір
+      inner.style.width  = newW + 'px';
+      inner.style.height = newH + 'px';
+
+      // Скролимо так щоб точка під пальцями залишилась на місці
+      vp.scrollLeft = Math.round(relX * newW - (midX - vpRect.left));
+      vp.scrollTop  = Math.round(relY * newH - (midY - vpRect.top));
     }
+
     lastPinchDist = dist;
+    lastPinchMidX = midX;
+    lastPinchMidY = midY;
   }, { passive: false });
-  document.addEventListener('touchend', () => { lastPinchDist = null; });
+
+  document.addEventListener('touchend', e => {
+    if (e.touches.length < 2) lastPinchDist = null;
+  });
 
   /* ══ COLORS ══ */
   const LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };

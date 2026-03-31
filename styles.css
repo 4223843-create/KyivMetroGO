@@ -1312,3 +1312,26 @@ select, select option {
 #feedbackSheet .sheet-sheet-title {
   top: 32px !important; /* Відстань НАД текстом від повзунка */
 }
+
+/* ══ ЗАБОРОНА ВИДІЛЕННЯ ТЕКСТУ ══ */
+body, .station-sheet, .sheet-body, .about-content, .drop-menu, .sheet-handle-bar {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Дозволяємо виділення тільки в полях вводу */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Заборона zoom при подвійному тапі на зображення */
+img {
+  -webkit-touch-callout: none;
+  touch-action: pan-x pan-y;
+}
+
+/* Заборона zoom по всьому body */
+html {
+  touch-action: pan-x pan-y;
+}
