@@ -1109,6 +1109,11 @@ body { background: var(--bg); }
   pointer-events: none;
 }
 
+/* Піднімаємо заголовок саме у вікні "Обрані станції" */
+#favSheet .sheet-sheet-title {
+  top: 19px !important; /* Чим менше число, тим вище напис */
+}
+
 /* ══ П.4 (nav): прибрати підкреслення при tap ══ */
 .nav-link, span.nav-link {
   -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
