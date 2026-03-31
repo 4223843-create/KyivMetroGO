@@ -123,13 +123,14 @@ function openFeedbackSheet(stationsData) {
         <div class="fb-select-wrap">
           <label class="fb-label">Гілка</label>
           ${lineSelectHtml}
+          ${isAndroid ? '<div id="fbLineDropdown" class="fb-dropdown" hidden></div>' : ''}
         </div>
         <div class="fb-select-wrap">
           <label class="fb-label">Станція</label>
           ${stationSelectHtml}
+          ${isAndroid ? '<div id="fbStationDropdown" class="fb-dropdown" hidden></div>' : ''}
         </div>
       </div>
-      ${isAndroid ? '<div id="fbLineDropdown" class="fb-dropdown" hidden></div><div id="fbStationDropdown" class="fb-dropdown" hidden></div>' : ''}
       <div id="fbPositions"></div>
       <button id="fbSend" class="fb-send-btn" disabled>Надіслати зміни</button>
       <div id="fbResult"></div>

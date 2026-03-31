@@ -783,7 +783,7 @@ body { background: var(--bg); }
 
 /* ══ FEEDBACK FORM ══ */
 .fb-selectors { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-.fb-select-wrap { display: flex; flex-direction: column; gap: 4px; }
+.fb-select-wrap { display: flex; flex-direction: column; gap: 4px; position: relative; }
 .fb-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
 .fb-select {
   -webkit-appearance: none;
@@ -837,10 +837,12 @@ body { background: var(--bg); }
   background: var(--bg-card);
   border: 0.5px solid var(--border);
   border-radius: 10px;
-  margin-top: -6px;
-  margin-bottom: 8px;
   overflow-y: auto;
-  max-height: 220px;
+  max-height: 50vh;
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(100% + 4px);
+  z-index: 100;
 }
 .fb-dropdown-item {
   display: block;
