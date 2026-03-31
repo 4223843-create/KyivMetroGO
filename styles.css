@@ -266,10 +266,9 @@ body#map-page .map-viewport {
 html { background: var(--bg); color: var(--text); }
 body { background: var(--bg); }
 
-/* ══ UI BUTTONS ══ */
 .ui-buttons {
   position: fixed;
-  right: 14px;
+  right: 12px; /* Було 14px. Тепер центр 44px-кнопки ідеально збігається з 40px-кнопкою зверху */
   bottom: calc(14px + env(safe-area-inset-bottom));
   z-index: 1010;
   display: flex;
@@ -678,7 +677,6 @@ body { background: var(--bg); }
   );
 }
 
-/* ══ DROP MENU EMOJI ══ */
 .drop-item-icon span {
   display: block;
   filter: grayscale(1) brightness(0.15);
@@ -688,11 +686,11 @@ body { background: var(--bg); }
 [data-theme="dark"] .drop-item-icon span {
   filter: grayscale(1) brightness(10);
 }
-/* ══ DROPDOWN MENU ══ */
 .drop-menu {
   position: fixed;
   top: calc(56px + env(safe-area-inset-top));
-  right: 14px;
+  right: 34px; /* Встановлюємо правий край рівно по центру верхньої кнопки */
+  transform: translateX(50%); /* Центруємо менюшку відносно цієї осі */
   z-index: 1050;
   background: var(--bg-sheet);
   border-radius: 12px;
@@ -719,7 +717,6 @@ body { background: var(--bg); }
 .drop-item:active { background: var(--bg-card); }
 .drop-item span:first-child { font-size: 18px; width: 24px; text-align: center; }
 
-/* ══ ABOUT SHEET ══ */
 .about-content {
   padding: 0 0 8px; 
   margin-top: -6px; /* Чим більший мінус, тим сильніше текст "втягнеться" вгору */
@@ -972,9 +969,6 @@ body { background: var(--bg); }
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-/* ══ П.7: більший ⓘ ══ */
-#aboutItem span { font-size: 26px !important; line-height:1; }
-
 /* ══ П.8: штрихування на шітах (протилежний напрям) у світлій темі ══ */
 
 
@@ -995,18 +989,97 @@ body { background: var(--bg); }
 }
 .fb-reset-btn:active { opacity: 1; }
 
-/* ══ П.4: олівець у position-row — не зміщує пілюлі ══ */
+/* ══ ОЛІВЕЦЬ ТА ПОПАП РЕДАГУВАННЯ ══ */
 .position-row { position: relative; }
+
 .pos-edited-mark {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
   font-size: 16px;
   color: var(--text-muted);
-  opacity: 0.55;
+  opacity: 0.6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px 8px 4px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.pos-edited-mark:active { opacity: 1; transform: scale(1.1); }
+.pos-edited-spacer {
+  width: 24px; /* Невидима розпірка праворуч, зберігає ідеальний центр */
+}
+
+/* Сам попап */
+.edit-popup {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
   cursor: default;
-  user-select: none;
+}
+.edit-popup-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.edit-popup-btns {
+  display: flex;
+  gap: 16px;
+}
+.edit-popup-btn {
+  background: var(--bg-pill);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.edit-popup-btn:active { transform: scale(0.9); }
+/* Наші фірмові кольори для кнопок попапу */
+.edit-popup-btn.btn-reset { color: #c8523a; } /* Червоний метро */
+.edit-popup-btn.btn-ok { color: #5aaa6a; }    /* Зелений метро */
+
+/* Глобальне вікно підтвердження (як на олівці, але по центру) */
+.global-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.global-confirm-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 240px;
+  animation: popIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 /* ══ П.6: центр у fb-select ══ */
@@ -1052,7 +1125,7 @@ body { background: var(--bg); }
   letter-spacing: .04em;
   color: var(--text-muted);
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 12px;
 }
 .fb-exit-label {
   font-size: 13px;
@@ -1133,8 +1206,12 @@ select, select option {
 }
 
 /* ══ П.8: більший ⓘ ══ */
-#aboutItem span { font-size: 28px !important; line-height:1; }
-
+#aboutItem span { 
+  font-size: 28px !important; 
+  line-height: 1; 
+  display: inline-block; 
+  padding: 0 2px; /* Даємо іконці трохи місця, щоб iOS її не обрізав */
+}
 .fb-transfer-bar {
   display: inline-block;
   width: 2px; height: 14px;
@@ -1227,6 +1304,23 @@ select, select option {
 /* Якщо тема темна, показуємо біле серце (🤍) */
 [data-theme="dark"] .about-heart-icon-wrapper .heart-dark-emoji {
   display: inline;
+}
+
+/* ══ ТЕМАТИЧНІ ОЛІВЦІ В "ПРО ДОДАТОК" ══ */
+.about-pencil-icon-wrapper span {
+  display: none;
+}
+
+/* У світлій темі показуємо перший і робимо його чорним (знебарвлюємо і затемнюємо) */
+[data-theme="light"] .about-pencil-icon-wrapper .pencil-light-emoji {
+  display: inline;
+  filter: grayscale(100%) brightness(0%);
+}
+
+/* У темній темі показуємо другий і робимо його білим (знебарвлюємо і висвітлюємо) */
+[data-theme="dark"] .about-pencil-icon-wrapper .pencil-dark-emoji {
+  display: inline;
+  filter: grayscale(100%) brightness(1000%);
 }
 
 [data-theme="light"] .about-station-sheet .sheet-body,
@@ -1339,4 +1433,47 @@ img {
 /* Заборона zoom по всьому body */
 html {
   touch-action: pan-x pan-y;
+}
+/* ══ ФІКСОВАНА КНОПКА У ФОРМІ ЗМІН ══ */
+.fb-footer-sticky {
+  position: sticky;
+  bottom: -32px; /* Компенсуємо внутрішній відступ вікна */
+  padding: 12px 16px 32px;
+  margin: 0 -16px -32px;
+  z-index: 100;
+  border-top: 1px solid var(--border);
+}
+/* Щоб кнопка не зливалася з текстом, який під неї заїжджає, задаємо фон */
+[data-theme="light"] .fb-footer-sticky {
+  background-color: #D0D0D5;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] .fb-footer-sticky {
+  background-color: var(--bg-sheet);
+}
+.fb-footer-sticky .fb-send-btn {
+  margin: 0 0 8px 0 !important; /* Прибираємо зайві відступи навколо самої кнопки */
+}
+/* ══ ПЛАВАЮЧЕ ВІКНО ПІДТВЕРДЖЕННЯ ЗМІН ══ */
+.popup-confirm {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 16px;
+  right: 16px;
+  z-index: 1100;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  border-radius: 16px;
+  margin: 0 !important;
+  animation: popUpBottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+[data-theme="light"] .popup-confirm {
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+}
+
+@keyframes popUpBottom {
+  from { transform: translateY(150%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

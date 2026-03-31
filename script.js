@@ -11,8 +11,8 @@
     if (!natW || !natH) return;
     const w  = Math.min(window.innerWidth, document.documentElement.clientWidth);
     const sf = w <= 500 ? 4.5 : 1.5;
-    const zoom = Math.max(0.09, Math.min(4.0, Math.round(vp.clientWidth * sf) / natW));
-    inner.style.width  = Math.round(natW * zoom) + 'px';
+const minZoom = vp.clientWidth / natW; // Забороняє зумити менше ширини екрану
+      const zoom = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / natW));    inner.style.width  = Math.round(natW * zoom) + 'px';
     inner.style.height = Math.round(natH * zoom) + 'px';
     img.style.width = img.style.height = '100%';
     requestAnimationFrame(() => {
@@ -71,7 +71,7 @@
       // Нові розміри з обмеженням
       const natW = img.naturalWidth || img.width;
       const natH = img.naturalHeight || img.height;
-      const minW = Math.round(natW * 0.09);
+      const minW = vp.clientWidth; // НЕ менше ширини екрану
       const maxW = Math.round(natW * 4.0);
       const newW = Math.max(minW, Math.min(maxW, Math.round(oldW * ratio)));
       const newH = Math.round(newW * oldH / oldW);
@@ -145,26 +145,32 @@
      multiRow=true (Хрещатик): кілька positions в одному exit → один рядок.
      Інакше: кожна position — окремий рядок.
   */
+/* ══ RENDER POSITIONS ══ */
   function renderPositions(positions, color, multiRow) {
     if (!positions.length) return '';
     if (positions.length === 1) {
       const p = positions[0];
-      const editedMark = p._edited ? '<span class="pos-edited-mark" title="Значення для цього виходу змінені користувачем">✏</span>' : '';
+      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">✏️</span>` : '';
+      const spacer = p._edited ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row">
+        ${editedMark}
         ${pill('вагон', p.wagon, color)}
         ${pill('двері', p.doors, color)}
-        ${editedMark}
+        ${spacer}
       </div>`;
     }
     if (multiRow) {
-      const anyEdited = positions.some(p => p._edited);
+      const editedPos = positions.find(p => p._edited);
+      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">✏️</span>` : '';
+      const spacer = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row position-row-multi">
+        ${editedMark}
         ${positions.map((p, i) => `
           ${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}
           ${pill('вагон', p.wagon, color)}
           ${pill('двері', p.doors, color)}
         `).join('')}
-        ${anyEdited ? '<span class="pos-edited-mark" title="Значення для цього виходу змінені користувачем">✏</span>' : ''}
+        ${spacer}
       </div>`;
     }
     return positions.map(p => `
@@ -353,80 +359,158 @@
     return NAME_TO_SLUG[normalized] || null;
   }
 
-  /* ══ OPEN STATION ══ */
+/* ══ OPEN STATION ══ */
   function openStation(slug) {
-    if (!stationsData?.[slug]) return;
-    const s     = stationsData[slug];
-    const color = LINE_COLOR[s.line] || '#888';
-    const fav   = isFav(slug);
-
-    sheetBody.innerHTML = `
-      <div class="sheet-header">
-        <span class="sheet-title">${s.name}</span>
-      </div>
-      ${renderDirections(s, color)}
-    `;
-
-    // nav-links: клікабельні назви станцій
-    sheetBody.querySelectorAll('.nav-label').forEach(el => {
-      const target = slugByName(el.dataset.name || '');
-      if (target && target !== slug) {
-        el.classList.add('nav-link');
-        el.addEventListener('click', e => { e.stopPropagation(); openStation(target); });
-      }
-    });
-
-    if (slug === 'R.Khreshchatyk') {
-      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-      sheet.style.maxHeight = vh + 'px';
-      sheet.classList.add('sheet-fullscreen');
-    } else {
-      sheet.style.maxHeight = '';
-      sheet.classList.remove('sheet-fullscreen');
-    }
-
-    // колір handle = колір гілки
-    const handle = sheet.querySelector('.sheet-handle');
-    if (handle) handle.style.background = color;
-
-    // серце в handle-bar
-    const favBtn = sheet.querySelector('.fav-btn-bar');
-    if (favBtn) {
-      const newBtn = favBtn.cloneNode(true);
-      newBtn.innerHTML = heartSvg(fav, slug, color);
-      newBtn.classList.toggle('fav-active', fav);
-      favBtn.parentNode.replaceChild(newBtn, favBtn);
-      newBtn.addEventListener('click', () => {
-        const nowFav = toggleFav(slug);
-        newBtn.innerHTML = heartSvg(nowFav, slug, color);
-        newBtn.classList.toggle('fav-active', nowFav);
+    if (typeof window.hasUnsavedFeedback === 'function' && window.hasUnsavedFeedback()) {
+      window.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+        if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
+        window.fbUnsaved = false;
+        actualOpenStation(); 
+      }, () => {
+        window.fbUnsaved = false;
+        actualOpenStation();
       });
+      return; 
     }
 
-// Примусово закриваємо всі ІНШІ вікна (Про, Зміни, Обране), якщо вони відкриті
-    document.querySelectorAll('.station-sheet').forEach(el => {
-      if (el.id !== 'stationSheet') {
-        el.classList.remove('sheet-open');
+    function actualOpenStation() {
+      if (!stationsData?.[slug]) return;
+      const s     = stationsData[slug];
+      const color = LINE_COLOR[s.line] || '#888';
+      const fav   = isFav(slug);
+
+      sheetBody.innerHTML = `
+        <div class="sheet-header">
+          <span class="sheet-title">${s.name}</span>
+        </div>
+        ${renderDirections(s, color)}
+      `;
+
+      sheetBody.querySelectorAll('.nav-label').forEach(el => {
+        const target = slugByName(el.dataset.name || '');
+        if (target && target !== slug) {
+          el.classList.add('nav-link');
+          el.addEventListener('click', e => { e.stopPropagation(); openStation(target); });
+        }
+      });
+
+      if (slug === 'R.Khreshchatyk') {
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        sheet.style.maxHeight = vh + 'px';
+        sheet.classList.add('sheet-fullscreen');
+      } else {
+        sheet.style.maxHeight = '';
+        sheet.classList.remove('sheet-fullscreen');
       }
-    });
 
-    // Відкриваємо картку станції
-    // Якщо вона вже відкрита — просто оновлюємо вміст без анімації
-    if (!sheet.classList.contains('sheet-open')) {
-      sheet.classList.add('sheet-open');
-      sheetOverlay.classList.add('overlay-visible');
+      const handle = sheet.querySelector('.sheet-handle');
+      if (handle) handle.style.background = color;
+
+      const favBtn = sheet.querySelector('.fav-btn-bar');
+      if (favBtn) {
+        const newBtn = favBtn.cloneNode(true);
+        newBtn.innerHTML = heartSvg(fav, slug, color);
+        newBtn.classList.toggle('fav-active', fav);
+        favBtn.parentNode.replaceChild(newBtn, favBtn);
+        newBtn.addEventListener('click', () => {
+          const nowFav = toggleFav(slug);
+          newBtn.innerHTML = heartSvg(nowFav, slug, color);
+          newBtn.classList.toggle('fav-active', nowFav);
+        });
+      }
+
+      document.querySelectorAll('.station-sheet').forEach(el => {
+        if (el.id !== 'stationSheet') el.classList.remove('sheet-open');
+      });
+
+      if (!sheet.classList.contains('sheet-open')) {
+        sheet.classList.add('sheet-open');
+        sheetOverlay.classList.add('overlay-visible');
+      }
     }
+    actualOpenStation(); // Запускаємо, якщо немає незбережених змін
   }
 
-// 1. Універсальна функція закриття для ВСІХ відкритих вікон
-  function closeAllSheets() {
+  // 1. Універсальна функція закриття для ВСІХ відкритих вікон
+  function closeAllSheets(force = false) {
+    if (!force && typeof window.hasUnsavedFeedback === 'function' && window.hasUnsavedFeedback()) {
+      window.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+        if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
+        window.fbUnsaved = false;
+        closeAllSheets(true); 
+      }, () => {
+        window.fbUnsaved = false;
+        closeAllSheets(true); 
+      });
+      return false;
+    }
     document.querySelectorAll('.station-sheet').forEach(el => {
       el.classList.remove('sheet-open');
       el.style.maxHeight = ''; 
     });
     sheetOverlay.classList.remove('overlay-visible');
+    return true;
   }
   window.closeAllSheets = closeAllSheets;
+  // Обробка кліку на олівець (Попап скасування)
+  sheetBody.addEventListener('click', e => {
+    const pencil = e.target.closest('.pos-edited-mark');
+    if (pencil) {
+      e.stopPropagation();
+      document.querySelectorAll('.edit-popup').forEach(el => el.remove()); // ховаємо старі
+
+      const slug = pencil.dataset.slug;
+      const idx = pencil.dataset.idx;
+
+      const popup = document.createElement('div');
+      popup.className = 'edit-popup';
+popup.innerHTML = `
+        <div class="edit-popup-text">Значення змінено користувачем</div>
+        <div class="edit-popup-btns">
+          <button class="edit-popup-btn btn-ok" aria-label="ОК">✓</button>
+          <button class="edit-popup-btn btn-reset" aria-label="Скасувати">✕</button>
+        </div>
+      `;
+
+      pencil.closest('.position-row').appendChild(popup);
+
+      // Кнопка СКАСУВАТИ
+      popup.querySelector('.btn-reset').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        try {
+          const edits = JSON.parse(localStorage.getItem('metro_local_edits') || '{}');
+          if (edits[slug] && edits[slug][idx]) {
+            delete edits[slug][idx];
+            if (Object.keys(edits[slug]).length === 0) delete edits[slug];
+            localStorage.setItem('metro_local_edits', JSON.stringify(edits));
+          }
+          // Миттєве оновлення картки
+          fetch('stations.json').then(r => r.json()).then(d => {
+            Object.keys(stationsData).forEach(k => delete stationsData[k]);
+            d.stations.forEach(s => { stationsData[s.slug] = s; });
+            if (window.applyLocalEdits) window.applyLocalEdits(stationsData);
+            openStation(slug);
+          });
+        } catch(err) {}
+      });
+
+      // Кнопка ОК
+      popup.querySelector('.btn-ok').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        popup.remove();
+      });
+
+      // Авто-закриття, якщо клікнути деінде
+      setTimeout(() => {
+        document.addEventListener('click', function closePopup(ev) {
+          if (!popup.contains(ev.target)) {
+            popup.remove();
+            document.removeEventListener('click', closePopup);
+          }
+        }, {once: true});
+      }, 0);
+    }
+  });
 
   // 2. Хрестик закриває все
   sheetClose.addEventListener('click', closeAllSheets);
@@ -651,26 +735,42 @@ sheet.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - sw
       if (typeof openFeedbackSheet === 'function') openFeedbackSheet(stationsData);
     });
 
-    // 5. Про додаток: закриває Зміни, відкриває Про. Станція залишається.
+// 5. Про додаток: закриває Зміни, відкриває Про. Станція залишається.
     document.getElementById('aboutItem')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       dropMenu.classList.remove('show');
       dropMenu.hidden = true;
-      document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
-      if (typeof openAboutSheet === 'function') openAboutSheet();
+      
+      // ОНОВЛЕНО: Тепер використовує наше красиве кастомне вікно
+      if (typeof window.hasUnsavedFeedback === 'function' && window.hasUnsavedFeedback()) {
+        window.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+          if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
+          window.fbUnsaved = false;
+          executeAboutTransition();
+        }, () => {
+          window.fbUnsaved = false;
+          executeAboutTransition();
+        });
+        return;
+      }
+      
+      function executeAboutTransition() {
+        document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
+        if (typeof openAboutSheet === 'function') openAboutSheet();
+      }
+      executeAboutTransition(); 
     });
-  })();
-  /* ══ ABOUT SHEET ══ */
+    })(); 
+
 /* ══ ABOUT SHEET ══ */
 function openAboutSheet() {
-  // Створюємо sheet динамічно якщо ще немає
   let aboutSheet = document.getElementById('aboutSheet');
   if (!aboutSheet) {
     aboutSheet = document.createElement('div');
     aboutSheet.id = 'aboutSheet';
     aboutSheet.className = 'station-sheet about-station-sheet';
-aboutSheet.innerHTML = `
+    aboutSheet.innerHTML = `
         <div class="sheet-handle-bar">
           <div class="sheet-handle"></div>
           <span class="sheet-sheet-title about-version-title">KyivMetroGO · версія 0.9</span>
@@ -678,17 +778,20 @@ aboutSheet.innerHTML = `
         </div>
         <div class="sheet-body">
           <div class="about-content">
-            <p>Додаток для заощадження часопростору у київському метро. Натисніть на станцію, і отримаєте вагон та двері, які будуть якнайближче до виходу з підземки.</p>
+            <p>Додаток для заощадження часопростору у київському метро. Натисніть на станцію, і отримаєте вагон та двері, які будуть якнайближче до виходу з підземки.</p>
             <p style="text-align:center;margin:16px 0 4px"><img src="icon-96x96.png" width="64" height="64" style="border-radius:16px"></p>
-            <p>Для швидкого доступу до потрібних станцій, додайте їх в обране.</p>
+            <p>Для швидкого доступу до потрібних станцій, додайте їх в обране.</p>
             <p style="text-align:center;font-size:22px;margin:4px 0" class="about-heart-icon-wrapper">
               <span class="heart-light-emoji">🖤</span>
               <span class="heart-dark-emoji">🤍</span>
             </p>
             <p>Помітили неточність — повідомте. Локальні зміни відобразяться миттєво.</p>
-            <p style="text-align:center;font-size:22px;margin:4px 0">✏️</p>
-            <p>Наразі це PWA-додаток: він відкривається в браузері і не потребує встановлення.</p>
-            <p>Задля швидкого доступу додайте іконку на головний екран телефону.</p>
+            <p style="text-align:center;font-size:22px;margin:4px 0" class="about-pencil-icon-wrapper">
+            <span class="pencil-light-emoji">✏️</span>
+            <span class="pencil-dark-emoji">✏️</span>
+            </p>
+            <p>Наразі це PWA-додаток: він відкривається в браузері і не потребує встановлення.</p>
+            <p>Задля швидкого доступу додайте іконку на головний екран телефону.</p>
             <p class="about-footer"> Зроблено з любовʼю до Києва</p>
           </div>
         </div>`;
@@ -699,10 +802,43 @@ aboutSheet.innerHTML = `
       if (!anyOpen) document.getElementById('sheetOverlay').classList.remove('overlay-visible');
     });
   }
-// Закриваємо Зміни і картку станції перед відкриттям Про
+  // Закриваємо Зміни і картку станції перед відкриттям Про
   document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
   document.getElementById('stationSheet')?.classList.remove('sheet-open');
   aboutSheet.classList.add('sheet-open');
   document.getElementById('sheetOverlay').classList.add('overlay-visible');
 }
-})();
+})()
+/* ══ CUSTOM CONFIRM WINDOW ══ */
+  window.showCustomConfirm = function(message, onYes, onNo) {
+    const overlay = document.createElement('div');
+    overlay.className = 'global-confirm-overlay';
+overlay.innerHTML = `
+      <div class="global-confirm-card">
+        <div class="edit-popup-text" style="font-size:16px">${message}</div>
+        <div class="edit-popup-btns">
+          <button class="edit-popup-btn btn-ok" id="confirmYes">✓</button>
+          <button class="edit-popup-btn btn-reset" id="confirmNo">✕</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#confirmYes').addEventListener('click', () => {
+      overlay.remove();
+      if (onYes) onYes();
+    });
+
+    overlay.querySelector('#confirmNo').addEventListener('click', () => {
+      overlay.remove();
+      if (onNo) onNo();
+    });
+    
+    // Закриття по кліку на фон (як "Ні")
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        if (onNo) onNo();
+      }
+    });
+  };

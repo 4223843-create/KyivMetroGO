@@ -6,6 +6,7 @@ const LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
 const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
 const LINE_ORDER = ['red', 'blue', 'green'];
 const LOCAL_EDITS_KEY = 'metro_local_edits';
+let currentStationsData = null; // Глобально для попапу збереження
 
 function getLocalEdits() {
   try { return JSON.parse(localStorage.getItem(LOCAL_EDITS_KEY) || '{}'); } catch { return {}; }
@@ -28,7 +29,7 @@ function applyLocalEdits(stationsData) {
       for (const exit of dir.exits) {
         for (let i = 0; i < exit.positions.length; i++) {
           if (posEdits[posIdx] !== undefined) {
-            exit.positions[i] = { ...exit.positions[i], ...posEdits[posIdx], _edited: true };
+            exit.positions[i] = { ...exit.positions[i], ...posEdits[posIdx], _edited: true, _slug: slug, _posIdx: posIdx };
           }
           posIdx++;
         }
@@ -56,11 +57,11 @@ function bindSteppers(container) {
       const max = parseInt(btn.dataset.max);
       let val = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
       el.textContent = Math.max(min, Math.min(max, val));
+      window.fbUnsaved = true; // Фіксуємо, що були зміни
     });
   });
 }
 
-/* ── Формуємо рядок змін для відправки ── */
 function changeText(p, nw, nd, closed) {
   const loc = [p.dir, p.exit].filter(Boolean).join(' · ');
   if (closed) return `${loc}: ВИХІД ЗАКРИТО`;
@@ -72,6 +73,9 @@ function changeText(p, nw, nd, closed) {
 
 function openFeedbackSheet(stationsData) {
   try {
+  currentStationsData = stationsData;
+  window.fbUnsaved = false;
+
   let sheet = document.getElementById('feedbackSheet');
   if (!sheet) {
     sheet = document.createElement('div');
@@ -90,9 +94,8 @@ function openFeedbackSheet(stationsData) {
       list.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
   }
 
-  const isAndroid = true; // кастомний dropdown для всіх платформ
+  const isAndroid = true;
 
-  // На Android — кастомні dropdown, на iOS/інших — нативний <select>
   const lineSelectHtml = isAndroid
     ? `<button type="button" class="fb-custom-select" id="fbLineBtn">
          <span id="fbLineLabel">— всі —</span>
@@ -136,9 +139,12 @@ function openFeedbackSheet(stationsData) {
         </div>
       </div>
       <div id="fbPositions"></div>
-      <button id="fbSend" class="fb-send-btn" disabled>Надіслати зміни</button>
-      <div id="fbResult"></div>
-      <div id="fbResetWrap"></div>
+      
+      <div class="fb-footer-sticky">
+        <button id="fbSend" class="fb-send-btn" disabled>Запропонувати зміни</button>
+        <div id="fbResult"></div>
+        <div id="fbResetWrap"></div>
+      </div>
     </div>`;
 
   const posEl     = document.getElementById('fbPositions');
@@ -194,6 +200,7 @@ function openFeedbackSheet(stationsData) {
         closeAllDD();
         const s = STATIONS_FOR_FORM[stationEl.value];
         if (s && !lineEl.value) { lineEl.value = s.line; lineLbl.textContent = LINE_NAMES[s.line]; }
+        window.fbUnsaved = false;
         renderPositions(stationEl.value);
       }));
     }
@@ -211,45 +218,51 @@ function openFeedbackSheet(stationsData) {
       if (!open) { buildStationDD(); stationDD.hidden = false; stationBtn.classList.add('fb-select-open'); }
     });
     setTimeout(() => { document.addEventListener('click', closeAllDD); }, 0);
-    sheet._closeAllDD = closeAllDD; // зберігаємо для cleanup
+    sheet._closeAllDD = closeAllDD;
 
   } else {
-    // iOS / desktop — нативні select
     lineEl    = document.getElementById('fbLine');
     stationEl = document.getElementById('fbStation');
 
-    lineEl.addEventListener('change', () => {
-      stationEl.innerHTML = stationOptions(lineEl.value);
-      stationEl.value = '';
-      posEl.innerHTML = '';
-      sendBtn.disabled = true;
-    });
+lineEl.addEventListener('change', () => {
+    stationEl.innerHTML = stationOptions(lineEl.value);
+    stationEl.value = '';
+    posEl.innerHTML = '';
+    sendBtn.disabled = true;
+    renderResetBtn(); // <--- Додали оновлення кнопки
+  });
 
-    stationEl.addEventListener('change', () => {
-      const slug = stationEl.value;
-      if (!slug) { posEl.innerHTML = ''; sendBtn.disabled = true; return; }
-      const s = STATIONS_FOR_FORM[slug];
-      if (s && !lineEl.value) lineEl.value = s.line;
-      renderPositions(slug);
-    });
-  } // end platform if
-
-  function renderResetBtn() {
-    resetWrap.innerHTML = hasLocalEdits()
-      ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
-    document.getElementById('fbReset')?.addEventListener('click', () => {
-      if (!confirm('Скинути всі локальні зміни та повернутись до стандартних даних?')) return;
-      clearAllLocalEdits();
-      fetch('stations.json').then(r => r.json()).then(d => {
-        Object.keys(stationsData).forEach(k => delete stationsData[k]);
-        d.stations.forEach(s => { stationsData[s.slug] = s; });
-        applyLocalEdits(stationsData);
-      });
-      resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
-      renderPositions(stationEl.value);
-    });
+  stationEl.addEventListener('change', () => {
+    const slug = stationEl.value;
+    if (!slug) { 
+      posEl.innerHTML = ''; 
+      sendBtn.disabled = true; 
+      renderResetBtn(); // <--- Додали оновлення кнопки, якщо скинули вибір
+      return; 
+    }
+    const s = STATIONS_FOR_FORM[slug];
+    if (s && !lineEl.value) lineEl.value = s.line;
+    renderPositions(slug);
+  });
   }
 
+function renderResetBtn() {
+    resetWrap.innerHTML = (hasLocalEdits() && !stationEl.value)
+      ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
+      
+    document.getElementById('fbReset')?.addEventListener('click', () => {
+      window.showCustomConfirm('Скинути всі локальні зміни та повернутись до стандартних даних?', () => {
+        clearAllLocalEdits();
+        fetch('stations.json').then(r => r.json()).then(d => {
+          Object.keys(stationsData).forEach(k => delete stationsData[k]);
+          d.stations.forEach(s => { stationsData[s.slug] = s; });
+          applyLocalEdits(stationsData);
+        });
+        resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
+        renderPositions(stationEl.value);
+      });
+    });
+  }
   function renderPositions(slug) {
     if (!slug) { posEl.innerHTML = ''; sendBtn.disabled = true; return; }
     const s = STATIONS_FOR_FORM[slug];
@@ -258,142 +271,240 @@ function openFeedbackSheet(stationsData) {
       return;
     }
     const edits = getLocalEdits()[slug] || {};
-    posEl.innerHTML = s.positions.map((p, i) => {
-      const w = parseInt(edits[i]?.wagon ?? p.wagon) || 1;
-      const d = parseInt(edits[i]?.doors  ?? p.doors) || 1;
-      const isEdited = edits[i] !== undefined;
-      const isClosed = edits[i]?.closed;
-      // Функція правильного регістру назви станції
-      function properCase(name) {
-        // Слова що завжди з великої всередині назви
-        const alwaysCap = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
-        return name.split(' ').map((w, i) => {
-          const wl = w.toLowerCase();
-          if (i === 0 || alwaysCap.has(wl)) return wl.charAt(0).toUpperCase() + wl.slice(1);
-          return wl;
-        }).join(' ');
+
+    const groups = [];
+    s.positions.forEach((p, i) => {
+      const key = p.dir;
+      let g = groups.find(g => g.key === key);
+      if (!g) {
+        g = { key, dir: p.dir, items: [] };
+        groups.push(g);
       }
+      g.items.push({ p, i });
+    });
+
+    function properCase(name) {
+      const alwaysCap = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
+      return name.split(' ').map((w, index) => {
+        const wl = w.toLowerCase();
+        if (index === 0 || alwaysCap.has(wl)) return wl.charAt(0).toUpperCase() + wl.slice(1);
+        return wl;
+      }).join(' ');
+    }
+
+    posEl.innerHTML = groups.map(g => {
       let dirLabel;
-      const dirLower = p.dir.toLowerCase();
+      const dirLower = g.dir.toLowerCase();
       if (dirLower === 'кінцева' || dirLower === 'вихід праворуч' || dirLower === '__long_transfer__') {
-        dirLabel = p.dir;
+        dirLabel = g.dir;
       } else {
-        const rawName = p.dir.replace(/^[Пп]опередня\s+/, '');
-        dirLabel = `попередня ${properCase(rawName)}`;
+        const rawName = g.dir.replace(/^[Пп]опередня\s+/, '');
+        dirLabel = `Попередня ${properCase(rawName)}`;
       }
-      // Форматуємо exit
-      let exitHtml = '';
-      if (p.exit) {
-        const EMOJI_COLOR = { '🟥': '#c8523a', '🟦': '#5b9bd5', '🟩': '#5aaa6a' };
-        // Визначаємо колір за emoji
-        const emojiMatch = [...p.exit.matchAll(/[\u{1F7E5}\u{1F7E6}\u{1F7E9}]/gu)].find(m => EMOJI_COLOR[m[0]]);
-        const lineColor = emojiMatch ? EMOJI_COLOR[emojiMatch[0]] : null;
-        // Прибираємо emoji і nbsp
-        const cleanExit = p.exit.replace(/[\u{1F7E5}\u{1F7E6}\u{1F7E9}]/gu,'').replace(/[\u00a0\u202f]/g,' ').replace(/\s+/g,' ').trim();
-        const isPересадка = /пересадка|перехід/i.test(cleanExit);
-        if (isPересадка) {
-          // Зберігаємо "пересадка на" + | Назва |
-          const prefix = cleanExit.match(/^(пересадка на|короткий перехід на|довгий перехід на|перехід на)\s*/i)?.[0] || 'пересадка на ';
-          const name = cleanExit.slice(prefix.length).trim();
-          const color = lineColor || 'var(--text-muted)';
-          exitHtml = `<div class="fb-exit-label fb-transfer">
-            <span class="fb-transfer-prefix">${prefix.trim()}</span>
-            <span class="fb-transfer-bar" style="background:${color}"></span>
-            <span>${name}</span>
-            <span class="fb-transfer-bar" style="background:${color}"></span>
-          </div>`;
-        } else {
-          exitHtml = `<div class="fb-exit-label">${cleanExit}</div>`;
+
+      const anyEdited = g.items.some(item => edits[item.i] !== undefined);
+
+      const itemsHtml = g.items.map((item, index) => {
+        const w = parseInt(edits[item.i]?.wagon ?? item.p.wagon) || 1;
+        const d = parseInt(edits[item.i]?.doors  ?? item.p.doors) || 1;
+        const isClosed = edits[item.i]?.closed;
+        
+        let exitHtml = '';
+        if (item.p.exit) {
+          const EMOJI_COLOR = { '🟥': '#c8523a', '🟦': '#5b9bd5', '🟩': '#5aaa6a' };
+          const emojiMatch = item.p.exit.match(/[\u{1F7E5}\u{1F7E6}\u{1F7E9}]/u);
+          const lineColor = emojiMatch ? EMOJI_COLOR[emojiMatch[0]] : null;
+          const cleanExit = item.p.exit.replace(/[\u{1F7E5}\u{1F7E6}\u{1F7E9}]/gu,'').replace(/[\u00a0\u202f]/g,' ').replace(/\s+/g,' ').trim();
+          const isPересадка = /пересадка|перехід/i.test(cleanExit);
+          
+          if (isPересадка) {
+            const prefix = cleanExit.match(/^(пересадка на|короткий перехід на|довгий перехід на|перехід на)\s*/i)?.[0] || 'пересадка на ';
+            const name = cleanExit.slice(prefix.length).trim();
+            const color = lineColor || 'var(--text-muted)';
+            exitHtml = `<div class="fb-exit-label fb-transfer" style="${index > 0 ? 'margin-top:6px;' : ''}">
+              <span class="fb-transfer-prefix">${prefix.trim()}</span>
+              <span class="fb-transfer-bar" style="background:${color}"></span>
+              <span>${name}</span>
+              <span class="fb-transfer-bar" style="background:${color}"></span>
+            </div>`;
+          } else {
+            exitHtml = `<div class="fb-exit-label" style="${index > 0 ? 'margin-top:6px;' : ''}">${cleanExit}</div>`;
+          }
         }
-      }
-      return `<div class="fb-pos-row${isClosed ? ' fb-pos-closed' : ''}" data-idx="${i}">
-        <div class="fb-dir-label">${dirLabel}${isEdited ? ' <span class="fb-edited-mark">✏</span>' : ''}</div>
+
+        return `
         ${exitHtml}
-        ${isClosed
-          ? `<div class="fb-closed-note">Вихід позначено як недоступний</div>`
-          : `<div class="fb-pos-wrap"><div class="fb-pos-inputs">${stepperHtml(`fbW${i}`, w, 1, 5, 'вагон')}${stepperHtml(`fbD${i}`, d, 1, 4, 'двері')}</div><button type="button" class="fb-close-exit" data-idx="${i}" title="Позначити вихід як недоступний">✕</button></div>`
-        }
+        <div class="${isClosed ? 'fb-pos-closed' : ''}">
+          ${isClosed
+            ? `<div class="fb-closed-note" style="padding: 0;">Вихід позначено як недоступний</div>`
+            : `<div class="fb-pos-wrap"><div class="fb-pos-inputs">${stepperHtml(`fbW${item.i}`, w, 1, 5, 'вагон')}${stepperHtml(`fbD${item.i}`, d, 1, 4, 'двері')}</div><button type="button" class="fb-close-exit" data-idx="${item.i}" title="Позначити вихід як недоступний">✕</button></div>`
+          }
+        </div>`;
+      }).join('<div style="height: 6px;"></div>'); // Зменшений відступ між блоками
+
+      return `<div class="fb-pos-row">
+        <div class="fb-dir-label">${dirLabel}${anyEdited ? ' <span class="fb-edited-mark">✏</span>' : ''}</div>
+        <div style="margin-top: 4px;">
+          ${itemsHtml}
+        </div>
       </div>`;
     }).join('');
+
     bindSteppers(posEl);
     sendBtn.disabled = false;
 
-    // п.3: кнопки закриття виходу
-    posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
-      btn.addEventListener('click', async () => {
+posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
+      btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
         const p   = s.positions[idx];
         const loc = [p.dir.startsWith('попередня') ? p.dir : `Попередня ${p.dir}`, p.exit].filter(Boolean).join(' · ');
-        if (!confirm(`Позначити вихід як недоступний?\n${loc}`)) return;
-
-        // Відправити
-        await fetch(FORMSPREE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` })
-        }).catch(e => console.warn(e));
-
-        // Питання локально
-        if (confirm('Застосувати локально?\n(Вихід не відображатиметься у вашому додатку)')) {
+        
+        window.showCustomConfirm('Позначити вихід як недоступний?', () => {
+          // 1. Одразу застосовуємо локально і оновлюємо інтерфейс
           saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
           applyLocalEdits(stationsData);
+          window.fbUnsaved = false;
           renderPositions(slug);
-          renderResetBtn();
-        }
+          if (typeof renderResetBtn === 'function') renderResetBtn();
+
+          // 2. Відправляємо інформацію автору у фоновому режимі
+          fetch(FORMSPREE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` })
+          }).catch(e => console.warn(e));
+
+          // 3. ВИВОДИМО ТЕКСТ УСПІХУ ТА КНОПКУ СКАСУВАННЯ
+          resultEl.innerHTML = `
+            <p class="fb-note fb-success" style="padding-bottom: 0; margin-bottom: 6px; line-height: 1.4;">
+              Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.
+            </p>
+            <button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top: 0; padding-top: 8px;">Скасувати ці зміни</button>
+          `;
+
+          // Вішаємо логіку скасування на цю нову кнопку
+          document.getElementById('fbUndoCurrent')?.addEventListener('click', () => {
+            const edits = getLocalEdits();
+            if (edits[slug]) {
+              delete edits[slug];
+              if (Object.keys(edits).length === 0) clearAllLocalEdits();
+              else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+            }
+            fetch('stations.json').then(r => r.json()).then(d => {
+              const targetData = currentStationsData || stationsData;
+              Object.keys(targetData).forEach(k => delete targetData[k]);
+              d.stations.forEach(st => { targetData[st.slug] = st; });
+              if (window.applyLocalEdits) window.applyLocalEdits(targetData);
+              resultEl.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
+              renderPositions(slug);
+              if (typeof renderResetBtn === 'function') renderResetBtn();
+            });
+          });
+        });
       });
     });
-    renderResetBtn();
+            renderResetBtn();
   }
 
-  // change listeners — вище в else блоці
-
-  sendBtn.addEventListener('click', async () => {
+// Робимо функцію глобальною, щоб її міг викликати script.js при закритті вікон
+  window.triggerFeedbackSubmit = async function(background = false) {
     const slug = stationEl.value;
     if (!slug) return;
-    const s      = STATIONS_FOR_FORM[slug];
+    const s = STATIONS_FOR_FORM[slug];
     const changes = s.positions.map((p, i) => {
       const nw = String(document.getElementById(`fbW${i}`)?.textContent ?? p.wagon);
       const nd = String(document.getElementById(`fbD${i}`)?.textContent ?? p.doors);
       return (nw !== p.wagon || nd !== p.doors) ? { i, p, nw, nd } : null;
     }).filter(Boolean);
 
-    if (!changes.length) { resultEl.innerHTML = '<p class="fb-note">Змін не виявлено.</p>'; return; }
-    sendBtn.disabled = true;
-    sendBtn.textContent = 'Надсилаємо…';
+    if (!changes.length) { 
+      if (!background) resultEl.innerHTML = '<p class="fb-note">Змін не виявлено.</p>'; 
+      window.fbUnsaved = false;
+      return; 
+    }
+    
+    // 1. ОДРАЗУ ЗБЕРІГАЄМО ЛОКАЛЬНО
+    changes.forEach(c => saveLocalEdit(slug, c.i, { wagon: c.nw, doors: c.nd }));
+    if (typeof window.applyLocalEdits === 'function') window.applyLocalEdits(currentStationsData || stationsData);
+    window.fbUnsaved = false; // Зміни збережено
 
-    await fetch(FORMSPREE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        station: s.name, slug, line: LINE_NAMES[s.line],
-        changes: changes.map(c => changeText(c.p, c.nw, c.nd, false)).join('\n')
-      })
-    }).catch(e => console.warn(e));
+    // Якщо це робиться фоном (при закритті вікна), далі не оновлюємо UI
+    if (!background) {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Надсилаємо…';
+      renderPositions(slug); // Миттєво перемальовуємо форму (щоб з'явилися олівці)
+      resultEl.innerHTML = '';
+    }
 
-    // п.9: оновлений текст
-    resultEl.innerHTML = `
-      <div class="fb-confirm">
-        <p>Дякуємо, зміни надіслано.<br>Застосувати їх локально?</p>
-        <div class="fb-confirm-btns">
-          <button id="fbApplyYes" class="fb-confirm-btn fb-yes">Так</button>
-          <button id="fbApplyNo"  class="fb-confirm-btn fb-no">Ні</button>
-        </div>
-      </div>`;
+    // Допоміжна функція для кнопки скасування
+    const attachUndoBtn = () => {
+      document.getElementById('fbUndoCurrent')?.addEventListener('click', () => {
+        const edits = getLocalEdits();
+        if (edits[slug]) {
+          delete edits[slug];
+          if (Object.keys(edits).length === 0) clearAllLocalEdits();
+          else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+        }
+        fetch('stations.json').then(r => r.json()).then(d => {
+          const targetData = currentStationsData || stationsData;
+          Object.keys(targetData).forEach(k => delete targetData[k]);
+          d.stations.forEach(st => { targetData[st.slug] = st; });
+          if (window.applyLocalEdits) window.applyLocalEdits(targetData);
+          resultEl.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
+          renderPositions(slug);
+          if (typeof renderResetBtn === 'function') renderResetBtn();
+        });
+      });
+    };
 
-    document.getElementById('fbApplyYes').addEventListener('click', () => {
-      changes.forEach(c => saveLocalEdit(slug, c.i, { wagon: c.nw, doors: c.nd }));
-      applyLocalEdits(stationsData);
-      resultEl.innerHTML = '<p class="fb-note fb-success">✓ Зміни застосовано локально.</p>';
-      sendBtn.textContent = 'Надіслати зміни';
-      sendBtn.disabled = false;
-      renderResetBtn();
-      renderPositions(slug);
-    });
-    document.getElementById('fbApplyNo').addEventListener('click', () => {
-      resultEl.innerHTML = '<p class="fb-note">Зміни надіслано автору.</p>';
-      sendBtn.textContent = 'Надіслати зміни';
-      sendBtn.disabled = false;
-    });
+    try {
+      // 2. ВІДПРАВЛЯЄМО НА СЕРВЕР ФОНОМ
+      const response = await fetch(FORMSPREE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          station: s.name, slug, line: LINE_NAMES[s.line],
+          changes: changes.map(c => changeText(c.p, c.nw, c.nd, false)).join('\n')
+        })
+      });
+
+      if (!response.ok) throw new Error('Помилка сервера');
+
+      if (!background) {
+        sendBtn.textContent = 'Запропонувати зміни';
+        sendBtn.disabled = false;
+        
+        // 3. ВИВОДИМО ТЕКСТ УСПІХУ ТА КНОПКУ СКАСУВАННЯ
+        resultEl.innerHTML = `
+          <p class="fb-note fb-success" style="padding-bottom: 0; margin-bottom: 6px; line-height: 1.4;">
+            Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.
+          </p>
+          <button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top: 0; padding-top: 8px;">Скасувати ці зміни</button>
+        `;
+        attachUndoBtn();
+      }
+    } catch (error) {
+      console.warn(error);
+      if (!background) {
+        sendBtn.textContent = 'Запропонувати зміни';
+        sendBtn.disabled = false;
+        // Навіть якщо помилка інтернету, локально ми вже зберегли
+        resultEl.innerHTML = `
+          <p class="fb-note" style="color: #c8523a; padding-bottom: 0; margin-bottom: 6px; line-height: 1.4;">
+            Немає зв'язку з сервером.<br>Але зміни збережено локально.
+          </p>
+          <button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top: 0; padding-top: 8px;">Скасувати ці зміни</button>
+        `;
+        attachUndoBtn();
+      }
+    }
+  };
+
+  // При кліку на кнопку викликаємо функцію
+  sendBtn.addEventListener('click', () => {
+    if (typeof window.triggerFeedbackSubmit === 'function') {
+      window.triggerFeedbackSubmit(false);
+    }
   });
 
   document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
@@ -408,12 +519,62 @@ function openFeedbackSheet(stationsData) {
   } catch(err) { console.error('[FeedbackSheet ERROR]', err); alert('Помилка: ' + err.message); }
 }
 
-function closeFeedbackSheet() {
+function forceCloseFeedbackSheet() {
+  window.fbUnsaved = false;
   const s = document.getElementById('feedbackSheet');
   if (s?._closeAllDD) { document.removeEventListener('click', s._closeAllDD); s._closeAllDD = null; }
   s?.classList.remove('sheet-open');
   const anyOpen = document.querySelectorAll('.station-sheet.sheet-open').length > 0;
   if (!anyOpen) document.getElementById('sheetOverlay')?.classList.remove('overlay-visible');
+}
+
+// === РОЗУМНА ПЕРЕВІРКА НА ЗМІНИ ===
+window.hasUnsavedFeedback = function() {
+  // ДОДАНО: Якщо вікно змін закрите, одразу кажемо, що незбережених змін немає!
+  const fbSheet = document.getElementById('feedbackSheet');
+  if (!fbSheet || !fbSheet.classList.contains('sheet-open')) return false;
+
+  const stationEl = document.getElementById('fbStation');
+  if (!stationEl || !stationEl.value) return false;
+  const s = STATIONS_FOR_FORM[stationEl.value];
+  if (!s) return false;
+
+  const edits = getLocalEdits()[stationEl.value] || {};
+  let dirty = false;
+  
+  // Перевіряємо кожну пілюлю, чи відрізняється її значення від початкового
+  s.positions.forEach((p, i) => {
+    const wNode = document.getElementById(`fbW${i}`);
+    const dNode = document.getElementById(`fbD${i}`);
+    if (wNode && dNode) {
+      if (wNode.textContent !== String(edits[i]?.wagon ?? p.wagon) || 
+          dNode.textContent !== String(edits[i]?.doors ?? p.doors)) {
+        dirty = true;
+      }
+    }
+  });
+  return dirty;
+};
+
+function closeFeedbackSheet() {
+  if (window.hasUnsavedFeedback && window.hasUnsavedFeedback()) {
+    window.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+      if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
+      window.fbUnsaved = false;
+      window.closeAllSheets(true);
+    }, () => {
+      window.fbUnsaved = false;
+      window.closeAllSheets(true);
+    });
+    return;
+  }
+  
+  if (typeof window.closeAllSheets === 'function') {
+    window.closeAllSheets(true); 
+  } else {
+    document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
+    document.getElementById('sheetOverlay')?.classList.remove('overlay-visible');
+  }
 }
 
 window.openFeedbackSheet  = openFeedbackSheet;
