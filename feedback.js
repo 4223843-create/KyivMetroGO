@@ -58,6 +58,13 @@ function bindSteppers(container) {
       let val = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
       el.textContent = Math.max(min, Math.min(max, val));
       window.fbUnsaved = true; // Фіксуємо, що були зміни
+      
+      // ОЖИВЛЯЄМО КНОПКУ: Якщо користувач вносить нові зміни, повертаємо її в активний стан
+      const sendBtn = document.getElementById('fbSend');
+      if (sendBtn) {
+        sendBtn.textContent = 'Запропонувати зміни';
+        sendBtn.disabled = false;
+      }
     });
   });
 }
@@ -468,11 +475,11 @@ posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
         })
       });
 
-      if (!response.ok) throw new Error('Помилка сервера');
+if (!response.ok) throw new Error('Помилка сервера');
 
       if (!background) {
-        sendBtn.textContent = 'Запропонувати зміни';
-        sendBtn.disabled = false;
+        sendBtn.textContent = 'Надіслано ✓';
+        sendBtn.disabled = true; // Блокуємо кнопку, щоб не дублювати відправку
         
         // 3. ВИВОДИМО ТЕКСТ УСПІХУ ТА КНОПКУ СКАСУВАННЯ
         resultEl.innerHTML = `

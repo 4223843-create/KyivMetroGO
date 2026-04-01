@@ -1208,9 +1208,11 @@ select, select option {
 /* ══ П.8: більший ⓘ ══ */
 #aboutItem span { 
   font-size: 28px !important; 
-  line-height: 1; 
+  line-height: 1.2 !important; /* Даємо трохи більше місця по вертикалі */
   display: inline-block; 
-  padding: 0 2px; /* Даємо іконці трохи місця, щоб iOS її не обрізав */
+  padding: 0 4px !important;   /* Збільшуємо відступи по боках */
+  overflow: visible;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif; /* Змушуємо Айфон малювати його своїм рідним системним шрифтом, який ідеально відкалібрований */
 }
 .fb-transfer-bar {
   display: inline-block;
