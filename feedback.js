@@ -49,23 +49,121 @@ function stepperHtml(id, value, min, max, label) {
     </div>
   </div>`;
 }
+/* ── Логіка сусідніх дверей ── */
+function getAdjacentDoors(w, d) {
+  const adj = [];
+  if (d > 1) adj.push({w: w, d: d - 1});
+  if (d < 4) adj.push({w: w, d: d + 1});
+  if (d === 4 && w < 5) adj.push({w: w + 1, d: 1});
+  if (d === 1 && w > 1) adj.push({w: w - 1, d: 4});
+  return adj;
+}
+
 function bindSteppers(container) {
   container.querySelectorAll('.fb-step').forEach(btn => {
     btn.addEventListener('click', () => {
-      const el  = document.getElementById(btn.dataset.id);
-      const min = parseInt(btn.dataset.min);
-      const max = parseInt(btn.dataset.max);
-      let val = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
-      el.textContent = Math.max(min, Math.min(max, val));
-      window.fbUnsaved = true; // Фіксуємо, що були зміни
-      
-      // ОЖИВЛЯЄМО КНОПКУ: Якщо користувач вносить нові зміни, повертаємо її в активний стан
-      const sendBtn = document.getElementById('fbSend');
-      if (sendBtn) {
-        sendBtn.textContent = 'Запропонувати зміни';
-        sendBtn.disabled = false;
+      const id = btn.dataset.id;
+      const el = document.getElementById(id);
+      const isExtra = id.includes('_ex');
+      const idx = id.replace(/[^0-9]/g, '');
+
+      if (isExtra) {
+        // Додаткові двері: циклічно перемикаємо тільки між сусідами!
+        const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+        const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+        const adj = getAdjacentDoors(mainW, mainD);
+        
+        let curW = document.getElementById(`fbW_ex${idx}`).textContent;
+        let curD = document.getElementById(`fbD_ex${idx}`).textContent;
+        
+        if (curW === '-' || curD === '-') {
+            curW = adj[0].w; curD = adj[0].d;
+        } else {
+            curW = parseInt(curW); curD = parseInt(curD);
+            const curIdx = adj.findIndex(a => a.w === curW && a.d === curD);
+            if (curIdx === -1) {
+                curW = adj[0].w; curD = adj[0].d;
+            } else if (adj.length > 1) {
+                const nextIdx = (curIdx + (btn.classList.contains('fb-step-up') ? 1 : -1) + adj.length) % adj.length;
+                curW = adj[nextIdx].w; curD = adj[nextIdx].d;
+            }
+        }
+        document.getElementById(`fbW_ex${idx}`).textContent = curW;
+        document.getElementById(`fbD_ex${idx}`).textContent = curD;
+      } else {
+        // Основні двері: звичайна логіка +/-
+        const min = parseInt(btn.dataset.min);
+        const max = parseInt(btn.dataset.max);
+        let val = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
+        el.textContent = Math.max(min, Math.min(max, val));
+
+        // Якщо змінили основні двері, перевіряємо чи додаткові досі валідні (суміжні)
+        const exWNode = document.getElementById(`fbW_ex${idx}`);
+        const exDNode = document.getElementById(`fbD_ex${idx}`);
+        if (exWNode && exDNode && exWNode.textContent !== '-') {
+            const newMainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+            const newMainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+            const adj = getAdjacentDoors(newMainW, newMainD);
+            const isValid = adj.some(a => a.w === parseInt(exWNode.textContent) && a.d === parseInt(exDNode.textContent));
+            if (!isValid) {
+                // Якщо стали не валідні — автоматично підтягуємо найближчі правильні
+                exWNode.textContent = adj[0].w;
+                exDNode.textContent = adj[0].d;
+            }
+        }
       }
+
+      window.fbUnsaved = true;
+      const sendBtn = document.getElementById('fbSend');
+      if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
     });
+  });
+
+  // Кнопка "+ Додати ще двері"
+  container.querySelectorAll('.fb-add-door-btn').forEach(btn => {
+     btn.addEventListener('click', () => {
+         const idx = btn.dataset.idx;
+         btn.style.display = 'none';
+         document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
+
+         // Якщо пусто, автоматично підставляємо найближчі сусідні двері
+         const exWNode = document.getElementById(`fbW_ex${idx}`);
+         const exDNode = document.getElementById(`fbD_ex${idx}`);
+         if (exWNode.textContent === '-') {
+             const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+             const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+             const adj = getAdjacentDoors(mainW, mainD);
+             exWNode.textContent = adj[0].w;
+             exDNode.textContent = adj[0].d;
+         }
+         window.fbUnsaved = true;
+         const sendBtn = document.getElementById('fbSend');
+         if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
+     });
+  });
+
+  // Кнопка "Скасувати" додаткові двері
+  container.querySelectorAll('.fb-cancel-extra-btn').forEach(btn => {
+     btn.addEventListener('click', () => {
+         const idx = btn.dataset.idx;
+         document.getElementById(`fbW_ex${idx}`).textContent = '-';
+         document.getElementById(`fbD_ex${idx}`).textContent = '-';
+         document.getElementById(`fbExtraWrap${idx}`).style.display = 'none';
+         document.getElementById(`fbAddBtn${idx}`).style.display = 'block';
+         
+window.fbUnsaved = true;
+         const sendBtn = document.getElementById('fbSend');
+         if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
+     });
+  });
+
+  // Кнопка "ЯК ЦЕ ПРАЦЮЄ"
+  container.querySelectorAll('.fb-info-btn').forEach(btn => {
+     btn.addEventListener('click', () => {
+         const idx = btn.dataset.idx;
+         const textEl = document.getElementById(`fbInfoText${idx}`);
+         textEl.style.display = textEl.style.display === 'none' ? 'block' : 'none';
+     });
   });
 }
 
@@ -91,7 +189,7 @@ function openFeedbackSheet(stationsData) {
     document.body.appendChild(sheet);
   }
 
-  const allStations = Object.entries(STATIONS_FOR_FORM)
+  const allStations = Object.entries(currentStationsData)
     .map(([slug, s]) => ({ slug, ...s }))
     .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
@@ -205,7 +303,7 @@ function openFeedbackSheet(stationsData) {
         stationEl.value = b.dataset.value;
         stationLbl.textContent = b.textContent;
         closeAllDD();
-        const s = STATIONS_FOR_FORM[stationEl.value];
+        const s = currentStationsData[stationEl.value];
         if (s && !lineEl.value) { lineEl.value = s.line; lineLbl.textContent = LINE_NAMES[s.line]; }
         window.fbUnsaved = false;
         renderPositions(stationEl.value);
@@ -247,7 +345,7 @@ lineEl.addEventListener('change', () => {
       renderResetBtn(); // <--- Додали оновлення кнопки, якщо скинули вибір
       return; 
     }
-    const s = STATIONS_FOR_FORM[slug];
+    const s = currentStationsData[slug];
     if (s && !lineEl.value) lineEl.value = s.line;
     renderPositions(slug);
   });
@@ -311,9 +409,28 @@ function renderResetBtn() {
 
       const anyEdited = g.items.some(item => edits[item.i] !== undefined);
 
-      const itemsHtml = g.items.map((item, index) => {
-        const w = parseInt(edits[item.i]?.wagon ?? item.p.wagon) || 1;
-        const d = parseInt(edits[item.i]?.doors  ?? item.p.doors) || 1;
+const itemsHtml = g.items.map((item, index) => {
+        const rawW = String(edits[item.i]?.wagon ?? item.p.wagon);
+        const rawD = String(edits[item.i]?.doors ?? item.p.doors);
+        let wMain = parseInt(rawW) || 1;
+        let dMain = parseInt(rawD) || 1;
+        let wEx = '-'; let dEx = '-';
+        let hasExtra = false;
+
+        // Розбираємо збережені дані (якщо там є кома або тире)
+        if (rawD.includes('-') || rawD.includes(',')) {
+            hasExtra = true;
+            if (rawW.includes(',')) {
+                const wParts = rawW.split(',');
+                const dParts = rawD.split(',');
+                wMain = parseInt(wParts[0]); dMain = parseInt(dParts[0]);
+                wEx = parseInt(wParts[1]); dEx = parseInt(dParts[1]);
+            } else if (rawD.includes('-')) {
+                const dParts = rawD.split('-');
+                wMain = parseInt(rawW); dMain = parseInt(dParts[0]);
+                wEx = wMain; dEx = parseInt(dParts[1]);
+            }
+        }
         const isClosed = edits[item.i]?.closed;
         
         let exitHtml = '';
@@ -339,18 +456,43 @@ function renderResetBtn() {
           }
         }
 
-        return `
+return `
         ${exitHtml}
         <div class="${isClosed ? 'fb-pos-closed' : ''}">
           ${isClosed
             ? `<div class="fb-closed-note" style="padding: 0;">Вихід позначено як недоступний</div>`
-            : `<div class="fb-pos-wrap"><div class="fb-pos-inputs">${stepperHtml(`fbW${item.i}`, w, 1, 5, 'вагон')}${stepperHtml(`fbD${item.i}`, d, 1, 4, 'двері')}</div><button type="button" class="fb-close-exit" data-idx="${item.i}" title="Позначити вихід як недоступний">✕</button></div>`
+            : `<div class="fb-pos-wrap">
+                 <div class="fb-pos-inputs">
+                   ${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}
+                   ${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}
+                 </div>
+                 <button type="button" class="fb-close-exit" data-idx="${item.i}" title="Позначити вихід як недоступний">✕</button>
+               </div>
+               
+               <button type="button" class="fb-add-door-btn" id="fbAddBtn${item.i}" style="display: ${hasExtra ? 'none' : 'block'};" data-idx="${item.i}">Додати двері</button>
+
+               <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};">
+                 <p class="fb-extra-note">Тут ви можете додати ще одні зручні вагон і двері<br>для виходу з поїзду метро</p>
+                 <div class="fb-pos-inputs">
+                   ${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}
+                   ${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}
+                 </div>
+                 <button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">Скасувати</button>
+                 
+                 <button type="button" class="fb-info-btn" data-idx="${item.i}">
+                   <span>ⓘ</span>
+                 </button>
+                 <div class="fb-info-text" id="fbInfoText${item.i}" style="display: none;">
+                   У київському метро зручними для виходу зазвичай є одні або двоє дверей, тому на цьому кроці ви можете обрати тільки сусідні двері відносно тих, які вказали вище.
+                 </div>
+               </div>`
           }
         </div>`;
-      }).join('<div style="height: 6px;"></div>'); // Зменшений відступ між блоками
+      }).join('<div style="height: 6px;"></div>');
 
+      // ДОДАНО: Тут ми остаточно прибрали зайві олівці з назв напрямків
       return `<div class="fb-pos-row">
-        <div class="fb-dir-label">${dirLabel}${anyEdited ? ' <span class="fb-edited-mark">✏</span>' : ''}</div>
+        <div class="fb-dir-label">${dirLabel}</div>
         <div style="margin-top: 4px;">
           ${itemsHtml}
         </div>
@@ -412,16 +554,16 @@ posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
     });
             renderResetBtn();
   }
-
 // Робимо функцію глобальною, щоб її міг викликати script.js при закритті вікон
   window.triggerFeedbackSubmit = async function(background = false) {
     const slug = stationEl.value;
     if (!slug) return;
     const s = STATIONS_FOR_FORM[slug];
-    const changes = s.positions.map((p, i) => {
-      const nw = String(document.getElementById(`fbW${i}`)?.textContent ?? p.wagon);
-      const nd = String(document.getElementById(`fbD${i}`)?.textContent ?? p.doors);
-      return (nw !== p.wagon || nd !== p.doors) ? { i, p, nw, nd } : null;
+const changes = s.positions.map((p, i) => {
+      const vals = extractFinalValues(i);
+      if (!vals) return null;
+      return (vals.finalW !== String(p.wagon) || vals.finalD !== String(p.doors)) 
+             ? { i, p, nw: vals.finalW, nd: vals.finalD } : null;
     }).filter(Boolean);
 
     if (!changes.length) { 
@@ -534,54 +676,123 @@ function forceCloseFeedbackSheet() {
   const anyOpen = document.querySelectorAll('.station-sheet.sheet-open').length > 0;
   if (!anyOpen) document.getElementById('sheetOverlay')?.classList.remove('overlay-visible');
 }
+function extractFinalValues(i) {
+    const wNode = document.getElementById(`fbW${i}`);
+    const dNode = document.getElementById(`fbD${i}`);
+    if (!wNode || !dNode) return null;
+
+    let finalW = wNode.textContent;
+    let finalD = dNode.textContent;
+
+    const exWNode = document.getElementById(`fbW_ex${i}`);
+    const exDNode = document.getElementById(`fbD_ex${i}`);
+    if (exWNode && exWNode.textContent !== '-' && exDNode && exDNode.textContent !== '-') {
+        const exW = exWNode.textContent; const exD = exDNode.textContent;
+        if (finalW === exW) {
+            // Якщо вагон той самий, робимо діапазон (напр., "1-2")
+            const d1 = Math.min(parseInt(finalD), parseInt(exD));
+            const d2 = Math.max(parseInt(finalD), parseInt(exD));
+            finalD = `${d1}-${d2}`;
+        } else {
+            // Якщо вагони різні, зберігаємо через кому
+            const w1 = parseInt(finalW); const w2 = parseInt(exW);
+            const door1 = parseInt(finalD); const door2 = parseInt(exD);
+            if (w1 < w2) { finalW = `${w1}, ${w2}`; finalD = `${door1}, ${door2}`; } 
+            else { finalW = `${w2}, ${w1}`; finalD = `${door2}, ${door1}`; }
+        }
+    }
+    return { finalW, finalD };
+  }
 
 // === РОЗУМНА ПЕРЕВІРКА НА ЗМІНИ ===
 window.hasUnsavedFeedback = function() {
-  // ДОДАНО: Якщо вікно змін закрите, одразу кажемо, що незбережених змін немає!
-  const fbSheet = document.getElementById('feedbackSheet');
-  if (!fbSheet || !fbSheet.classList.contains('sheet-open')) return false;
+  try {
+    const fbSheet = document.getElementById('feedbackSheet');
+    if (!fbSheet || !fbSheet.classList.contains('sheet-open')) return false;
 
-  const stationEl = document.getElementById('fbStation');
-  if (!stationEl || !stationEl.value) return false;
-  const s = STATIONS_FOR_FORM[stationEl.value];
-  if (!s) return false;
+    const stationEl = document.getElementById('fbStation');
+    if (!stationEl || !stationEl.value) return false;
+    
+    // Надійний доступ до даних
+    const data = (typeof STATIONS_FOR_FORM !== 'undefined') ? STATIONS_FOR_FORM : (currentStationsData || {});
+    const s = data[stationEl.value];
+    if (!s || !s.positions) return false;
 
-  const edits = getLocalEdits()[stationEl.value] || {};
-  let dirty = false;
-  
-  // Перевіряємо кожну пілюлю, чи відрізняється її значення від початкового
-  s.positions.forEach((p, i) => {
-    const wNode = document.getElementById(`fbW${i}`);
-    const dNode = document.getElementById(`fbD${i}`);
-    if (wNode && dNode) {
-      if (wNode.textContent !== String(edits[i]?.wagon ?? p.wagon) || 
-          dNode.textContent !== String(edits[i]?.doors ?? p.doors)) {
-        dirty = true;
+    const edits = getLocalEdits()[stationEl.value] || {};
+    let dirty = false;
+    
+    // Перевіряємо, чи змінились цифри безпосередньо в інтерфейсі
+    s.positions.forEach((p, i) => {
+      const vals = extractFinalValues(i);
+      if (vals) {
+        const rawW = String(edits[i]?.wagon ?? p.wagon);
+        const rawD = String(edits[i]?.doors ?? p.doors);
+        
+        let wMain = parseInt(rawW) || 1;
+        let dMain = parseInt(rawD) || 1;
+        let wEx = '-'; let dEx = '-';
+        
+        if (rawD.includes('-') || rawD.includes(',')) {
+            if (rawW.includes(',')) {
+                const wParts = rawW.split(',');
+                const dParts = rawD.split(',');
+                wMain = parseInt(wParts[0]); dMain = parseInt(dParts[0]);
+                wEx = parseInt(wParts[1]); dEx = parseInt(dParts[1]);
+            } else if (rawD.includes('-')) {
+                const dParts = rawD.split('-');
+                wMain = parseInt(rawW); dMain = parseInt(dParts[0]);
+                wEx = wMain; dEx = parseInt(dParts[1]);
+            }
+        }
+
+        const exWNode = document.getElementById(`fbW_ex${i}`);
+        const exDNode = document.getElementById(`fbD_ex${i}`);
+        
+        let currentWEx = exWNode ? exWNode.textContent : '-';
+        let currentDEx = exDNode ? exDNode.textContent : '-';
+        let currentWMain = document.getElementById(`fbW${i}`).textContent;
+        let currentDMain = document.getElementById(`fbD${i}`).textContent;
+
+        if (currentWMain !== String(wMain) || currentDMain !== String(dMain) || 
+            currentWEx !== String(wEx) || currentDEx !== String(dEx)) {
+          dirty = true;
+        }
       }
-    }
-  });
-  return dirty;
+    });
+    return dirty;
+  } catch(e) {
+    console.error("hasUnsavedFeedback error:", e);
+    return false; // Якщо сталася будь-яка помилка, дозволяємо закрити вікно
+  }
 };
 
-function closeFeedbackSheet() {
-  if (window.hasUnsavedFeedback && window.hasUnsavedFeedback()) {
-    window.showCustomConfirm('Застосувати зміни локально та повідомити розробника?', () => {
-      if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
-      window.fbUnsaved = false;
-      window.closeAllSheets(true);
-    }, () => {
-      window.fbUnsaved = false;
-      window.closeAllSheets(true);
-    });
-    return;
-  }
-  
+function forceCloseFeedbackSheet() {
+  window.fbUnsaved = false;
   if (typeof window.closeAllSheets === 'function') {
-    window.closeAllSheets(true); 
+    window.closeAllSheets(true);
   } else {
     document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
-    document.getElementById('sheetOverlay')?.classList.remove('overlay-visible');
+    const anyOpen = document.querySelectorAll('.station-sheet.sheet-open').length > 0;
+    if (!anyOpen) document.getElementById('sheetOverlay')?.classList.remove('overlay-visible');
   }
+}
+
+function closeFeedbackSheet() {
+  try {
+    if (window.hasUnsavedFeedback && window.hasUnsavedFeedback()) {
+      if (typeof window.showCustomConfirm === 'function') {
+        window.showCustomConfirm('Застосувати зміни локально та повідомити розробника?', () => {
+          if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
+          forceCloseFeedbackSheet();
+        }, () => {
+          forceCloseFeedbackSheet();
+        });
+        return;
+      }
+    }
+  } catch(e) { console.error(e); }
+  
+  forceCloseFeedbackSheet(); // Примусове закриття
 }
 
 window.openFeedbackSheet  = openFeedbackSheet;

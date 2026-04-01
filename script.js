@@ -163,17 +163,33 @@ if (lastPinchDist) {
 /* ══ RENDER POSITIONS ══ */
   function renderPositions(positions, color, multiRow) {
     if (!positions.length) return '';
+
+    // Магія розбиття: якщо є кома, малюємо кілька блоків пілюль підряд
+    function generatePills(wStr, dStr) {
+      const wArr = String(wStr).split(',').map(s => s.trim());
+      const dArr = String(dStr).split(',').map(s => s.trim());
+      const blocks = [];
+      const count = Math.max(wArr.length, dArr.length);
+      for (let i = 0; i < count; i++) {
+        const w = wArr[i] || wArr[0];
+        const d = dArr[i] || dArr[0];
+        blocks.push(`${pill('вагон', w, color)}\n${pill('двері', d, color)}`);
+      }
+      return blocks.join('<span class="pos-multi-sep" style="margin: 0 6px;">·</span>');
+    }
+
     if (positions.length === 1) {
       const p = positions[0];
+      const isMulti = String(p.wagon).includes(',');
       const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">✏️</span>` : '';
       const spacer = p._edited ? `<span class="pos-edited-spacer"></span>` : '';
-      return `<div class="position-row">
+      return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
         ${editedMark}
-        ${pill('вагон', p.wagon, color)}
-        ${pill('двері', p.doors, color)}
+        ${generatePills(p.wagon, p.doors)}
         ${spacer}
       </div>`;
     }
+    
     if (multiRow) {
       const editedPos = positions.find(p => p._edited);
       const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">✏️</span>` : '';
@@ -182,20 +198,19 @@ if (lastPinchDist) {
         ${editedMark}
         ${positions.map((p, i) => `
           ${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}
-          ${pill('вагон', p.wagon, color)}
-          ${pill('двері', p.doors, color)}
+          ${generatePills(p.wagon, p.doors)}
         `).join('')}
         ${spacer}
       </div>`;
     }
-    return positions.map(p => `
-      <div class="position-row">
-        ${pill('вагон', p.wagon, color)}
-        ${pill('двері', p.doors, color)}
-      </div>
-    `).join('');
+    
+    return positions.map(p => {
+      const isMulti = String(p.wagon).includes(',');
+      return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
+        ${generatePills(p.wagon, p.doors)}
+      </div>`;
+    }).join('');
   }
-
   /* ══ RENDER DIRECTIONS ══ */
   function renderDirections(s, color) {
     const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
@@ -817,43 +832,45 @@ function openAboutSheet() {
       if (!anyOpen) document.getElementById('sheetOverlay').classList.remove('overlay-visible');
     });
   }
-  // Закриваємо Зміни і картку станції перед відкриттям Про
+// Закриваємо Зміни і картку станції перед відкриттям Про
   document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
   document.getElementById('stationSheet')?.classList.remove('sheet-open');
   aboutSheet.classList.add('sheet-open');
   document.getElementById('sheetOverlay').classList.add('overlay-visible');
 }
-})()
+
 /* ══ CUSTOM CONFIRM WINDOW ══ */
-  window.showCustomConfirm = function(message, onYes, onNo) {
-    const overlay = document.createElement('div');
-    overlay.className = 'global-confirm-overlay';
-overlay.innerHTML = `
-      <div class="global-confirm-card">
-        <div class="edit-popup-text" style="font-size:16px">${message}</div>
-        <div class="edit-popup-btns">
-          <button class="edit-popup-btn btn-ok" id="confirmYes">✓</button>
-          <button class="edit-popup-btn btn-reset" id="confirmNo">✕</button>
-        </div>
+window.showCustomConfirm = function(message, onYes, onNo) {
+  const overlay = document.createElement('div');
+  overlay.className = 'global-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="global-confirm-card">
+      <div class="edit-popup-text" style="font-size:16px">${message}</div>
+      <div class="edit-popup-btns">
+        <button class="edit-popup-btn btn-ok" id="confirmYes">✓</button>
+        <button class="edit-popup-btn btn-reset" id="confirmNo">✕</button>
       </div>
-    `;
-    document.body.appendChild(overlay);
+    </div>
+  `;
+  document.body.appendChild(overlay);
 
-    overlay.querySelector('#confirmYes').addEventListener('click', () => {
-      overlay.remove();
-      if (onYes) onYes();
-    });
+  overlay.querySelector('#confirmYes').addEventListener('click', () => {
+    overlay.remove();
+    if (onYes) onYes();
+  });
 
-    overlay.querySelector('#confirmNo').addEventListener('click', () => {
+  overlay.querySelector('#confirmNo').addEventListener('click', () => {
+    overlay.remove();
+    if (onNo) onNo();
+  });
+  
+  // Закриття по кліку на фон (як "Ні")
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
       overlay.remove();
       if (onNo) onNo();
-    });
-    
-    // Закриття по кліку на фон (як "Ні")
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        overlay.remove();
-        if (onNo) onNo();
-      }
-    });
-  };
+    }
+  });
+};
+
+})();
