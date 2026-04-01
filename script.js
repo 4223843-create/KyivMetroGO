@@ -5,25 +5,38 @@
   const img   = document.getElementById('mapImg');
   const centerX = 0.485, centerY = 0.5;
 
-  function applyZoomAndCenter() {
+function applyZoomAndCenter() {
     const natW = img.naturalWidth || img.width;
     const natH = img.naturalHeight || img.height;
     if (!natW || !natH) return;
     const w  = Math.min(window.innerWidth, document.documentElement.clientWidth);
     const sf = w <= 500 ? 4.5 : 1.5;
-const minZoom = vp.clientWidth / natW; // Забороняє зумити менше ширини екрану
-      const zoom = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / natW));    inner.style.width  = Math.round(natW * zoom) + 'px';
-    inner.style.height = Math.round(natH * zoom) + 'px';
+    const minZoom = vp.clientWidth / natW; // Забороняє зумити менше ширини екрану
+    const zoom = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / natW));
+    
+    const newW = Math.round(natW * zoom);
+    const newH = Math.round(natH * zoom);
+    
+    inner.style.width  = newW + 'px';
+    inner.style.height = newH + 'px';
+    
+    // ДОДАНО: Центрування карти, якщо вона менша за екран
+    const padX = Math.max(0, (vp.clientWidth - newW) / 2);
+    const padY = Math.max(0, (vp.clientHeight - newH) / 2);
+    inner.style.marginLeft = padX + 'px';
+    inner.style.marginTop  = padY + 'px';
+    
     img.style.width = img.style.height = '100%';
+    
     requestAnimationFrame(() => {
-      const left = Math.round(inner.clientWidth  * centerX - vp.clientWidth  / 2);
-      let   top  = Math.round(inner.clientHeight * centerY - vp.clientHeight / 2);
-      top = Math.max(0, Math.min(top, inner.clientHeight - vp.clientHeight));
-      vp.scrollLeft = Math.max(0, left);
-      vp.scrollTop  = top;
+      // Центруємо скрол з урахуванням нових відступів
+      const targetX = padX + newW * centerX;
+      const targetY = padY + newH * centerY;
+      
+      vp.scrollLeft = Math.max(0, targetX - vp.clientWidth / 2);
+      vp.scrollTop  = Math.max(0, targetY - vp.clientHeight / 2);
     });
   }
-
   function adjustViewportHeight() {
     if (!vp) return;
     const top   = vp.getBoundingClientRect().top;
@@ -61,12 +74,17 @@ const minZoom = vp.clientWidth / natW; // Забороняє зумити мен
     const midX = (t0.clientX + t1.clientX) / 2;
     const midY = (t0.clientY + t1.clientY) / 2;
 
-    if (lastPinchDist) {
+if (lastPinchDist) {
       const ratio = dist / lastPinchDist;
 
       // Поточний розмір inner
       const oldW = inner.offsetWidth;
       const oldH = inner.offsetHeight;
+
+      // Точка кліку відносно самого зображення (щоб зум не збивався через margin)
+      const imgRect = inner.getBoundingClientRect();
+      const relX = (midX - imgRect.left) / oldW;
+      const relY = (midY - imgRect.top) / oldH;
 
       // Нові розміри з обмеженням
       const natW = img.naturalWidth || img.width;
@@ -76,24 +94,21 @@ const minZoom = vp.clientWidth / natW; // Забороняє зумити мен
       const newW = Math.max(minW, Math.min(maxW, Math.round(oldW * ratio)));
       const newH = Math.round(newW * oldH / oldW);
 
-      // Точка кліку у координатах вмісту (до масштабування)
-      const vpRect = vp.getBoundingClientRect();
-      const contentX = vp.scrollLeft + (midX - vpRect.left);
-      const contentY = vp.scrollTop  + (midY - vpRect.top);
+      // ДОДАНО: Динамічне центрування при відзумлюванні
+      const padX = Math.max(0, (vp.clientWidth - newW) / 2);
+      const padY = Math.max(0, (vp.clientHeight - newH) / 2);
 
-      // Коефіцієнт відносної позиції точки в контенті
-      const relX = contentX / oldW;
-      const relY = contentY / oldH;
-
-      // Застосовуємо новий розмір
+      // Застосовуємо нові розміри та відступи
       inner.style.width  = newW + 'px';
       inner.style.height = newH + 'px';
+      inner.style.marginLeft = padX + 'px';
+      inner.style.marginTop  = padY + 'px';
 
-      // Скролимо так щоб точка під пальцями залишилась на місці
-      vp.scrollLeft = Math.round(relX * newW - (midX - vpRect.left));
-      vp.scrollTop  = Math.round(relY * newH - (midY - vpRect.top));
+      // Скролимо так, щоб точка під пальцями залишилась на місці
+      const vpRect = vp.getBoundingClientRect();
+      vp.scrollLeft = Math.round((relX * newW + padX) - (midX - vpRect.left));
+      vp.scrollTop  = Math.round((relY * newH + padY) - (midY - vpRect.top));
     }
-
     lastPinchDist = dist;
     lastPinchMidX = midX;
     lastPinchMidY = midY;

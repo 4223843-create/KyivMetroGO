@@ -478,7 +478,7 @@ posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
 if (!response.ok) throw new Error('Помилка сервера');
 
       if (!background) {
-        sendBtn.textContent = 'Надіслано ✓';
+        sendBtn.textContent = '✓';
         sendBtn.disabled = true; // Блокуємо кнопку, щоб не дублювати відправку
         
         // 3. ВИВОДИМО ТЕКСТ УСПІХУ ТА КНОПКУ СКАСУВАННЯ
@@ -565,7 +565,7 @@ window.hasUnsavedFeedback = function() {
 
 function closeFeedbackSheet() {
   if (window.hasUnsavedFeedback && window.hasUnsavedFeedback()) {
-    window.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+    window.showCustomConfirm('Застосувати зміни локально та повідомити розробника?', () => {
       if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
       window.fbUnsaved = false;
       window.closeAllSheets(true);
