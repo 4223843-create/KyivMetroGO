@@ -565,10 +565,17 @@ popup.innerHTML = `
     }
 
     closeAllSheets();
-  });  let swipeStartY = 0;
-  sheet.addEventListener('touchstart', e => { swipeStartY = e.touches[0].clientY; }, { passive: true });
-sheet.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - swipeStartY > 60) closeAllSheets(); });
-  /* ══ FAVOURITES SHEET ══ */
+  });  
+let swipeStartY = 0;
+  let isHandleSwipeMain = false;
+  sheet.addEventListener('touchstart', e => { 
+      swipeStartY = e.touches[0].clientY; 
+      isHandleSwipeMain = !!e.target.closest('.sheet-handle-bar');
+  }, { passive: true });
+  sheet.addEventListener('touchend', e => { 
+      if (isHandleSwipeMain && (e.changedTouches[0].clientY - swipeStartY > 60)) closeAllSheets(); 
+  });
+    /* ══ FAVOURITES SHEET ══ */
   function renderFavList(favs) {
     if (!favs.length) {
       favBody.innerHTML = `<p class="fav-empty-text">Немає збережених станцій.<br>Натисніть ♡ на картці станції,<br>щоб зберегти її в обране.</p>`;
@@ -692,11 +699,16 @@ sheet.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - sw
     favSheet.classList.remove('sheet-open');
     if (!sheet.classList.contains('sheet-open')) sheetOverlay.classList.remove('overlay-visible');
   }
-  favBtn.addEventListener('click', openFavSheet);
+favBtn.addEventListener('click', openFavSheet);
   favClose.addEventListener('click', closeFavSheet);
-  favSheet.addEventListener('touchstart', e => { swipeStartY = e.touches[0].clientY; }, { passive: true });
-  favSheet.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - swipeStartY > 60) closeFavSheet(); });
-
+  let isHandleSwipeFav = false;
+  favSheet.addEventListener('touchstart', e => { 
+      swipeStartY = e.touches[0].clientY; 
+      isHandleSwipeFav = !!e.target.closest('.sheet-handle-bar');
+  }, { passive: true });
+  favSheet.addEventListener('touchend', e => { 
+      if (isHandleSwipeFav && (e.changedTouches[0].clientY - swipeStartY > 60)) closeFavSheet(); 
+  });
   /* ══ ZONE CLICKS ══ */
   function initZoneClicks() {
     document.querySelectorAll('a.zone').forEach(link => {

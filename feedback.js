@@ -59,6 +59,23 @@ function getAdjacentDoors(w, d) {
   return adj;
 }
 
+
+
+
+
+
+
+/* ── Логіка сусідніх дверей ── */
+function getAdjacentDoors(w, d) {
+  const adj = [];
+  if (d > 1) adj.push({w: w, d: d - 1});
+  if (d < 4) adj.push({w: w, d: d + 1});
+  // Handle wagon transitions
+  if (d === 4 && w < 5) adj.push({w: w + 1, d: 1});
+  if (d === 1 && w > 1) adj.push({w: w - 1, d: 4});
+  return adj;
+}
+
 function bindSteppers(container) {
   container.querySelectorAll('.fb-step').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -82,6 +99,7 @@ function bindSteppers(container) {
             curW = parseInt(curW); curD = parseInt(curD);
             const curIdx = adj.findIndex(a => a.w === curW && a.d === curD);
             if (curIdx === -1) {
+                // Should not happen, but for safety
                 curW = adj[0].w; curD = adj[0].d;
             } else if (adj.length > 1) {
                 const nextIdx = (curIdx + (btn.classList.contains('fb-step-up') ? 1 : -1) + adj.length) % adj.length;
@@ -97,7 +115,7 @@ function bindSteppers(container) {
         let val = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
         el.textContent = Math.max(min, Math.min(max, val));
 
-        // Якщо змінили основні двері, перевіряємо чи додаткові досі валідні (суміжні)
+        // Якщо змінили основні двері, перевіряємо чи додаткові досі валідні
         const exWNode = document.getElementById(`fbW_ex${idx}`);
         const exDNode = document.getElementById(`fbD_ex${idx}`);
         if (exWNode && exDNode && exWNode.textContent !== '-') {
@@ -106,11 +124,17 @@ function bindSteppers(container) {
             const adj = getAdjacentDoors(newMainW, newMainD);
             const isValid = adj.some(a => a.w === parseInt(exWNode.textContent) && a.d === parseInt(exDNode.textContent));
             if (!isValid) {
-                // Якщо стали не валідні — автоматично підтягуємо найближчі правильні
+                // Якщо невалідні, підставляємо першого сусіда
                 exWNode.textContent = adj[0].w;
                 exDNode.textContent = adj[0].d;
             }
         }
+      }
+
+      // Показуємо напис, тільки якщо він був прихований (для авто-відкритих діапазонів)
+      const noteEl = document.getElementById(`fbExtraNote${idx}`);
+      if (noteEl && noteEl.style.display === 'none') {
+          noteEl.style.display = 'block';
       }
 
       window.fbUnsaved = true;
@@ -119,14 +143,14 @@ function bindSteppers(container) {
     });
   });
 
-  // Кнопка "+ Додати ще двері"
-  container.querySelectorAll('.fb-add-door-btn').forEach(btn => {
+  // Кнопка "+" (Додати двері)
+  container.querySelectorAll('.fb-add-plus').forEach(btn => {
      btn.addEventListener('click', () => {
          const idx = btn.dataset.idx;
          btn.style.display = 'none';
          document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
 
-         // Якщо пусто, автоматично підставляємо найближчі сусідні двері
+         // Автоматично підставляємо найближчі сусідні двері
          const exWNode = document.getElementById(`fbW_ex${idx}`);
          const exDNode = document.getElementById(`fbD_ex${idx}`);
          if (exWNode.textContent === '-') {
@@ -136,13 +160,18 @@ function bindSteppers(container) {
              exWNode.textContent = adj[0].w;
              exDNode.textContent = adj[0].d;
          }
+         
+         // Показуємо напис
+         const noteEl = document.getElementById(`fbExtraNote${idx}`);
+         if (noteEl) noteEl.style.display = 'block';
+         
          window.fbUnsaved = true;
          const sendBtn = document.getElementById('fbSend');
          if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
      });
   });
 
-  // Кнопка "Скасувати" додаткові двері
+  // Кнопка "Скасувати" (НИЖНІЙ ХРЕСТИК)
   container.querySelectorAll('.fb-cancel-extra-btn').forEach(btn => {
      btn.addEventListener('click', () => {
          const idx = btn.dataset.idx;
@@ -151,13 +180,17 @@ function bindSteppers(container) {
          document.getElementById(`fbExtraWrap${idx}`).style.display = 'none';
          document.getElementById(`fbAddBtn${idx}`).style.display = 'block';
          
-window.fbUnsaved = true;
+         // Ховаємо напис
+         const noteEl = document.getElementById(`fbExtraNote${idx}`);
+         if (noteEl) noteEl.style.display = 'none';
+         
+         window.fbUnsaved = true;
          const sendBtn = document.getElementById('fbSend');
          if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
      });
   });
 
-  // Кнопка "ЯК ЦЕ ПРАЦЮЄ"
+// Кнопка "ЯК ЦЕ ПРАЦЮЄ"
   container.querySelectorAll('.fb-info-btn').forEach(btn => {
      btn.addEventListener('click', () => {
          const idx = btn.dataset.idx;
@@ -179,6 +212,26 @@ function changeText(p, nw, nd, closed) {
 function openFeedbackSheet(stationsData) {
   try {
   currentStationsData = stationsData;
+  
+  // ДОДАЄМО ЦЕЙ БЛОК: Робимо плоский масив позицій, щоб форма їх бачила
+  Object.values(currentStationsData).forEach(s => {
+    if (!s.positions) {
+      s.positions = [];
+      s.directions?.forEach(dir => {
+        dir.exits?.forEach(exit => {
+          exit.positions?.forEach(pos => {
+            s.positions.push({
+              dir: dir.from,
+              exit: exit.label || '',
+              wagon: pos.wagon,
+              doors: pos.doors
+            });
+          });
+        });
+      });
+    }
+  });
+
   window.fbUnsaved = false;
 
   let sheet = document.getElementById('feedbackSheet');
@@ -368,10 +421,10 @@ function renderResetBtn() {
       });
     });
   }
-  function renderPositions(slug) {
+function renderPositions(slug) {
     if (!slug) { posEl.innerHTML = ''; sendBtn.disabled = true; return; }
-    const s = STATIONS_FOR_FORM[slug];
-    if (!s?.positions?.length) {
+    const s = currentStationsData[slug];
+        if (!s?.positions?.length) {
       posEl.innerHTML = '<p class="fb-note">Для цієї станції немає позицій.</p>';
       return;
     }
@@ -397,7 +450,10 @@ function renderResetBtn() {
       }).join(' ');
     }
 
-    posEl.innerHTML = groups.map(g => {
+
+
+
+posEl.innerHTML = groups.map(g => {
       let dirLabel;
       const dirLower = g.dir.toLowerCase();
       if (dirLower === 'кінцева' || dirLower === 'вихід праворуч' || dirLower === '__long_transfer__') {
@@ -407,9 +463,7 @@ function renderResetBtn() {
         dirLabel = `Попередня ${properCase(rawName)}`;
       }
 
-      const anyEdited = g.items.some(item => edits[item.i] !== undefined);
-
-const itemsHtml = g.items.map((item, index) => {
+      const itemsHtml = g.items.map((item, index) => {
         const rawW = String(edits[item.i]?.wagon ?? item.p.wagon);
         const rawD = String(edits[item.i]?.doors ?? item.p.doors);
         let wMain = parseInt(rawW) || 1;
@@ -435,30 +489,12 @@ const itemsHtml = g.items.map((item, index) => {
         
         let exitHtml = '';
         if (item.p.exit) {
-          const EMOJI_COLOR = { '🟥': '#c8523a', '🟦': '#5b9bd5', '🟩': '#5aaa6a' };
-          const emojiMatch = item.p.exit.match(/[\u{1F7E5}\u{1F7E6}\u{1F7E9}]/u);
-          const lineColor = emojiMatch ? EMOJI_COLOR[emojiMatch[0]] : null;
-          const cleanExit = item.p.exit.replace(/[\u{1F7E5}\u{1F7E6}\u{1F7E9}]/gu,'').replace(/[\u00a0\u202f]/g,' ').replace(/\s+/g,' ').trim();
-          const isPересадка = /пересадка|перехід/i.test(cleanExit);
-          
-          if (isPересадка) {
-            const prefix = cleanExit.match(/^(пересадка на|короткий перехід на|довгий перехід на|перехід на)\s*/i)?.[0] || 'пересадка на ';
-            const name = cleanExit.slice(prefix.length).trim();
-            const color = lineColor || 'var(--text-muted)';
-            exitHtml = `<div class="fb-exit-label fb-transfer" style="${index > 0 ? 'margin-top:6px;' : ''}">
-              <span class="fb-transfer-prefix">${prefix.trim()}</span>
-              <span class="fb-transfer-bar" style="background:${color}"></span>
-              <span>${name}</span>
-              <span class="fb-transfer-bar" style="background:${color}"></span>
-            </div>`;
-          } else {
-            exitHtml = `<div class="fb-exit-label" style="${index > 0 ? 'margin-top:6px;' : ''}">${cleanExit}</div>`;
-          }
+          // ... (тут багато коду, що малює іконки пересадок, прокрути його) ...
         }
 
 return `
         ${exitHtml}
-        <div class="${isClosed ? 'fb-pos-closed' : ''}">
+        <div class="fb-pos-row ${hasExtra ? 'fb-pos-multi' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}">
           ${isClosed
             ? `<div class="fb-closed-note" style="padding: 0;">Вихід позначено як недоступний</div>`
             : `<div class="fb-pos-wrap">
@@ -466,21 +502,27 @@ return `
                    ${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}
                    ${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}
                  </div>
-                 <button type="button" class="fb-close-exit" data-idx="${item.i}" title="Позначити вихід як недоступний">✕</button>
+                 <div class="fb-side-actions">
+                   <button type="button" class="fb-add-plus" id="fbAddBtn${item.i}" style="display: ${hasExtra ? 'none' : 'block'};" data-idx="${item.i}">+</button>
+                   <button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button>
+                 </div>
                </div>
-               
-               <button type="button" class="fb-add-door-btn" id="fbAddBtn${item.i}" style="display: ${hasExtra ? 'none' : 'block'};" data-idx="${item.i}">Додати двері</button>
 
                <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};">
-                 <p class="fb-extra-note">Тут ви можете додати ще одні зручні вагон і двері<br>для виходу з поїзду метро</p>
-                 <div class="fb-pos-inputs">
-                   ${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}
-                   ${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}
-                 </div>
-                 <button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">Скасувати</button>
+                 <p class="fb-extra-note" id="fbExtraNote${item.i}" style="display: ${hasExtra ? 'none' : 'block'};">Тут ви можете додати ще одні зручні вагон і двері<br>для виходу з поїзду метро</p>
                  
-                 <button type="button" class="fb-info-btn" data-idx="${item.i}">
-                   <span>ⓘ</span>
+                 <div class="fb-pos-wrap" style="margin-top: 4px;">
+                   <div class="fb-pos-inputs">
+                     ${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}
+                     ${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}
+                   </div>
+                   <div class="fb-side-actions">
+                     <button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button>
+                   </div>
+                 </div>
+                 
+                 <button type="button" class="fb-info-btn" id="fbInfoBtn${item.i}" style="display: ${hasExtra ? 'none' : 'flex'};" data-idx="${item.i}">
+                   <span>ⓘ Як це працює</span>
                  </button>
                  <div class="fb-info-text" id="fbInfoText${item.i}" style="display: none;">
                    У київському метро зручними для виходу зазвичай є одні або двоє дверей, тому на цьому кроці ви можете обрати тільки сусідні двері відносно тих, які вказали вище.
@@ -489,7 +531,6 @@ return `
           }
         </div>`;
       }).join('<div style="height: 6px;"></div>');
-
       // ДОДАНО: Тут ми остаточно прибрали зайві олівці з назв напрямків
       return `<div class="fb-pos-row">
         <div class="fb-dir-label">${dirLabel}</div>
@@ -502,28 +543,54 @@ return `
     bindSteppers(posEl);
     sendBtn.disabled = false;
 
+
+
+
+
 posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
         const p   = s.positions[idx];
         const loc = [p.dir.startsWith('попередня') ? p.dir : `Попередня ${p.dir}`, p.exit].filter(Boolean).join(' · ');
         
-        window.showCustomConfirm('Позначити вихід як недоступний?', () => {
-          // 1. Одразу застосовуємо локально і оновлюємо інтерфейс
+        const exWrap = document.getElementById(`fbExtraWrap${idx}`);
+        const isExtraVisible = exWrap && exWrap.style.display !== 'none';
+
+        if (isExtraVisible) {
+            // Прибираємо ПЕРШІ двері, другі стають на їхнє місце, а панель других зникає
+            const wMain = document.getElementById(`fbW${idx}`);
+            const dMain = document.getElementById(`fbD${idx}`);
+            const wEx = document.getElementById(`fbW_ex${idx}`);
+            const dEx = document.getElementById(`fbD_ex${idx}`);
+            
+            wMain.textContent = wEx.textContent;
+            dMain.textContent = dEx.textContent;
+            
+            wEx.textContent = '-';
+            dEx.textContent = '-';
+            exWrap.style.display = 'none';
+            document.getElementById(`fbAddBtn${idx}`).style.display = 'block';
+            
+            window.fbUnsaved = true;
+            const sendBtn = document.getElementById('fbSend');
+            if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
+            return; // Виходимо, щоб не викликати попап закриття
+        }
+
+window.showCustomConfirm('Позначити вихід як недоступний?', () => {
+
           saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
           applyLocalEdits(stationsData);
           window.fbUnsaved = false;
           renderPositions(slug);
           if (typeof renderResetBtn === 'function') renderResetBtn();
 
-          // 2. Відправляємо інформацію автору у фоновому режимі
           fetch(FORMSPREE_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` })
           }).catch(e => console.warn(e));
 
-          // 3. ВИВОДИМО ТЕКСТ УСПІХУ ТА КНОПКУ СКАСУВАННЯ
           resultEl.innerHTML = `
             <p class="fb-note fb-success" style="padding-bottom: 0; margin-bottom: 6px; line-height: 1.4;">
               Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.
@@ -531,8 +598,9 @@ posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
             <button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top: 0; padding-top: 8px;">Скасувати ці зміни</button>
           `;
 
-          // Вішаємо логіку скасування на цю нову кнопку
           document.getElementById('fbUndoCurrent')?.addEventListener('click', () => {
+
+
             const edits = getLocalEdits();
             if (edits[slug]) {
               delete edits[slug];
@@ -552,14 +620,16 @@ posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
         });
       });
     });
-            renderResetBtn();
+
+
+                renderResetBtn();
   }
 // Робимо функцію глобальною, щоб її міг викликати script.js при закритті вікон
-  window.triggerFeedbackSubmit = async function(background = false) {
+window.triggerFeedbackSubmit = async function(background = false) {
     const slug = stationEl.value;
     if (!slug) return;
-    const s = STATIONS_FOR_FORM[slug];
-const changes = s.positions.map((p, i) => {
+    const s = currentStationsData[slug];
+    const changes = s.positions.map((p, i) => {
       const vals = extractFinalValues(i);
       if (!vals) return null;
       return (vals.finalW !== String(p.wagon) || vals.finalD !== String(p.doors)) 
@@ -662,9 +732,16 @@ if (!response.ok) throw new Error('Помилка сервера');
   document.getElementById('stationSheet')?.classList.remove('sheet-open');
   sheet.classList.add('sheet-open');
   document.getElementById('sheetOverlay').classList.add('overlay-visible');
-  let swY = 0;
-  sheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; }, { passive: true });
-  sheet.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - swY > 60) closeFeedbackSheet(); });
+let swY = 0;
+  let isHandleSwipeFB = false;
+  sheet.addEventListener('touchstart', e => { 
+      swY = e.touches[0].clientY; 
+      // Свайп спрацює ТІЛЬКИ якщо ми торкнулися верхньої шапки
+      isHandleSwipeFB = !!e.target.closest('.sheet-handle-bar');
+  }, { passive: true });
+  sheet.addEventListener('touchend', e => { 
+      if (isHandleSwipeFB && (e.changedTouches[0].clientY - swY > 60)) closeFeedbackSheet(); 
+  });
   } catch(err) { console.error('[FeedbackSheet ERROR]', err); alert('Помилка: ' + err.message); }
 }
 
