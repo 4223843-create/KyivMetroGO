@@ -425,12 +425,11 @@ if (lastPinchDist) {
       });
 
       if (slug === 'R.Khreshchatyk') {
-        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        sheet.style.maxHeight = vh + 'px';
-        sheet.classList.add('sheet-fullscreen');
+        sheet.classList.add('sheet-fullscreen', 'sheet-scrollable');
+        sheet.style.maxHeight = '';
       } else {
         sheet.style.maxHeight = '';
-        sheet.classList.remove('sheet-fullscreen');
+        sheet.classList.remove('sheet-fullscreen', 'sheet-scrollable');
       }
 
       const handle = sheet.querySelector('.sheet-handle');
@@ -568,12 +567,21 @@ popup.innerHTML = `
   });  
 let swipeStartY = 0;
   let isHandleSwipeMain = false;
+  let swipeScrollTop = 0;
   sheet.addEventListener('touchstart', e => { 
-      swipeStartY = e.touches[0].clientY; 
-      isHandleSwipeMain = !!e.target.closest('.sheet-handle-bar');
+      swipeStartY = e.touches[0].clientY;
+      swipeScrollTop = sheetBody.scrollTop;
+      isHandleSwipeMain = !!e.target.closest('.sheet-handle-bar') || sheet.classList.contains('sheet-scrollable');
   }, { passive: true });
   sheet.addEventListener('touchend', e => { 
-      if (isHandleSwipeMain && (e.changedTouches[0].clientY - swipeStartY > 60)) closeAllSheets(); 
+      if (!isHandleSwipeMain) return;
+      const dy = e.changedTouches[0].clientY - swipeStartY;
+      // Для Хрещатика: свайп вниз тільки якщо вже прокручені до верху
+      if (sheet.classList.contains('sheet-scrollable')) {
+        if (dy > 60 && swipeScrollTop <= 0) closeAllSheets();
+      } else {
+        if (dy > 60) closeAllSheets();
+      }
   });
     /* ══ FAVOURITES SHEET ══ */
   function renderFavList(favs) {

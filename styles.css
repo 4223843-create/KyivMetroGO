@@ -455,6 +455,7 @@ body { background: var(--bg); }
 .position-row {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 8px;
   padding: 6px 0;
   border-top: 0.5px solid var(--border);
@@ -775,7 +776,7 @@ body { background: var(--bg); }
 .fb-selectors { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .fb-select-wrap { display: flex; flex-direction: column-reverse; gap: 0; }
 .fb-select-inner { display: flex; flex-direction: column; gap: 4px; }
-.fb-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.fb-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); display: grid; grid-template-columns: 40px 1fr 40px; text-align: center; } .fb-label::before, .fb-label::after { content: ''; }
 .fb-select {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -801,28 +802,29 @@ body { background: var(--bg); }
   color: var(--text);
   border: 0.5px solid var(--border);
   border-radius: 10px;
-  padding: 10px 36px 10px 36px;
+  padding: 10px 0;
   font-size: 15px;
   font-family: inherit;
-  text-align: center;
   cursor: pointer;
-  display: flex;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
   align-items: center;
-  justify-content: space-between;
   position: relative;
 }
 .fb-custom-select.fb-select-open {
   border-color: var(--text-muted);
 }
 .fb-custom-select span:first-child {
-  flex: 1;
+  grid-column: 2;
   text-align: center;
 }
 .fb-select-arrow {
+  grid-column: 3;
   font-size: 18px;
   color: var(--text-muted);
   line-height: 1;
-  flex-shrink: 0;
+  text-align: center;
+  padding-right: 4px;
 }
 .fb-dropdown {
   background: var(--bg-card);
@@ -1571,19 +1573,7 @@ html {
 
 /* 6. Кнопка та попап інфо */
 .fb-info-btn {
-  background: none; border: none;
-  color: var(--text-muted);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  width: 100%; margin-top: 2px; padding: 8px 0;
-  font-size: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-.fb-info-btn span {
-  font-size: 32px !important;
-  line-height: 1 !important;
-  display: inline-block;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  vertical-align: middle;
+  display: none; /* Більше не використовується */
 }
 .fb-info-text {
   font-size: 13px; color: var(--text-muted);
@@ -1591,3 +1581,157 @@ html {
   background: rgba(255,255,255,0.03);
   padding: 12px; border-radius: 8px; margin-top: 8px;
 }
+
+/* ══ "Додати двері" — текстовий підпис замість кнопки + ══ */
+.fb-add-doors-link {
+  display: block;
+  background: none; border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 6px 0 2px;
+  text-align: center;
+  width: 100%;
+  opacity: 0.7;
+  -webkit-tap-highlight-color: transparent;
+}
+.fb-add-doors-link:active { opacity: 1; }
+
+/* ══ Кнопка I (довідка) у шапці sheets ══ */
+.sheet-info-btn {
+  background: none;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 700;
+  font-family: Georgia, serif;
+  cursor: pointer;
+  width: 22px; height: 22px;
+  padding: 0;
+  line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  margin-right: auto;
+  opacity: 0.75;
+}
+.sheet-info-btn:active { opacity: 1; }
+
+/* ══ Панель довідки під шапкою ══ */
+.fb-info-panel {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  flex-shrink: 0;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.28s ease, padding 0.28s ease;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.fb-info-panel.fb-info-open {
+  max-height: 200px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.fb-info-panel-content p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 10px 0;
+  text-align: left;
+}
+.fb-info-panel-content p:first-child { margin-top: 12px; }
+.fb-info-panel-content p:last-child { margin-bottom: 12px; }
+
+/* ══ Хрещатик: scrollable sheet з нормальним swipe ══ */
+.station-sheet.sheet-scrollable {
+  max-height: 92dvh !important;
+}
+.station-sheet.sheet-scrollable .sheet-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ══ П.4: хрестик fb-close-exit — вертикально центрований відносно пілюлі ══ */
+.fb-side-actions {
+  align-items: center !important;
+  justify-content: center !important;
+  height: auto !important;
+  min-height: unset !important;
+  gap: 0 !important;
+}
+.fb-close-exit {
+  margin-top: 0 !important;
+  align-self: center !important;
+}
+
+/* ══ Старі fb-add-plus — лишаємо для зворотної сумісності, але ховаємо ══ */
+.fb-add-plus { display: none !important; }
+/* ══ Рядок "i · Додати двері" ══ */
+.fb-add-doors-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 0 2px;
+}
+.fb-add-doors-info {
+  flex-shrink: 0;
+  background: none;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 700;
+  font-family: Georgia, serif;
+  width: 16px; height: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.65;
+  -webkit-tap-highlight-color: transparent;
+}
+.fb-add-doors-info:active { opacity: 1; }
+/* Текст "Додати двері" — без власної ширини */
+.fb-add-doors-row .fb-add-doors-link {
+  padding: 2px 0;
+  width: auto;
+}
+/* Spacer справа — рівний ширині кнопки i, щоб текст залишався по центру */
+.fb-add-doors-spacer {
+  display: inline-block;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+/* Розкривний блок довідки — розсуває контент вниз */
+.fb-add-doors-hint {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.25s ease;
+}
+.fb-add-doors-hint.fb-hint-open {
+  max-height: 120px;
+}
+.fb-add-doors-hint-inner {
+  padding: 8px 4px 4px;
+  border-top: 0.5px solid var(--border);
+  margin-top: 4px;
+}
+.fb-add-doors-hint-inner p {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0 0 6px;
+  text-align: center;
+  opacity: 0.85;
+}
+.fb-add-doors-hint-inner p:last-child { margin-bottom: 0; }
