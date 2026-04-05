@@ -733,7 +733,7 @@ body { background: var(--bg); }
   margin-bottom: 16px !important;
 }
 .about-footer {
-  margin-top: 24px !important;
+  margin-top: 8px !important;
   text-align: center;
   opacity: 0.4;
   font-size: 13px;
@@ -853,8 +853,9 @@ body { background: var(--bg); }
 .fb-pos-row {
   background: var(--bg-card);
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 2px 2px;
   margin-bottom: 10px;
+  margin-top: 10px; /* Додаємо цей рядок для відступу зверху */
 }
 .fb-pos-label {
   font-size: 12px;
@@ -1139,6 +1140,7 @@ body { background: var(--bg); }
   color: var(--text-muted);
   text-align: center;
   margin-bottom: 12px;
+  margin-top: 10px; /* ДОДАНО: посуне текст нижче від верхнього бортика. Змінюйте цифру під свій смак (8px, 12px, 16px) */
 }
 .fb-exit-label {
   font-size: 13px;
@@ -1680,6 +1682,7 @@ html {
   justify-content: center;
   gap: 5px;
   padding: 4px 0 2px;
+  margin-top: 6px;
 }
 .fb-add-doors-info {
   flex-shrink: 0;
@@ -1734,4 +1737,74 @@ html {
   text-align: center;
   opacity: 0.85;
 }
-.fb-add-doors-hint-inner p:last-child { margin-bottom: 0; }
+.fb-add-doors-hint-inner p:last-child { margin-bottom: 16px; }
+.fb-door-icon {
+  width: 22px;
+  height: auto;
+  display: block;
+  opacity: 0.55;
+  filter: var(--door-icon-filter);
+}
+[data-theme="dark"] .fb-add-doors-link .fb-door-icon {
+  filter: invert(1);
+}
+/* ══ Exit icon wrapper (moved inside fb-pos-row, after extra doors) ══ */
+.fb-exit-icon-wrap {
+  margin-top: 8px;
+  text-align: center;
+}
+.about-info-demo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; /* Оптимальний розмір, щоб виглядати на рівні з емоджі 22px */
+  height: 26px;
+  border: 2px solid var(--text); /* Автоматично білий або чорний */
+  border-radius: 50%;
+  color: var(--text); /* Автоматично білий або чорний */
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 700;
+  font-family: Georgia, serif;
+  pointer-events: none; /* Щоб іконка була просто декоративною */
+}
+/* ══ КЛАСИЧНИЙ СПИСОК (ІКОНКА ЗЛІВА, ТЕКСТ СПРАВА) ══ */
+/* ══ ВАРІАНТ: ІКОНКА ЗЛІВА + КАРТКИ ══ */
+.about-list-item {
+  display: flex;
+  align-items: center;
+  gap: 16px; /* Відстань між іконкою та текстом */
+  margin-bottom: 12px; /* Відстань між картками (робимо меншою) */
+  padding: 16px; /* Внутрішній відступ картки */
+  background: var(--bg-card); /* Колір фону картки */
+  border: 0.5px solid var(--border); /* Тонка рамка */
+  border-radius: 14px; /* Заокруглені кути */
+}
+
+.about-list-icon {
+  flex-shrink: 0;
+  width: 26px; /* Фіксована ширина для рівної колонки іконок */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.about-list-text {.about-footer {
+  flex: 1;
+  margin: 0 !important;
+  text-align: left;
+  font-size: 15px;
+  line-height: 1.4;
+}
+/* Зменшуємо відступ від нижнього краю екрана саме для вікна "Про додаток" */
+.about-station-sheet .sheet-body {
+  padding-bottom: 12px; 
+}/* Прибираємо велику порожнечу в самому низу вікна "Про додаток" */
+#aboutSheet .sheet-body {
+  padding-bottom: 8px !important;
+}
+
+/* Прибираємо відступ над написом "Зроблено з любов'ю" */
+.about-footer {
+  margin-top: 4px !important;
+}

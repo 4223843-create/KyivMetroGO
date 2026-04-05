@@ -828,21 +828,44 @@ function openAboutSheet() {
         </div>
         <div class="sheet-body">
           <div class="about-content">
-            <p>Додаток для заощадження часопростору у київському метро. Натисніть на станцію, і отримаєте вагон та двері, які будуть якнайближче до виходу з підземки.</p>
-            <p style="text-align:center;margin:16px 0 4px"><img src="icon-96x96.png" width="64" height="64" style="border-radius:16px"></p>
-            <p>Для швидкого доступу до потрібних станцій, додайте їх в обране.</p>
-            <p style="text-align:center;font-size:22px;margin:4px 0" class="about-heart-icon-wrapper">
-              <span class="heart-light-emoji">🖤</span>
-              <span class="heart-dark-emoji">🤍</span>
+         <img src="icon-96x96.png" width="64" height="64" style="border-radius: 16px;">
+         <p style="text-align: center; margin: 0px 0 0px;">
+         <p style="text-align: center;">Додаток для заощадження часопростору у київському метро</p>
             </p>
-            <p>Помітили неточність — повідомте. Локальні зміни відобразяться миттєво.</p>
-            <p style="text-align:center;font-size:22px;margin:4px 0" class="about-pencil-icon-wrapper">
-            <span class="pencil-light-emoji">✏️</span>
-            <span class="pencil-dark-emoji">✏️</span>
+
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
+              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;">
+                <img src="pluh.svg" style="width: 96px; height: auto; border-radius: 4px; filter: grayscale(100%);">
+              </p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Натисніть на станцію, і отримаєте вагон та двері, які будуть якнайближче до виходу з підземки.</p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
+              <p style="font-size:28px; margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;" class="about-heart-icon-wrapper">
+                <span class="heart-light-emoji">🖤</span>
+                <span class="heart-dark-emoji">🤍</span>
+              </p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Для швидкого доступу до потрібних станцій, додайте їх в обране.</p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
+              <p style="font-size:28px; margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;" class="about-pencil-icon-wrapper">
+                <span class="pencil-light-emoji">✏️</span>
+                <span class="pencil-dark-emoji">✏️</span>
+              </p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Помітили неточність — повідомте. Локальні зміни відобразяться миттєво.</p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
+              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;">
+                <span class="about-info-demo" style="width: 28px; height: 28px; border-width: 2.5px; font-size: 16px;">i</span>
+              </p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Довідкові блоки позначені відповідним знаком.</p>
+            </div>
+
+            <p class="about-footer" style="margin: 4px 0 0 !important; text-align: center; opacity: 0.4; font-size: 13px;">
+              Зроблено з любовʼю до Києва
             </p>
-            <p>Наразі це PWA-додаток: він відкривається в браузері і не потребує встановлення.</p>
-            <p>Задля швидкого доступу додайте іконку на головний екран телефону.</p>
-            <p class="about-footer"> Зроблено з любовʼю до Києва</p>
           </div>
         </div>`;
     document.body.appendChild(aboutSheet);
@@ -852,13 +875,11 @@ function openAboutSheet() {
       if (!anyOpen) document.getElementById('sheetOverlay').classList.remove('overlay-visible');
     });
   }
-// Закриваємо Зміни і картку станції перед відкриттям Про
   document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
   document.getElementById('stationSheet')?.classList.remove('sheet-open');
   aboutSheet.classList.add('sheet-open');
   document.getElementById('sheetOverlay').classList.add('overlay-visible');
 }
-
 /* ══ CUSTOM CONFIRM WINDOW ══ */
 window.showCustomConfirm = function(message, onYes, onNo) {
   const overlay = document.createElement('div');

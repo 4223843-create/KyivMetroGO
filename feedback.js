@@ -144,14 +144,13 @@ function bindSteppers(container) {
   });
 
   // Іконка-довідка біля "Додати двері"
+  // Кнопка довідки "i" — лише розкриває/ховає підказку, пілюль не чіпає
   container.querySelectorAll('.fb-add-doors-info').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const idx = btn.dataset.idx;
-      // Закриваємо всі інші відкриті підказки
-      container.querySelectorAll('.fb-add-doors-hint.fb-hint-open').forEach(h => {
-        if (h.id !== `fbHint${idx}`) h.classList.remove('fb-hint-open');
-      });
+      // Підказка живе всередині fbExtraWrap — показуємо її там де вона є
+      // але сам fbExtraWrap НЕ відкриваємо
       const hint = document.getElementById(`fbHint${idx}`);
       if (hint) hint.classList.toggle('fb-hint-open');
     });
@@ -161,8 +160,8 @@ function bindSteppers(container) {
   container.querySelectorAll('.fb-add-doors-link').forEach(btn => {
      btn.addEventListener('click', () => {
          const idx = btn.dataset.idx;
-         btn.style.display = 'none';
-         document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
+document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'none';
+document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
 
          // Автоматично підставляємо найближчі сусідні двері
          const exWNode = document.getElementById(`fbW_ex${idx}`);
@@ -189,9 +188,9 @@ function bindSteppers(container) {
          document.getElementById(`fbD_ex${idx}`).textContent = '-';
          document.getElementById(`fbExtraWrap${idx}`).style.display = 'none';
          // Відновлюємо кнопку "Додати двері"
-         const addLink = document.getElementById(`fbAddBtn${idx}`);
-         if (addLink) addLink.style.display = '';
-         
+const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
+if (addRow) addRow.style.display = 'flex';
+
          window.fbUnsaved = true;
          const sendBtn = document.getElementById('fbSend');
          if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
@@ -283,7 +282,7 @@ function openFeedbackSheet(stationsData) {
     <div class="fb-info-panel" id="feedbackInfoPanel">
       <div class="fb-info-panel-content">
         <p>Якщо дані неточні, оберіть станцію та введіть коректні значення. Зміни одразу застосуються локально та надійдуть розробнику.</p>
-        <p>Хрестик ✕ позначає вихід як тимчасово недоступний.</p>
+        <p>Хрестик <span style="color:#c8523a">✕</span> поряд з вагоном позначає вихід як тимчасово недоступний.</p>
        <p>“Додати двері” — додайте другі зручні двері для виходу. Можете обрати тільки сусідні двері.
       </div>
     </div>
@@ -518,7 +517,17 @@ return `
         <div class="fb-pos-row ${hasExtra ? 'fb-pos-multi' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}">
           ${isClosed
             ? `<div class="fb-closed-note" style="padding: 0;">Вихід позначено як недоступний</div>`
-            : `<div class="fb-pos-wrap">
+            : `<div class="fb-info-anchor" id="fbInfoAnchor${item.i}" style="display:flex; justify-content:center; margin-top:-6px; margin-bottom:10px;">
+                 <button type="button" class="fb-add-doors-info" id="fbInfoBtn${item.i}" data-idx="${item.i}" aria-label="Довідка">i</button>
+               </div>
+               <div class="fb-add-doors-hint" id="fbHint${item.i}">
+                 <div class="fb-add-doors-hint-inner">
+                   <p>Хрестик <span style="color:#c8523a">✕</span> поряд з вагоном позначає вихід як тимчасово недоступний.</p>
+                   <p>«Додати двері» — другі зручні двері для виходу, сусідні з першими.</p>
+                 </div>
+               </div>
+
+               <div class="fb-pos-wrap">
                  <div class="fb-pos-inputs">
                    ${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}
                    ${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}
@@ -527,17 +536,6 @@ return `
                    <button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button>
                  </div>
                </div>
-
-               ${!hasExtra ? `<div class="fb-add-doors-row">
-                 <button type="button" class="fb-add-doors-info" id="fbInfoBtn${item.i}" data-idx="${item.i}" aria-label="Довідка">i</button>
-                 <button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}">Додати двері</button>
-                 <span class="fb-add-doors-spacer"></span>
-               </div>
-               <div class="fb-add-doors-hint" id="fbHint${item.i}">
-                 <div class="fb-add-doors-hint-inner">
-                   <p>Додайте другі зручні двері для виходу. Можете обрати тільки сусідні двері.</p>
-                 </div>
-               </div>` : ''}
 
                <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};">
                  <div class="fb-pos-wrap" style="margin-top: 4px;">
@@ -549,6 +547,10 @@ return `
                      <button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button>
                    </div>
                  </div>
+               </div>
+
+               <div class="fb-add-doors-row" id="fbAddDoorsRow${item.i}" style="display:${hasExtra ? 'none' : 'flex'}; justify-content:center;">
+                 <button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}">Додати двері</button>
                </div>`
           }
         </div>`;
@@ -591,8 +593,8 @@ posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
             wEx.textContent = '-';
             dEx.textContent = '-';
             exWrap.style.display = 'none';
-            const addLink = document.getElementById(`fbAddBtn${idx}`);
-            if (addLink) addLink.style.display = '';
+const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
+if (addRow) addRow.style.display = 'flex';
             
             window.fbUnsaved = true;
             const sendBtn = document.getElementById('fbSend');
