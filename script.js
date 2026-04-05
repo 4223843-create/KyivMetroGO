@@ -833,19 +833,23 @@ function openAboutSheet() {
          <p style="text-align: center;">Додаток для заощадження часопростору у київському метро</p>
             </p>
 
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
+<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
               <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;">
-                <img src="pluh.svg" style="width: 96px; height: auto; border-radius: 4px; filter: grayscale(100%);">
-              </p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Натисніть на станцію, і отримаєте вагон та двері, які будуть якнайближче до виходу з підземки.</p>
-            </div>
+                
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 5" style="width: 96px; height: auto; border-radius: 4px;">
+                  <path class="pluh-bg" fill="#D0D0D5" d="M0 0h10v5H0z"/>
+                  <path class="pluh-text" fill="#1C1C1E" transform="translate(-112.36 -152.57) scale(.26458)" d="m433.82 582.27v8.6389h1.2917v-9.7222h-7.1944v9.7222h1.3056v-8.6389zm5.5972 4.8611v-2.0694h2.375v5.8472h1.2917v-6.875h-4.9583v3.0417c0 2.6667-0.5 2.9861-1.2639 2.9861v0.84722c0.125 0.0417 0.44445 0.0695 0.65278 0.0695 1.1667 0 1.9028-0.65278 1.9028-3.8472zm11.681-5.9444-2.5556 5.1389-2.5556-5.1389h-1.4028l3.3472 6.6667-1.6806 3.0556h1.4028l4.8472-9.7222zm7.9861 1.0833v-1.0833h-4.9722v9.7222h1.3056v-8.6389z"/>
+                </svg>
 
+              </p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Натисніть на станцію, і отримаєте вагон та двері, які будуть якнайближче до виходу з підземки</p>
+            </div>
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
               <p style="font-size:28px; margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;" class="about-heart-icon-wrapper">
                 <span class="heart-light-emoji">🖤</span>
                 <span class="heart-dark-emoji">🤍</span>
               </p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Для швидкого доступу до потрібних станцій, додайте їх в обране.</p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Для швидкого доступу до потрібних станцій, додайте їх в обране</p>
             </div>
 
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
@@ -853,14 +857,14 @@ function openAboutSheet() {
                 <span class="pencil-light-emoji">✏️</span>
                 <span class="pencil-dark-emoji">✏️</span>
               </p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Помітили неточність — повідомте. Локальні зміни відобразяться миттєво.</p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Помітили неточність — повідомте. Локальні зміни відобразяться миттєво</p>
             </div>
 
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
               <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;">
                 <span class="about-info-demo" style="width: 28px; height: 28px; border-width: 2.5px; font-size: 16px;">i</span>
               </p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Довідкові блоки позначені відповідним знаком.</p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Довідкові блоки</p>
             </div>
 
             <p class="about-footer" style="margin: 4px 0 0 !important; text-align: center; opacity: 0.4; font-size: 13px;">

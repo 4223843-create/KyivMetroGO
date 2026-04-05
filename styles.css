@@ -1789,22 +1789,33 @@ html {
   align-items: center;
 }
 
-.about-list-text {.about-footer {
+/* ══ КЛАСИЧНИЙ СПИСОК (ІКОНКА ЗЛІВА, ТЕКСТ СПРАВА) ══ */
+.about-list-text {
   flex: 1;
-  margin: 0 !important;
   text-align: left;
   font-size: 15px;
   line-height: 1.4;
 }
-/* Зменшуємо відступ від нижнього краю екрана саме для вікна "Про додаток" */
-.about-station-sheet .sheet-body {
-  padding-bottom: 12px; 
-}/* Прибираємо велику порожнечу в самому низу вікна "Про додаток" */
+
+/* Прибираємо велику порожнечу в самому низу вікна "Про додаток" */
 #aboutSheet .sheet-body {
   padding-bottom: 8px !important;
 }
 
-/* Прибираємо відступ над написом "Зроблено з любов'ю" */
+/* Відступ над написом "Зроблено з любов'ю" */
 .about-footer {
   margin-top: 4px !important;
+  text-align: center;
+  opacity: 0.4;
+  font-size: 13px;
 }
+
+/* ══ КОЛЬОРИ ДЛЯ ІКОНКИ "ПлУГ" ══ */
+
+/* Світла тема */
+[data-theme="light"] .pluh-bg { fill: #D0D0D5 !important; }
+[data-theme="light"] .pluh-text { fill: #1C1C1E !important; }
+
+/* Темна тема */
+[data-theme="dark"] .pluh-bg { fill: #2C2C2E !important; }
+[data-theme="dark"] .pluh-text { fill: #ABABAB !important; }
