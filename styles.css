@@ -713,7 +713,7 @@ body { background: var(--bg); }
 
 .about-content {
   padding: 0 0 8px; 
-  margin-top: -6px; /* Чим більший мінус, тим сильніше текст "втягнеться" вгору */
+  margin-top: 0;
   color: var(--text-muted);
   font-size: 15px;
   line-height: 1.6;
@@ -1065,6 +1065,19 @@ body { background: var(--bg); }
 .edit-popup-btn.btn-reset { color: #c8523a; } /* Червоний метро */
 .edit-popup-btn.btn-ok { color: #5aaa6a; }    /* Зелений метро */
 
+/* Квадратні кнопки підтвердження */
+.confirm-square {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.confirm-square:active { transform: scale(0.9); opacity: 0.85; }
+.confirm-square-yes { background: #5aaa6a; }
+.confirm-square-no  { background: #c8523a; }
+
 /* Глобальне вікно підтвердження (як на олівці, але по центру) */
 .global-confirm-overlay {
   position: fixed;
@@ -1134,13 +1147,26 @@ body { background: var(--bg); }
 }
 
 /* ══ П.1: форматування label у формі ══ */
+/* Обгортка заголовку напрямку з кнопкою довідки в лівому куті */
+.fb-dir-label-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  margin-top: 10px;
+}
+.fb-dir-info-btn {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
 .fb-dir-label {
   font-size: 12px;
   letter-spacing: .04em;
   color: var(--text-muted);
   text-align: center;
-  margin-bottom: 12px;
-  margin-top: 10px; /* ДОДАНО: посуне текст нижче від верхнього бортика. Змінюйте цифру під свій смак (8px, 12px, 16px) */
 }
 .fb-exit-label {
   font-size: 13px;
@@ -1366,7 +1392,7 @@ select, select option {
   letter-spacing: normal; 
   font-weight: normal; 
   opacity: 0.5; 
-  top: 18px; /* Підняли текст ще вище (було 26px) */
+  top: 21px; /* Нижній край лінії (11px) + 10px відступ */
 }
 
 /* 2. Повзунок на самий верх */
@@ -1414,7 +1440,7 @@ select, select option {
 /* Робимо однаковий компактний відступ для обох вікон */
 .about-station-sheet .sheet-handle-bar,
 #feedbackSheet .sheet-handle-bar {
-  padding-bottom: 0px !important;
+  padding-bottom: 10px !important;
 }
 
 /* =========================================

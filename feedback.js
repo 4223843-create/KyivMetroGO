@@ -282,8 +282,6 @@ function openFeedbackSheet(stationsData) {
     <div class="fb-info-panel" id="feedbackInfoPanel">
       <div class="fb-info-panel-content">
         <p>Якщо дані неточні, оберіть станцію та введіть коректні значення. Зміни одразу застосуються локально та надійдуть розробнику.</p>
-        <p>Хрестик <span style="color:#c8523a">✕</span> поряд з вагоном позначає вихід як тимчасово недоступний.</p>
-       <p>“Додати двері” — додайте другі зручні двері для виходу. Можете обрати тільки сусідні двері.
       </div>
     </div>
     <div class="sheet-body" id="feedbackBody">
@@ -517,17 +515,7 @@ return `
         <div class="fb-pos-row ${hasExtra ? 'fb-pos-multi' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}">
           ${isClosed
             ? `<div class="fb-closed-note" style="padding: 0;">Вихід позначено як недоступний</div>`
-            : `<div class="fb-info-anchor" id="fbInfoAnchor${item.i}" style="display:flex; justify-content:center; margin-top:-6px; margin-bottom:10px;">
-                 <button type="button" class="fb-add-doors-info" id="fbInfoBtn${item.i}" data-idx="${item.i}" aria-label="Довідка">i</button>
-               </div>
-               <div class="fb-add-doors-hint" id="fbHint${item.i}">
-                 <div class="fb-add-doors-hint-inner">
-                   <p>Хрестик <span style="color:#c8523a">✕</span> поряд з вагоном позначає вихід як тимчасово недоступний.</p>
-                   <p>«Додати двері» — другі зручні двері для виходу, сусідні з першими.</p>
-                 </div>
-               </div>
-
-               <div class="fb-pos-wrap">
+            : `<div class="fb-pos-wrap">
                  <div class="fb-pos-inputs">
                    ${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}
                    ${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}
@@ -556,8 +544,19 @@ return `
         </div>`;
       }).join('<div style="height: 6px;"></div>');
       // ДОДАНО: Тут ми остаточно прибрали зайві олівці з назв напрямків
+      // Беремо idx першого item групи для прив'язки довідки
+      const firstIdx = g.items[0].i;
       return `<div class="fb-pos-row">
-        <div class="fb-dir-label">${dirLabel}</div>
+        <div class="fb-dir-label-wrap">
+          <button type="button" class="fb-add-doors-info fb-dir-info-btn" id="fbInfoBtn${firstIdx}" data-idx="${firstIdx}" aria-label="Довідка">i</button>
+          <div class="fb-dir-label">${dirLabel}</div>
+        </div>
+        <div class="fb-add-doors-hint" id="fbHint${firstIdx}">
+          <div class="fb-add-doors-hint-inner">
+            <p>Хрестик <span style="color:#c8523a">✕</span> поряд з вагоном позначає вихід як тимчасово недоступний.</p>
+            <p>«„Додати двері“ — додайте другі зручні двері для виходу. Можна обрати тільки сусідні двері.</p>
+          </div>
+        </div>
         <div style="margin-top: 4px;">
           ${itemsHtml}
         </div>
@@ -889,7 +888,7 @@ function closeFeedbackSheet() {
   try {
     if (window.hasUnsavedFeedback && window.hasUnsavedFeedback()) {
       if (typeof window.showCustomConfirm === 'function') {
-        window.showCustomConfirm('Застосувати зміни локально та повідомити розробника?', () => {
+        window.showCustomConfirm('Застосувати зміни локально та повідомити розробника?', () => {
           if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
           forceCloseFeedbackSheet();
         }, () => {

@@ -823,13 +823,12 @@ function openAboutSheet() {
     aboutSheet.innerHTML = `
         <div class="sheet-handle-bar">
           <div class="sheet-handle"></div>
-          <span class="sheet-sheet-title about-version-title">KyivMetroGO · версія 0.9</span>
+          <span class="sheet-sheet-title about-version-title">KyivMetroGO</span>
           <button class="sheet-close-btn" id="aboutClose" aria-label="Закрити">✕</button>
         </div>
         <div class="sheet-body">
           <div class="about-content">
-         <img src="icon-96x96.png" width="64" height="64" style="border-radius: 16px;">
-         <p style="text-align: center; margin: 0px 0 0px;">
+         <img src="icon-96x96.png" width="64" height="64" style="border-radius: 16px; margin-bottom: -10px;">
          <p style="text-align: center;">Додаток для заощадження часопростору у київському метро</p>
             </p>
 
@@ -892,8 +891,8 @@ window.showCustomConfirm = function(message, onYes, onNo) {
     <div class="global-confirm-card">
       <div class="edit-popup-text" style="font-size:16px">${message}</div>
       <div class="edit-popup-btns">
-        <button class="edit-popup-btn btn-ok" id="confirmYes">✓</button>
-        <button class="edit-popup-btn btn-reset" id="confirmNo">✕</button>
+        <button class="confirm-square confirm-square-yes" id="confirmYes"></button>
+        <button class="confirm-square confirm-square-no" id="confirmNo"></button>
       </div>
     </div>
   `;
