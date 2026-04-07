@@ -76,83 +76,96 @@ function getAdjacentDoors(w, d) {
   return adj;
 }
 
+function closeAllHints() {
+  document.getElementById('feedbackInfoPanel')?.classList.remove('fb-info-open');
+  document.querySelectorAll('.fb-add-doors-hint.fb-hint-open').forEach(h => h.classList.remove('fb-hint-open'));
+}
+
 function bindSteppers(container) {
-  container.querySelectorAll('.fb-step').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const el = document.getElementById(id);
-      const isExtra = id.includes('_ex');
-      const idx = id.replace(/[^0-9]/g, '');
+// Кнопка "+1"
+  container.querySelectorAll('.fb-add-doors-link').forEach(btn => {
+     btn.addEventListener('click', () => {
+         const idx = btn.dataset.idx;
+         document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'none';
+         document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
+         
+         // МИТТЄВО РОБИМО ХРЕСТИКИ СИНІМИ І ЗМІНЮЄМО ДОВІДКУ
+         document.getElementById(`fbItemInner${idx}`).classList.add('has-extra-doors');
 
-      if (isExtra) {
-        // Додаткові двері: циклічно перемикаємо тільки між сусідами!
-        const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
-        const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
-        const adj = getAdjacentDoors(mainW, mainD);
-        
-        let curW = document.getElementById(`fbW_ex${idx}`).textContent;
-        let curD = document.getElementById(`fbD_ex${idx}`).textContent;
-        
-        if (curW === '-' || curD === '-') {
-            curW = adj[0].w; curD = adj[0].d;
-        } else {
-            curW = parseInt(curW); curD = parseInt(curD);
-            const curIdx = adj.findIndex(a => a.w === curW && a.d === curD);
-            if (curIdx === -1) {
-                // Should not happen, but for safety
-                curW = adj[0].w; curD = adj[0].d;
-            } else if (adj.length > 1) {
-                const nextIdx = (curIdx + (btn.classList.contains('fb-step-up') ? 1 : -1) + adj.length) % adj.length;
-                curW = adj[nextIdx].w; curD = adj[nextIdx].d;
-            }
-        }
-        document.getElementById(`fbW_ex${idx}`).textContent = curW;
-        document.getElementById(`fbD_ex${idx}`).textContent = curD;
-      } else {
-        // Основні двері: звичайна логіка +/-
-        const min = parseInt(btn.dataset.min);
-        const max = parseInt(btn.dataset.max);
-        let val = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
-        el.textContent = Math.max(min, Math.min(max, val));
-
-        // Якщо змінили основні двері, перевіряємо чи додаткові досі валідні
-        const exWNode = document.getElementById(`fbW_ex${idx}`);
-        const exDNode = document.getElementById(`fbD_ex${idx}`);
-        if (exWNode && exDNode && exWNode.textContent !== '-') {
-            const newMainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
-            const newMainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
-            const adj = getAdjacentDoors(newMainW, newMainD);
-            const isValid = adj.some(a => a.w === parseInt(exWNode.textContent) && a.d === parseInt(exDNode.textContent));
-            if (!isValid) {
-                // Якщо невалідні, підставляємо першого сусіда
-                exWNode.textContent = adj[0].w;
-                exDNode.textContent = adj[0].d;
-            }
-        }
-      }
-
-      // Показуємо напис, тільки якщо він був прихований (для авто-відкритих діапазонів)
-      const noteEl = document.getElementById(`fbExtraNote${idx}`);
-      if (noteEl && noteEl.style.display === 'none') {
-          noteEl.style.display = 'block';
-      }
-
-      window.fbUnsaved = true;
-      const sendBtn = document.getElementById('fbSend');
-      if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
-    });
+         // Автоматично підставляємо найближчі сусідні двері
+         const exWNode = document.getElementById(`fbW_ex${idx}`);
+         const exDNode = document.getElementById(`fbD_ex${idx}`);
+         if (exWNode.textContent === '-') {
+             const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+             const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+             const adj = getAdjacentDoors(mainW, mainD);
+             exWNode.textContent = adj[0].w;
+             exDNode.textContent = adj[0].d;
+         }
+         
+         window.fbUnsaved = true;
+         const sendBtn = document.getElementById('fbSend');
+         if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
+     });
   });
 
+  // Кнопка "Скасувати" (НИЖНІЙ ХРЕСТИК)
+  container.querySelectorAll('.fb-cancel-extra-btn').forEach(btn => {
+     btn.addEventListener('click', () => {
+         const idx = btn.dataset.idx;
+         document.getElementById(`fbW_ex${idx}`).textContent = '-';
+         document.getElementById(`fbD_ex${idx}`).textContent = '-';
+         document.getElementById(`fbExtraWrap${idx}`).style.display = 'none';
+         
+         // Відновлюємо кнопку "+1"
+         const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
+         if (addRow) addRow.style.display = 'flex';
+         
+         // МИТТЄВО ПОВЕРТАЄМО ЧЕРВОНИЙ КОЛІР ХРЕСТИКУ І 1-ШУ ДОВІДКУ
+         document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
+
+         window.fbUnsaved = true;
+         const sendBtn = document.getElementById('fbSend');
+         if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
+     });
+  });
+// Кнопка "Відновити" (для закритого виходу)
+  container.querySelectorAll('.fb-restore-exit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = btn.dataset.idx;
+      const slug = document.getElementById('fbStation').value;
+      const edits = getLocalEdits();
+
+      // Видаляємо запис про закриття саме цього виходу
+      if (edits[slug] && edits[slug][idx]) {
+        delete edits[slug][idx];
+        if (Object.keys(edits[slug]).length === 0) delete edits[slug];
+        if (Object.keys(edits).length === 0) clearAllLocalEdits();
+        else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+      }
+
+      // Перезавантажуємо дані станції і миттєво відмальовуємо пілюлі
+      fetch('stations.json').then(r => r.json()).then(d => {
+        Object.keys(currentStationsData).forEach(k => delete currentStationsData[k]);
+        d.stations.forEach(st => { currentStationsData[st.slug] = st; });
+        rebuildPositions(currentStationsData);
+        if (window.applyLocalEdits) window.applyLocalEdits(currentStationsData);
+        renderPositions(slug);
+        if (typeof renderResetBtn === 'function') renderResetBtn();
+      });
+    });
+  });
   // Іконка-довідка біля "Додати двері"
   // Кнопка довідки "i" — лише розкриває/ховає підказку, пілюль не чіпає
   container.querySelectorAll('.fb-add-doors-info').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const idx = btn.dataset.idx;
-      // Підказка живе всередині fbExtraWrap — показуємо її там де вона є
-      // але сам fbExtraWrap НЕ відкриваємо
       const hint = document.getElementById(`fbHint${idx}`);
-      if (hint) hint.classList.toggle('fb-hint-open');
+      if (!hint) return;
+      const willOpen = !hint.classList.contains('fb-hint-open');
+      closeAllHints();
+      if (willOpen) hint.classList.add('fb-hint-open');
     });
   });
 
@@ -272,19 +285,16 @@ function openFeedbackSheet(stationsData) {
        <input type="hidden" id="fbStation" value="">`
     : `<select id="fbStation" class="fb-select">${stationOptions('')}</select>`;
 
-  sheet.innerHTML = `
+sheet.innerHTML = `
     <div class="sheet-handle-bar">
       <div class="sheet-handle"></div>
-      <button class="sheet-info-btn" id="feedbackInfo" aria-label="Довідка">i</button>
       <span class="sheet-sheet-title">Запропонувати зміни</span>
       <button class="sheet-close-btn" id="feedbackClose">✕</button>
     </div>
-    <div class="fb-info-panel" id="feedbackInfoPanel">
-      <div class="fb-info-panel-content">
-        <p>Якщо дані неточні, оберіть станцію та введіть коректні значення. Зміни одразу застосуються локально та надійдуть розробнику.</p>
-      </div>
-    </div>
+    
     <div class="sheet-body" id="feedbackBody">
+      <p class="fb-main-intro-text">Якщо дані на картці станції неточні, ви можете їх виправити. Зміни одразу застосуються локально та надійдуть розробнику.</p>
+
       <div class="fb-selectors">
         <div class="fb-select-wrap">
           <div id="fbLineDropdown" class="fb-dropdown" hidden></div>
@@ -309,7 +319,6 @@ function openFeedbackSheet(stationsData) {
         <div id="fbResetWrap"></div>
       </div>
     </div>`;
-
   const posEl     = document.getElementById('fbPositions');
   const sendBtn   = document.getElementById('fbSend');
   const resultEl  = document.getElementById('fbResult');
@@ -364,6 +373,7 @@ function openFeedbackSheet(stationsData) {
         const s = currentStationsData[stationEl.value];
         if (s && !lineEl.value) { lineEl.value = s.line; lineLbl.textContent = LINE_NAMES[s.line]; }
         window.fbUnsaved = false;
+        closeAllHints();
         renderPositions(stationEl.value);
       }));
     }
@@ -405,6 +415,7 @@ lineEl.addEventListener('change', () => {
     }
     const s = currentStationsData[slug];
     if (s && !lineEl.value) lineEl.value = s.line;
+    closeAllHints();
     renderPositions(slug);
   });
   }
@@ -471,6 +482,10 @@ function renderPositions(slug) {
 
 
 
+
+
+
+
 posEl.innerHTML = groups.map(g => {
       let dirLabel;
       const dirLower = g.dir.toLowerCase();
@@ -481,6 +496,7 @@ posEl.innerHTML = groups.map(g => {
         dirLabel = `Попередня ${properCase(rawName)}`;
       }
 
+      // Формуємо всі позиції (виходи), які належать до цієї групи
       const itemsHtml = g.items.map((item, index) => {
         const rawW = String(edits[item.i]?.wagon ?? item.p.wagon);
         const rawD = String(edits[item.i]?.doors ?? item.p.doors);
@@ -489,7 +505,6 @@ posEl.innerHTML = groups.map(g => {
         let wEx = '-'; let dEx = '-';
         let hasExtra = false;
 
-        // Розбираємо збережені дані (якщо там є кома або тире)
         if (rawD.includes('-') || rawD.includes(',')) {
             hasExtra = true;
             if (rawW.includes(',')) {
@@ -504,18 +519,30 @@ posEl.innerHTML = groups.map(g => {
             }
         }
         const isClosed = edits[item.i]?.closed;
-        
         let exitHtml = '';
-        if (item.p.exit) {
-          // ... (тут багато коду, що малює іконки пересадок, прокрути його) ...
-        }
 
-return `
+        // Перевіряємо, чи це останній елемент у групі, щоб не малювати лінію після нього
+        const isLast = index === g.items.length - 1;
+        const dividerHtml = !isLast ? `<div class="fb-item-divider"></div>` : '';
+
+        return `
         ${exitHtml}
-        <div class="fb-pos-row ${hasExtra ? 'fb-pos-multi' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}">
-          ${isClosed
-            ? `<div class="fb-closed-note" style="padding: 0;">Вихід позначено як недоступний</div>`
+<div class="fb-item-inner ${hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
+${isClosed
+            ? `<div class="fb-closed-note-wrap">
+                 <span class="fb-closed-note">Вихід позначено як недоступний</span>
+                 <button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                     <path d="M3 7v6h6"/>
+                     <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                   </svg>
+                 </button>
+               </div>`
             : `<div class="fb-pos-wrap">
+                 <div class="fb-side-actions-left">
+                   <button type="button" class="fb-add-doors-info" data-idx="${item.i}" aria-label="Довідка">i</button>
+                 </div>
+                 
                  <div class="fb-pos-inputs">
                    ${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}
                    ${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}
@@ -527,6 +554,7 @@ return `
 
                <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};">
                  <div class="fb-pos-wrap" style="margin-top: 4px;">
+                   <div class="fb-side-actions-left"></div> 
                    <div class="fb-pos-inputs">
                      ${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}
                      ${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}
@@ -538,33 +566,36 @@ return `
                </div>
 
                <div class="fb-add-doors-row" id="fbAddDoorsRow${item.i}" style="display:${hasExtra ? 'none' : 'flex'}; justify-content:center;">
-                 <button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}">Додати двері</button>
+                 <button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}">+1</button>
+               </div>
+               
+               <div class="fb-add-doors-hint" id="fbHint${item.i}">
+                 <div class="fb-add-doors-hint-inner">
+                   <div class="hint-1-door">
+                     <p>«+1» — другі зручні двері для виходу. Можна обрати тільки сусідні двері.</p>
+                     <p><span style="color:#c8523a">✕</span> позначає вихід як тимчасово недоступний (якщо двері лише одні).</p>
+                   </div>
+                   <div class="hint-2-doors">
+                     <p><span style="color:#5B9BD5">✕</span> скасовує додавання других дверей (якщо дверей двоє).</p>
+                   </div>
+                 </div>
                </div>`
           }
-        </div>`;
-      }).join('<div style="height: 6px;"></div>');
-      // ДОДАНО: Тут ми остаточно прибрали зайві олівці з назв напрямків
-      // Беремо idx першого item групи для прив'язки довідки
-      const firstIdx = g.items[0].i;
-      return `<div class="fb-pos-row">
+        </div>
+        ${dividerHtml}`;
+      }).join('');
+
+      return `
+      <div class="fb-pos-row">
         <div class="fb-dir-label-wrap">
-          <button type="button" class="fb-add-doors-info fb-dir-info-btn" id="fbInfoBtn${firstIdx}" data-idx="${firstIdx}" aria-label="Довідка">i</button>
           <div class="fb-dir-label">${dirLabel}</div>
         </div>
-        <div class="fb-add-doors-hint" id="fbHint${firstIdx}">
-          <div class="fb-add-doors-hint-inner">
-            <p>Хрестик <span style="color:#c8523a">✕</span> поряд з вагоном позначає вихід як тимчасово недоступний.</p>
-            <p>«„Додати двері“ — додайте другі зручні двері для виходу. Можна обрати тільки сусідні двері.</p>
-          </div>
-        </div>
-        <div style="margin-top: 4px;">
-          ${itemsHtml}
-        </div>
+        ${itemsHtml}
       </div>`;
     }).join('');
 
     bindSteppers(posEl);
-    sendBtn.disabled = false;
+            sendBtn.disabled = false;
 
 
 
@@ -592,8 +623,11 @@ posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
             wEx.textContent = '-';
             dEx.textContent = '-';
             exWrap.style.display = 'none';
-const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
-if (addRow) addRow.style.display = 'flex';
+            const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
+            if (addRow) addRow.style.display = 'flex';
+            
+            // ПОВЕРТАЄМО ЧЕРВОНИЙ ХРЕСТИК
+            document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
             
             window.fbUnsaved = true;
             const sendBtn = document.getElementById('fbSend');
@@ -752,10 +786,6 @@ if (!response.ok) throw new Error('Помилка сервера');
     }
   });
 
-  document.getElementById('feedbackInfo').addEventListener('click', () => {
-    const panel = document.getElementById('feedbackInfoPanel');
-    panel.classList.toggle('fb-info-open');
-  });
   document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
   renderResetBtn();
   document.getElementById('aboutSheet')?.classList.remove('sheet-open');
@@ -888,7 +918,7 @@ function closeFeedbackSheet() {
   try {
     if (window.hasUnsavedFeedback && window.hasUnsavedFeedback()) {
       if (typeof window.showCustomConfirm === 'function') {
-        window.showCustomConfirm('Застосувати зміни локально та повідомити розробника?', () => {
+        window.showCustomConfirm('Застосувати зміни локально та повідомити розробника?', () => {
           if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
           forceCloseFeedbackSheet();
         }, () => {

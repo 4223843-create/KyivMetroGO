@@ -1123,9 +1123,60 @@ body { background: var(--bg); }
   border-radius: 8px;
   -webkit-tap-highlight-color: transparent;
 }
-.fb-close-exit:active { background: rgba(200,82,58,0.1); }
-.fb-pos-closed { opacity: 0.5; }
-.fb-closed-note { font-size: 13px; color: #c8523a; text-align: center; padding: 6px 0; }
+/* ══ ДИЗАЙН ЗАКРИТОГО ВИХОДУ ══ */
+.fb-closed-note-wrap {
+display: flex !important;
+  align-items: center !important;
+  justify-content: center !important; 
+  position: relative !important; 
+  background: var(--bg-pill) !important; /* Тло 1в1 як у пілюль */
+  border-radius: 8px !important; /* Таке саме заокруглення */
+  padding: 10px 44px 10px 16px !important; /* Місце для тексту зліва + кнопки справа */
+  margin: 8px auto !important; /* Робимо блок по центру */
+  width: fit-content !important; /* Блок стискається під розмір тексту, стаючи "пілюлею" */
+  min-height: 44px !important; /* Компактніше */
+}
+
+.fb-closed-note {
+font-size: 13px !important; /* Трохи менший шрифт для акуратності */
+  color: #c8523a !important;
+  text-align: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.3 !important;
+}
+
+/* ══ КНОПКА "ВІДНОВИТИ" (ТІЛЬКИ ЗЕЛЕНА ІКОНКА UNDO) ══ */
+.fb-restore-exit {
+  position: absolute !important;
+  right: 8px !important; /* Відступ від правого краю пілюлі */
+  background: none !important; 
+  border: none !important;
+  color: #5aaa6a !important; 
+  width: 32px !important; 
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important; 
+  transition: transform 0.1s, opacity 0.15s !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.fb-restore-exit:active { 
+  transform: scale(0.85) !important; 
+  opacity: 0.6 !important;
+}
+
+
+
+
+.fb-restore-exit:active { 
+  transform: scale(0.9) !important; 
+  opacity: 0.8 !important;
+}
 
 /* ══ П.10: nav-link — прибрати підкреслення при tap (iOS) ══ */
 .nav-link, .nav-link:visited, .nav-link:active {
@@ -1148,25 +1199,13 @@ body { background: var(--bg); }
 
 /* ══ П.1: форматування label у формі ══ */
 /* Обгортка заголовку напрямку з кнопкою довідки в лівому куті */
-.fb-dir-label-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12px;
-  margin-top: 10px;
-}
-.fb-dir-info-btn {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-}
 .fb-dir-label {
   font-size: 12px;
   letter-spacing: .04em;
   color: var(--text-muted);
   text-align: center;
+  margin-top: 12px;
+  margin-bottom: 12px;
 }
 .fb-exit-label {
   font-size: 13px;
@@ -1530,6 +1569,14 @@ html {
   margin: 0 !important;
 }
 
+/* Ліва колонка grid — місце для кнопки i (перший елемент групи) */
+.fb-pos-left-slot {
+  grid-column: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 /* Обгортка самих пілюль (стоїть по центру) */
 .fb-pos-inputs {
   grid-column: 2 !important;
@@ -1610,6 +1657,11 @@ html {
   padding: 12px; border-radius: 8px; margin-top: 8px;
 }
 
+
+
+
+
+
 /* ══ "Додати двері" — текстовий підпис замість кнопки + ══ */
 .fb-add-doors-link {
   display: block;
@@ -1629,26 +1681,17 @@ html {
 .fb-add-doors-link:active { opacity: 1; }
 
 /* ══ Кнопка I (довідка) у шапці sheets ══ */
-.sheet-info-btn {
-  background: none;
-  border: 1.5px solid var(--text-muted);
-  border-radius: 50%;
+/* Статичний підзаголовок під шапкою */
+.fb-subtitle {
+  font-size: 13px;
   color: var(--text-muted);
-  font-size: 12px;
-  font-style: italic;
-  font-weight: 700;
-  font-family: Georgia, serif;
-  cursor: pointer;
-  width: 22px; height: 22px;
-  padding: 0;
-  line-height: 1;
-  display: flex; align-items: center; justify-content: center;
+  line-height: 1.5;
+  padding: 10px 16px;
+  background: var(--bg-sheet);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
   flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-  margin-right: auto;
-  opacity: 0.75;
 }
-.sheet-info-btn:active { opacity: 1; }
 
 /* ══ Панель довідки під шапкою ══ */
 .fb-info-panel {
@@ -1707,8 +1750,8 @@ html {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 4px 0 2px;
-  margin-top: 6px;
+  padding: 0 0 2px;
+  margin-top: 12px;
 }
 .fb-add-doors-info {
   flex-shrink: 0;
@@ -1845,3 +1888,135 @@ html {
 /* Темна тема */
 [data-theme="dark"] .pluh-bg { fill: #2C2C2E !important; }
 [data-theme="dark"] .pluh-text { fill: #ABABAB !important; }
+/* ══ ЛІВА КОЛОНКА ДЛЯ КНОПКИ "i" (Симетрія до хрестика) ══ */
+.fb-side-actions-left {
+  grid-column: 1 !important;
+  justify-self: end !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  height: 100% !important;
+  min-height: 52px !important; /* Висота пілюль */
+  padding-right: 8px !important;
+  width: auto !important;
+}
+
+/* ══ ВСТУПНИЙ ТЕКСТ У ФОРМІ ЗМІН ══ */
+.fb-main-intro-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.4;
+  margin: 0 0 16px 0;
+  padding: 0 8px;
+}
+/* ══ ІДЕАЛЬНА СИМЕТРІЯ КАРТКИ ЗМІН ══ */
+
+/* 1. Рамка картки: рівно 16px зверху і знизу, 12px по боках */
+.fb-pos-row {
+  padding: 16px 12px !important;
+}
+
+/* 2. Вбиваємо всі старі відступи в обгортці тексту */
+.fb-dir-label-wrap {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 3. Текст "Попередня...": 0 зверху, рівно 16px знизу до пілюль */
+.fb-dir-label {
+  margin: 0 0 16px 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+  display: block !important;
+}
+
+/* 4. Контейнер з пілюлями: жодних зовнішніх відступів */
+.fb-pos-wrap {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 5. Блок "Додати двері": рівно 16px від пілюль до посилання */
+.fb-add-doors-row {
+  margin: 16px 0 0 0 !important;
+  padding: 0 !important;
+}
+
+
+
+
+
+
+/* ══ 1. ЗМЕНШЕНА КНОПКА "+1" ══ */
+.fb-add-doors-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: var(--bg-pill) !important; 
+  border: none !important; 
+  color: var(--text-muted) !important; 
+  font-size: 14px !important; /* Зменшили шрифт (було 16px) */
+  font-weight: 600 !important; 
+  text-decoration: none !important; 
+  border-radius: 8px !important; 
+  padding: 6px 24px !important; /* Зменшили відступи, щоб кнопка стала акуратнішою */
+  width: auto !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  opacity: 1 !important;
+  transition: transform 0.1s, background-color 0.15s !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.fb-add-doors-link:active {
+  transform: scale(0.93) !important;
+  background-color: var(--border) !important; 
+}
+
+/* ══ ДИНАМІЧНІ ХРЕСТИКИ ТА ДОВІДКИ (1 або 2 двері) ══ */
+
+/* Колір обох хрестиків за замовчуванням (1 двері) - Червоний */
+.fb-item-inner .fb-close-exit,
+.fb-item-inner .fb-cancel-extra-btn {
+  color: #c8523a !important;
+  transition: color 0.2s ease !important;
+}
+
+/* Колір обох хрестиків, коли активні 2 двері - Синій */
+.fb-item-inner.has-extra-doors .fb-close-exit,
+.fb-item-inner.has-extra-doors .fb-cancel-extra-btn {
+  color: #5B9BD5 !important;
+}
+
+/* Логіка відображення текстів підказок */
+.fb-item-inner .hint-1-door { display: block; }
+.fb-item-inner .hint-2-doors { display: none; }
+
+.fb-item-inner.has-extra-doors .hint-1-door { display: none; }
+.fb-item-inner.has-extra-doors .hint-2-doors { display: block; }
+
+/* Ефект при натисканні пальцем */
+.fb-add-doors-link:active {
+  opacity: 1 !important;
+  transform: scale(0.93) !important;
+  background-color: var(--border) !important; 
+}
+/* ══ ІДЕАЛЬНА СИМЕТРІЯ ДЛЯ ІКОНОК "i" ТА "✕" ══ */
+
+.fb-side-actions-left {
+  /* Відсуваємо коло "i" рівно на таку ж візуальну відстань, як і хрестик */
+  padding-right: 12px !important; 
+}
+
+.fb-side-actions {
+  /* Залишаємо базовий відступ (8px + 4px невидимого відступу самої кнопки = ті ж 12px) */
+  padding-left: 8px !important; 
+}
+/* ══ НЕНАВ'ЯЗЛИВИЙ РОЗДІЛЮВАЧ МІЖ ВИХОДАМИ (ПОКРАЩЕНА ВИДИМІСТЬ) ══ */
+.fb-item-divider {
+  height: 1px !important; /* 1px гарантовано видно на всіх екранах */
+  background: var(--text-muted) !important; /* Використовуємо колір тексту для контрасту */
+  opacity: 0.15 !important; /* Робимо лінію ледь помітною (15% видимості) */
+  margin: 16px 10% !important; /* Зробили лінію трохи довшою по боках */
+}
