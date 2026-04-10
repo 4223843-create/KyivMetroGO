@@ -147,10 +147,11 @@
   };
 
   function heartSvg(isFav, slug, lineColor) {
-    const path = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
-    const base = 'width="22" height="20" viewBox="0 0 24 22" xmlns="http://www.w3.org/2000/svg"';
-    if (!isFav) return `<svg ${base} fill="none" stroke="#636366" stroke-width="2"><path d="${path}"/></svg>`;
-    return `<svg ${base} fill="${lineColor}" stroke="${lineColor}" stroke-width="1"><path d="${path}"/></svg>`;
+    const path = 'M53.409 13.888q5.035 0 7.912 5.829 1.042 2.307 1.092 3.522h.074q.868-4.018 3.15-6.672 2.68-2.68 6.028-2.68 5.184 0 8.31 5.557.793 2.059.793 3.87 0 6.2-5.16 11.831l-13.12 15.751h-.15l-13.94-17.09q-4.167-5.085-4.167-10.492 0-5.234 4.936-8.31 2.084-1.116 4.242-1.116';
+    const t = 'transform="translate(-44.23 -13.888)"';
+    const base = 'width="22" height="20" viewBox="0 0 41.027 37.009" xmlns="http://www.w3.org/2000/svg"';
+    if (!isFav) return `<svg ${base} fill="none" stroke="#636366" stroke-width="1.5"><path d="${path}" ${t}/></svg>`;
+    return `<svg ${base} fill="${lineColor}" stroke="${lineColor}" stroke-width="0.5"><path d="${path}" ${t}/></svg>`;
   }
 
   function formatLabel(raw) {
@@ -509,20 +510,22 @@
       setTimeout(() => { document.addEventListener('click', function closePopup(ev) { if (!popup.contains(ev.target)) { popup.remove(); document.removeEventListener('click', closePopup); } }, {once: true}); }, 0);
     }
   });
-
-  /* ==========================================================================
+/* ==========================================================================
      8. ТЕМИ ТА ДРОПДАУН МЕНЮ (ABOUT)
      ========================================================================== */
   const THEME_KEY = 'metro_theme';
   const root = document.documentElement;
 
+  const SVG_SUN  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`;
+  
+  const SVG_MOON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`;
+
   function applyTheme(theme) {
     root.setAttribute('data-theme', theme);
     const icon = document.getElementById('themeIcon');
-    if (icon) icon.textContent = theme === 'dark' ? '☀' : '⏾';
+    if (icon) icon.innerHTML = theme === 'dark' ? SVG_SUN : SVG_MOON;
     localStorage.setItem(THEME_KEY, theme);
   }
-
   applyTheme(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 
   const menuBtn = document.getElementById('menuBtn');
@@ -587,15 +590,15 @@
               <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Натисніть на станцію, і отримаєте вагон та двері, які&nbsp;будуть якнайближче до&nbsp;виходу з&nbsp;підземки</p>
             </div>
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="font-size:42px; margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted); line-height: 1;">♡</p>
+              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 41.027 37.009" fill="currentColor"><path d="M53.409 13.888q5.035 0 7.912 5.829 1.042 2.307 1.092 3.522h.074q.868-4.018 3.15-6.672 2.68-2.68 6.028-2.68 5.184 0 8.31 5.557.793 2.059.793 3.87 0 6.2-5.16 11.831l-13.12 15.751h-.15l-13.94-17.09q-4.167-5.085-4.167-10.492 0-5.234 4.936-8.31 2.084-1.116 4.242-1.116" transform="translate(-44.23 -13.888)"/></svg></p>
               <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Для швидкого доступу до&nbsp;потрібних станцій, додайте&nbsp;їх в&nbsp;обране</p>
             </div>
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="font-size:32px; margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted); line-height: 1; transform: scaleX(-1);">✎</p>
+              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32.841 33.362" fill="currentColor"><path d="m78.908 50.896-8.136-3.472-23.515-23.515q-.744-.819-.967-1.34-.224-.545-.224-1.066t.224-1.141q.248-.62 1.166-1.612.719-.695 1.314-.943.62-.273 1.141-.273.62 0 1.24.323.645.297 1.365.992l23.713 23.713zm-2.828-2.034 1.042-1.041-1.39-4.267-.198 2.282-1.537-.496.347 1.786h-2.58zm-3.77-4.167.843-.843-17.016-17.016 1.042-1.042-.893-.893-2.977 2.977.893.893 1.092-1.092zM51.722 26.39l3.076-3.075-1.29-1.29-3.076 3.076zm-2.877-2.778 3.274-3.274q-.794-.818-1.315-1.042-.496-.223-1.017-.223-.322 0-.72.149-.396.149-.719.422-.347.272-.52.744-.15.471-.15.818.026.57.249 1.166.248.57.918 1.24" transform="translate(-46.066 -17.534)"/></svg></p>
               <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Помітили неточність — виправте. Локальні&nbsp;зміни відобразяться&nbsp;миттєво</p>
             </div>
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;"><span style="color: var(--text-muted); font-size: 32px; font-style: italic; font-weight: 700; font-family: Georgia, serif; line-height: 1;">i</span></p>
+              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg></p>
               <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Довідкові блоки</p>
             </div>
             <p class="about-footer">Зроблено з любовʼю до Києва</p>

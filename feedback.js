@@ -288,8 +288,14 @@
         .map(([slug, s]) => ({ slug, ...s }))
         .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
-      const lineSelectHtml = `<button type="button" class="fb-custom-select" id="fbLineBtn"><span id="fbLineLabel">— всі —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbLine" value="">`;
-      const stationSelectHtml = `<button type="button" class="fb-custom-select" id="fbStationBtn"><span id="fbStationLabel">— оберіть —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbStation" value="">`;
+      const isAndroid = true;
+      const lineSelectHtml = isAndroid
+        ? `<button type="button" class="fb-custom-select" id="fbLineBtn"><span id="fbLineLabel">— всі —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbLine" value="">`
+        : `<select id="fbLine" class="fb-select"><option value="">— всі —</option>${LINE_ORDER.map(l => `<option value="${l}">${LINE_NAMES[l]}</option>`).join('')}</select>`;
+
+      const stationSelectHtml = isAndroid
+        ? `<button type="button" class="fb-custom-select" id="fbStationBtn"><span id="fbStationLabel">— оберіть —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbStation" value="">`
+        : `<select id="fbStation" class="fb-select"><option value="" style="text-align:center">— оберіть —</option>${allStations.map(s => `<option value="${s.slug}">${s.name}</option>`).join('')}</select>`;
 
       sheet.innerHTML = `
         <div class="sheet-handle-bar">
@@ -314,7 +320,8 @@
       const resetWrap = document.getElementById('fbResetWrap');
       let lineEl, stationEl;
 
-      const lineHidden = document.getElementById('fbLine'), stationHidden = document.getElementById('fbStation');
+      if (isAndroid) {
+        const lineHidden = document.getElementById('fbLine'), stationHidden = document.getElementById('fbStation');
         const lineBtn = document.getElementById('fbLineBtn'), stationBtn = document.getElementById('fbStationBtn');
         const lineLbl = document.getElementById('fbLineLabel'), stationLbl = document.getElementById('fbStationLabel');
         const lineDD = document.getElementById('fbLineDropdown'), stationDD = document.getElementById('fbStationDropdown');
@@ -353,13 +360,14 @@
         if (sheet._closeAllDD) document.removeEventListener('click', sheet._closeAllDD);
         setTimeout(() => { document.addEventListener('click', closeAllDD); }, 0);
         sheet._closeAllDD = closeAllDD;
+      }
 
       function renderResetBtn() {
         resetWrap.innerHTML = (hasLocalEdits() && !stationEl.value) ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
         document.getElementById('fbReset')?.addEventListener('click', () => {
           window.showCustomConfirm('Скинути всі локальні зміни та повернутись до стандартних даних?', () => {
             clearAllLocalEdits();
-            fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
+            fetch('stations.json').then(r => r.json()).then(d => {
               Object.keys(stationsData).forEach(k => delete stationsData[k]);
               d.stations.forEach(s => { stationsData[s.slug] = s; });
               applyLocalEdits(stationsData);
@@ -408,10 +416,9 @@
             <div class="fb-item-inner ${hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
               ${isClosed
                 ? `<div class="fb-closed-note-wrap"><span class="fb-closed-note">Вихід позначено як недоступний</span><button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button></div>`
-                : `<div class="fb-pos-wrap"><div class="fb-side-actions-left"><button type="button" class="fb-add-doors-info" data-idx="${item.i}">i</button></div>
+: `<div class="fb-pos-wrap"><div class="fb-side-actions-left"><button type="button" class="fb-add-doors-info" data-idx="${item.i}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg></button></div>
                    <div class="fb-pos-inputs">${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}</div>
-                   <div class="fb-side-actions"><button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button></div></div>
-                   <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
+                   <div class="fb-side-actions"><button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button></div></div>                   <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
                    <div class="fb-add-doors-row" id="fbAddDoorsRow${item.i}" style="display:${hasExtra ? 'none' : 'flex'}; justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}">+1</button></div>
                    <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері.</p><p>Якщо двері лише одні, <span style="color:#c8523a">✕</span> позначить&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:#5B9BD5">✕</span> скасовує додавання других дверей.</p></div></div></div>`
               }
@@ -470,11 +477,11 @@
             delete edits[slug];
             if (Object.keys(edits).length === 0) clearAllLocalEdits(); else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
           }
-          fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
+          fetch('stations.json').then(r => r.json()).then(d => {
             Object.keys(currentStationsData).forEach(k => delete currentStationsData[k]);
             d.stations.forEach(st => { currentStationsData[st.slug] = st; });
             normalizeStationsData(currentStationsData);
-            applyLocalEdits(currentStationsData);
+            if (window.applyLocalEdits) window.applyLocalEdits(currentStationsData);
             resultContainer.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
             renderFn(slug); if (typeof resetBtnFn === 'function') resetBtnFn();
           });
