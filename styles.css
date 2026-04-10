@@ -700,8 +700,8 @@ body { background: var(--bg); }
 }
 
 .drop-item-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: block;
   color: var(--text-muted);
 }
