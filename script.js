@@ -496,7 +496,7 @@
             if (Object.keys(edits[slug]).length === 0) delete edits[slug];
             localStorage.setItem('metro_local_edits', JSON.stringify(edits));
           }
-          fetch('stations.json').then(r => r.json()).then(d => {
+          fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
             Object.keys(stationsData).forEach(k => delete stationsData[k]);
             d.stations.forEach(s => { stationsData[s.slug] = s; });
             if (window.applyLocalEdits) window.applyLocalEdits(stationsData);

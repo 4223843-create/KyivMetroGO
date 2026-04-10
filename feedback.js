@@ -288,14 +288,8 @@
         .map(([slug, s]) => ({ slug, ...s }))
         .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
-      const isAndroid = true;
-      const lineSelectHtml = isAndroid
-        ? `<button type="button" class="fb-custom-select" id="fbLineBtn"><span id="fbLineLabel">— всі —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbLine" value="">`
-        : `<select id="fbLine" class="fb-select"><option value="">— всі —</option>${LINE_ORDER.map(l => `<option value="${l}">${LINE_NAMES[l]}</option>`).join('')}</select>`;
-
-      const stationSelectHtml = isAndroid
-        ? `<button type="button" class="fb-custom-select" id="fbStationBtn"><span id="fbStationLabel">— оберіть —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbStation" value="">`
-        : `<select id="fbStation" class="fb-select"><option value="" style="text-align:center">— оберіть —</option>${allStations.map(s => `<option value="${s.slug}">${s.name}</option>`).join('')}</select>`;
+      const lineSelectHtml = `<button type="button" class="fb-custom-select" id="fbLineBtn"><span id="fbLineLabel">— всі —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbLine" value="">`;
+      const stationSelectHtml = `<button type="button" class="fb-custom-select" id="fbStationBtn"><span id="fbStationLabel">— оберіть —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbStation" value="">`;
 
       sheet.innerHTML = `
         <div class="sheet-handle-bar">
@@ -320,8 +314,7 @@
       const resetWrap = document.getElementById('fbResetWrap');
       let lineEl, stationEl;
 
-      if (isAndroid) {
-        const lineHidden = document.getElementById('fbLine'), stationHidden = document.getElementById('fbStation');
+      const lineHidden = document.getElementById('fbLine'), stationHidden = document.getElementById('fbStation');
         const lineBtn = document.getElementById('fbLineBtn'), stationBtn = document.getElementById('fbStationBtn');
         const lineLbl = document.getElementById('fbLineLabel'), stationLbl = document.getElementById('fbStationLabel');
         const lineDD = document.getElementById('fbLineDropdown'), stationDD = document.getElementById('fbStationDropdown');
@@ -360,14 +353,13 @@
         if (sheet._closeAllDD) document.removeEventListener('click', sheet._closeAllDD);
         setTimeout(() => { document.addEventListener('click', closeAllDD); }, 0);
         sheet._closeAllDD = closeAllDD;
-      }
 
       function renderResetBtn() {
         resetWrap.innerHTML = (hasLocalEdits() && !stationEl.value) ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
         document.getElementById('fbReset')?.addEventListener('click', () => {
           window.showCustomConfirm('Скинути всі локальні зміни та повернутись до стандартних даних?', () => {
             clearAllLocalEdits();
-            fetch('stations.json').then(r => r.json()).then(d => {
+            fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
               Object.keys(stationsData).forEach(k => delete stationsData[k]);
               d.stations.forEach(s => { stationsData[s.slug] = s; });
               applyLocalEdits(stationsData);
@@ -478,11 +470,11 @@
             delete edits[slug];
             if (Object.keys(edits).length === 0) clearAllLocalEdits(); else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
           }
-          fetch('stations.json').then(r => r.json()).then(d => {
+          fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
             Object.keys(currentStationsData).forEach(k => delete currentStationsData[k]);
             d.stations.forEach(st => { currentStationsData[st.slug] = st; });
             normalizeStationsData(currentStationsData);
-            if (window.applyLocalEdits) window.applyLocalEdits(currentStationsData);
+            applyLocalEdits(currentStationsData);
             resultContainer.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
             renderFn(slug); if (typeof resetBtnFn === 'function') resetBtnFn();
           });
