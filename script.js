@@ -17,6 +17,7 @@
   const favBtn = document.getElementById('favListBtn');
 
   let stationsData = null;
+  let currentStationSlug = null;
 
   /* ==========================================================================
      2. УПРАВЛІННЯ КАРТОЮ (ZOOM ТА PAN)
@@ -77,7 +78,7 @@
   let lastPinchMidX = 0, lastPinchMidY = 0;
 
   document.addEventListener('touchmove', e => {
-    if (e.touches.length !== 2 || document.querySelector('.station-sheet.sheet-open')) return;
+    if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
     e.preventDefault();
 
     const t0 = e.touches[0], t1 = e.touches[1];
@@ -150,7 +151,7 @@
     const path = 'M53.409 13.888q5.035 0 7.912 5.829 1.042 2.307 1.092 3.522h.074q.868-4.018 3.15-6.672 2.68-2.68 6.028-2.68 5.184 0 8.31 5.557.793 2.059.793 3.87 0 6.2-5.16 11.831l-13.12 15.751h-.15l-13.94-17.09q-4.167-5.085-4.167-10.492 0-5.234 4.936-8.31 2.084-1.116 4.242-1.116';
     const t = 'transform="translate(-44.23 -13.888)"';
     const base = 'width="22" height="20" viewBox="0 0 41.027 37.009" xmlns="http://www.w3.org/2000/svg"';
-    if (!isFav) return `<svg ${base} fill="none" stroke="#636366" stroke-width="1.5"><path d="${path}" ${t}/></svg>`;
+    if (!isFav) return `<svg ${base} fill="none" stroke="#ABABAB" stroke-width="2"><path d="${path}" ${t}/></svg>`;
     return `<svg ${base} fill="${lineColor}" stroke="${lineColor}" stroke-width="0.5"><path d="${path}" ${t}/></svg>`;
   }
 
@@ -176,37 +177,58 @@
   /* ==========================================================================
      4. ЗАВАНТАЖЕННЯ ДАНИХ ТА КЛІКИ ПО КАРТІ
      ========================================================================== */
-  fetch('stations.json')
-    .then(r => r.json())
-    .then(data => {
-      stationsData = {};
-      data.stations.forEach(s => { stationsData[s.slug] = s; });
-      if (window.applyLocalEdits) window.applyLocalEdits(stationsData);
-      initZoneClicks();
-    })
-    .catch(err => console.error('stations.json load failed', err));
-
-  function initZoneClicks() {
-    document.querySelectorAll('a.zone').forEach(link => {
-      link.addEventListener('click', e => {
-        e.preventDefault();
-        if (link.dataset.slug) openStation(link.dataset.slug);
-      });
-    });
+  function hydrateStations(data) {
+    if (!stationsData) stationsData = {};
+    Object.keys(stationsData).forEach(key => delete stationsData[key]);
+    data.stations.forEach(s => { stationsData[s.slug] = s; });
+    if (window.applyLocalEdits) window.applyLocalEdits(stationsData);
+    return stationsData;
   }
+
+  async function reloadStationsData(forceFresh = false) {
+    const url = forceFresh ? `stations.json?nc=${Date.now()}` : 'stations.json';
+    const response = await fetch(url, forceFresh ? { cache: 'no-store' } : undefined);
+    const data = await response.json();
+    return hydrateStations(data);
+  }
+
+  window.reloadStationsData = reloadStationsData;
+
+  reloadStationsData().catch(err => console.error('stations.json load failed', err));
+
+  inner.addEventListener('click', e => {
+    const zone = e.target.closest('a.zone');
+    if (!zone) return;
+    e.preventDefault();
+    if (zone.dataset.slug) openStation(zone.dataset.slug);
+  });
 
   /* ==========================================================================
      5. ОБРАНІ СТАНЦІЇ (FAVOURITES)
      ========================================================================== */
   const FAV_KEY = 'metro_favs';
-  const getFavs = () => { try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch { return []; } };
-  const saveFavs = arr => localStorage.setItem(FAV_KEY, JSON.stringify(arr));
+  let favCache = null;
+  const getFavs = () => {
+    if (favCache) return [...favCache];
+    try { favCache = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); }
+    catch { favCache = []; }
+    return [...favCache];
+  };
+  const saveFavs = arr => {
+    favCache = [...arr];
+    localStorage.setItem(FAV_KEY, JSON.stringify(favCache));
+  };
   const isFav = slug => getFavs().includes(slug);
   const toggleFav = slug => {
     let favs = getFavs();
     favs = favs.includes(slug) ? favs.filter(s => s !== slug) : [...favs, slug];
     saveFavs(favs); return favs.includes(slug);
   };
+  window.addEventListener('storage', e => {
+    if (e.key !== FAV_KEY) return;
+    try { favCache = JSON.parse(e.newValue || '[]'); }
+    catch { favCache = []; }
+  });
 
   function renderFavList(favs) {
     if (!favs.length) {
@@ -225,23 +247,23 @@
       </div>`;
     }).join('');
 
-    favBody.querySelectorAll('.fav-open-btn').forEach(btn => btn.addEventListener('click', () => openStation(btn.dataset.slug)));
-
-    let dragSrc = null, startY = 0, currentY = 0;
+    let dragSrc = null;
     function getDragItems() { return [...favBody.querySelectorAll('.fav-item')]; }
     function saveOrder() { saveFavs(getDragItems().map(i => i.dataset.slug)); }
     function getItemAtY(y) { return getDragItems().find(item => { const r = item.getBoundingClientRect(); return y >= r.top && y <= r.bottom; }); }
+    function clearDragState() {
+      getDragItems().forEach(i => i.classList.remove('fav-over'));
+    }
 
     favBody.querySelectorAll('.fav-drag-handle').forEach(handle => {
       const item = handle.closest('.fav-item');
-      handle.addEventListener('touchstart', e => { e.preventDefault(); dragSrc = item; startY = e.touches[0].clientY; dragSrc.classList.add('fav-dragging'); }, { passive: false });
+      handle.addEventListener('touchstart', e => { e.preventDefault(); dragSrc = item; dragSrc.classList.add('fav-dragging'); }, { passive: false });
       handle.addEventListener('touchmove', e => {
         if (!dragSrc) return;
         e.preventDefault();
-        currentY = e.touches[0].clientY;
-        const target = getItemAtY(currentY);
+        const target = getItemAtY(e.touches[0].clientY);
         if (target && target !== dragSrc) {
-          getDragItems().forEach(i => i.classList.remove('fav-over'));
+          clearDragState();
           target.classList.add('fav-over');
           const items = getDragItems();
           if (items.indexOf(dragSrc) < items.indexOf(target)) target.after(dragSrc); else target.before(dragSrc);
@@ -250,7 +272,7 @@
       handle.addEventListener('touchend', () => {
         if (!dragSrc) return;
         dragSrc.classList.remove('fav-dragging');
-        getDragItems().forEach(i => i.classList.remove('fav-over'));
+        clearDragState();
         saveOrder(); dragSrc = null;
       });
 
@@ -261,7 +283,7 @@
       if (!dragSrc) return;
       const target = getItemAtY(e.clientY);
       if (target && target !== dragSrc) {
-        getDragItems().forEach(i => i.classList.remove('fav-over'));
+        clearDragState();
         target.classList.add('fav-over');
         const items = getDragItems();
         if (items.indexOf(dragSrc) < items.indexOf(target)) target.after(dragSrc); else target.before(dragSrc);
@@ -270,11 +292,17 @@
     function onMouseUp() {
       if (!dragSrc) return;
       dragSrc.classList.remove('fav-dragging');
-      getDragItems().forEach(i => i.classList.remove('fav-over'));
+      clearDragState();
       saveOrder(); dragSrc = null;
       document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp);
     }
   }
+
+  favBody.addEventListener('click', e => {
+    const btn = e.target.closest('.fav-open-btn');
+    if (!btn?.dataset.slug) return;
+    openStation(btn.dataset.slug);
+  });
 
   function openFavSheet() {
     const favs = getFavs();
@@ -318,14 +346,14 @@
     if (positions.length === 1) {
       const p = positions[0];
       const isMulti = String(p.wagon).includes(',');
-      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">✏️</span>` : '';
+      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="14" height="14"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
       const spacer = p._edited ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}${generatePills(p.wagon, p.doors)}${spacer}</div>`;
     }
     
     if (multiRow) {
       const editedPos = positions.find(p => p._edited);
-      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">✏️</span>` : '';
+      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="14" height="14"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
       const spacer = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row position-row-multi">${editedMark}${positions.map((p, i) => `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${generatePills(p.wagon, p.doors)}`).join('')}${spacer}</div>`;
     }
@@ -380,18 +408,15 @@
 
     function actualOpenStation() {
       if (!stationsData?.[slug]) return;
+      currentStationSlug = slug;
       const s = stationsData[slug];
       const color = LINE_COLOR[s.line] || '#888';
       const fav = isFav(slug);
 
       sheetBody.innerHTML = `<div class="sheet-header"><span class="sheet-title">${s.name}</span></div>${renderDirections(s, color)}`;
-
       sheetBody.querySelectorAll('.nav-label').forEach(el => {
         const target = slugByName(el.dataset.name || '');
-        if (target && target !== slug) {
-          el.classList.add('nav-link');
-          el.addEventListener('click', e => { e.stopPropagation(); openStation(target); });
-        }
+        if (target && target !== slug) el.classList.add('nav-link');
       });
 
       if (slug === 'R.Khreshchatyk') {
@@ -407,23 +432,127 @@
 
       const favBtnBar = sheet.querySelector('.fav-btn-bar');
       if (favBtnBar) {
-        const newBtn = favBtnBar.cloneNode(true);
-        newBtn.innerHTML = heartSvg(fav, slug, color);
-        newBtn.classList.toggle('fav-active', fav);
-        favBtnBar.parentNode.replaceChild(newBtn, favBtnBar);
-        newBtn.addEventListener('click', () => {
-          const nowFav = toggleFav(slug);
-          newBtn.innerHTML = heartSvg(nowFav, slug, color);
-          newBtn.classList.toggle('fav-active', nowFav);
-        });
+        favBtnBar.dataset.slug = slug;
+        favBtnBar.dataset.color = color;
+        favBtnBar.innerHTML = heartSvg(fav, slug, color);
+        favBtnBar.classList.toggle('fav-active', fav);
       }
 
       document.querySelectorAll('.station-sheet').forEach(el => { if (el.id !== 'stationSheet') el.classList.remove('sheet-open'); });
       if (!sheet.classList.contains('sheet-open')) { sheet.classList.add('sheet-open'); sheetOverlay.classList.add('overlay-visible'); }
+      // Exit favs & station fav pill styles
+      attachExitFavListeners(sheetBody, slug, color);
+      if (isFav(slug)) applyFavPillStyles(sheetBody, color, true);
     }
     actualOpenStation();
   }
 
+
+  /* ==========================================================================
+     ОБРАНЕ ВИХОДІВ (Exit Favourites)
+     ========================================================================== */
+  const EXIT_FAV_KEY = 'metro_exit_favs';
+
+  function getExitFavs() {
+    try { return JSON.parse(localStorage.getItem(EXIT_FAV_KEY) || '[]'); } catch { return []; }
+  }
+  function exitFavId(slug, wagon, doors) { return `${slug}|${wagon}|${doors}`; }
+  function isExitFav(slug, wagon, doors) {
+    return getExitFavs().some(f => f.id === exitFavId(slug, wagon, doors));
+  }
+  function toggleExitFav(slug, wagon, doors) {
+    let favs = getExitFavs(); const id = exitFavId(slug, wagon, doors);
+    const idx = favs.findIndex(f => f.id === id);
+    if (idx >= 0) favs.splice(idx, 1); else favs.push({ id, slug, wagon, doors });
+    localStorage.setItem(EXIT_FAV_KEY, JSON.stringify(favs));
+    return idx < 0; // true = was added
+  }
+
+  function applyFavPillStyles(container, lineColor, isFaved) {
+    container.querySelectorAll('.pos-pill').forEach(pill => {
+      if (isFaved) {
+        pill.style.background = lineColor;
+        const num = pill.querySelector('.pos-pill-num');
+        const lbl = pill.querySelector('.pos-pill-label');
+        if (num) num.style.color = '#1c1c1e';
+        if (lbl) lbl.style.color = '#1c1c1e';
+      } else {
+        pill.style.background = '';
+        const num = pill.querySelector('.pos-pill-num');
+        const lbl = pill.querySelector('.pos-pill-label');
+        if (num) num.style.color = lineColor;
+        if (lbl) lbl.style.color = '';
+      }
+    });
+  }
+
+  const UNDO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`;
+
+  function attachExitFavListeners(container, slug, lineColor) {
+    const rows = container.querySelectorAll('.position-row');
+    rows.forEach(row => {
+      // Get wagon/doors from first pill pair in this row
+      function getPillValues() {
+        const nums = row.querySelectorAll('.pos-pill-num');
+        if (nums.length < 2) return null;
+        return { wagon: nums[0].textContent.trim(), doors: nums[1].textContent.trim() };
+      }
+
+      function showExitFavToast(row, added) {
+        // Remove existing toast
+        let toast = row.nextElementSibling;
+        if (toast && toast.classList.contains('exit-fav-note-wrap')) toast.remove();
+
+        if (!added) return;
+        const pv = getPillValues(); if (!pv) return;
+
+        toast = document.createElement('div');
+        toast.className = 'exit-fav-note-wrap';
+        toast.innerHTML = `<span class="exit-fav-note">Вихід додано в обране</span><button class="exit-fav-cancel" aria-label="Скасувати">${UNDO_SVG} Скасувати</button>`;
+        row.after(toast);
+        requestAnimationFrame(() => toast.classList.add('fav-note-open'));
+
+        toast.querySelector('.exit-fav-cancel').addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleExitFav(slug, pv.wagon, pv.doors);
+          applyFavPillStyles(row, lineColor, false);
+          toast.classList.remove('fav-note-open');
+          setTimeout(() => toast.remove(), 300);
+        });
+      }
+
+      function triggerExitFav() {
+        const pv = getPillValues(); if (!pv) return;
+        const added = toggleExitFav(slug, pv.wagon, pv.doors);
+        applyFavPillStyles(row, lineColor, added);
+        showExitFavToast(row, added);
+      }
+
+      // Apply stored fav state on render
+      const pv = getPillValues();
+      if (pv && isExitFav(slug, pv.wagon, pv.doors)) {
+        applyFavPillStyles(row, lineColor, true);
+      }
+
+      // Long press detection
+      let longPressTimer = null;
+      row.addEventListener('touchstart', e => {
+        longPressTimer = setTimeout(() => { longPressTimer = null; triggerExitFav(); }, 600);
+      }, { passive: true });
+      row.addEventListener('touchend', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
+      row.addEventListener('touchmove', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
+
+      // Triple tap detection
+      let tapCount = 0; let tapTimer = null;
+      row.addEventListener('click', e => {
+        if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
+        tapCount++;
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => { tapCount = 0; }, 500);
+        if (tapCount >= 3) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
+      });
+    });
+  }
   /* ==========================================================================
      7. УПРАВЛІННЯ ВІКНАМИ, МЕНЮ ТА ТЕМАМИ
      ========================================================================== */
@@ -442,6 +571,29 @@
   window.closeAllSheets = closeAllSheets;
 
   sheetClose.addEventListener('click', () => closeAllSheets());
+
+  sheetBody.addEventListener('click', e => {
+    const navLabel = e.target.closest('.nav-label');
+    if (navLabel) {
+      const target = slugByName(navLabel.dataset.name || '');
+      if (target && target !== currentStationSlug) {
+        e.stopPropagation();
+        openStation(target);
+        return;
+      }
+    }
+  });
+
+  sheet.querySelector('.fav-btn-bar')?.addEventListener('click', e => {
+    const btn = e.currentTarget;
+    const slug = btn.dataset.slug;
+    if (!slug) return;
+    const color = btn.dataset.color || '#888';
+    const nowFav = toggleFav(slug);
+    btn.innerHTML = heartSvg(nowFav, slug, color);
+    btn.classList.toggle('fav-active', nowFav);
+    applyFavPillStyles(sheetBody, color, nowFav);
+  });
 
   sheetOverlay.addEventListener('click', (e) => {
     if (e.target !== sheetOverlay) return;
@@ -475,20 +627,36 @@
       else { if (dy > 60) closeAllSheets(); }
   });
 
-  // Обробка кліку на олівець (Попап скасування)
+  // Обробка кліку на олівець (Slide-in info panel)
   sheetBody.addEventListener('click', e => {
     const pencil = e.target.closest('.pos-edited-mark');
     if (pencil) {
       e.stopPropagation();
-      document.querySelectorAll('.edit-popup').forEach(el => el.remove());
+      const row = pencil.closest('.position-row');
       const slug = pencil.dataset.slug; const idx = pencil.dataset.idx;
 
-      const popup = document.createElement('div');
-      popup.className = 'edit-popup';
-      popup.innerHTML = `<div class="edit-popup-text">Значення змінено користувачем</div><div class="edit-popup-btns"><button class="edit-popup-btn btn-ok">✓</button><button class="edit-popup-btn btn-reset">✕</button></div>`;
-      pencil.closest('.position-row').appendChild(popup);
+      // Знайти або створити edit-info-panel одразу після row
+      let panel = row.nextElementSibling;
+      if (panel && panel.classList.contains('edit-info-panel')) {
+        // Другий тап — закрити
+        panel.classList.remove('panel-open');
+        setTimeout(() => { if (!panel.classList.contains('panel-open')) panel.remove(); }, 300);
+        return;
+      }
 
-      popup.querySelector('.btn-reset').addEventListener('click', (ev) => {
+      // Закрити всі інші панелі
+      document.querySelectorAll('.edit-info-panel').forEach(p => {
+        p.classList.remove('panel-open');
+        setTimeout(() => p.remove(), 300);
+      });
+
+      panel = document.createElement('div');
+      panel.className = 'edit-info-panel';
+      panel.innerHTML = `<div class="edit-info-panel-inner"><span class="edit-info-panel-text">Значення змінено користувачем</span><button class="edit-info-panel-cancel" data-slug="${slug}" data-idx="${idx}"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7v6h6\"/><path d=\"M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13\"/></svg> Скасувати</button></div>`;
+      row.after(panel);
+      requestAnimationFrame(() => panel.classList.add('panel-open'));
+
+      panel.querySelector('.edit-info-panel-cancel').addEventListener('click', (ev) => {
         ev.stopPropagation();
         try {
           const edits = JSON.parse(localStorage.getItem('metro_local_edits') || '{}');
@@ -497,17 +665,11 @@
             if (Object.keys(edits[slug]).length === 0) delete edits[slug];
             localStorage.setItem('metro_local_edits', JSON.stringify(edits));
           }
-          fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
-            Object.keys(stationsData).forEach(k => delete stationsData[k]);
-            d.stations.forEach(s => { stationsData[s.slug] = s; });
-            if (window.applyLocalEdits) window.applyLocalEdits(stationsData);
-            openStation(slug);
-          });
-        } catch(err) {}
+          panel.classList.remove('panel-open');
+          setTimeout(() => panel.remove(), 300);
+          reloadStationsData(true).then(() => openStation(slug));
+        } catch(err) { console.error('edit reset failed', err); }
       });
-
-      popup.querySelector('.btn-ok').addEventListener('click', (ev) => { ev.stopPropagation(); popup.remove(); });
-      setTimeout(() => { document.addEventListener('click', function closePopup(ev) { if (!popup.contains(ev.target)) { popup.remove(); document.removeEventListener('click', closePopup); } }, {once: true}); }, 0);
     }
   });
 /* ==========================================================================
@@ -590,11 +752,11 @@
               <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Натисніть на станцію, і отримаєте вагон та двері, які&nbsp;будуть якнайближче до&nbsp;виходу з&nbsp;підземки</p>
             </div>
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 41.027 37.009" fill="currentColor"><path d="M53.409 13.888q5.035 0 7.912 5.829 1.042 2.307 1.092 3.522h.074q.868-4.018 3.15-6.672 2.68-2.68 6.028-2.68 5.184 0 8.31 5.557.793 2.059.793 3.87 0 6.2-5.16 11.831l-13.12 15.751h-.15l-13.94-17.09q-4.167-5.085-4.167-10.492 0-5.234 4.936-8.31 2.084-1.116 4.242-1.116" transform="translate(-44.23 -13.888)"/></svg></p>
+              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 22" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></p>
               <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Для швидкого доступу до&nbsp;потрібних станцій, додайте&nbsp;їх в&nbsp;обране</p>
             </div>
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32.841 33.362" fill="currentColor"><path d="m78.908 50.896-8.136-3.472-23.515-23.515q-.744-.819-.967-1.34-.224-.545-.224-1.066t.224-1.141q.248-.62 1.166-1.612.719-.695 1.314-.943.62-.273 1.141-.273.62 0 1.24.323.645.297 1.365.992l23.713 23.713zm-2.828-2.034 1.042-1.041-1.39-4.267-.198 2.282-1.537-.496.347 1.786h-2.58zm-3.77-4.167.843-.843-17.016-17.016 1.042-1.042-.893-.893-2.977 2.977.893.893 1.092-1.092zM51.722 26.39l3.076-3.075-1.29-1.29-3.076 3.076zm-2.877-2.778 3.274-3.274q-.794-.818-1.315-1.042-.496-.223-1.017-.223-.322 0-.72.149-.396.149-.719.422-.347.272-.52.744-.15.471-.15.818.026.57.249 1.166.248.57.918 1.24" transform="translate(-46.066 -17.534)"/></svg></p>
+              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="32" height="32"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></p>
               <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Помітили неточність — виправте. Локальні&nbsp;зміни відобразяться&nbsp;миттєво</p>
             </div>
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
@@ -620,7 +782,7 @@
   window.showCustomConfirm = function(message, onYes, onNo) {
     const overlay = document.createElement('div');
     overlay.className = 'global-confirm-overlay';
-    overlay.innerHTML = `<div class="global-confirm-card"><div class="edit-popup-text" style="font-size:16px">${message}</div><div class="edit-popup-btns"><button class="confirm-square confirm-square-yes" id="confirmYes"></button><button class="confirm-square confirm-square-no" id="confirmNo"></button></div></div>`;
+    overlay.innerHTML = `<div class="global-confirm-card"><div class="edit-popup-text" style="font-size:16px">${message}</div><div class="edit-popup-btns"><button class="confirm-square confirm-square-yes" id="confirmYes"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button><button class="confirm-square confirm-square-no" id="confirmNo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></div>`;
     document.body.appendChild(overlay);
 
     overlay.querySelector('#confirmYes').addEventListener('click', () => { overlay.remove(); if (onYes) onYes(); });

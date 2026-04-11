@@ -76,6 +76,15 @@
     document.querySelectorAll('.fb-add-doors-hint.fb-hint-open').forEach(h => h.classList.remove('fb-hint-open'));
   }
 
+  function markFeedbackDirty() {
+    window.fbUnsaved = true;
+    const sendBtn = document.getElementById('fbSend');
+    if (sendBtn) {
+      sendBtn.textContent = 'Запропонувати зміни';
+      sendBtn.disabled = false;
+    }
+  }
+
   function changeText(p, nw, nd, closed) {
     const loc = [p.dir, p.exit].filter(Boolean).join(' · ');
     if (closed) return `${loc}: ВИХІД ЗАКРИТО`;
@@ -86,55 +95,78 @@
   }
 
   function extractFinalValues(i) {
-      const wNode = document.getElementById(`fbW${i}`);
-      const dNode = document.getElementById(`fbD${i}`);
-      if (!wNode || !dNode) return null;
+    const wNode = document.getElementById(`fbW${i}`);
+    const dNode = document.getElementById(`fbD${i}`);
+    if (!wNode || !dNode) return null;
 
-      let finalW = wNode.textContent;
-      let finalD = dNode.textContent;
+    let finalW = wNode.textContent;
+    let finalD = dNode.textContent;
 
-      const exWNode = document.getElementById(`fbW_ex${i}`);
-      const exDNode = document.getElementById(`fbD_ex${i}`);
-      if (exWNode && exWNode.textContent !== '-' && exDNode && exDNode.textContent !== '-') {
-          const exW = exWNode.textContent; const exD = exDNode.textContent;
-          if (finalW === exW) {
-              const d1 = Math.min(parseInt(finalD), parseInt(exD));
-              const d2 = Math.max(parseInt(finalD), parseInt(exD));
-              finalD = `${d1}-${d2}`;
-          } else {
-              const w1 = parseInt(finalW); const w2 = parseInt(exW);
-              const door1 = parseInt(finalD); const door2 = parseInt(exD);
-              if (w1 < w2) { finalW = `${w1}, ${w2}`; finalD = `${door1}, ${door2}`; } 
-              else { finalW = `${w2}, ${w1}`; finalD = `${door2}, ${door1}`; }
-          }
-      }
-      return { finalW, finalD };
-  }
+    const exWNode  = document.getElementById(`fbW_ex${i}`);
+    const exDNode  = document.getElementById(`fbD_ex${i}`);
+    const ex2WNode = document.getElementById(`fbW_ex2_${i}`);
+    const ex2DNode = document.getElementById(`fbD_ex2_${i}`);
 
-  // НОВЕ: Централізований парсинг складних значень дверей ("3-4" або "1, 2")
-  function parseDoorValues(rawW, rawD) {
-    let wMain = parseInt(rawW) || 1;
-    let dMain = parseInt(rawD) || 1;
-    let wEx = '-'; let dEx = '-';
-    let hasExtra = false;
+    const hasEx  = exWNode  && exWNode.textContent  !== '-' && exDNode  && exDNode.textContent  !== '-';
+    const hasEx2 = ex2WNode && ex2WNode.textContent !== '-' && ex2DNode && ex2DNode.textContent !== '-';
 
-    const rD = String(rawD);
-    const rW = String(rawW);
-
-    if (rD.includes('-') || rD.includes(',')) {
-      hasExtra = true;
-      if (rW.includes(',')) {
-        const wParts = rW.split(',');
-        const dParts = rD.split(',');
-        wMain = parseInt(wParts[0]); dMain = parseInt(dParts[0]);
-        wEx = parseInt(wParts[1]); dEx = parseInt(dParts[1]);
-      } else if (rD.includes('-')) {
-        const dParts = rD.split('-');
-        wMain = parseInt(rW); dMain = parseInt(dParts[0]);
-        wEx = wMain; dEx = parseInt(dParts[1]);
+    if (hasEx && hasEx2) {
+      // Три двері в одному вагоні → діапазон "d1-d3"
+      const doors = [parseInt(finalD), parseInt(exDNode.textContent), parseInt(ex2DNode.textContent)].sort((a,b) => a-b);
+      finalD = `${doors[0]}-${doors[2]}`;
+    } else if (hasEx) {
+      const exW = exWNode.textContent; const exD = exDNode.textContent;
+      if (finalW === exW) {
+        const d1 = Math.min(parseInt(finalD), parseInt(exD));
+        const d2 = Math.max(parseInt(finalD), parseInt(exD));
+        finalD = `${d1}-${d2}`;
+      } else {
+        const w1 = parseInt(finalW); const w2 = parseInt(exW);
+        const door1 = parseInt(finalD); const door2 = parseInt(exD);
+        if (w1 < w2) { finalW = `${w1}, ${w2}`; finalD = `${door1}, ${door2}`; }
+        else         { finalW = `${w2}, ${w1}`; finalD = `${door2}, ${door1}`; }
       }
     }
-    return { wMain, dMain, wEx, dEx, hasExtra };
+    return { finalW, finalD };
+  }
+
+  // Парсинг значень дверей:
+  //   '1'       → одні двері
+  //   '3-4'     → дві сусідні двері (вагон3 двері1..двері2)
+  //   '1-3'     → три двері діапазоном (Хрещатик: 1, 2, 3)
+  //   '1, 2'    → два різні входи (різні вагони)
+  function parseDoorValues(rawW, rawD) {
+    const rD = String(rawD);
+    const rW = String(rawW);
+    let wMain = parseInt(rW) || 1;
+    let dMain = parseInt(rD) || 1;
+    let wEx = '-'; let dEx = '-';
+    let wEx2 = '-'; let dEx2 = '-';
+    let hasExtra = false;
+    let hasThird = false;
+
+    if (rD.includes(',')) {
+      // Формат "1, 4" — два різних входи з різними вагонами
+      hasExtra = true;
+      const wParts = rW.split(',');
+      const dParts = rD.split(',');
+      wMain = parseInt(wParts[0]); dMain = parseInt(dParts[0]);
+      wEx = parseInt(wParts[1]);   dEx = parseInt(dParts[1]);
+    } else if (rD.includes('-')) {
+      const dParts = rD.split('-');
+      const d1 = parseInt(dParts[0]);
+      const d2 = parseInt(dParts[1]);
+      wMain = parseInt(rW); dMain = d1;
+      wEx = wMain; dEx = d2;
+      hasExtra = true;
+      // Три двері: діапазон охоплює більше 2 (напр. 1-3 = двері 1, 2, 3)
+      if (d2 - d1 >= 2) {
+        hasThird = true;
+        wEx2 = wMain; dEx2 = d2;
+        dEx = d1 + 1; // середні двері
+      }
+    }
+    return { wMain, dMain, wEx, dEx, wEx2, dEx2, hasExtra, hasThird };
   }
 
   // НОВЕ: Універсальна підготовка масиву positions
@@ -154,11 +186,19 @@
   /* ==========================================================================
      4. ОБРОБНИКИ КНОПОК ТА ПОДІЙ (BINDERS)
      ========================================================================== */
-  function bindSteppers(container) {
-    container.querySelectorAll('.fb-step').forEach(btn => {
-      btn.addEventListener('click', () => {
+  /* ==========================================================================
+     5. РЕНДЕРИНГ ІНТЕРФЕЙСУ ТА КЕРУВАННЯ ФОРМОЮ
+     ========================================================================== */
+  function bindSteppersOptimized(container) {
+    if (container._fbSteppersBound) return;
+    container._fbSteppersBound = true;
+
+    container.addEventListener('click', (event) => {
+      const btn = event.target.closest('.fb-step');
+      if (btn) {
         const id = btn.dataset.id;
         const el = document.getElementById(id);
+        if (!el) return;
         const isExtra = id.includes('_ex');
         const idx = id.replace(/[^0-9]/g, '');
 
@@ -166,24 +206,41 @@
           const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
           const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
           const adj = getAdjacentDoors(mainW, mainD);
-          
+
           let curW = document.getElementById(`fbW_ex${idx}`).textContent;
           let curD = document.getElementById(`fbD_ex${idx}`).textContent;
-          
+
           if (curW === '-' || curD === '-') {
-              curW = adj[0].w; curD = adj[0].d;
+            curW = adj[0].w;
+            curD = adj[0].d;
           } else {
-              curW = parseInt(curW); curD = parseInt(curD);
-              const curIdx = adj.findIndex(a => a.w === curW && a.d === curD);
-              if (curIdx === -1) {
-                  curW = adj[0].w; curD = adj[0].d;
-              } else if (adj.length > 1) {
-                  const nextIdx = (curIdx + (btn.classList.contains('fb-step-up') ? 1 : -1) + adj.length) % adj.length;
-                  curW = adj[nextIdx].w; curD = adj[nextIdx].d;
-              }
+            curW = parseInt(curW);
+            curD = parseInt(curD);
+            const curIdx = adj.findIndex(a => a.w === curW && a.d === curD);
+            if (curIdx === -1) {
+              curW = adj[0].w;
+              curD = adj[0].d;
+            } else if (adj.length > 1) {
+              const nextIdx = (curIdx + (btn.classList.contains('fb-step-up') ? 1 : -1) + adj.length) % adj.length;
+              curW = adj[nextIdx].w;
+              curD = adj[nextIdx].d;
+            }
           }
+
           document.getElementById(`fbW_ex${idx}`).textContent = curW;
           document.getElementById(`fbD_ex${idx}`).textContent = curD;
+
+          // Cascade to third door if it exists
+          const ex2WNode2 = document.getElementById(`fbW_ex2_${idx}`);
+          const ex2DNode2 = document.getElementById(`fbD_ex2_${idx}`);
+          const wrap2b = document.getElementById(`fbExtraWrap2_${idx}`);
+          if (ex2WNode2 && ex2DNode2 && wrap2b && wrap2b.style.display !== 'none') {
+            const adj3 = getAdjacentDoors(curW, curD);
+            const mainW3 = parseInt(document.getElementById(`fbW${idx}`).textContent);
+            const mainD3 = parseInt(document.getElementById(`fbD${idx}`).textContent);
+            const validAdj3 = adj3.filter(a => !(a.w === mainW3 && a.d === mainD3));
+            if (validAdj3.length) { ex2WNode2.textContent = validAdj3[0].w; ex2DNode2.textContent = validAdj3[0].d; }
+          }
         } else {
           const min = parseInt(btn.dataset.min);
           const max = parseInt(btn.dataset.max);
@@ -193,83 +250,103 @@
           const exWNode = document.getElementById(`fbW_ex${idx}`);
           const exDNode = document.getElementById(`fbD_ex${idx}`);
           if (exWNode && exDNode && exWNode.textContent !== '-') {
-              const newMainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
-              const newMainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
-              const adj = getAdjacentDoors(newMainW, newMainD);
-              const isValid = adj.some(a => a.w === parseInt(exWNode.textContent) && a.d === parseInt(exDNode.textContent));
-              if (!isValid) {
-                  exWNode.textContent = adj[0].w;
-                  exDNode.textContent = adj[0].d;
-              }
+            const newMainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+            const newMainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+            const adj = getAdjacentDoors(newMainW, newMainD);
+            const isValid = adj.some(a => a.w === parseInt(exWNode.textContent) && a.d === parseInt(exDNode.textContent));
+            if (!isValid) {
+              exWNode.textContent = adj[0].w;
+              exDNode.textContent = adj[0].d;
+            }
+            // Cascade to third door if exists
+            const ex2WNode = document.getElementById(`fbW_ex2_${idx}`);
+            const ex2DNode = document.getElementById(`fbD_ex2_${idx}`);
+            const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
+            if (ex2WNode && ex2DNode && wrap2 && wrap2.style.display !== 'none') {
+              const curExW = parseInt(exWNode.textContent);
+              const curExD = parseInt(exDNode.textContent);
+              const adj2 = getAdjacentDoors(curExW, curExD);
+              const mainW2 = parseInt(document.getElementById(`fbW${idx}`).textContent);
+              const mainD2 = parseInt(document.getElementById(`fbD${idx}`).textContent);
+              const validAdj2 = adj2.filter(a => !(a.w === mainW2 && a.d === mainD2));
+              if (validAdj2.length) { ex2WNode.textContent = validAdj2[0].w; ex2DNode.textContent = validAdj2[0].d; }
+            }
           }
         }
 
         const noteEl = document.getElementById(`fbExtraNote${idx}`);
-        if (noteEl && noteEl.style.display === 'none') {
-            noteEl.style.display = 'block';
-        }
+        if (noteEl && noteEl.style.display === 'none') noteEl.style.display = 'block';
+        markFeedbackDirty();
+        return;
+      }
 
-        window.fbUnsaved = true;
-        const sendBtn = document.getElementById('fbSend');
-        if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
-      });
-    });
-    
-    container.querySelectorAll('.fb-add-doors-info').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault(); e.stopPropagation();
-        const hint = document.getElementById(`fbHint${btn.dataset.idx}`);
+      const infoBtn = event.target.closest('.fb-add-doors-info');
+      if (infoBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        const hint = document.getElementById(`fbHint${infoBtn.dataset.idx}`);
         document.querySelectorAll('.fb-add-doors-hint.fb-hint-open').forEach(h => {
           if (h !== hint) h.classList.remove('fb-hint-open');
         });
         if (hint) hint.classList.toggle('fb-hint-open');
-      });
-    });
+        return;
+      }
 
-    container.querySelectorAll('.fb-add-doors-link').forEach(btn => {
-       btn.addEventListener('click', () => {
-           const idx = btn.dataset.idx;
-           document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'none';
-           document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
-           document.getElementById(`fbItemInner${idx}`).classList.add('has-extra-doors');
+      const addDoorsBtn = event.target.closest('.fb-add-doors-link');
+      if (addDoorsBtn) {
+        const idx = addDoorsBtn.dataset.idx;
+        document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'none';
+        document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
+        document.getElementById(`fbItemInner${idx}`).classList.add('has-extra-doors');
 
-           const exWNode = document.getElementById(`fbW_ex${idx}`);
-           const exDNode = document.getElementById(`fbD_ex${idx}`);
-           if (exWNode.textContent === '-') {
-               const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
-               const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
-               const adj = getAdjacentDoors(mainW, mainD);
-               exWNode.textContent = adj[0].w; exDNode.textContent = adj[0].d;
-           }
-           
-           window.fbUnsaved = true;
-           const sendBtn = document.getElementById('fbSend');
-           if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
-       });
-    });
+        const exWNode = document.getElementById(`fbW_ex${idx}`);
+        const exDNode = document.getElementById(`fbD_ex${idx}`);
+        if (exWNode.textContent === '-') {
+          const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+          const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+          const adj = getAdjacentDoors(mainW, mainD);
+          exWNode.textContent = adj[0].w;
+          exDNode.textContent = adj[0].d;
+        }
 
-    container.querySelectorAll('.fb-cancel-extra-btn').forEach(btn => {
-       btn.addEventListener('click', () => {
-           const idx = btn.dataset.idx;
-           document.getElementById(`fbW_ex${idx}`).textContent = '-';
-           document.getElementById(`fbD_ex${idx}`).textContent = '-';
-           document.getElementById(`fbExtraWrap${idx}`).style.display = 'none';
-           
-           const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
-           if (addRow) addRow.style.display = 'flex';
-           
-           document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
+        markFeedbackDirty();
+        return;
+      }
 
-           window.fbUnsaved = true;
-           const sendBtn = document.getElementById('fbSend');
-           if (sendBtn) { sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false; }
-       });
+      const cancelExtraBtn = event.target.closest('.fb-cancel-extra-btn');
+      if (cancelExtraBtn) {
+        const idx = cancelExtraBtn.dataset.idx;
+        document.getElementById(`fbW_ex${idx}`).textContent = '-';
+        document.getElementById(`fbD_ex${idx}`).textContent = '-';
+        document.getElementById(`fbExtraWrap${idx}`).style.display = 'none';
+
+        const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
+        if (addRow) addRow.style.display = 'flex';
+
+        document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
+        markFeedbackDirty();
+      }
+
+      const cancelThirdBtn = event.target.closest('.fb-cancel-third-btn');
+      if (cancelThirdBtn) {
+        const idx = cancelThirdBtn.dataset.idx;
+        document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
+        document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
+        document.getElementById(`fbExtraWrap2_${idx}`).style.display = 'none';
+        markFeedbackDirty();
+      }
     });
   }
 
-  /* ==========================================================================
-     5. РЕНДЕРИНГ ІНТЕРФЕЙСУ ТА КЕРУВАННЯ ФОРМОЮ
-     ========================================================================== */
+  function markFeedbackDirty() {
+    window.fbUnsaved = true;
+    const sendBtn = document.getElementById('fbSend');
+    if (sendBtn) {
+      sendBtn.textContent = 'Запропонувати зміни';
+      sendBtn.disabled = false;
+    }
+  }
+
   function openFeedbackSheet(stationsData) {
     try {
       currentStationsData = stationsData;
@@ -359,11 +436,15 @@
         document.getElementById('fbReset')?.addEventListener('click', () => {
           window.showCustomConfirm('Скинути всі локальні зміни та повернутись до стандартних даних?', () => {
             clearAllLocalEdits();
-            fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
-              Object.keys(stationsData).forEach(k => delete stationsData[k]);
-              d.stations.forEach(s => { stationsData[s.slug] = s; });
-              applyLocalEdits(stationsData);
-            });
+            if (typeof window.reloadStationsData === 'function') {
+              window.reloadStationsData(true);
+            } else {
+              fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
+                Object.keys(stationsData).forEach(k => delete stationsData[k]);
+                d.stations.forEach(s => { stationsData[s.slug] = s; });
+                applyLocalEdits(stationsData);
+              });
+            }
             resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
             renderPositions(stationEl.value);
           });
@@ -376,13 +457,17 @@
         if (!s?.positions?.length) { posEl.innerHTML = '<p class="fb-note">Для цієї станції немає позицій.</p>'; return; }
         const edits = getLocalEdits()[slug] || {};
 
-        const groups = [];
+        const groupsMap = new Map();
         s.positions.forEach((p, i) => {
           const key = p.dir;
-          let g = groups.find(g => g.key === key);
-          if (!g) { g = { key, dir: p.dir, items: [] }; groups.push(g); }
+          let g = groupsMap.get(key);
+          if (!g) {
+            g = { key, dir: p.dir, items: [] };
+            groupsMap.set(key, g);
+          }
           g.items.push({ p, i });
         });
+        const groups = [...groupsMap.values()];
 
         function properCase(name) {
           const alwaysCap = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
@@ -393,24 +478,26 @@
         }
 
         posEl.innerHTML = groups.map(g => {
-          let dirLabel = (['кінцева', 'вихід праворуч', '__long_transfer__'].includes(g.dir.toLowerCase())) 
-                         ? g.dir : `Попередня ${properCase(g.dir.replace(/^[Пп]опередня\s+/, ''))}`;
+          let dirLabel = g.dir === '__long_transfer__' ? 'Довгий перехід на Майдан Незалежності'
+                         : (['кінцева', 'вихід праворуч'].includes(g.dir.toLowerCase())) ? g.dir
+                         : `Попередня ${properCase(g.dir.replace(/^[Пп]опередня\s+/, ''))}`;
 
           const itemsHtml = g.items.map((item, index) => {
             const rawW = String(edits[item.i]?.wagon ?? item.p.wagon);
             const rawD = String(edits[item.i]?.doors ?? item.p.doors);
-            const { wMain, dMain, wEx, dEx, hasExtra } = parseDoorValues(rawW, rawD); // Використовуємо новий хелпер
+            const { wMain, dMain, wEx, dEx, wEx2, dEx2, hasExtra, hasThird } = parseDoorValues(rawW, rawD);
             
             const isClosed = edits[item.i]?.closed;
             const dividerHtml = (index !== g.items.length - 1) ? `<div class="fb-item-divider"></div>` : '';
 
             return `
-            <div class="fb-item-inner ${hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
+            <div class="fb-item-inner ${hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${hasThird ? 'has-three-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
               ${isClosed
                 ? `<div class="fb-closed-note-wrap"><span class="fb-closed-note">Вихід позначено як недоступний</span><button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button></div>`
 : `<div class="fb-pos-wrap"><div class="fb-side-actions-left"><button type="button" class="fb-add-doors-info" data-idx="${item.i}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg></button></div>
                    <div class="fb-pos-inputs">${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}</div>
                    <div class="fb-side-actions"><button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button></div></div>                   <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
+                   <div class="fb-extra-door-wrap" id="fbExtraWrap2_${item.i}" style="display: ${hasThird ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex2_${item.i}`, wEx2, 1, 5, 'вагон')}${stepperHtml(`fbD_ex2_${item.i}`, dEx2, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-third-btn" data-idx="${item.i}">✕</button></div></div></div>
                    <div class="fb-add-doors-row" id="fbAddDoorsRow${item.i}" style="display:${hasExtra ? 'none' : 'flex'}; justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}">+1</button></div>
                    <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері.</p><p>Якщо двері лише одні, <span style="color:#c8523a">✕</span> позначить&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:#5B9BD5">✕</span> скасовує додавання других дверей.</p></div></div></div>`
               }
@@ -419,7 +506,7 @@
           return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>${itemsHtml}</div>`;
         }).join('');
 
-        bindSteppers(posEl);
+        bindSteppersOptimized(posEl);
         sendBtn.disabled = false;
 
         posEl.querySelectorAll('.fb-restore-exit').forEach(btn => {
@@ -461,7 +548,6 @@
         renderResetBtn();
       }
 
-      // НОВЕ: Хелпер для кнопки скасування (використовується при Success та Error відправки)
       function attachUndoBtn(slug, resultContainer, renderFn, resetBtnFn) {
         document.getElementById('fbUndoCurrent')?.addEventListener('click', () => {
           const edits = getLocalEdits();
@@ -469,9 +555,15 @@
             delete edits[slug];
             if (Object.keys(edits).length === 0) clearAllLocalEdits(); else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
           }
-          fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
-            Object.keys(currentStationsData).forEach(k => delete currentStationsData[k]);
-            d.stations.forEach(st => { currentStationsData[st.slug] = st; });
+
+          const reloadPromise = typeof window.reloadStationsData === 'function'
+            ? window.reloadStationsData(true)
+            : fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
+                Object.keys(currentStationsData).forEach(k => delete currentStationsData[k]);
+                d.stations.forEach(st => { currentStationsData[st.slug] = st; });
+              });
+
+          Promise.resolve(reloadPromise).then(() => {
             normalizeStationsData(currentStationsData);
             applyLocalEdits(currentStationsData);
             resultContainer.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
@@ -566,14 +658,18 @@
         if (vals) {
           const rawW = String(edits[i]?.wagon ?? p.wagon);
           const rawD = String(edits[i]?.doors ?? p.doors);
-          const { wMain, dMain, wEx, dEx } = parseDoorValues(rawW, rawD); // Використовуємо новий хелпер
-          
-          let currentWEx = document.getElementById(`fbW_ex${i}`) ? document.getElementById(`fbW_ex${i}`).textContent : '-';
-          let currentDEx = document.getElementById(`fbD_ex${i}`) ? document.getElementById(`fbD_ex${i}`).textContent : '-';
-          let currentWMain = document.getElementById(`fbW${i}`).textContent;
-          let currentDMain = document.getElementById(`fbD${i}`).textContent;
+          const { wMain, dMain, wEx, dEx, wEx2, dEx2 } = parseDoorValues(rawW, rawD);
 
-          if (currentWMain !== String(wMain) || currentDMain !== String(dMain) || currentWEx !== String(wEx) || currentDEx !== String(dEx)) {
+          const currentWMain = document.getElementById(`fbW${i}`)?.textContent ?? '-';
+          const currentDMain = document.getElementById(`fbD${i}`)?.textContent ?? '-';
+          const currentWEx   = document.getElementById(`fbW_ex${i}`)?.textContent ?? '-';
+          const currentDEx   = document.getElementById(`fbD_ex${i}`)?.textContent ?? '-';
+          const currentWEx2  = document.getElementById(`fbW_ex2_${i}`)?.textContent ?? '-';
+          const currentDEx2  = document.getElementById(`fbD_ex2_${i}`)?.textContent ?? '-';
+
+          if (currentWMain !== String(wMain) || currentDMain !== String(dMain) ||
+              currentWEx !== String(wEx)   || currentDEx !== String(dEx) ||
+              currentWEx2 !== String(wEx2) || currentDEx2 !== String(dEx2)) {
             dirty = true;
           }
         }
