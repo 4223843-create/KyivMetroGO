@@ -230,25 +230,80 @@
     catch { favCache = []; }
   });
 
-  function formatExitFavs(slug) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function formatExitFavs(slug) {
     const all = getExitFavs().filter(f => f.slug === slug);
     if (!all.length) return '';
-    if (all.length === 1) return ' | ' + all[0].wagon + ' вагон, ' + all[0].doors + ' двері';
-    return ' | ' + all.map(f => f.wagon + ' в., ' + f.doors + ' д.').join(', ');
+    if (all.length === 1) return all[0].wagon + ' вагон, ' + all[0].doors + ' двері';
+    return all.map(f => f.wagon + ' в., ' + f.doors + ' д.').join(', ');
   }
 
+  // Відновлюємо загублену функцію renderFavList
   function renderFavList(favs) {
     if (!favs.length) {
-      favBody.innerHTML = `<p class="fav-empty-text">Немає збережених станцій.<br>Натисніть&nbsp;♡ на&nbsp;картці&nbsp;станції,<br>щоб зберегти&nbsp;її в&nbsp;обране.</p>`;
+      favBody.innerHTML = `<p class="fav-empty-text">Немає збережених станцій.<br>Натисніть ♡ на картці станції,<br>щоб зберегти її в обране.</p>`;
       return;
     }
+
+    // Допоміжна функція для рендеру квадратів
+    function renderExitFavsHtml(slug, color) {
+      const exits = getExitFavs().filter(f => f.slug === slug);
+      if (!exits.length) return '';
+      
+      // Якщо виходів 3 — додаємо клас для компактного вигляду
+      const isCompact = exits.length > 2;
+      const containerClass = isCompact ? 'fav-exits-container fav-exits-compact' : 'fav-exits-container';
+
+      // Генеруємо групи та з'єднуємо їх відбивачем
+      const groupsHtml = exits.map(f => `
+        <div class="fav-exit-group">
+          <div class="fav-pos-square" style="color:${color}">${f.wagon}</div>
+          <div class="fav-pos-square" style="color:${color}">${f.doors}</div>
+        </div>
+      `).join('<div class="fav-exit-sep"></div>');
+      
+      return `<div class="${containerClass}">${groupsHtml}</div>`;
+    }
+
+// Тепер рендеримо список обраних станцій
     favBody.innerHTML = favs.map(slug => {
       const s = stationsData?.[slug];
       if (!s) return '';
       const color = LINE_COLOR[s.line] || '#888';
+      
+      // ДОДАНО: Скорочуємо довгі назви спеціально для Обраного
+      let displayName = s.name;
+      if (slug === 'B.Ploshcha_Ukrainskikh_heroiv') {
+        displayName = 'Пл. Українських героїв';
+      }
+      // Можна додати інші скорочення в майбутньому, якщо знадобиться
+      
       return `<div class="fav-item" data-slug="${slug}">
         <button class="fav-open-btn" data-slug="${slug}" style="border-left-color:${color}">
-          <span class="fav-station-name">${s.name}<span class="fav-exit-info">${formatExitFavs(slug)}</span></span>
+          <span class="fav-station-name">${displayName}</span>
+          ${renderExitFavsHtml(slug, color)}
         </button>
         <div class="fav-drag-handle" aria-label="Перетягнути">⠿</div>
       </div>`;
@@ -457,21 +512,36 @@
   /* ==========================================================================
      ОБРАНЕ ВИХОДІВ (Exit Favourites)
      ========================================================================== */
-  const EXIT_FAV_KEY = 'metro_exit_favs';
+const EXIT_FAV_KEY = 'metro_exit_favs';
 
   function getExitFavs() {
     try { return JSON.parse(localStorage.getItem(EXIT_FAV_KEY) || '[]'); } catch { return []; }
   }
-  function exitFavId(slug, wagon, doors) { return `${slug}|${wagon}|${doors}`; }
-  function isExitFav(slug, wagon, doors) {
-    return getExitFavs().some(f => f.id === exitFavId(slug, wagon, doors));
+  
+  // Тепер ID включає напрямок
+  function exitFavId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
+  
+  function isExitFav(slug, dir, wagon, doors) {
+    return getExitFavs().some(f => f.id === exitFavId(slug, dir, wagon, doors));
   }
-  function toggleExitFav(slug, wagon, doors) {
-    let favs = getExitFavs(); const id = exitFavId(slug, wagon, doors);
+
+  function toggleExitFav(slug, dir, wagon, doors) {
+    let favs = getExitFavs(); 
+    const id = exitFavId(slug, dir, wagon, doors);
     const idx = favs.findIndex(f => f.id === id);
-    if (idx >= 0) favs.splice(idx, 1); else favs.push({ id, slug, wagon, doors });
+    
+    if (idx >= 0) {
+      favs.splice(idx, 1);
+    } else {
+      // ПЕРЕВІРКА ЛІМІТУ: не більше 3 виходів для одного напрямку
+      const slugDirFavs = favs.filter(f => f.slug === slug && f.dir === dir);
+      if (slugDirFavs.length >= 3) return false; 
+      
+      favs.push({ id, slug, dir, wagon, doors });
+    }
+    
     localStorage.setItem(EXIT_FAV_KEY, JSON.stringify(favs));
-    return idx < 0; // true = was added
+    return idx < 0; 
   }
 
   function applyFavPillStyles(container, lineColor, isFaved) {
@@ -506,40 +576,57 @@
 
       function showExitFavToast(row, added) {
         // Remove existing toast
-        let toast = row.nextElementSibling;
-        if (toast && toast.classList.contains('fb-closed-note-wrap')) toast.remove();
+        let existing = row.querySelector('.exit-fav-toast');
+        if (existing) { existing.classList.remove('fav-note-open'); setTimeout(() => existing?.remove(), 300); }
 
         if (!added) return;
         const pv = getPillValues(); if (!pv) return;
 
-        toast = document.createElement('div');
-        toast.className = 'fb-closed-note-wrap exit-fav-slide';
-        toast.innerHTML = `<span class="fb-closed-note">Вихід додано в обране</span><button class="fb-restore-exit exit-fav-cancel" aria-label="Скасувати"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7v6h6\"/><path d=\"M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13\"/></svg></button>`;
-        row.after(toast);
+        const toast = document.createElement('div');
+        toast.className = 'exit-fav-toast';
+        toast.innerHTML = '<span class="exit-fav-toast-text">Вихід<br>додано<br>в обране</span>'
+          + '<button class="exit-fav-toast-cancel" aria-label="Скасувати"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7v6h6\"/><path d=\"M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13\"/></svg></button>';
+        row.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('fav-note-open'));
 
-        toast.querySelector('.exit-fav-cancel').addEventListener('click', (e) => {
+toast.querySelector('.exit-fav-toast-cancel').addEventListener('click', (e) => {
           e.stopPropagation();
-          toggleExitFav(slug, pv.wagon, pv.doors);
+          const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
+          const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
+          const dirLabel = labelEl ? labelEl.textContent.trim() : '';
+          toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
           applyFavPillStyles(row, lineColor, false);
           toast.classList.remove('fav-note-open');
           setTimeout(() => toast.remove(), 300);
         });
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+          toast.classList.remove('fav-note-open');
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
       }
 
       function triggerExitFav() {
         const pv = getPillValues(); if (!pv) return;
-        const added = toggleExitFav(slug, pv.wagon, pv.doors);
+        const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
+        const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
+        const dirLabel = labelEl ? labelEl.textContent.trim() : '';
+        const added = toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
         applyFavPillStyles(row, lineColor, added);
         showExitFavToast(row, added);
       }
 
       // Apply stored fav state on render
       const pv = getPillValues();
-      if (pv && isExitFav(slug, pv.wagon, pv.doors)) {
-        applyFavPillStyles(row, lineColor, true);
+      if (pv) {
+        const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
+        const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
+        const dirLabel = labelEl ? labelEl.textContent.trim() : '';
+        if (isExitFav(slug, dirLabel, pv.wagon, pv.doors)) {
+          applyFavPillStyles(row, lineColor, true);
+        }
       }
-
       // Long press detection
       let longPressTimer = null;
       row.addEventListener('touchstart', e => {
@@ -575,6 +662,25 @@
     return true;
   }
   window.closeAllSheets = closeAllSheets;
+
+  // Called by feedback.js after saving an exit label so the card updates immediately
+  window.refreshCurrentStation = function() {
+    if (!currentStationSlug) return;
+    // Re-apply exit labels to latest stationsData then re-render
+    if (typeof window.applyExitLabels === 'function') window.applyExitLabels(stationsData);
+    if (stationsData[currentStationSlug] && sheet.classList.contains('sheet-open')) {
+      const s = stationsData[currentStationSlug];
+      const color = LINE_COLOR[s.line] || '#888';
+      const prevScrollTop = sheetBody.scrollTop;
+      sheetBody.innerHTML = `<div class="sheet-header"><span class="sheet-title">${s.name}</span></div>${renderDirections(s, color)}`;
+      sheetBody.querySelectorAll('.nav-label').forEach(el => {
+        const target = slugByName(el.dataset.name || '');
+        if (target && target !== currentStationSlug) el.classList.add('nav-link');
+      });
+      attachExitFavListeners(sheetBody, currentStationSlug, color);
+      sheetBody.scrollTop = prevScrollTop;
+    }
+  };
 
   sheetClose.addEventListener('click', () => closeAllSheets());
 

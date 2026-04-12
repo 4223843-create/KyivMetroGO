@@ -516,38 +516,100 @@ body { background: var(--bg); }
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
-  cursor: default;
 }
-.fav-drag-handle {
-  font-size: 20px;
-  color: var(--text-muted);
-  cursor: grab;
-  padding: 4px 6px;
-  flex-shrink: 0;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none; /* критично для iOS drag */
-}
-.fav-drag-handle:active { cursor: grabbing; }
-.fav-item.fav-dragging { opacity: 0.4; }
-.fav-item.fav-over { outline: 1px dashed var(--text-muted); border-radius: 12px; }
+
 .fav-open-btn {
   flex: 1;
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Назва зліва, виходи справа */
+  gap: 12px;
   background: var(--bg-card);
   border: none;
   border-radius: 12px;
-  padding: 14px 14px 14px 16px;
+  padding: 12px 14px 12px 16px;
   cursor: pointer;
-  text-align: left;
-  border-left-width: 3px;
-  border-left-style: solid;
+  border-left: 3px solid;
+  min-height: 54px;
+  min-width: 0; /* ДОДАНО: дозволяє кнопці бути меншою за свій вміст */
 }
+
+/* Назва станції займає рівно ліву половину */
 .fav-station-name {
+  flex: 1;
+  width: 50%; /* Гарантуємо, що текст не залізе на праву частину */
   font-size: 16px;
   font-weight: 500;
   color: var(--text-muted);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Контейнер виходів займає рівно праву половину */
+.fav-exits-container {
+  flex: 1;
+  width: 50%; /* Другі 50% простору */
+  display: flex;
+  justify-content: center; /* МАГІЯ ТУТ: центруємо квадрати відносно виділеної правої половини */
+  align-items: center;
+  gap: 6px; 
+  min-width: 0;
+}
+
+/* Група з двох квадратів (вагон + двері) */
+.fav-exit-group {
+  display: flex;
+  gap: 4px;
+}
+
+/* Стиль самих квадратів (ВЕЛИКІ) */
+.fav-pos-square {
+  background: var(--bg-pill);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px; /* Більше заокруглення для великого розміру */
+  font-size: 20px; /* Великий і соковитий шрифт */
+  font-weight: 700;
+  line-height: 1;
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1); /* Плавна анімація зменшення */
+}
+
+/* Акуратний вертикальний відбивач */
+.fav-exit-sep {
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+  background: var(--text-muted);
+  opacity: 0.25;
+  margin: 0 2px;
+}
+
+/* ══ КОМПАКТНИЙ ВИГЛЯД (Коли 3 виходи) ══ */
+.fav-exits-compact .fav-pos-square {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  border-radius: 6px;
+}
+
+.fav-exits-compact .fav-exit-sep {
+  height: 12px;
+  opacity: 0.2;
+}
+
+.fav-exit-info {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* ══ СЕРЦЕ В HANDLE-BAR ══ */
@@ -1002,49 +1064,52 @@ body { background: var(--bg); }
   align-items: flex-end;
   justify-content: center;
   backdrop-filter: blur(2px);
-  padding-bottom: calc(28px + env(safe-area-inset-bottom));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
 }
 .global-confirm-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: calc(100% - 32px);
-  max-width: 400px;
+  max-width: 360px;
   animation: popUpBottom 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border-radius: 16px;
+  overflow: hidden;
 }
 .global-confirm-text {
   width: 100%;
   background: var(--bg-card);
-  border-radius: 16px 16px 0 0;
-  padding: 20px 20px 18px;
-  font-size: 16px;
+  padding: 16px 16px 0;
+  font-size: 15px;
   color: var(--text);
   text-align: center;
-  line-height: 1.45;
+  line-height: 1.4;
   font-weight: 500;
   box-sizing: border-box;
 }
 .global-confirm-btns {
   display: flex;
   width: 100%;
+  background: var(--bg-card);
+  padding: 12px 16px 14px;
+  gap: 10px;
+  box-sizing: border-box;
 }
 .global-confirm-btns .confirm-square {
   flex: 1;
-  height: 52px;
+  height: 40px;
   width: auto;
-  border-radius: 0;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top: 0.5px solid var(--border);
+  border: 0.5px solid var(--border);
 }
 .global-confirm-btns .confirm-square-yes {
-  border-radius: 0 0 0 16px;
-  border-right: 0.25px solid var(--border);
+  border-radius: 10px;
 }
 .global-confirm-btns .confirm-square-no {
-  border-radius: 0 0 16px 0;
-  border-left: 0.25px solid var(--border);
+  border-radius: 10px;
 }
 @keyframes popIn {
   from { transform: scale(0.85); opacity: 0; }
@@ -1970,17 +2035,48 @@ html {
 /* ══ Exit info in fav list ══ */
 .fav-exit-info { font-size: 16px; font-weight: 500; color: var(--text-muted); }
 
-/* ══ Exit fav toast (uses fb-closed-note-wrap design) ══ */
-.exit-fav-slide {
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height 0.3s cubic-bezier(0.32,0.72,0,1);
+/* ══ Exit fav toast — LEFT of pills ══ */
+.exit-fav-toast {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateX(-100%) translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px 4px 0;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 10;
 }
-.exit-fav-slide.fav-note-open {
-  max-height: 90px;
+.exit-fav-toast.fav-note-open {
+  opacity: 1;
   pointer-events: auto;
 }
+.exit-fav-toast-text {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.exit-fav-toast-cancel {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.exit-fav-toast-cancel:active { opacity: 1; }
+/* Make position-row relative for absolute positioning of toast */
+.position-row { position: relative; }
 
 /* ══ Task 5: Inline exit-close confirm panel ══ */
 .fb-inline-confirm {
@@ -2041,11 +2137,16 @@ html {
 /* ══ Task 3: Exit label editor ══ */
 .fb-exit-label-row {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 6px;
+  align-items: center;
   margin: 0 0 6px;
   min-height: 22px;
+}
+.fb-exit-label-row-inner {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .fb-exit-label-text {
   font-size: 12px;
@@ -2054,16 +2155,20 @@ html {
   text-align: center;
 }
 .fb-exit-label-edit-btn {
+  /* Абсолютне позиціонування праворуч зберігає ідеальний центр тексту! */
+  position: absolute;
+  left: 100%;
+  margin-left: 4px;
   background: none;
   border: none;
   color: var(--text-muted);
   opacity: 0.55;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px; /* Збільшили зону кліку */
   display: flex;
   align-items: center;
+  justify-content: center;
   -webkit-tap-highlight-color: transparent;
-  flex-shrink: 0;
 }
 .fb-exit-label-edit-btn:active { opacity: 1; }
 .fb-add-desc-btn {
@@ -2072,29 +2177,29 @@ html {
   font-size: 11px;
   color: var(--text-muted);
   opacity: 0.55;
-  letter-spacing: .04em;
+  letter-spacing: .02em;
   cursor: pointer;
   padding: 2px 8px;
-  text-transform: uppercase;
+  text-transform: none;
   -webkit-tap-highlight-color: transparent;
 }
 .fb-add-desc-btn:active { opacity: 1; }
 .fb-exit-label-input-wrap {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   overflow: hidden;
   max-height: 0;
   transition: max-height 0.25s ease;
 }
 .fb-exit-label-input-wrap.label-input-open {
-  max-height: 60px;
+  max-height: 48px;
 }
 .fb-exit-label-input {
   width: 100%;
   background: var(--bg-pill);
   border: 0.5px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 10px;
-  font-size: 13px;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
   color: var(--text);
   font-family: inherit;
   text-align: center;
@@ -2104,3 +2209,15 @@ html {
   user-select: text;
 }
 .fb-exit-label-input:focus { border-color: var(--text-muted); }
+.fav-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.fav-exit-info {
+  font-size: 13px;
+  color: var(--text-muted);
+  opacity: 0.8;
+  text-align: left;
+}
