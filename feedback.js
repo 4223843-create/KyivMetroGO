@@ -9,6 +9,47 @@
   const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
   const LINE_ORDER = ['red', 'blue', 'green'];
   const LOCAL_EDITS_KEY = 'metro_local_edits';
+
+  /* ==========================================================================
+     EXIT LABEL EDITS (custom exit descriptions)
+     ========================================================================== */
+  const EXIT_LABELS_KEY = 'metro_exit_labels';
+  const PENCIL_SVG_LABEL = '<svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="11" height="11"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>';
+
+  function getExitLabels() {
+    try { return JSON.parse(localStorage.getItem(EXIT_LABELS_KEY) || '{}'); } catch { return {}; }
+  }
+  function saveExitLabel(slug, posIdx, label) {
+    const labels = getExitLabels();
+    if (!labels[slug]) labels[slug] = {};
+    if (label.trim()) labels[slug][posIdx] = label.trim();
+    else { delete labels[slug][posIdx]; if (!Object.keys(labels[slug]).length) delete labels[slug]; }
+    localStorage.setItem(EXIT_LABELS_KEY, JSON.stringify(labels));
+  }
+  function getExitLabel(slug, posIdx) {
+    const labels = getExitLabels();
+    return labels[slug]?.[posIdx] ?? null;
+  }
+  window.getExitLabel = getExitLabel;
+
+  function applyExitLabels(stationsData) {
+    const labels = getExitLabels();
+    for (const [slug, posLabels] of Object.entries(labels)) {
+      if (!stationsData[slug]) continue;
+      let posIdx = 0;
+      for (const dir of stationsData[slug].directions) {
+        for (const exit of dir.exits) {
+          if (posLabels[posIdx] !== undefined) {
+            exit.label = posLabels[posIdx];
+          }
+          for (let i = 0; i < exit.positions.length; i++) { posIdx++; }
+        }
+      }
+    }
+  }
+  window.applyExitLabels = applyExitLabels;
+
+
   
   let currentStationsData = null; 
 
@@ -208,6 +249,36 @@
     if (container._fbSteppersBound) return;
     container._fbSteppersBound = true;
 
+    container.addEventListener('change', (event) => {
+      const input = event.target.closest('.fb-exit-label-input');
+      if (input) {
+        const slug = document.getElementById('fbStation')?.value;
+        const wrapId = input.id.replace('fbLabelInput', '');
+        if (slug && wrapId !== '') {
+          saveExitLabel(slug, parseInt(wrapId), input.value);
+          // Update the label text span
+          const wrap = document.getElementById('fbLabelWrap' + wrapId);
+          const row = wrap?.previousElementSibling;
+          if (row?.classList.contains('fb-exit-label-row')) {
+            const textSpan = row.querySelector('.fb-exit-label-text');
+            if (textSpan) textSpan.textContent = input.value.trim();
+            // Swap pencil/add-desc button
+            const editBtn = row.querySelector('.fb-exit-label-edit-btn, .fb-add-desc-btn');
+            if (editBtn && input.value.trim()) {
+              editBtn.className = 'fb-exit-label-edit-btn';
+              editBtn.textContent = '';
+              editBtn.innerHTML = PENCIL_SVG_LABEL;
+              editBtn.setAttribute('aria-label', 'Редагувати');
+            } else if (editBtn && !input.value.trim()) {
+              editBtn.className = 'fb-add-desc-btn';
+              editBtn.innerHTML = 'Додати опис';
+            }
+          }
+          markFeedbackDirty();
+        }
+      }
+    });
+
     container.addEventListener('click', (event) => {
       const btn = event.target.closest('.fb-step');
       if (btn) {
@@ -310,6 +381,7 @@
       const addDoorsBtn = event.target.closest('.fb-add-doors-link');
       if (addDoorsBtn) {
         const idx = addDoorsBtn.dataset.idx;
+        const canHaveThird = addDoorsBtn.dataset.canHaveThird === '1';
         document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'none';
         document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
         document.getElementById(`fbItemInner${idx}`).classList.add('has-extra-doors');
@@ -324,6 +396,18 @@
           exDNode.textContent = adj[0].d;
         }
 
+        if (canHaveThird) {
+          // One door at a time: second added → keep +1 so user can add third
+          const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
+          if (wrap2 && wrap2.style.display === 'none') {
+            // Second just added — keep +1 visible for adding third
+            document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'flex';
+          } else if (wrap2 && wrap2.style.display !== 'none') {
+            // Third just added — hide +1
+            document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'none';
+          }
+        }
+
         markFeedbackDirty();
         return;
       }
@@ -334,12 +418,29 @@
         document.getElementById(`fbW_ex${idx}`).textContent = '-';
         document.getElementById(`fbD_ex${idx}`).textContent = '-';
         document.getElementById(`fbExtraWrap${idx}`).style.display = 'none';
-
+        const w2 = document.getElementById(`fbExtraWrap2_${idx}`);
+        if (w2) { document.getElementById(`fbW_ex2_${idx}`).textContent = '-'; document.getElementById(`fbD_ex2_${idx}`).textContent = '-'; w2.style.display = 'none'; }
         const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
         if (addRow) addRow.style.display = 'flex';
-
         document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
         markFeedbackDirty();
+      }
+
+      const labelEditBtn = event.target.closest('.fb-exit-label-edit-btn, .fb-add-desc-btn');
+      if (labelEditBtn) {
+        const itemIdx = labelEditBtn.dataset.itemIdx;
+        const wrap = document.getElementById('fbLabelWrap' + itemIdx);
+        const input = document.getElementById('fbLabelInput' + itemIdx);
+        if (wrap && input) {
+          const isOpen = wrap.classList.contains('label-input-open');
+          // Close all other open inputs
+          document.querySelectorAll('.fb-exit-label-input-wrap.label-input-open').forEach(w => {
+            if (w !== wrap) w.classList.remove('label-input-open');
+          });
+          if (!isOpen) { wrap.classList.add('label-input-open'); setTimeout(() => input.focus(), 250); }
+          else wrap.classList.remove('label-input-open');
+        }
+        return;
       }
 
       const cancelThirdBtn = event.target.closest('.fb-cancel-third-btn');
@@ -348,9 +449,11 @@
         document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
         document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
         document.getElementById(`fbExtraWrap2_${idx}`).style.display = 'none';
-        // Reshow +1 button so user can add third door again
-        const addRow3 = document.getElementById(`fbAddDoorsRow${idx}`);
-        if (addRow3) addRow3.style.display = 'flex';
+        const addBtn3 = document.getElementById(`fbAddBtn${idx}`);
+        if (addBtn3 && addBtn3.dataset.canHaveThird === '1') {
+          const addRow3 = document.getElementById(`fbAddDoorsRow${idx}`);
+          if (addRow3) addRow3.style.display = 'flex';
+        }
         markFeedbackDirty();
       }
     });
@@ -388,10 +491,10 @@
 
       sheet.innerHTML = `
         <div class="sheet-handle-bar">
-          <div class="sheet-handle"></div><span class="sheet-sheet-title">Запропонувати зміни</span><button class="sheet-close-btn" id="feedbackClose">✕</button>
+          <div class="sheet-handle"></div><span class="sheet-sheet-title">Виправте неточності</span><button class="sheet-close-btn" id="feedbackClose">✕</button>
         </div>
         <div class="sheet-body" id="feedbackBody">
-          <p class="fb-main-intro-text">Виправте неточності. Зміни застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
+          <p class="fb-main-intro-text">Зміни застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
           <div class="fb-selectors">
             <div class="fb-select-wrap"><div id="fbLineDropdown" class="fb-dropdown" hidden></div><div class="fb-select-inner"><label class="fb-label">Гілка</label>${lineSelectHtml}</div></div>
             <div class="fb-select-wrap"><div id="fbStationDropdown" class="fb-dropdown" hidden></div><div class="fb-select-inner"><label class="fb-label">Станція</label>${stationSelectHtml}</div></div>
@@ -508,8 +611,18 @@
             const isClosed = edits[item.i]?.closed;
             const dividerHtml = (index !== g.items.length - 1) ? `<div class="fb-item-divider"></div>` : '';
 
-            const exitSubLabel = item.p.exit ? `<div class="fb-exit-label" style="font-size:12px;color:var(--text-muted);text-align:center;margin:0 0 6px;opacity:0.8;">${item.p.exit.replace(/[🟥🟦🟩]/g,'').trim()}</div>` : '';
-            return `${exitSubLabel}
+            const customLbl = getExitLabel(slug, item.i);
+            const rawExit = customLbl ?? (item.p.exit ? item.p.exit.replace(/[🟥🟦🟩]/g,'').trim() : '');
+            const exitLabelHtml = '<div class="fb-exit-label-row">'
+              + '<span class="fb-exit-label-text">' + rawExit + '</span>'
+              + (rawExit
+                ? '<button type="button" class="fb-exit-label-edit-btn" data-item-idx="' + item.i + '" aria-label="Редагувати">' + PENCIL_SVG_LABEL + '</button>'
+                : '<button type="button" class="fb-add-desc-btn" data-item-idx="' + item.i + '">Додати опис</button>')
+              + '</div>'
+              + '<div class="fb-exit-label-input-wrap" id="fbLabelWrap' + item.i + '">'
+              + '<input type="text" class="fb-exit-label-input" id="fbLabelInput' + item.i + '" placeholder="Короткий опис виходу" value="' + rawExit.replace(/"/g, '&quot;') + '" maxlength="60">'
+              + '</div>';
+            return exitLabelHtml + `
             <div class="fb-item-inner ${hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${hasThird ? 'has-three-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
               ${isClosed
                 ? `<div class="fb-closed-note-wrap"><span class="fb-closed-note">Вихід позначено як недоступний</span><button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button></div>`
@@ -517,7 +630,7 @@
                    <div class="fb-pos-inputs">${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}</div>
                    <div class="fb-side-actions"><button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button></div></div>                   <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
                    <div class="fb-extra-door-wrap" id="fbExtraWrap2_${item.i}" style="display: ${hasThird ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex2_${item.i}`, wEx2, 1, 5, 'вагон')}${stepperHtml(`fbD_ex2_${item.i}`, dEx2, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-third-btn" data-idx="${item.i}">✕</button></div></div></div>
-                   <div class="fb-add-doors-row" id="fbAddDoorsRow${item.i}" style="display:${hasExtra ? 'none' : 'flex'}; justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}">+1</button></div>
+                   <div class="fb-add-doors-row" id="fbAddDoorsRow${item.i}" style="display:${hasExtra ? 'none' : 'flex'}; justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}" data-can-have-third="${hasThird ? '1' : '0'}">+1</button></div>
                    <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері.</p><p>Якщо двері лише одні, <span style="color:#c8523a">✕</span> позначить&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:#5B9BD5">✕</span> скасовує додавання других дверей.</p></div></div></div>`
               }
             </div>${dividerHtml}`;
@@ -554,13 +667,42 @@
                 if (document.getElementById(`fbAddDoorsRow${idx}`)) document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'flex';
                 document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
                 window.fbUnsaved = true; sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false;
-                return; 
+                return;
             }
-            window.showCustomConfirm('Позначити вихід як недоступний?', () => {
-              saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true }); applyLocalEdits(stationsData); window.fbUnsaved = false; renderPositions(slug);
+            // Inline confirm panel instead of global overlay
+            const itemEl = document.getElementById(`fbItemInner${idx}`);
+            let confirmEl = itemEl?.nextElementSibling;
+            if (confirmEl && confirmEl.classList.contains('fb-inline-confirm')) {
+              confirmEl.classList.remove('fb-inline-open');
+              setTimeout(() => confirmEl?.remove(), 300);
+              return;
+            }
+            document.querySelectorAll('.fb-inline-confirm').forEach(el => {
+              el.classList.remove('fb-inline-open'); setTimeout(() => el.remove(), 300);
+            });
+            confirmEl = document.createElement('div');
+            confirmEl.className = 'fb-inline-confirm';
+            confirmEl.innerHTML = '<div class="fb-inline-confirm-inner">'
+              + '<div class="fb-inline-confirm-note">Позначити як недоступний?</div>'
+              + '<div class="fb-inline-confirm-btns">'
+              + '<button class="fb-inline-confirm-yes">' + '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' + '</button>'
+              + '<button class="fb-inline-confirm-no">' + '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' + '</button>'
+              + '</div></div>';
+            itemEl.after(confirmEl);
+            requestAnimationFrame(() => confirmEl.classList.add('fb-inline-open'));
+
+            confirmEl.querySelector('.fb-inline-confirm-yes').addEventListener('click', () => {
+              confirmEl.classList.remove('fb-inline-open');
+              setTimeout(() => confirmEl.remove(), 300);
+              saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
+              applyLocalEdits(stationsData); window.fbUnsaved = false; renderPositions(slug);
               fetch(FORMSPREE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` }) }).catch(e => console.warn(e));
-              resultEl.innerHTML = `<p class="fb-note fb-success" style="padding-bottom: 0; margin-bottom: 6px;">Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.</p><button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top: 0; padding-top: 8px;">Скасувати ці зміни</button>`;
+              resultEl.innerHTML = `<p class="fb-note fb-success" style="padding-bottom:0;margin-bottom:6px;">Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.</p><button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top:0;padding-top:8px;">Скасувати ці зміни</button>`;
               attachUndoBtn(slug, resultEl, renderPositions, renderResetBtn);
+            });
+            confirmEl.querySelector('.fb-inline-confirm-no').addEventListener('click', () => {
+              confirmEl.classList.remove('fb-inline-open');
+              setTimeout(() => confirmEl.remove(), 300);
             });
           });
         });

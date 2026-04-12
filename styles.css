@@ -225,7 +225,7 @@ body#map-page .map-viewport {
   --bg-pill:    #cacace;
   --text:       #1c1c1e;
   --text-muted: #2c2c2e;
-  --icon-color: #636366;
+  --icon-color: #2c2c2e;
   --text-exit:  #3a3a3c;
   --border:     rgba(0,0,0,0.14);
   --overlay:    rgba(0,0,0,0.35);
@@ -992,32 +992,60 @@ body { background: var(--bg); }
 .confirm-square-yes { background: var(--bg-card); color: #5aaa6a; border: 0.5px solid var(--border); }
 .confirm-square-no  { background: var(--bg-card); color: #c8523a; border: 0.5px solid var(--border); }
 
-/* Глобальне вікно підтвердження (як на олівці, але по центру) */
+/* Глобальне вікно підтвердження — дизайн як fb-closed-note-wrap */
 .global-confirm-overlay {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.45);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   backdrop-filter: blur(2px);
+  padding-bottom: calc(28px + env(safe-area-inset-bottom));
 }
-
 .global-confirm-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  padding: 20px;
-  border-radius: 20px;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  min-width: 240px;
-  animation: popIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  width: calc(100% - 32px);
+  max-width: 400px;
+  animation: popUpBottom 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-
+.global-confirm-text {
+  width: 100%;
+  background: var(--bg-card);
+  border-radius: 16px 16px 0 0;
+  padding: 20px 20px 18px;
+  font-size: 16px;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.45;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+.global-confirm-btns {
+  display: flex;
+  width: 100%;
+}
+.global-confirm-btns .confirm-square {
+  flex: 1;
+  height: 52px;
+  width: auto;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 0.5px solid var(--border);
+}
+.global-confirm-btns .confirm-square-yes {
+  border-radius: 0 0 0 16px;
+  border-right: 0.25px solid var(--border);
+}
+.global-confirm-btns .confirm-square-no {
+  border-radius: 0 0 16px 0;
+  border-left: 0.25px solid var(--border);
+}
 @keyframes popIn {
   from { transform: scale(0.85); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -1062,7 +1090,7 @@ body { background: var(--bg); }
   position: relative;
   background: #2C2C2E;
   border: none;
-  color: #ffffff;
+  color: var(--text-muted);
   width: 44px;
   border-radius: 0 0 12px 12px;
   margin: -16px auto 0 auto;
@@ -1837,14 +1865,21 @@ html {
 }
 .exit-fav-cancel:active { opacity: 0.6; }
 
-/* ══ Task 6: Slide-in edit info panel ══ */
+/* ══ Pencil slide-in panel ══ */
 .edit-info-panel {
   overflow: hidden;
   max-height: 0;
-  transition: max-height 0.28s ease;
+  transition: max-height 0.3s cubic-bezier(0.32,0.72,0,1);
 }
 .edit-info-panel.panel-open {
-  max-height: 80px;
+  max-height: 120px;
+}
+.edit-info-panel .fb-closed-note-wrap {
+  pointer-events: auto !important;
+  margin: 4px 0 0;
+}
+.edit-info-panel .fb-restore-exit {
+  pointer-events: auto !important;
 }
 .edit-info-panel-inner {
   display: flex;
@@ -1931,3 +1966,141 @@ html {
 }
 
 /* ══ Remove old edit-info-panel styles now that we use fb-closed-note-wrap ══ */
+
+/* ══ Exit info in fav list ══ */
+.fav-exit-info { font-size: 16px; font-weight: 500; color: var(--text-muted); }
+
+/* ══ Exit fav toast (uses fb-closed-note-wrap design) ══ */
+.exit-fav-slide {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s cubic-bezier(0.32,0.72,0,1);
+  pointer-events: none;
+}
+.exit-fav-slide.fav-note-open {
+  max-height: 90px;
+  pointer-events: auto;
+}
+
+/* ══ Task 5: Inline exit-close confirm panel ══ */
+.fb-inline-confirm {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.28s cubic-bezier(0.32,0.72,0,1);
+}
+.fb-inline-confirm.fb-inline-open {
+  max-height: 80px;
+}
+.fb-inline-confirm-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 4px 0 0;
+}
+.fb-inline-confirm-note {
+  width: 100%;
+  background: var(--bg-card);
+  border-radius: 12px 12px 0 0;
+  padding: 10px 14px 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  box-sizing: border-box;
+}
+.fb-inline-confirm-btns {
+  display: flex;
+  width: 60%;
+}
+.fb-inline-confirm-yes,
+.fb-inline-confirm-no {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  -webkit-tap-highlight-color: transparent;
+  border-top: 0.5px solid var(--border);
+}
+.fb-inline-confirm-yes {
+  color: #5aaa6a;
+  border-radius: 0 0 0 12px;
+  border-right: 0.25px solid var(--border);
+}
+.fb-inline-confirm-no {
+  color: #c8523a;
+  border-radius: 0 0 12px 0;
+  border-left: 0.25px solid var(--border);
+}
+.fb-inline-confirm-yes:active, .fb-inline-confirm-no:active { opacity: 0.6; }
+
+/* ══ Task 3: Exit label editor ══ */
+.fb-exit-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  min-height: 22px;
+}
+.fb-exit-label-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.8;
+  text-align: center;
+}
+.fb-exit-label-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.fb-exit-label-edit-btn:active { opacity: 1; }
+.fb-add-desc-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.55;
+  letter-spacing: .04em;
+  cursor: pointer;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent;
+}
+.fb-add-desc-btn:active { opacity: 1; }
+.fb-exit-label-input-wrap {
+  margin: 0 0 8px;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.25s ease;
+}
+.fb-exit-label-input-wrap.label-input-open {
+  max-height: 60px;
+}
+.fb-exit-label-input {
+  width: 100%;
+  background: var(--bg-pill);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  text-align: center;
+  box-sizing: border-box;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.fb-exit-label-input:focus { border-color: var(--text-muted); }

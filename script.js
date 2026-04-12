@@ -181,6 +181,7 @@
     Object.keys(stationsData).forEach(key => delete stationsData[key]);
     data.stations.forEach(s => { stationsData[s.slug] = s; });
     if (window.applyLocalEdits) window.applyLocalEdits(stationsData);
+    if (window.applyExitLabels) window.applyExitLabels(stationsData);
     return stationsData;
   }
 
@@ -229,6 +230,13 @@
     catch { favCache = []; }
   });
 
+  function formatExitFavs(slug) {
+    const all = getExitFavs().filter(f => f.slug === slug);
+    if (!all.length) return '';
+    if (all.length === 1) return ' | ' + all[0].wagon + ' вагон, ' + all[0].doors + ' двері';
+    return ' | ' + all.map(f => f.wagon + ' в., ' + f.doors + ' д.').join(', ');
+  }
+
   function renderFavList(favs) {
     if (!favs.length) {
       favBody.innerHTML = `<p class="fav-empty-text">Немає збережених станцій.<br>Натисніть&nbsp;♡ на&nbsp;картці&nbsp;станції,<br>щоб зберегти&nbsp;її в&nbsp;обране.</p>`;
@@ -240,7 +248,7 @@
       const color = LINE_COLOR[s.line] || '#888';
       return `<div class="fav-item" data-slug="${slug}">
         <button class="fav-open-btn" data-slug="${slug}" style="border-left-color:${color}">
-          <span class="fav-station-name">${s.name}</span>
+          <span class="fav-station-name">${s.name}<span class="fav-exit-info">${formatExitFavs(slug)}</span></span>
         </button>
         <div class="fav-drag-handle" aria-label="Перетягнути">⠿</div>
       </div>`;
@@ -649,7 +657,7 @@
 
       panel = document.createElement('div');
       panel.className = 'edit-info-panel';
-      panel.innerHTML = `<div class="edit-info-panel-inner"><span class="edit-info-panel-text">Значення змінено користувачем</span><button class="edit-info-panel-cancel" data-slug="${slug}" data-idx="${idx}"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7v6h6\"/><path d=\"M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13\"/></svg> Скасувати</button></div>`;
+      panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;margin:4px 0 0"><span class="fb-closed-note">Значення змінено користувачем</span><button class="fb-restore-exit edit-info-cancel" style="pointer-events:auto" data-slug="' + slug + '" data-idx="' + idx + '"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button></div>';
       row.after(panel);
       requestAnimationFrame(() => panel.classList.add('panel-open'));
 
@@ -779,7 +787,7 @@
   window.showCustomConfirm = function(message, onYes, onNo) {
     const overlay = document.createElement('div');
     overlay.className = 'global-confirm-overlay';
-    overlay.innerHTML = `<div class="global-confirm-card"><div class="edit-popup-text" style="font-size:16px">${message}</div><div class="edit-popup-btns"><button class="confirm-square confirm-square-yes" id="confirmYes"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button><button class="confirm-square confirm-square-no" id="confirmNo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></div>`;
+    overlay.innerHTML = `<div class="global-confirm-card"><div class="global-confirm-text">${message}</div><div class="global-confirm-btns"><button class="confirm-square confirm-square-yes" id="confirmYes"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button><button class="confirm-square confirm-square-no" id="confirmNo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></div>`;
     document.body.appendChild(overlay);
 
     overlay.querySelector('#confirmYes').addEventListener('click', () => { overlay.remove(); if (onYes) onYes(); });
