@@ -32,6 +32,7 @@
 
   function applyLocalEdits(stationsData) {
     const edits = getLocalEdits();
+    let editsChanged = false;
     for (const [slug, posEdits] of Object.entries(edits)) {
       if (!stationsData[slug]) continue;
       let posIdx = 0;
@@ -39,12 +40,26 @@
         for (const exit of dir.exits) {
           for (let i = 0; i < exit.positions.length; i++) {
             if (posEdits[posIdx] !== undefined) {
-              exit.positions[i] = { ...exit.positions[i], ...posEdits[posIdx], _edited: true, _slug: slug, _posIdx: posIdx };
+              const edit = posEdits[posIdx];
+              // Skip corrupt edits with NaN wagon/doors values
+              const wStr = String(edit.wagon ?? '');
+              const dStr = String(edit.doors ?? '');
+              if (wStr.includes('NaN') || dStr.includes('NaN') || wStr === 'undefined' || dStr === 'undefined') {
+                delete posEdits[posIdx];
+                editsChanged = true;
+              } else {
+                exit.positions[i] = { ...exit.positions[i], ...edit, _edited: true, _slug: slug, _posIdx: posIdx };
+              }
             }
             posIdx++;
           }
         }
       }
+      if (Object.keys(posEdits).length === 0) delete edits[slug];
+    }
+    if (editsChanged) {
+      if (Object.keys(edits).length === 0) localStorage.removeItem('metro_local_edits');
+      else localStorage.setItem('metro_local_edits', JSON.stringify(edits));
     }
   }
 
@@ -333,6 +348,9 @@
         document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
         document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
         document.getElementById(`fbExtraWrap2_${idx}`).style.display = 'none';
+        // Reshow +1 button so user can add third door again
+        const addRow3 = document.getElementById(`fbAddDoorsRow${idx}`);
+        if (addRow3) addRow3.style.display = 'flex';
         markFeedbackDirty();
       }
     });
@@ -490,7 +508,8 @@
             const isClosed = edits[item.i]?.closed;
             const dividerHtml = (index !== g.items.length - 1) ? `<div class="fb-item-divider"></div>` : '';
 
-            return `
+            const exitSubLabel = item.p.exit ? `<div class="fb-exit-label" style="font-size:12px;color:var(--text-muted);text-align:center;margin:0 0 6px;opacity:0.8;">${item.p.exit.replace(/[🟥🟦🟩]/g,'').trim()}</div>` : '';
+            return `${exitSubLabel}
             <div class="fb-item-inner ${hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${hasThird ? 'has-three-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
               ${isClosed
                 ? `<div class="fb-closed-note-wrap"><span class="fb-closed-note">Вихід позначено як недоступний</span><button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button></div>`

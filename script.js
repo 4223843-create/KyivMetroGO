@@ -148,11 +148,10 @@
   };
 
   function heartSvg(isFav, slug, lineColor) {
-    const path = 'M53.409 13.888q5.035 0 7.912 5.829 1.042 2.307 1.092 3.522h.074q.868-4.018 3.15-6.672 2.68-2.68 6.028-2.68 5.184 0 8.31 5.557.793 2.059.793 3.87 0 6.2-5.16 11.831l-13.12 15.751h-.15l-13.94-17.09q-4.167-5.085-4.167-10.492 0-5.234 4.936-8.31 2.084-1.116 4.242-1.116';
-    const t = 'transform="translate(-44.23 -13.888)"';
-    const base = 'width="22" height="20" viewBox="0 0 41.027 37.009" xmlns="http://www.w3.org/2000/svg"';
-    if (!isFav) return `<svg ${base} fill="none" stroke="#ABABAB" stroke-width="2"><path d="${path}" ${t}/></svg>`;
-    return `<svg ${base} fill="${lineColor}" stroke="${lineColor}" stroke-width="0.5"><path d="${path}" ${t}/></svg>`;
+    const base = 'width="22" height="20" viewBox="0 0 24 22" xmlns="http://www.w3.org/2000/svg"';
+    const path = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+    if (!isFav) return `<svg ${base} fill="none" stroke="#ABABAB" stroke-width="2"><path d="${path}"/></svg>`;
+    return `<svg ${base} fill="${lineColor}"><path d="${path}"/></svg>`;
   }
 
   function formatLabel(raw) {
@@ -346,14 +345,14 @@
     if (positions.length === 1) {
       const p = positions[0];
       const isMulti = String(p.wagon).includes(',');
-      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="14" height="14"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
+      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="17" height="17"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
       const spacer = p._edited ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}${generatePills(p.wagon, p.doors)}${spacer}</div>`;
     }
     
     if (multiRow) {
       const editedPos = positions.find(p => p._edited);
-      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="14" height="14"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
+      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="17" height="17"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
       const spacer = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row position-row-multi">${editedMark}${positions.map((p, i) => `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${generatePills(p.wagon, p.doors)}`).join('')}${spacer}</div>`;
     }
@@ -442,7 +441,6 @@
       if (!sheet.classList.contains('sheet-open')) { sheet.classList.add('sheet-open'); sheetOverlay.classList.add('overlay-visible'); }
       // Exit favs & station fav pill styles
       attachExitFavListeners(sheetBody, slug, color);
-      if (isFav(slug)) applyFavPillStyles(sheetBody, color, true);
     }
     actualOpenStation();
   }
@@ -474,8 +472,8 @@
         pill.style.background = lineColor;
         const num = pill.querySelector('.pos-pill-num');
         const lbl = pill.querySelector('.pos-pill-label');
-        if (num) num.style.color = '#1c1c1e';
-        if (lbl) lbl.style.color = '#1c1c1e';
+        if (num) num.style.color = 'var(--bg-pill)';
+        if (lbl) lbl.style.color = 'var(--bg-pill)';
       } else {
         pill.style.background = '';
         const num = pill.querySelector('.pos-pill-num');
@@ -501,14 +499,14 @@
       function showExitFavToast(row, added) {
         // Remove existing toast
         let toast = row.nextElementSibling;
-        if (toast && toast.classList.contains('exit-fav-note-wrap')) toast.remove();
+        if (toast && toast.classList.contains('fb-closed-note-wrap')) toast.remove();
 
         if (!added) return;
         const pv = getPillValues(); if (!pv) return;
 
         toast = document.createElement('div');
-        toast.className = 'exit-fav-note-wrap';
-        toast.innerHTML = `<span class="exit-fav-note">Вихід додано в обране</span><button class="exit-fav-cancel" aria-label="Скасувати">${UNDO_SVG} Скасувати</button>`;
+        toast.className = 'fb-closed-note-wrap exit-fav-slide';
+        toast.innerHTML = `<span class="fb-closed-note">Вихід додано в обране</span><button class="fb-restore-exit exit-fav-cancel" aria-label="Скасувати"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7v6h6\"/><path d=\"M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13\"/></svg></button>`;
         row.after(toast);
         requestAnimationFrame(() => toast.classList.add('fav-note-open'));
 
@@ -592,7 +590,6 @@
     const nowFav = toggleFav(slug);
     btn.innerHTML = heartSvg(nowFav, slug, color);
     btn.classList.toggle('fav-active', nowFav);
-    applyFavPillStyles(sheetBody, color, nowFav);
   });
 
   sheetOverlay.addEventListener('click', (e) => {
@@ -656,7 +653,7 @@
       row.after(panel);
       requestAnimationFrame(() => panel.classList.add('panel-open'));
 
-      panel.querySelector('.edit-info-panel-cancel').addEventListener('click', (ev) => {
+      panel.querySelector('.edit-info-cancel').addEventListener('click', (ev) => {
         ev.stopPropagation();
         try {
           const edits = JSON.parse(localStorage.getItem('metro_local_edits') || '{}');

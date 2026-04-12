@@ -984,10 +984,13 @@ body { background: var(--bg); }
   cursor: pointer;
   transition: transform 0.1s, opacity 0.1s;
   -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .confirm-square:active { transform: scale(0.9); opacity: 0.85; }
-.confirm-square-yes { background: #5aaa6a; }
-.confirm-square-no  { background: #c8523a; }
+.confirm-square-yes { background: var(--bg-card); color: #5aaa6a; border: 0.5px solid var(--border); }
+.confirm-square-no  { background: var(--bg-card); color: #c8523a; border: 0.5px solid var(--border); }
 
 /* Глобальне вікно підтвердження (як на олівці, але по центру) */
 .global-confirm-overlay {
@@ -1905,3 +1908,26 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 .fb-cancel-third-btn:active { opacity: 0.6; }
+
+/* ══ Task 3: Exit fav slide-in (uses fb-closed-note-wrap design) ══ */
+.exit-fav-slide {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.32,0.72,0,1);
+  margin: 0;
+  pointer-events: none;
+}
+.exit-fav-slide.fav-note-open {
+  max-height: 90px;
+  pointer-events: auto;
+}
+/* When used in station card, ensure it respects z-index */
+.position-row + .exit-fav-slide { margin-top: 0; }
+
+/* ══ Task 6: Pencil slide-in panel (same as edit-info-panel with fb-closed-note-wrap inside) ══ */
+/* Override pointer-events for fb-closed-note-wrap inside edit-info-panel */
+.edit-info-panel .fb-closed-note-wrap {
+  pointer-events: auto;
+}
+
+/* ══ Remove old edit-info-panel styles now that we use fb-closed-note-wrap ══ */

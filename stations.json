@@ -1688,7 +1688,11 @@
               "positions": [
                 {
                   "wagon": "2",
-                  "doors": "1, 4"
+                  "doors": "1"
+                },
+                {
+                  "wagon": "1",
+                  "doors": "4"
                 },
                 {
                   "wagon": "3",
