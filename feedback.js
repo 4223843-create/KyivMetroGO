@@ -466,10 +466,10 @@
 
       sheet.innerHTML = `
         <div class="sheet-handle-bar">
-          <div class="sheet-handle"></div><span class="sheet-sheet-title">Виправте неточності</span><button class="sheet-close-btn" id="feedbackClose">✕</button>
+          <div class="sheet-handle"></div><span class="sheet-sheet-title">Запропонувати зміни</span><button class="sheet-close-btn" id="feedbackClose">✕</button>
         </div>
         <div class="sheet-body" id="feedbackBody">
-          <p class="fb-main-intro-text">Зміни застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
+          <p class="fb-main-intro-text">Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
           <div class="fb-selectors">
             <div class="fb-select-wrap"><div id="fbLineDropdown" class="fb-dropdown" hidden></div><div class="fb-select-inner"><label class="fb-label">Гілка</label>${lineSelectHtml}</div></div>
             <div class="fb-select-wrap"><div id="fbStationDropdown" class="fb-dropdown" hidden></div><div class="fb-select-inner"><label class="fb-label">Станція</label>${stationSelectHtml}</div></div>
