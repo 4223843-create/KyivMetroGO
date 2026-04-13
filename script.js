@@ -147,7 +147,7 @@
     'вокзальна': 'R.Vokzalna', 'житомирська': 'R.Zhytomyrska'
   };
 
-  function heartSvg(isFav, slug, lineColor) {
+function heartSvg(isFav, slug, lineColor) {
     const base = 'width="22" height="20" viewBox="0 0 24 22" xmlns="http://www.w3.org/2000/svg"';
     const path = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
     if (!isFav) return `<svg ${base} fill="none" stroke="#ABABAB" stroke-width="2"><path d="${path}"/></svg>`;
@@ -204,7 +204,7 @@
   });
 
   /* ==========================================================================
-     5. ОБРАНІ СТАНЦІЇ (FAVOURITES)
+     5. ОБРАНІ СТАНЦІЇ ТА ВИХОДИ (FAVOURITES)
      ========================================================================== */
   const FAV_KEY = 'metro_favs';
   let favCache = null;
@@ -230,92 +230,189 @@
     catch { favCache = []; }
   });
 
+  const EXIT_FAV_KEY = 'metro_exit_favs';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function formatExitFavs(slug) {
-    const all = getExitFavs().filter(f => f.slug === slug);
-    if (!all.length) return '';
-    if (all.length === 1) return all[0].wagon + ' вагон, ' + all[0].doors + ' двері';
-    return all.map(f => f.wagon + ' в., ' + f.doors + ' д.').join(', ');
+  function getExitFavs() {
+    try { return JSON.parse(localStorage.getItem(EXIT_FAV_KEY) || '[]'); } catch { return []; }
+  }
+  
+  function exitFavId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
+  
+  function isExitFav(slug, dir, wagon, doors) {
+    return getExitFavs().some(f => f.id === exitFavId(slug, dir, wagon, doors));
   }
 
-  // Відновлюємо загублену функцію renderFavList
-  function renderFavList(favs) {
+function toggleExitFav(slug, dir, wagon, doors) {
+    let favs = getExitFavs(); 
+    const id = exitFavId(slug, dir, wagon, doors);
+    const idx = favs.findIndex(f => f.id === id);
+    
+    if (idx >= 0) {
+      favs.splice(idx, 1);
+    } else {
+      const slugDirFavs = favs.filter(f => f.slug === slug && f.dir === dir);
+      if (slugDirFavs.length >= 3) return false; 
+      favs.push({ id, slug, dir, wagon, doors });
+      
+      // Якщо станції ще немає в Обраному, додаємо її автоматично
+      let mainFavs = getFavs();
+      if (!mainFavs.includes(slug)) {
+        mainFavs.push(slug);
+        saveFavs(mainFavs);
+      }
+    }
+    
+    localStorage.setItem(EXIT_FAV_KEY, JSON.stringify(favs));
+    return idx < 0; 
+  }
+
+
+
+
+
+
+
+
+
+
+function renderFavList(favs) {
     if (!favs.length) {
       favBody.innerHTML = `<p class="fav-empty-text">Немає збережених станцій.<br>Натисніть ♡ на картці станції,<br>щоб зберегти її в обране.</p>`;
       return;
     }
 
-    // Допоміжна функція для рендеру квадратів
-    function renderExitFavsHtml(slug, color) {
-      const exits = getExitFavs().filter(f => f.slug === slug);
-      if (!exits.length) return '';
-      
-      // Якщо виходів 3 — додаємо клас для компактного вигляду
-      const isCompact = exits.length > 2;
-      const containerClass = isCompact ? 'fav-exits-container fav-exits-compact' : 'fav-exits-container';
+    const exitFavs = getExitFavs();
+    const itemsToRender = [];
 
-      // Генеруємо групи та з'єднуємо їх відбивачем
-      const groupsHtml = exits.map(f => `
-        <div class="fav-exit-group">
-          <div class="fav-pos-square" style="color:${color}">${f.wagon}</div>
-          <div class="fav-pos-square" style="color:${color}">${f.doors}</div>
-        </div>
-      `).join('<div class="fav-exit-sep"></div>');
-      
-      return `<div class="${containerClass}">${groupsHtml}</div>`;
-    }
-
-// Тепер рендеримо список обраних станцій
-    favBody.innerHTML = favs.map(slug => {
+    favs.forEach(slug => {
       const s = stationsData?.[slug];
-      if (!s) return '';
-      const color = LINE_COLOR[s.line] || '#888';
+      if (!s) return;
       
-      // ДОДАНО: Скорочуємо довгі назви спеціально для Обраного
-      let displayName = s.name;
-      if (slug === 'B.Ploshcha_Ukrainskikh_heroiv') {
+      const stationExits = exitFavs.filter(f => f.slug === slug);
+      if (stationExits.length === 0) {
+        itemsToRender.push({ slug, name: s.name, dir: '', color: LINE_COLOR[s.line], exits: [] });
+      } else {
+        const grouped = {};
+        stationExits.forEach(e => {
+          if (!grouped[e.dir]) grouped[e.dir] = [];
+          grouped[e.dir].push(e);
+        });
+        Object.entries(grouped).forEach(([dir, eList]) => {
+          itemsToRender.push({ slug, name: s.name, dir, color: LINE_COLOR[s.line], exits: eList });
+        });
+      }
+    });
+
+    itemsToRender.forEach(item => {
+        item.rowId = `${item.slug}::${item.dir}`;
+    });
+
+    let savedOrder = [];
+    try { savedOrder = JSON.parse(localStorage.getItem('metro_fav_rows_order') || '[]'); } catch(e) {}
+
+    const getEffectiveIdx = (item) => {
+        let idx = savedOrder.indexOf(item.rowId);
+        if (idx !== -1) return idx;
+        // Якщо напрямок новий, шукаємо сусідів по станції і ставимо рівно під ними
+        let siblingIdx = savedOrder.findIndex(id => id.startsWith(item.slug + '::'));
+        if (siblingIdx !== -1) return siblingIdx + 0.5;
+        return 99999;
+    };
+
+    itemsToRender.sort((a, b) => {
+        let valA = getEffectiveIdx(a);
+        let valB = getEffectiveIdx(b);
+        if (valA === valB) return a.dir.localeCompare(b.dir);
+        return valA - valB;
+    });
+
+favBody.innerHTML = itemsToRender.map(item => {
+      let displayName = item.name;
+      if (item.slug === 'B.Ploshcha_Ukrainskikh_heroiv') {
         displayName = 'Пл. Українських героїв';
       }
-      // Можна додати інші скорочення в майбутньому, якщо знадобиться
+
+      // ВІДНОВЛЕНО: Блок правильної капіталізації напрямку
+      let formattedDir = '';
+      if (item.dir && item.dir !== 'undefined') {
+        let lower = item.dir.toLowerCase().trim();
+        if (lower === 'кінцева' || lower === 'вихід праворуч') {
+          formattedDir = lower;
+        } else if (lower.includes('довгий перехід')) {
+          formattedDir = 'довгий перехід на Майдан Незалежності';
+
+
+
+
+} else {
+          let stationName = lower.replace(/^попередня\s+/, '');
+          const alwaysCap = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
+          let formattedStation = stationName.split(/[\s\u00a0\u202f]+/).map((w, index) => {
+            return (index === 0 || alwaysCap.has(w)) ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+          }).join(' ');
+
+          // РОЗУМНЕ СКОРОЧЕННЯ: відсікаємо зайве, якщо виходів > 1 (бо бракує місця)
+          if (item.exits.length > 1) {
+            const fsLower = formattedStation.toLowerCase();
+            if (fsLower === 'контрактова площа') formattedStation = 'Контрактова';
+            else if (fsLower === 'поштова площа') formattedStation = 'Поштова';
+            else if (fsLower === 'майдан незалежності') formattedStation = 'Майдан';
+            else if (fsLower === 'політехнічний інститут') formattedStation = 'Політехнічний';
+            else if (fsLower === 'золоті ворота') formattedStation = 'Золоті';
+          }
+
+          formattedDir = lower.startsWith('попередня') ? `попередня ${formattedStation}` : formattedStation;
+        }
+      }
+
+      let squaresHtml = '';
+      if (item.exits.length > 0) {
+        const isCompact = item.exits.length > 2;
+        const containerClass = isCompact ? 'fav-exits-container fav-exits-compact' : 'fav-exits-container';
+        
+        const groupsHtml = item.exits.map(f => `
+          <div class="fav-exit-group">
+            <div class="fav-pos-square" style="color:${item.color}">${f.wagon}</div>
+            <div class="fav-pos-square" style="color:${item.color}">${f.doors}</div>
+          </div>
+        `).join('<div class="fav-exit-sep"></div>');
+        
+        squaresHtml = `<div class="${containerClass}">${groupsHtml}</div>`;
+      }
       
-      return `<div class="fav-item" data-slug="${slug}">
-        <button class="fav-open-btn" data-slug="${slug}" style="border-left-color:${color}">
-          <span class="fav-station-name">${displayName}</span>
-          ${renderExitFavsHtml(slug, color)}
+      return `<div class="fav-item" data-slug="${item.slug}" data-row-id="${item.rowId}">
+        <button class="fav-open-btn" data-slug="${item.slug}" style="border-left-color:${item.color}">
+          <div class="fav-text-wrap">
+            <span class="fav-station-name ${item.exits.length > 1 ? 'fav-small' : ''}">${displayName}</span>
+            ${(formattedDir && item.exits.length > 0) ? `<span class="fav-dir-name ${item.exits.length > 1 ? 'fav-small-dir' : ''}">${formattedDir}</span>` : ''}
+          </div>
+          ${squaresHtml}
         </button>
         <div class="fav-drag-handle" aria-label="Перетягнути">⠿</div>
       </div>`;
+
+
+
+      
     }).join('');
 
     let dragSrc = null;
     function getDragItems() { return [...favBody.querySelectorAll('.fav-item')]; }
-    function saveOrder() { saveFavs(getDragItems().map(i => i.dataset.slug)); }
-    function getItemAtY(y) { return getDragItems().find(item => { const r = item.getBoundingClientRect(); return y >= r.top && y <= r.bottom; }); }
-    function clearDragState() {
-      getDragItems().forEach(i => i.classList.remove('fav-over'));
+    function saveOrder() { 
+      const items = getDragItems();
+      const rowIds = items.map(i => i.dataset.rowId);
+      localStorage.setItem('metro_fav_rows_order', JSON.stringify(rowIds));
+      
+      const currentSlugs = items.map(i => i.dataset.slug);
+      const uniqueSlugs = [...new Set(currentSlugs)];
+      saveFavs(uniqueSlugs); 
     }
+
+
+
+
+    function getItemAtY(y) { return getDragItems().find(item => { const r = item.getBoundingClientRect(); return y >= r.top && y <= r.bottom; }); }
+    function clearDragState() { getDragItems().forEach(i => i.classList.remove('fav-over')); }
 
     favBody.querySelectorAll('.fav-drag-handle').forEach(handle => {
       const item = handle.closest('.fav-item');
@@ -379,10 +476,10 @@ function formatExitFavs(slug) {
     favSheet.classList.remove('sheet-open');
     if (!sheet.classList.contains('sheet-open')) sheetOverlay.classList.remove('overlay-visible');
   }
-  
+
   favBtn.addEventListener('click', openFavSheet);
   favClose.addEventListener('click', closeFavSheet);
-  
+
   let isHandleSwipeFav = false;
   let swipeStartYFav = 0;
   favSheet.addEventListener('touchstart', e => { swipeStartYFav = e.touches[0].clientY; isHandleSwipeFav = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
@@ -412,14 +509,14 @@ function formatExitFavs(slug) {
       const spacer = p._edited ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}${generatePills(p.wagon, p.doors)}${spacer}</div>`;
     }
-    
+
     if (multiRow) {
       const editedPos = positions.find(p => p._edited);
       const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="17" height="17"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
       const spacer = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row position-row-multi">${editedMark}${positions.map((p, i) => `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${generatePills(p.wagon, p.doors)}`).join('')}${spacer}</div>`;
     }
-    
+
     return positions.map(p => {
       return `<div class="position-row ${String(p.wagon).includes(',') ? 'position-row-multi' : ''}">${generatePills(p.wagon, p.doors)}</div>`;
     }).join('');
@@ -456,6 +553,98 @@ function formatExitFavs(slug) {
         ${dir.exits.map(exit => `${exit.label ? `<div class="exit-label nav-label" data-name="${exit.label}">${formatLabel(exit.label)}</div>` : ''}${renderPositions(exit.positions, color, false)}`).join('')}
       </div>`;
     }).join('');
+  }
+
+  function applyFavPillStyles(container, lineColor, isFaved) {
+    container.querySelectorAll('.pos-pill').forEach(pill => {
+      if (isFaved) {
+        pill.style.background = lineColor;
+        const num = pill.querySelector('.pos-pill-num');
+        const lbl = pill.querySelector('.pos-pill-label');
+        if (num) num.style.color = 'var(--bg-pill)';
+        if (lbl) lbl.style.color = 'var(--bg-pill)';
+      } else {
+        pill.style.background = '';
+        const num = pill.querySelector('.pos-pill-num');
+        const lbl = pill.querySelector('.pos-pill-label');
+        if (num) num.style.color = lineColor;
+        if (lbl) lbl.style.color = '';
+      }
+    });
+  }
+
+  function attachExitFavListeners(container, slug, lineColor) {
+    const rows = container.querySelectorAll('.position-row');
+    rows.forEach(row => {
+      function getPillValues() {
+        const nums = row.querySelectorAll('.pos-pill-num');
+        if (nums.length < 2) return null;
+        return { wagon: nums[0].textContent.trim(), doors: nums[1].textContent.trim() };
+      }
+
+ function showExitFavToast(row, added) {
+        let existing = row.querySelector('.exit-fav-toast');
+        if (existing) { existing.classList.remove('fav-note-open'); setTimeout(() => existing?.remove(), 300); }
+
+        if (!added) return;
+        const pv = getPillValues(); if (!pv) return;
+
+const toast = document.createElement('div');
+        toast.className = 'exit-fav-toast';
+        toast.innerHTML = '<span class="exit-fav-toast-text">Вихід<br>додано<br>в обране</span>';
+        row.prepend(toast);
+        requestAnimationFrame(() => toast.classList.add('fav-note-open'));
+
+        setTimeout(() => {
+          toast.classList.remove('fav-note-open');
+          setTimeout(() => toast.remove(), 300);
+        }, 6000);
+              }
+
+function triggerExitFav() {
+        const pv = getPillValues(); if (!pv) return;
+        const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
+        const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
+        const dirLabel = labelEl ? labelEl.textContent.trim() : '';
+        const added = toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
+        applyFavPillStyles(row, lineColor, added);
+        showExitFavToast(row, added);
+
+        // МИТТЄВО оновлюємо іконку серця у шапці поточної картки
+        const favBtnBar = document.querySelector('.fav-btn-bar');
+        if (favBtnBar && favBtnBar.dataset.slug === slug) {
+          const nowFav = isFav(slug);
+          favBtnBar.innerHTML = heartSvg(nowFav, slug, lineColor);
+          favBtnBar.classList.toggle('fav-active', nowFav);
+        }
+      }
+
+      const pv = getPillValues();
+      if (pv) {
+        const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
+        const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
+        const dirLabel = labelEl ? labelEl.textContent.trim() : '';
+        if (isExitFav(slug, dirLabel, pv.wagon, pv.doors)) {
+          applyFavPillStyles(row, lineColor, true);
+        }
+      }
+
+      let longPressTimer = null;
+      row.addEventListener('touchstart', e => {
+        longPressTimer = setTimeout(() => { longPressTimer = null; triggerExitFav(); }, 600);
+      }, { passive: true });
+      row.addEventListener('touchend', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
+      row.addEventListener('touchmove', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
+
+      let tapCount = 0; let tapTimer = null;
+      row.addEventListener('click', e => {
+        if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
+        tapCount++;
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => { tapCount = 0; }, 500);
+        if (tapCount >= 3) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
+      });
+    });
   }
 
   function openStation(slug) {
@@ -502,150 +691,11 @@ function formatExitFavs(slug) {
 
       document.querySelectorAll('.station-sheet').forEach(el => { if (el.id !== 'stationSheet') el.classList.remove('sheet-open'); });
       if (!sheet.classList.contains('sheet-open')) { sheet.classList.add('sheet-open'); sheetOverlay.classList.add('overlay-visible'); }
-      // Exit favs & station fav pill styles
       attachExitFavListeners(sheetBody, slug, color);
     }
     actualOpenStation();
   }
 
-
-  /* ==========================================================================
-     ОБРАНЕ ВИХОДІВ (Exit Favourites)
-     ========================================================================== */
-const EXIT_FAV_KEY = 'metro_exit_favs';
-
-  function getExitFavs() {
-    try { return JSON.parse(localStorage.getItem(EXIT_FAV_KEY) || '[]'); } catch { return []; }
-  }
-  
-  // Тепер ID включає напрямок
-  function exitFavId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
-  
-  function isExitFav(slug, dir, wagon, doors) {
-    return getExitFavs().some(f => f.id === exitFavId(slug, dir, wagon, doors));
-  }
-
-  function toggleExitFav(slug, dir, wagon, doors) {
-    let favs = getExitFavs(); 
-    const id = exitFavId(slug, dir, wagon, doors);
-    const idx = favs.findIndex(f => f.id === id);
-    
-    if (idx >= 0) {
-      favs.splice(idx, 1);
-    } else {
-      // ПЕРЕВІРКА ЛІМІТУ: не більше 3 виходів для одного напрямку
-      const slugDirFavs = favs.filter(f => f.slug === slug && f.dir === dir);
-      if (slugDirFavs.length >= 3) return false; 
-      
-      favs.push({ id, slug, dir, wagon, doors });
-    }
-    
-    localStorage.setItem(EXIT_FAV_KEY, JSON.stringify(favs));
-    return idx < 0; 
-  }
-
-  function applyFavPillStyles(container, lineColor, isFaved) {
-    container.querySelectorAll('.pos-pill').forEach(pill => {
-      if (isFaved) {
-        pill.style.background = lineColor;
-        const num = pill.querySelector('.pos-pill-num');
-        const lbl = pill.querySelector('.pos-pill-label');
-        if (num) num.style.color = 'var(--bg-pill)';
-        if (lbl) lbl.style.color = 'var(--bg-pill)';
-      } else {
-        pill.style.background = '';
-        const num = pill.querySelector('.pos-pill-num');
-        const lbl = pill.querySelector('.pos-pill-label');
-        if (num) num.style.color = lineColor;
-        if (lbl) lbl.style.color = '';
-      }
-    });
-  }
-
-  const UNDO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`;
-
-  function attachExitFavListeners(container, slug, lineColor) {
-    const rows = container.querySelectorAll('.position-row');
-    rows.forEach(row => {
-      // Get wagon/doors from first pill pair in this row
-      function getPillValues() {
-        const nums = row.querySelectorAll('.pos-pill-num');
-        if (nums.length < 2) return null;
-        return { wagon: nums[0].textContent.trim(), doors: nums[1].textContent.trim() };
-      }
-
-      function showExitFavToast(row, added) {
-        // Remove existing toast
-        let existing = row.querySelector('.exit-fav-toast');
-        if (existing) { existing.classList.remove('fav-note-open'); setTimeout(() => existing?.remove(), 300); }
-
-        if (!added) return;
-        const pv = getPillValues(); if (!pv) return;
-
-        const toast = document.createElement('div');
-        toast.className = 'exit-fav-toast';
-        toast.innerHTML = '<span class="exit-fav-toast-text">Вихід<br>додано<br>в обране</span>'
-          + '<button class="exit-fav-toast-cancel" aria-label="Скасувати"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7v6h6\"/><path d=\"M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13\"/></svg></button>';
-        row.appendChild(toast);
-        requestAnimationFrame(() => toast.classList.add('fav-note-open'));
-
-toast.querySelector('.exit-fav-toast-cancel').addEventListener('click', (e) => {
-          e.stopPropagation();
-          const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
-          const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
-          const dirLabel = labelEl ? labelEl.textContent.trim() : '';
-          toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
-          applyFavPillStyles(row, lineColor, false);
-          toast.classList.remove('fav-note-open');
-          setTimeout(() => toast.remove(), 300);
-        });
-
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-          toast.classList.remove('fav-note-open');
-          setTimeout(() => toast.remove(), 300);
-        }, 3000);
-      }
-
-      function triggerExitFav() {
-        const pv = getPillValues(); if (!pv) return;
-        const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
-        const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
-        const dirLabel = labelEl ? labelEl.textContent.trim() : '';
-        const added = toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
-        applyFavPillStyles(row, lineColor, added);
-        showExitFavToast(row, added);
-      }
-
-      // Apply stored fav state on render
-      const pv = getPillValues();
-      if (pv) {
-        const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
-        const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
-        const dirLabel = labelEl ? labelEl.textContent.trim() : '';
-        if (isExitFav(slug, dirLabel, pv.wagon, pv.doors)) {
-          applyFavPillStyles(row, lineColor, true);
-        }
-      }
-      // Long press detection
-      let longPressTimer = null;
-      row.addEventListener('touchstart', e => {
-        longPressTimer = setTimeout(() => { longPressTimer = null; triggerExitFav(); }, 600);
-      }, { passive: true });
-      row.addEventListener('touchend', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
-      row.addEventListener('touchmove', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
-
-      // Triple tap detection
-      let tapCount = 0; let tapTimer = null;
-      row.addEventListener('click', e => {
-        if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
-        tapCount++;
-        clearTimeout(tapTimer);
-        tapTimer = setTimeout(() => { tapCount = 0; }, 500);
-        if (tapCount >= 3) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
-      });
-    });
-  }
   /* ==========================================================================
      7. УПРАВЛІННЯ ВІКНАМИ, МЕНЮ ТА ТЕМАМИ
      ========================================================================== */
@@ -663,10 +713,8 @@ toast.querySelector('.exit-fav-toast-cancel').addEventListener('click', (e) => {
   }
   window.closeAllSheets = closeAllSheets;
 
-  // Called by feedback.js after saving an exit label so the card updates immediately
   window.refreshCurrentStation = function() {
     if (!currentStationSlug) return;
-    // Re-apply exit labels to latest stationsData then re-render
     if (typeof window.applyExitLabels === 'function') window.applyExitLabels(stationsData);
     if (stationsData[currentStationSlug] && sheet.classList.contains('sheet-open')) {
       const s = stationsData[currentStationSlug];
@@ -738,7 +786,6 @@ toast.querySelector('.exit-fav-toast-cancel').addEventListener('click', (e) => {
       else { if (dy > 60) closeAllSheets(); }
   });
 
-  // Обробка кліку на олівець (Slide-in info panel)
   sheetBody.addEventListener('click', e => {
     const pencil = e.target.closest('.pos-edited-mark');
     if (pencil) {
@@ -746,22 +793,19 @@ toast.querySelector('.exit-fav-toast-cancel').addEventListener('click', (e) => {
       const row = pencil.closest('.position-row');
       const slug = pencil.dataset.slug; const idx = pencil.dataset.idx;
 
-      // Знайти або створити edit-info-panel одразу після row
       let panel = row.nextElementSibling;
       if (panel && panel.classList.contains('edit-info-panel')) {
-        // Другий тап — закрити
         panel.classList.remove('panel-open');
         setTimeout(() => { if (!panel.classList.contains('panel-open')) panel.remove(); }, 300);
         return;
       }
 
-      // Закрити всі інші панелі
       document.querySelectorAll('.edit-info-panel').forEach(p => {
         p.classList.remove('panel-open');
         setTimeout(() => p.remove(), 300);
       });
 
-      panel = document.createElement('div');
+panel = document.createElement('div');
       panel.className = 'edit-info-panel';
       panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;margin:4px 0 0"><span class="fb-closed-note">Значення змінено користувачем</span><button class="fb-restore-exit edit-info-cancel" style="pointer-events:auto" data-slug="' + slug + '" data-idx="' + idx + '"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button></div>';
       row.after(panel);
@@ -783,14 +827,14 @@ toast.querySelector('.exit-fav-toast-cancel').addEventListener('click', (e) => {
       });
     }
   });
-/* ==========================================================================
+
+  /* ==========================================================================
      8. ТЕМИ ТА ДРОПДАУН МЕНЮ (ABOUT)
      ========================================================================== */
   const THEME_KEY = 'metro_theme';
   const root = document.documentElement;
 
   const SVG_SUN  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`;
-  
   const SVG_MOON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`;
 
   function applyTheme(theme) {
@@ -858,7 +902,7 @@ toast.querySelector('.exit-fav-toast-cancel').addEventListener('click', (e) => {
           <div class="about-content">
             <img src="icon-96x96.png" width="64" height="64" style="border-radius: 16px; margin-bottom: -10px;">
             <p style="text-align: center;">Додаток для заощадження часопростору у київському метро</p>
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
+<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
               <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 5" style="width: 96px; height: auto; border-radius: 4px;"><path class="pluh-bg" fill="#D0D0D5" d="M0 0h10v5H0z"/><path class="pluh-text" fill="#1C1C1E" transform="translate(-112.36 -152.57) scale(.26458)" d="m433.82 582.27v8.6389h1.2917v-9.7222h-7.1944v9.7222h1.3056v-8.6389zm5.5972 4.8611v-2.0694h2.375v5.8472h1.2917v-6.875h-4.9583v3.0417c0 2.6667-0.5 2.9861-1.2639 2.9861v0.84722c0.125 0.0417 0.44445 0.0695 0.65278 0.0695 1.1667 0 1.9028-0.65278 1.9028-3.8472zm11.681-5.9444-2.5556 5.1389-2.5556-5.1389h-1.4028l3.3472 6.6667-1.6806 3.0556h1.4028l4.8472-9.7222zm7.9861 1.0833v-1.0833h-4.9722v9.7222h1.3056v-8.6389z"/></svg></p>
               <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Натисніть на станцію, і отримаєте вагон та двері, які&nbsp;будуть якнайближче до&nbsp;виходу з&nbsp;підземки</p>
             </div>
