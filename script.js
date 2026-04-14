@@ -680,7 +680,7 @@ function triggerExitFav() {
         tapCount++;
         clearTimeout(tapTimer);
         tapTimer = setTimeout(() => { tapCount = 0; }, 500);
-        if (tapCount >= 3) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
+if (tapCount >= 2) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
       });
     });
   }
@@ -963,7 +963,8 @@ function openAboutSheet() {
                   <path fill="#ABABAB" d="M286.54 152.3c17.08-17.08 19.39-22.61 19.39-28 0-9.17-6.79-14-15.68-14-10.29 0-16.52 6.51-16.52 16.1h9.45c0-4.62 2.38-7.98 7.14-7.98 3.22 0 6.16 1.54 6.16 6.44 0 2.87-.98 6.23-22.54 27.79V160h31.99v-7.7z" aria-label="2"/>
                 </svg>
               </p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Щоб&nbsp;додати вихід до&nbsp;вибраного, натисніть на&nbsp;нього тричі</p>
+              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; 
+<p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Щоб&nbsp;додати вихід до&nbsp;вибраного, натисніть на&nbsp;нього двічі</p>
             </div>
 
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
@@ -1000,5 +1001,7 @@ function openAboutSheet() {
     overlay.querySelector('#confirmNo').addEventListener('click', () => { overlay.remove(); if (onNo) onNo(); });
     overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); if (onNo) onNo(); } });
   };
+
+  
 
 })();

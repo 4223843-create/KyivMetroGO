@@ -2282,7 +2282,7 @@ html {
 }
 
 .fav-drag-handle {
-  width: 42px; /* Фіксуємо ширину для ідеальної симетрії з тумблером */
+  width: 34px; /* Фіксуємо ширину для ідеальної симетрії з тумблером */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2296,82 +2296,25 @@ html {
 }
 /* ══ НАЛАШТУВАННЯ В ОБРАНОМУ (Тумблер) ══ */
 /* Обгортка, що імітує відступи всього рядка зі станцією */
-/* ══ НАЛАШТУВАННЯ В ОБРАНОМУ (Вертикальний тумблер) ══ */
-.fav-settings-container {
-  display: flex;
-  align-items: center;
+/* 1. Шрифт у глобальному вікні (як у інлайновому) */
+.global-confirm-text {
+  padding: 16px 16px 4px;
+  font-size: 13px; /* Було 15px */
+  color: var(--text-muted); /* Текст тепер спокійніший */
+}
+
+/* 2. Розмір кнопок та іконок */
+.global-confirm-btns {
+  padding: 8px 16px 14px;
   gap: 8px;
-  margin-top: 20px;
-  margin-bottom: 12px;
 }
 
-.fav-settings-row {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: var(--bg-card);
-  border-radius: 10px;
-  padding: 8px 16px;
-  min-height: 42px; /* Блок став значно меншим */
+.global-confirm-btns .confirm-square {
+  height: 36px; /* Трохи нижчі кнопки */
 }
 
-.fav-settings-label {
-  font-size: 11px; /* Кегль як у назв попередніх станцій */
-  font-weight: 500;
-  color: var(--text-muted);
-  opacity: 0.8;
-  line-height: 1.2;
-}
-
-.fav-settings-toggle-wrap {
-  width: 42px; /* Така ж ширина, як у зони крапок перетягування */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-/* Вертикальний iOS-тумблер */
-.ios-toggle {
-  position: relative;
-  display: inline-block;
-  width: 24px;   /* Вузький */
-  height: 40px;  /* Високий */
-  flex-shrink: 0;
-}
-.ios-toggle input {
-  opacity: 0; width: 0; height: 0;
-}
-.ios-toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: var(--bg-pill);
-  border-radius: 24px;
-  transition: background-color 0.3s ease;
-  border: 1px solid var(--border);
-}
-.ios-toggle-slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 2px;
-  bottom: 2px; /* Початкова позиція (вимкнено) — знизу */
-  background-color: #fff;
-  border-radius: 50%;
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-[data-theme="light"] .ios-toggle-slider:before {
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-}
-/* Колір при ввімкненні */
-.ios-toggle input:checked + .ios-toggle-slider {
-  background-color: #5aaa6a;
-  border-color: #5aaa6a;
-}
-/* Рух вгору при ввімкненні */
-.ios-toggle input:checked + .ios-toggle-slider:before {
-  transform: translateY(-16px);
+/* Розмір іконок всередині кнопок підтвердження */
+.confirm-square svg {
+  width: 14px; /* Було 18/16 */
+  height: 14px;
 }
