@@ -158,9 +158,8 @@ let resizeTimer;
 
 function heartSvg(isFav, slug, lineColor) {
     const base = 'width="22" height="20" viewBox="0 0 24 22" xmlns="http://www.w3.org/2000/svg"';
-    const path = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
-    if (!isFav) return `<svg ${base} fill="none" stroke="#ABABAB" stroke-width="2"><path d="${path}"/></svg>`;
-    return `<svg ${base} fill="${lineColor}"><path d="${path}"/></svg>`;
+    if (!isFav) return `<svg ${base} fill="none" stroke="#ABABAB" stroke-width="2"><path d="${window.MetroIcons.heartPath}"/></svg>`;
+    return `<svg ${base} fill="${lineColor}"><path d="${window.MetroIcons.heartPath}"/></svg>`;
   }
 
   function formatLabel(raw) {
@@ -393,6 +392,13 @@ favBody.innerHTML = itemsToRender.map(item => {
         <button class="fav-open-btn" data-slug="${item.slug}" style="border-left-color:${item.color}">
           <div class="fav-text-wrap">
             <span class="fav-station-name ${item.exits.length > 1 ? 'fav-small' : ''}">${displayName}</span>
+
+
+
+
+
+
+      
             ${(formattedDir && item.exits.length > 0) ? `<span class="fav-dir-name ${item.exits.length > 1 ? 'fav-small-dir' : ''}">${formattedDir}</span>` : ''}
           </div>
           ${squaresHtml}
@@ -540,17 +546,17 @@ favBody.innerHTML = itemsToRender.map(item => {
       return blocks.join('<span class="pos-multi-sep" style="margin: 0 6px;">·</span>');
     }
 
-    if (positions.length === 1) {
+if (positions.length === 1) {
       const p = positions[0];
       const isMulti = String(p.wagon).includes(',');
-      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="17" height="17"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
+      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${window.MetroIcons.pencil}</span>` : '';
       const spacer = p._edited ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}${generatePills(p.wagon, p.doors)}${spacer}</div>`;
     }
 
     if (multiRow) {
       const editedPos = positions.find(p => p._edited);
-      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="17" height="17"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></span>` : '';
+      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${window.MetroIcons.pencil}</span>` : '';
       const spacer = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row position-row-multi">${editedMark}${positions.map((p, i) => `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${generatePills(p.wagon, p.doors)}`).join('')}${spacer}</div>`;
     }
@@ -845,8 +851,7 @@ if (tapCount >= 2) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
 
 panel = document.createElement('div');
       panel.className = 'edit-info-panel';
-      panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;margin:4px 0 0"><span class="fb-closed-note">Значення змінено користувачем</span><button class="fb-restore-exit edit-info-cancel" style="pointer-events:auto" data-slug="' + slug + '" data-idx="' + idx + '"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button></div>';
-      row.after(panel);
+panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;margin:4px 0 0"><span class="fb-closed-note">Значення змінено користувачем</span><button class="fb-restore-exit edit-info-cancel" style="pointer-events:auto" data-slug="' + slug + '" data-idx="' + idx + '">' + window.MetroIcons.undo + '</button></div>';      row.after(panel);
       requestAnimationFrame(() => panel.classList.add('panel-open'));
 
       panel.querySelector('.edit-info-cancel').addEventListener('click', (ev) => {
@@ -866,19 +871,24 @@ panel = document.createElement('div');
     }
   });
 
-  /* ==========================================================================
+
+
+
+
+
+
+
+
+/* ==========================================================================
      8. ТЕМИ ТА ДРОПДАУН МЕНЮ (ABOUT)
      ========================================================================== */
   const THEME_KEY = 'metro_theme';
   const root = document.documentElement;
 
-  const SVG_SUN  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`;
-  const SVG_MOON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`;
-
   function applyTheme(theme) {
     root.setAttribute('data-theme', theme);
     const icon = document.getElementById('themeIcon');
-    if (icon) icon.innerHTML = theme === 'dark' ? SVG_SUN : SVG_MOON;
+    if (icon) icon.innerHTML = theme === 'dark' ? window.MetroIcons.sun : window.MetroIcons.moon;
     localStorage.setItem(THEME_KEY, theme);
   }
   applyTheme(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
@@ -928,57 +938,39 @@ panel = document.createElement('div');
     });
   }
 
-function openAboutSheet() {
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ... (початок файлу без змін)
+
+  /* ==========================================================================
+     8. ТЕМИ ТА ДРОПДАУН МЕНЮ (ABOUT)
+     ========================================================================== */
+  // ... applyTheme і слухачі меню ...
+
+  function openAboutSheet() {
     let aboutSheet = document.getElementById('aboutSheet');
     if (!aboutSheet) {
       aboutSheet = document.createElement('div');
       aboutSheet.id = 'aboutSheet';
       aboutSheet.className = 'station-sheet about-station-sheet';
-      aboutSheet.innerHTML = `
-        <div class="sheet-handle-bar"><div class="sheet-handle"></div><span class="sheet-sheet-title about-version-title">KyivMetroGO</span><button class="sheet-close-btn" id="aboutClose" aria-label="Закрити">✕</button></div>
-        <div class="sheet-body">
-          <div class="about-content">
-            <img src="icon-96x96.png" width="64" height="64" style="border-radius: 16px; margin-bottom: -10px;">
-            <p style="text-align: center;">Додаток для заощадження часопростору у київському метро</p>
-
-
-
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 5" style="width: 96px; height: auto; border-radius: 4px;"><path class="pluh-bg" fill="#D0D0D5" d="M0 0h10v5H0z"/><path class="pluh-text" fill="#1C1C1E" transform="translate(-112.36 -152.57) scale(.26458)" d="m433.82 582.27v8.6389h1.2917v-9.7222h-7.1944v9.7222h1.3056v-8.6389zm5.5972 4.8611v-2.0694h2.375v5.8472h1.2917v-6.875h-4.9583v3.0417c0 2.6667-0.5 2.9861-1.2639 2.9861v0.84722c0.125 0.0417 0.44445 0.0695 0.65278 0.0695 1.1667 0 1.9028-0.65278 1.9028-3.8472zm11.681-5.9444-2.5556 5.1389-2.5556-5.1389h-1.4028l3.3472 6.6667-1.6806 3.0556h1.4028l4.8472-9.7222zm7.9861 1.0833v-1.0833h-4.9722v9.7222h1.3056v-8.6389z"/></svg></p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Натисніть на станцію, і отримаєте вагон та двері, які&nbsp;будуть якнайближче до&nbsp;виходу з&nbsp;підземки</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 22" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Для швидкого доступу до&nbsp;потрібних станцій, додайте&nbsp;їх до&nbsp;вибраного</p>
-            </div>
-            
-<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="30 30 340 160" style="width: 100%; height: auto;">
-                  <rect width="160" height="160" x="30" y="30" fill="#2C2C2E" rx="36"/>
-                  <path fill="var(--text-muted)" d="M87 76.14c0-1.74-.94-3.04-2.4-3.52 1.02-.58 1.64-1.64 1.64-3.02 0-2.2-1.5-3.6-3.74-3.6h-3.84v14H83c2.38 0 4-1.52 4-3.86m-6.76-8.82h2.16c1.4 0 2.32.96 2.32 2.4s-.92 2.38-2.32 2.38h-2.16zm0 6.12h2.72c1.5 0 2.52 1.04 2.52 2.6 0 1.58-1.02 2.64-2.52 2.64h-2.72zm18.44 2.52 1.66 4.04h1.76l-6.06-14h-1.46l-6.06 14h1.76l1.7-4.04zm-3.36-8.02 2.8 6.66h-5.6zm16.36-.66V66h-6.98v14h1.52V67.28zM127.56 73c0-4.26-2.82-7.16-6.98-7.16-4.14 0-6.96 2.9-6.96 7.16 0 4.24 2.82 7.16 6.96 7.16 4.16 0 6.98-2.92 6.98-7.16m-12.38 0c0-3.44 2.2-5.78 5.4-5.78 3.22 0 5.42 2.34 5.42 5.78 0 3.42-2.2 5.78-5.42 5.78-3.2 0-5.4-2.36-5.4-5.78m24.64.58V80h1.52V66h-1.52v6.3h-7.74V66h-1.52v14h1.52v-6.42z" aria-label="ВАГОН"/>
-                  <path fill="#ABABAB" d="M126.45 145.16c0-5.32-2.24-9.1-6.02-11.55 2.87-2.1 4.62-5.25 4.62-9.52 0-8.12-6.09-13.79-15.05-13.79s-15.05 5.67-15.05 13.79h9.45c0-3.36 2.31-5.74 5.6-5.74s5.6 2.38 5.6 5.74-2.31 5.88-5.6 5.88h-3.22v7.56H110c4.13 0 7 3.22 7 7.63s-2.87 7.49-7 7.49-7-3.08-7-7.49h-9.45c0 9.17 6.65 15.54 16.45 15.54s16.45-6.37 16.45-15.54" aria-label="3"/>
-                  <rect width="160" height="160" x="210" y="30" fill="#2C2C2E" rx="36"/>
-                  <path fill="var(--text-muted)" d="M275.58 80v3.2H277v-4.48h-1.5V66h-8.72v7.46c0 4.38-1.24 5.26-1.24 5.26h-1.24v4.48h1.42V80zm-7.24-6.52v-6.2h5.6v11.44h-6.7s1.1-1.02 1.1-5.24m19.84 2.66c0-1.74-.94-3.04-2.4-3.52 1.02-.58 1.64-1.64 1.64-3.02 0-2.2-1.5-3.6-3.74-3.6h-3.84v14h4.34c2.38 0 4-1.52 4-3.86m-6.76-8.82h2.16c1.4 0 2.32.96 2.32 2.4s-.92 2.38-2.32 2.38h-2.16zm0 6.12h2.72c1.5 0 2.52 1.04 2.52 2.6 0 1.58-1.02 2.64-2.52 2.64h-2.72zm11.4 5.28v-5.14h5.22V72.3h-5.22v-5.02h5.88V66h-7.4v14h7.5v-1.28zm13.1-4.9c2.42 0 4.06-1.52 4.06-3.9S308.34 66 305.92 66h-3.8v14h1.58v-6.18zm-2.22-6.5h2.22c1.5 0 2.5 1.04 2.5 2.6 0 1.54-1 2.58-2.5 2.58h-2.22zm9.28-1.32v14h1.52V66z" aria-label="ДВЕРІ"/>
-                  <path fill="#ABABAB" d="M286.54 152.3c17.08-17.08 19.39-22.61 19.39-28 0-9.17-6.79-14-15.68-14-10.29 0-16.52 6.51-16.52 16.1h9.45c0-4.62 2.38-7.98 7.14-7.98 3.22 0 6.16 1.54 6.16 6.44 0 2.87-.98 6.23-22.54 27.79V160h31.99v-7.7z" aria-label="2"/>
-                </svg>
-              </p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; 
-<p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Щоб&nbsp;додати вихід до&nbsp;вибраного, натисніть на&nbsp;нього двічі</p>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="32" height="32"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg></p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Помітили неточність — виправте. Локальні&nbsp;зміни відобразяться&nbsp;миттєво</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
-              <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center; color: var(--text-muted);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg></p>
-              <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Довідкові блоки</p>
-            </div>
-            <p class="about-footer">Зроблено з любовʼю до Києва</p>
-          </div>
-        </div>`;
-              document.body.appendChild(aboutSheet);
+      
+      // ВИКОРИСТАННЯ ШАБЛОНУ
+      const template = document.getElementById('tpl-about-sheet');
+      aboutSheet.appendChild(template.content.cloneNode(true));
+      
+      document.body.appendChild(aboutSheet);
+      
       document.getElementById('aboutClose').addEventListener('click', () => {
         aboutSheet.classList.remove('sheet-open');
         if (document.querySelectorAll('.station-sheet.sheet-open').length === 0) document.getElementById('sheetOverlay').classList.remove('overlay-visible');
@@ -990,11 +982,158 @@ function openAboutSheet() {
     document.getElementById('sheetOverlay').classList.add('overlay-visible');
   }
 
-  /* ГЛОБАЛЬНИЙ ЕКСПОРТ (Вікно підтвердження) */
+  /* ==========================================================================
+     9. ПОШУК СТАНЦІЙ
+     ========================================================================== */
+  
+const searchBtnTop = document.createElement('button');
+  searchBtnTop.className = 'search-btn-top';
+  searchBtnTop.setAttribute('aria-label', 'Пошук станції');
+  searchBtnTop.innerHTML = window.MetroIcons.search;
+  document.body.appendChild(searchBtnTop);
+
+  function openSearchSheet() {
+    let searchSheet = document.getElementById('searchSheet');
+    
+    if (!searchSheet) {
+      searchSheet = document.createElement('div');
+      searchSheet.id = 'searchSheet';
+      searchSheet.className = 'station-sheet search-station-sheet sheet-scrollable';
+      
+      // ВИКОРИСТАННЯ ШАБЛОНУ
+      const template = document.getElementById('tpl-search-sheet');
+      searchSheet.appendChild(template.content.cloneNode(true));
+      
+      document.body.appendChild(searchSheet);
+
+      // Логіка закриття
+      document.getElementById('searchClose').addEventListener('click', () => {
+        searchSheet.classList.remove('sheet-open');
+        document.getElementById('searchInput').blur();
+        if (document.querySelectorAll('.station-sheet.sheet-open').length === 0) {
+          document.getElementById('sheetOverlay').classList.remove('overlay-visible');
+        }
+      });
+
+// Логіка пошуку
+      const input = document.getElementById('searchInput');
+      const resultsContainer = document.getElementById('searchResults');
+
+      input.addEventListener('input', (e) => {
+        renderSearchResults(e.target.value.trim().toLowerCase(), resultsContainer);
+      });
+
+      // ДЕЛЕГУВАННЯ ПОДІЙ: Один слухач на весь список результатів
+      if (!resultsContainer._hasListener) {
+        resultsContainer.addEventListener('click', (e) => {
+          const item = e.target.closest('.search-item');
+          if (!item) return; // Якщо клікнули повз картку станції - ігноруємо
+          
+          document.getElementById('searchInput').blur(); 
+          document.getElementById('searchClose').click(); 
+          setTimeout(() => openStation(item.dataset.slug), 200); 
+        });
+        resultsContainer._hasListener = true;
+      }
+
+      // Свайп для закриття
+      let swY = 0; let isHandleSearch = false;
+      searchSheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isHandleSearch = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
+      searchSheet.addEventListener('touchend', e => { if (isHandleSearch && (e.changedTouches[0].clientY - swY > 60)) document.getElementById('searchClose').click(); });
+    }
+
+
+    // Оновлюємо стан при кожному відкритті
+    const input = document.getElementById('searchInput');
+    const resultsContainer = document.getElementById('searchResults');
+    input.value = '';
+    renderSearchResults('', resultsContainer);
+
+    // Закриваємо інші вікна та відкриваємо пошук
+    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+    searchSheet.classList.add('sheet-open');
+    document.getElementById('sheetOverlay').classList.add('overlay-visible');
+
+    // Фокусуємось на полі вводу після завершення анімації (щоб відкрилась клавіатура)
+    setTimeout(() => input.focus(), 350);
+  }
+
+
+
+
+
+
+function renderSearchResults(query, container) {
+    if (!stationsData) {
+      container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються...</p>';
+      return;
+    }
+
+    const allStations = Object.values(stationsData);
+    let filtered = allStations;
+
+    if (query) {
+      const rawQuery = query.toLowerCase().trim();
+      const queryWords = rawQuery.split(/\s+/).filter(w => w.length > 0);
+      const queryNoSpaces = rawQuery.replace(/\s+/g, '');
+      
+      filtered = allStations.filter(s => {
+        const cleanName = s.name.toLowerCase().replace(/["'„“«».,]/g, '');
+        const stationWords = cleanName.split(/[\s\u00a0\u202f\-]+/);
+        
+        const matchWords = queryWords.every(qWord => stationWords.some(sWord => sWord.startsWith(qWord)));
+        if (matchWords) return true;
+
+        const aliases = [];
+        if (s.slug === 'R.Politekhnychnyi_instytut') aliases.push('кпі');
+        if (s.slug === 'B.Ploshcha_Ukrainskikh_heroiv') { aliases.push('плуг'); aliases.push('площа льва толстого'); aliases.push('льва толстого'); }
+        if (s.slug === 'G.Zvirynetska') { aliases.push('дружби народів'); }
+
+        const matchAliases = aliases.some(alias => {
+          const aliasWords = alias.toLowerCase().split(/[\s\u00a0\u202f\-]+/);
+          return queryWords.every(qWord => aliasWords.some(aWord => aWord.startsWith(qWord)));
+        });
+        if (matchAliases) return true;
+
+        const acronym = stationWords.map(w => w.charAt(0)).join('');
+        if (acronym.length > 1 && acronym.startsWith(queryNoSpaces)) return true;
+
+        return false;
+      });
+    }
+
+    filtered.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<p class="fav-empty-text" style="padding-top:32px;">Станцію не знайдено</p>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(s => {
+      const color = LINE_COLOR[s.line];
+      return `
+        <div class="search-item" data-slug="${s.slug}">
+          <div class="search-item-line" style="background-color: ${color}"></div>
+          <div>${s.name}</div>
+        </div>
+      `;
+    }).join('');
+    
+  }
+
+
+
+
+  // Прив'язуємо клік по іконці лупи
+  searchBtnTop.addEventListener('click', openSearchSheet);
+
+
+
+/* ГЛОБАЛЬНИЙ ЕКСПОРТ (Вікно підтвердження) */
   window.showCustomConfirm = function(message, onYes, onNo) {
     const overlay = document.createElement('div');
     overlay.className = 'global-confirm-overlay';
-    overlay.innerHTML = `<div class="global-confirm-card"><div class="global-confirm-text">${message}</div><div class="global-confirm-btns"><button class="confirm-square confirm-square-yes" id="confirmYes"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button><button class="confirm-square confirm-square-no" id="confirmNo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></div>`;
+    overlay.innerHTML = `<div class="global-confirm-card"><div class="global-confirm-text">${message}</div><div class="global-confirm-btns"><button class="confirm-square confirm-square-yes" id="confirmYes">${window.MetroIcons.check}</button><button class="confirm-square confirm-square-no" id="confirmNo">${window.MetroIcons.cross}</button></div></div>`;
     document.body.appendChild(overlay);
 
     overlay.querySelector('#confirmYes').addEventListener('click', () => { overlay.remove(); if (onYes) onYes(); });

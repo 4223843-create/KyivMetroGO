@@ -1,3 +1,16 @@
+/* ══ ГЛОБАЛЬНИЙ СЛОВНИК ІКОНОК (SVG) ══ */
+window.MetroIcons = {
+  pencil: `<svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
+  undo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`,
+  info: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg>`,
+  check: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  cross: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  sun: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
+  moon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
+  search: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+  heartPath: `M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z`
+};
+
 /* ══ FEEDBACK SHEET ══ */
 (function() {
 
@@ -14,7 +27,7 @@
      EXIT LABEL EDITS (custom exit descriptions)
      ========================================================================== */
   const EXIT_LABELS_KEY = 'metro_exit_labels';
-  const PENCIL_SVG_LABEL = '<svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="11" height="11"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>';
+  const PENCIL_SVG_LABEL = window.MetroIcons.pencil; // Використовуємо словник
 
   function getExitLabels() {
     try { return JSON.parse(localStorage.getItem(EXIT_LABELS_KEY) || '{}'); } catch { return {}; }
@@ -454,32 +467,16 @@
         sheet = document.createElement('div');
         sheet.id = 'feedbackSheet';
         sheet.className = 'station-sheet';
+        
+        const template = document.getElementById('tpl-feedback-sheet');
+        sheet.appendChild(template.content.cloneNode(true));
+        
         document.body.appendChild(sheet);
       }
 
       const allStations = Object.entries(currentStationsData)
         .map(([slug, s]) => ({ slug, ...s }))
         .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-
-      const lineSelectHtml = `<button type="button" class="fb-custom-select" id="fbLineBtn"><span id="fbLineLabel">— всі —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbLine" value="">`;
-      const stationSelectHtml = `<button type="button" class="fb-custom-select" id="fbStationBtn"><span id="fbStationLabel">— оберіть —</span><span class="fb-select-arrow">&#8964;</span></button><input type="hidden" id="fbStation" value="">`;
-
-      sheet.innerHTML = `
-        <div class="sheet-handle-bar">
-          <div class="sheet-handle"></div><span class="sheet-sheet-title">Запропонувати зміни</span><button class="sheet-close-btn" id="feedbackClose">✕</button>
-        </div>
-        <div class="sheet-body" id="feedbackBody">
-          <p class="fb-main-intro-text">Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
-          <div class="fb-selectors">
-            <div class="fb-select-wrap"><div id="fbLineDropdown" class="fb-dropdown" hidden></div><div class="fb-select-inner"><label class="fb-label">Гілка</label>${lineSelectHtml}</div></div>
-            <div class="fb-select-wrap"><div id="fbStationDropdown" class="fb-dropdown" hidden></div><div class="fb-select-inner"><label class="fb-label">Станція</label>${stationSelectHtml}</div></div>
-          </div>
-          <div id="fbPositions"></div>
-          <div class="fb-footer-sticky">
-            <button id="fbSend" class="fb-send-btn" disabled>Запропонувати зміни</button>
-            <div id="fbResult"></div><div id="fbResetWrap"></div>
-          </div>
-        </div>`;
 
       const posEl     = document.getElementById('fbPositions');
       const sendBtn   = document.getElementById('fbSend');
@@ -500,24 +497,38 @@
         lineBtn.classList.remove('fb-select-open'); stationBtn.classList.remove('fb-select-open');
       }
 
+// Функції тепер лише генерують HTML (працюють блискавично)
       function buildLineDD() {
         const items = [{ value: '', label: '— всі —' }, ...LINE_ORDER.map(l => ({ value: l, label: LINE_NAMES[l] }))];
         lineDD.innerHTML = items.map(it => `<button type="button" class="fb-dropdown-item${it.value === lineEl.value ? ' fb-dropdown-selected' : ''}" data-value="${it.value}">${it.label}</button>`).join('');
-        lineDD.querySelectorAll('.fb-dropdown-item').forEach(b => b.addEventListener('click', (e) => { 
-          e.stopPropagation(); lineEl.value = b.dataset.value; lineLbl.textContent = b.textContent; closeAllDD();
-          stationEl.value = ''; stationLbl.textContent = '— оберіть —'; posEl.innerHTML = ''; sendBtn.disabled = true;
-        }));
       }
 
       function buildStationDD() {
         const list = lineEl.value ? allStations.filter(s => s.line === lineEl.value) : allStations;
         stationDD.innerHTML = list.map(s => `<button type="button" class="fb-dropdown-item${s.slug === stationEl.value ? ' fb-dropdown-selected' : ''}" data-value="${s.slug}">${s.name}</button>`).join('');
-        stationDD.querySelectorAll('.fb-dropdown-item').forEach(b => b.addEventListener('click', (e) => { 
+      }
+
+      // ДЕЛЕГУВАННЯ ПОДІЙ: Слухачі вішаються один раз на самі списки
+      if (!lineDD._hasListener) {
+        lineDD.addEventListener('click', (e) => {
+          const b = e.target.closest('.fb-dropdown-item');
+          if (!b) return;
+          e.stopPropagation(); lineEl.value = b.dataset.value; lineLbl.textContent = b.textContent; closeAllDD();
+          stationEl.value = ''; stationLbl.textContent = '— оберіть —'; posEl.innerHTML = ''; sendBtn.disabled = true;
+        });
+        lineDD._hasListener = true;
+      }
+
+      if (!stationDD._hasListener) {
+        stationDD.addEventListener('click', (e) => {
+          const b = e.target.closest('.fb-dropdown-item');
+          if (!b) return;
           e.stopPropagation(); stationEl.value = b.dataset.value; stationLbl.textContent = b.textContent; closeAllDD();
           const s = currentStationsData[stationEl.value];
           if (s && !lineEl.value) { lineEl.value = s.line; lineLbl.textContent = LINE_NAMES[s.line]; }
           window.fbUnsaved = false; closeAllHints(); renderPositions(stationEl.value);
-        }));
+        });
+        stationDD._hasListener = true;
       }
 
       lineDD.addEventListener('click', e => e.stopPropagation()); stationDD.addEventListener('click', e => e.stopPropagation());
@@ -593,7 +604,7 @@
               + '<div class="fb-exit-label-row-inner">'
               + '<span class="fb-exit-label-text">' + rawExit + '</span>'
               + (rawExit
-                ? '<button type="button" class="fb-exit-label-edit-btn" data-item-idx="' + item.i + '" aria-label="Редагувати">' + PENCIL_SVG_LABEL + '</button>'
+                ? '<button type="button" class="fb-exit-label-edit-btn" data-item-idx="' + item.i + '" aria-label="Редагувати">' + window.MetroIcons.pencil + '</button>'
                 : '<button type="button" class="fb-add-desc-btn" data-item-idx="' + item.i + '">додати опис</button>')
               + '</div>'
               + '</div>'
@@ -604,8 +615,8 @@
             return exitLabelHtml + `
             <div class="fb-item-inner ${hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${hasThird ? 'has-three-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
               ${isClosed
-                ? `<div class="fb-closed-note-wrap"><span class="fb-closed-note">Вихід позначено як недоступний</span><button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button></div>`
-                : `<div class="fb-pos-wrap"><div class="fb-side-actions-left"><button type="button" class="fb-add-doors-info" data-idx="${item.i}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg></button></div>
+                ? `<div class="fb-closed-note-wrap"><span class="fb-closed-note">Вихід позначено як недоступний</span><button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід">${window.MetroIcons.undo}</button></div>`
+                : `<div class="fb-pos-wrap"><div class="fb-side-actions-left"><button type="button" class="fb-add-doors-info" data-idx="${item.i}">${window.MetroIcons.info}</button></div>
                    <div class="fb-pos-inputs">${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}</div>
                    <div class="fb-side-actions"><button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button></div></div>
                    <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
@@ -664,8 +675,8 @@
             confirmEl.innerHTML = '<div class="fb-inline-confirm-inner">'
               + '<div class="fb-inline-confirm-note">Позначити як недоступний?</div>'
               + '<div class="fb-inline-confirm-btns">'
-              + '<button class="fb-inline-confirm-yes">' + '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' + '</button>'
-              + '<button class="fb-inline-confirm-no">' + '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' + '</button>'
+              + '<button class="fb-inline-confirm-yes">' + window.MetroIcons.check + '</button>'
+              + '<button class="fb-inline-confirm-no">' + window.MetroIcons.cross + '</button>'
               + '</div></div>';
             itemEl.after(confirmEl);
             requestAnimationFrame(() => confirmEl.classList.add('fb-inline-open'));

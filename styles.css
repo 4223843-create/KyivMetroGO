@@ -335,7 +335,13 @@ body { background: var(--bg); }
   background: none; border: none;
   color: var(--text-muted);
   font-size: 18px; cursor: pointer;
-  padding: 4px 8px; line-height: 1;
+  /* Прибираємо старі padding і задаємо жорсткі розміри: */
+  padding: 0; 
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center; /* Рівно по центру своїх 36px */
+  align-items: center;
 }
 
 /* ══ SHEET BODY — скролиться ══ */
@@ -2281,40 +2287,176 @@ html {
   flex-shrink: 0;
 }
 
+/* ══ ЗОНА ПЕРЕТЯГУВАННЯ (Точки) ══ */
 .fav-drag-handle {
-  width: 34px; /* Фіксуємо ширину для ідеальної симетрії з тумблером */
+  width: 36px; /* Ті самі 36px */
   display: flex;
-  justify-content: center;
+  justify-content: center; /* Рівно по центру своїх 36px */
   align-items: center;
   font-size: 22px;
   color: var(--text-muted) !important;
   opacity: 0.5;
   cursor: grab;
-  padding: 0;
   flex-shrink: 0;
   touch-action: none;
-}
-/* ══ НАЛАШТУВАННЯ В ОБРАНОМУ (Тумблер) ══ */
-/* Обгортка, що імітує відступи всього рядка зі станцією */
-/* 1. Шрифт у глобальному вікні (як у інлайновому) */
-.global-confirm-text {
-  padding: 16px 16px 4px;
-  font-size: 13px; /* Було 15px */
-  color: var(--text-muted); /* Текст тепер спокійніший */
+  /* ЖОДНИХ transform чи margin тут більше немає! */
 }
 
-/* 2. Розмір кнопок та іконок */
-.global-confirm-btns {
-  padding: 8px 16px 14px;
-  gap: 8px;
+/* ══ НАЛАШТУВАННЯ В ОБРАНОМУ (Вертикальний тумблер) ══ */
+.fav-settings-container {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Такий же відступ, як між карткою і точками */
+  margin-top: 16px;
+  margin-bottom: 8px;
 }
 
-.global-confirm-btns .confirm-square {
-  height: 36px; /* Трохи нижчі кнопки */
+.fav-settings-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 6px 14px;
+  min-height: 36px;
 }
 
-/* Розмір іконок всередині кнопок підтвердження */
-.confirm-square svg {
-  width: 14px; /* Було 18/16 */
+.fav-settings-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* ЗОНА ТУМБЛЕРА (Має бути ідентичною до зони точок) */
+.fav-settings-toggle-wrap {
+  width: 36px; /* Ті самі 36px */
+  display: flex;
+  justify-content: center; /* Рівно по центру своїх 36px */
+  align-items: center;
+  flex-shrink: 0;
+  /* ЖОДНИХ transform чи margin тут більше немає! */
+}
+
+/* Крихітний сірий тумблер */
+.ios-toggle {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.ios-toggle input { opacity: 0; width: 0; height: 0; }
+.ios-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--bg-pill);
+  border-radius: 20px;
+  transition: background-color 0.2s;
+  border: 1px solid var(--border);
+}
+.ios-toggle-slider:before {
+  position: absolute;
+  content: "";
   height: 14px;
+  width: 14px;
+  left: 1px;
+  bottom: 1px;
+  background-color: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
 }
+.ios-toggle input:checked + .ios-toggle-slider {
+  background-color: var(--bg-card);
+  border-color: var(--text-muted);
+}
+.ios-toggle input:checked + .ios-toggle-slider:before {
+  transform: translateY(-14px);
+  background-color: #fff;
+}
+
+/* ══ КНОПКА ПОШУКУ ══ */
+.search-btn-top {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 64px; /* Відступаємо від правої кнопки меню */
+  z-index: 1055;
+  width: 40px; 
+  height: 40px;
+  background: transparent; /* Без фону */
+  border: none;
+  color: var(--icon-color); /* Колір як у інших іконок */
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.search-btn-top:active { opacity: 0.6; }
+
+/* ══ ВІКНО ПОШУКУ ══ */
+.search-input-wrap {
+  padding: 0 16px 12px;
+}
+.search-input {
+  width: 100%;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+.search-input:focus {
+  border-color: var(--text-muted);
+}
+.search-results {
+  display: flex;
+  flex-direction: column;
+}
+.search-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+}
+.search-item:active { background: var(--bg-card); }
+.search-item:last-child { border-bottom: none; }
+
+.search-item-line {
+  width: 10px; 
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+/* Додаємо вікно пошуку до правил штрихування фону */
+[data-theme="light"] .search-station-sheet .sheet-body,
+[data-theme="light"] .search-station-sheet .sheet-handle-bar,
+[data-theme="light"] .search-station-sheet {
+  background-color: #D0D0D5;
+}
+[data-theme="dark"] .search-station-sheet .sheet-body,
+[data-theme="dark"] .search-station-sheet {
+  background-image: none;
+  background-color: var(--bg-sheet);
+}
+/* ══ РОЗМІРИ ІКОНОК ЗІ СЛОВНИКА METRO ICONS ══ */
+.fb-exit-label-edit-btn svg { width: 11px; height: 11px; }
+.pos-edited-mark svg { width: 17px; height: 17px; }
+.fb-restore-exit svg { width: 18px; height: 18px; }
+.search-btn-top svg { width: 24px; height: 24px; }
+.fb-inline-confirm-yes svg { width: 16px; height: 16px; }
+.fb-inline-confirm-no svg { width: 14px; height: 14px; }
+.confirm-square-yes svg { width: 18px; height: 18px; }
+.confirm-square-no svg { width: 16px; height: 16px; }
