@@ -1,3 +1,31 @@
+/* ══ ЗАГАЛЬНІ СТИЛІ ЗОН ══ */
+.zone {
+  position: absolute;
+  display: block;
+  border: none;
+  background: transparent;
+  outline: none;
+  z-index: var(--z-map-zones);;
+  cursor: pointer;
+}
+
+/* Стандартні розміри для кольорових зон */
+.zone.R, .zone.B, .zone.G {
+  width: 9.55%;
+  height: 4.28%;
+}
+
+/* Станції зі збільшеною висотою (кінцеві та глибокі) */
+.zone.tall {
+  height: 6.4% !important;
+}
+
+/* Зони пересадок (білі кола) */
+.zone.transfer {
+  width: 6.4%;
+  height: 8.6%;
+}
+
 /* 1. Підключаємо твій файл шрифту */
 @font-face {
   font-family: 'ProbaNav2';
@@ -96,18 +124,8 @@ h1, h2 {
   height: 4.28%;
 }
 
-.zone.R[data-slug="R.Vokzalna"],
-.zone[data-slug="B.Heroiv_Dnipra"],
-.zone[data-slug="B.Teremky"],
-.zone.R[data-slug="R.Dnipro"],
-.zone[data-slug="R.Arsenalna"],
-.zone[data-slug="R.Akademmistechko"],
-.zone[data-slug="R.Lisova"],
-.zone[data-slug="G.Chervonyi_khutir"],
-.zone[data-slug="G.Syrets"],
-.zone.G[data-slug="G.Slavutych"] {
-  height: 6.4%;
-}
+
+
 
 .zone.transfer {
   width: 6.4%;
@@ -144,67 +162,7 @@ body#map-page .map-viewport {
 }
 
 
-.zone[data-slug="R.Akademmistechko"] { left: 0%; top: 30.4%; }
-.zone[data-slug="R.Zhytomyrska"] { left: 3.3%; top: 36.9%; }
-.zone[data-slug="R.Sviatoshyn"] { left: 6.5%; top: 41.2%; }
-.zone[data-slug="R.Nyvky"] { left: 9.7%; top: 45.6%; }
-.zone[data-slug="R.Beresteiska"] { left: 12.9%; top: 49.9%; }
-.zone[data-slug="R.Shuliavska"] { left: 16.1%; top: 54.3%; }
-.zone[data-slug="R.Politekhnychnyi_instytut"].v3 { left: 19.4%; top: 58.7%; width: 9.55%; height: 4.3% }
-.zone[data-slug="R.Politekhnychnyi_instytut"].v4 { left:22.6%; top:58.8%; width:3%; height:6.3%; }
-.zone[data-slug="R.Vokzalna"] { left: 25.8%; top: 63%; }
-.zone[data-slug="R.Universytet"].v1 { left: 32.3%; top: 58.7%; width: 9.55%; height: 4.3%; }
-.zone[data-slug="R.Universytet"].v2 { left: 35.6%; top: 56.5%; width:3%; height:8.7%; }
-.zone[data-slug="R.Arsenalna"] { left: 51.6%; top: 43.5%; }
-.zone[data-slug="R.Dnipro"] { left: 58%; top: 50%; }
-.zone[data-slug="R.Hidropark"].v5 { left: 64.5%; top: 45.6%; width: 9.55%; height: 4.3%; }
-.zone[data-slug="R.Hidropark"].v6 { left:67.7%; top:45.7%; width:3%; height:6.3%; }  
-.zone[data-slug="R.Livoberezhna"] { left: 67.7%; top: 41.3%; }
-.zone[data-slug="R.Darnytsia"] { left: 70.9%; top: 36.9%; }
-.zone[data-slug="R.Chernihivska"] { left: 74.2%; top: 32.6%; }
-.zone[data-slug="R.Lisova"] { left: 77.5%; top: 26%; }
 
-.zone[data-slug="B.Heroiv_Dnipra"] { left: 35.5%; top: 0%; }
-.zone[data-slug="B.Minska"] { left: 32.3%; top: 6.4%; }
-.zone[data-slug="B.Obolon"] { left: 35.5%; top: 10.8%; }
-.zone[data-slug="B.Pochaina"] { left: 32.3%; top: 15.2%; } 
-.zone[data-slug="B.Tarasa_Shevchenko"] { left: 35.5%; top: 19.45%; }
-.zone[data-slug="B.Kontraktova_ploshcha"] { left: 38.7%; top: 23.9%; }
-.zone[data-slug="B.Poshtova_ploshcha"] { left: 42%; top: 28.2%; }
-.zone[data-slug="B.Olimpiiska"] { left: 42%; top: 58.7%; }
-.zone[data-slug="B.Palats_Ukraina"] { left: 45.2%; top: 63%; }
-.zone[data-slug="B.Lybidska"] { left: 48.4%; top: 67.4%; }
-.zone[data-slug="B.Demiivska"] { left: 45.2%; top: 71.7%; }
-.zone[data-slug="B.Holosiivska"] { left: 42%; top: 76.1%; }
-.zone[data-slug="B.Vasylkivska"] { left: 38.7%; top: 80.4%; }
-.zone[data-slug="B.Vystavkovyi_tsentr"] { left: 35.5%; top: 84.7%; }
-.zone[data-slug="B.Ipodrom"] { left: 32.3%; top: 89.1%; }
-.zone[data-slug="B.Teremky"] { left: 29%; top: 93.6%; }
-
-.zone[data-slug="G.Syrets"] { left: 25.9%; top: 26%; }
-.zone[data-slug="G.Dorohozhychi"] { left: 29.1%; top: 32.6%; }
-.zone[data-slug="G.Lukianivska"].v11 { left: 32.3%; top: 36.9%; width: 9.55%; height: 4.3%; }
-.zone[data-slug="G.Lukianivska"].v12 { left: 35.6%; top: 36.9%; width: 3%; height:6.3%; }
-.zone[data-slug="G.Klovska"] { left: 51.6%; top: 58.7%; }
-.zone[data-slug="G.Pecherska"] { left: 54.9%; top: 63%; }
-.zone[data-slug="G.Zvirynetska"] { left: 58.1%; top: 67.4%; }
-.zone[data-slug="G.Vydubychi"].v7 { left: 61.3%; top: 71.7%; width: 9.55%; height: 4.3%; }
-.zone[data-slug="G.Vydubychi"].v8 { left: 64.6%; top: 71.7%;  width:3%; height:6.3%; }
-.zone[data-slug="G.Slavutych"] { left: 67.7%; top: 76.1%; }
-.zone[data-slug="G.Osokorky"].v9 { left: 74.2%; top: 71.7%; width: 9.55%; height: 4.3%; }
-.zone[data-slug="G.Osokorky"].v10 { left: 77.4%; top: 71.7%; width: 3%; height: 6.3%; }
-.zone[data-slug="G.Pozniaky"] { left: 77.4%; top: 67.4%; }
-.zone[data-slug="G.Kharkivska"] { left: 80.6%; top: 63%; }
-.zone[data-slug="G.Vyrlytsia"] { left: 83.9%; top: 58.7%; }
-.zone[data-slug="G.Boryspilska"] { left: 87.1%; top: 54.3%; }
-.zone[data-slug="G.Chervonyi_khutir"] { left: 90.3%; top: 47.9%; }
-
-.zone[data-slug="B.Maidan_Nezalezhnosti"] { left: 45.2%; top: 32.6%; }
-.zone[data-slug="B.Ploshcha_Ukrainskikh_heroiv"] { left: 45.2%; top: 50%; }
-.zone[data-slug="R.Khreshchatyk"] { left: 45.2%; top: 41.4%; }
-.zone[data-slug="R.Teatralna"] { left: 38.7%; top: 50%; }
-.zone[data-slug="G.Palats_sportu"] { left: 51.6%; top: 50%; }
-.zone[data-slug="G.Zoloti_vorota"] { left: 38.7%; top: 41.4%; }
 /* ══ THEME VARIABLES ══ */
 :root {
   --bg:         #1c1c1e;
@@ -217,6 +175,19 @@ body#map-page .map-viewport {
   --icon-color: #ababab;
   --border:     rgba(255,255,255,0.08);
   --overlay:    rgba(0,0,0,0.55);
+  /* 🎯 СИСТЕМА Z-INDEX (Ієрархія шарів) */
+  --z-fav-toast: 10;           /* Сповіщення про додавання виходу */
+  --z-fb-sticky: 100;          /* Фіксована кнопка у формі змін */
+  --z-map-zones: 999;          /* Клікабельні зони на карті */
+  --z-ui-buttons: 1010;        /* Плаваючі кнопки (Обране) */
+  --z-overlay: 1020;           /* Темне тло під вікнами */
+  --z-bottom-sheet: 1030;      /* Звичайні вікна станцій */
+  --z-dropdown: 1050;          /* Меню три крапки */
+  --z-btn-top: 1055;           /* Кнопки пошуку та меню у верхньому куті */
+  --z-fullscreen-sheet: 1060;  /* Повноекранні вікна (Хрещатик) */
+  --z-dropdown-active: 1070;   /* Відкрите меню поверх усього */
+  --z-popup-confirm: 1100;     /* Спливаюче вікно підтвердження */
+  --z-global-modal: 2000;      /* Глобальне вікно (Застосувати зміни?) */
 }
 [data-theme="light"] {
   --bg:         #e5e5ea;
@@ -237,7 +208,7 @@ body { background: var(--bg); }
   position: fixed;
   right: 12px; /* Було 14px. Тепер центр 44px-кнопки ідеально збігається з 40px-кнопкою зверху */
   bottom: calc(14px + env(safe-area-inset-bottom));
-  z-index: 1010;
+z-index: var(--z-ui-buttons);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -260,7 +231,7 @@ body { background: var(--bg); }
   position: fixed;
   top: calc(12px + env(safe-area-inset-top));
   right: 14px;
-  z-index: 1055;
+z-index: var(--z-btn-top);
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
@@ -276,7 +247,7 @@ body { background: var(--bg); }
   display: none;
   position: fixed; inset: 0;
   background: var(--overlay);
-  z-index: 1020;
+z-index: var(--z-overlay);
 }
 .sheet-overlay.overlay-visible { display: block; }
 
@@ -284,7 +255,7 @@ body { background: var(--bg); }
 .station-sheet {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  z-index: 1030;
+z-index: var(--z-bottom-sheet);
   background: var(--bg-sheet);
   border-radius: 20px 20px 0 0;
   max-height: 85vh;
@@ -298,7 +269,7 @@ body { background: var(--bg); }
 .station-sheet.sheet-open { transform: translateY(0); }
 /* ══ Хрещатик: повноекранне вікно перекриває кнопку меню ══ */
 .station-sheet.sheet-fullscreen {
-  z-index: 1060;
+z-index: var(--z-fullscreen-sheet);
 }
 
 
@@ -724,7 +695,7 @@ body { background: var(--bg); }
   top: calc(56px + env(safe-area-inset-top));
   right: 34px;
   transform: translateX(50%);
-  z-index: 1050;
+z-index: var(--z-dropdown);
   background: var(--bg-sheet);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
@@ -1094,7 +1065,7 @@ body { background: var(--bg); }
 .global-confirm-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+z-index: var(--z-global-modal);
   background: rgba(0,0,0,0.45);
   display: flex;
   align-items: flex-end;
@@ -1500,7 +1471,7 @@ html {
   bottom: -32px; /* Компенсуємо внутрішній відступ вікна */
   padding: 12px 16px 32px;
   margin: 0 -16px -32px;
-  z-index: 100;
+z-index: var(--z-fb-sticky);
   border-top: 1px solid var(--border);
 }
 /* Щоб кнопка не зливалася з текстом, який під неї заїжджає, задаємо фон */
@@ -1520,7 +1491,7 @@ html {
   bottom: calc(24px + env(safe-area-inset-bottom));
   left: 16px;
   right: 16px;
-  z-index: 1100;
+z-index: var(--z-popup-confirm);
   background: var(--bg-card);
   border: 1px solid var(--border);
   box-shadow: 0 10px 40px rgba(0,0,0,0.6);
@@ -1921,7 +1892,7 @@ html {
 
 /* ══ Task 11: drop-menu поверх fullscreen sheet ══ */
 .drop-menu.show {
-  z-index: 1070;
+z-index: var(--z-dropdown-active);
 }
 
 /* ══ Task 3/4: Exit fav notification & inverted pills ══ */
@@ -2096,7 +2067,7 @@ html {
   opacity: 0;
   transition: opacity 0.25s ease;
   pointer-events: none;
-  z-index: 10;
+z-index: var(--z-fav-toast);
 }
 .exit-fav-toast.fav-note-open {
   opacity: 1;
@@ -2381,7 +2352,7 @@ html {
   position: fixed;
   top: calc(12px + env(safe-area-inset-top));
   right: 64px; /* Відступаємо від правої кнопки меню */
-  z-index: 1055;
+z-index: var(--z-btn-top);
   width: 40px; 
   height: 40px;
   background: transparent; /* Без фону */

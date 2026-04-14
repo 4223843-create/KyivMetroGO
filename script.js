@@ -1,3 +1,5 @@
+window.MetroApp = window.MetroApp || {};
+
 (function () {
   /* ==========================================================================
      1. ГЛОБАЛЬНІ ЗМІННІ ТА DOM ЕЛЕМЕНТИ
@@ -63,7 +65,7 @@
   }
 
   if (img.complete) applyZoomAndCenter(); else img.addEventListener('load', applyZoomAndCenter);
-  window.applyZoomAndCenter = applyZoomAndCenter;
+  MetroApp.applyZoomAndCenter = applyZoomAndCenter;
   adjustViewportHeight();
   img.addEventListener('load', () => { adjustViewportHeight(); applyZoomAndCenter(); });
 
@@ -158,8 +160,8 @@ let resizeTimer;
 
 function heartSvg(isFav, slug, lineColor) {
     const base = 'width="22" height="20" viewBox="0 0 24 22" xmlns="http://www.w3.org/2000/svg"';
-    if (!isFav) return `<svg ${base} fill="none" stroke="#ABABAB" stroke-width="2"><path d="${window.MetroIcons.heartPath}"/></svg>`;
-    return `<svg ${base} fill="${lineColor}"><path d="${window.MetroIcons.heartPath}"/></svg>`;
+    if (!isFav) return `<svg ${base} fill="none" stroke="#ABABAB" stroke-width="2"><path d="${MetroApp.Icons.heartPath}"/></svg>`;
+    return `<svg ${base} fill="${lineColor}"><path d="${MetroApp.Icons.heartPath}"/></svg>`;
   }
 
   function formatLabel(raw) {
@@ -188,8 +190,8 @@ function heartSvg(isFav, slug, lineColor) {
     if (!stationsData) stationsData = {};
     Object.keys(stationsData).forEach(key => delete stationsData[key]);
     data.stations.forEach(s => { stationsData[s.slug] = s; });
-    if (window.applyLocalEdits) window.applyLocalEdits(stationsData);
-    if (window.applyExitLabels) window.applyExitLabels(stationsData);
+    if (MetroApp.applyLocalEdits) MetroApp.applyLocalEdits(stationsData);
+    if (MetroApp.applyExitLabels) MetroApp.applyExitLabels(stationsData);
     return stationsData;
   }
 
@@ -200,7 +202,112 @@ function heartSvg(isFav, slug, lineColor) {
     return hydrateStations(data);
   }
 
-  window.reloadStationsData = reloadStationsData;
+
+
+/* ==========================================================================
+     4. ГЕНЕРАЦІЯ ЗОН КАРТИ
+     ========================================================================== */
+  const MAP_ZONES_DATA = [
+    // Червона гілка (R)
+    { slug: 'R.Akademmistechko', x: 0, y: 30.4, tall: true },
+    { slug: 'R.Zhytomyrska', x: 3.3, y: 36.9 },
+    { slug: 'R.Sviatoshyn', x: 6.5, y: 41.2 },
+    { slug: 'R.Nyvky', x: 9.7, y: 45.6 },
+    { slug: 'R.Beresteiska', x: 12.9, y: 49.9 },
+    { slug: 'R.Shuliavska', x: 16.1, y: 54.3 },
+    { slug: 'R.Politekhnychnyi_instytut', x: 19.4, y: 58.7 },
+    { slug: 'R.Politekhnychnyi_instytut', x: 22.6, y: 58.8, w: 3, h: 6.3 },
+    { slug: 'R.Vokzalna', x: 25.8, y: 63, tall: true },
+    { slug: 'R.Universytet', x: 32.3, y: 58.7 },
+    { slug: 'R.Universytet', x: 35.6, y: 56.5, w: 3, h: 8.7 },
+    { slug: 'R.Arsenalna', x: 51.6, y: 43.5, tall: true },
+    { slug: 'R.Dnipro', x: 58, y: 50, tall: true },
+    { slug: 'R.Hidropark', x: 64.5, y: 45.6 },
+    { slug: 'R.Hidropark', x: 67.7, y: 45.7, w: 3, h: 6.3 },
+    { slug: 'R.Livoberezhna', x: 67.7, y: 41.3 },
+    { slug: 'R.Darnytsia', x: 70.9, y: 36.9 },
+    { slug: 'R.Chernihivska', x: 74.2, y: 32.6 },
+    { slug: 'R.Lisova', x: 77.5, y: 26, tall: true },
+
+    // Синя гілка (B)
+    { slug: 'B.Heroiv_Dnipra', x: 35.5, y: 0, tall: true },
+    { slug: 'B.Minska', x: 32.3, y: 6.4 },
+    { slug: 'B.Obolon', x: 35.5, y: 10.8 },
+    { slug: 'B.Pochaina', x: 32.3, y: 15.2 },
+    { slug: 'B.Tarasa_Shevchenko', x: 35.5, y: 19.45 },
+    { slug: 'B.Kontraktova_ploshcha', x: 38.7, y: 23.9 },
+    { slug: 'B.Poshtova_ploshcha', x: 42, y: 28.2 },
+    { slug: 'B.Olimpiiska', x: 42, y: 58.7 },
+    { slug: 'B.Palats_Ukraina', x: 45.2, y: 63, tall: true },
+    { slug: 'B.Lybidska', x: 48.4, y: 67.4 },
+    { slug: 'B.Demiivska', x: 45.2, y: 71.7 },
+    { slug: 'B.Holosiivska', x: 42, y: 76.1 },
+    { slug: 'B.Vasylkivska', x: 38.7, y: 80.4 },
+    { slug: 'B.Vystavkovyi_tsentr', x: 35.5, y: 84.7 },
+    { slug: 'B.Ipodrom', x: 32.3, y: 89.1 },
+    { slug: 'B.Teremky', x: 29, y: 93.6, tall: true },
+
+    // Зелена гілка (G)
+    { slug: 'G.Syrets', x: 25.9, y: 26, tall: true },
+    { slug: 'G.Dorohozhychi', x: 29.1, y: 32.6 },
+    { slug: 'G.Lukianivska', x: 32.3, y: 36.9 },
+    { slug: 'G.Lukianivska', x: 35.6, y: 36.9, w: 3, h: 6.3 },
+    { slug: 'G.Klovska', x: 51.6, y: 58.7 },
+    { slug: 'G.Pecherska', x: 54.9, y: 63 },
+    { slug: 'G.Zvirynetska', x: 58.1, y: 67.4 },
+    { slug: 'G.Vydubychi', x: 61.3, y: 71.7 },
+    { slug: 'G.Vydubychi', x: 64.6, y: 71.7, w: 3, h: 6.3 },
+    { slug: 'G.Slavutych', x: 67.7, y: 76.1, tall: true },
+    { slug: 'G.Osokorky', x: 74.2, y: 71.7 },
+    { slug: 'G.Osokorky', x: 77.4, y: 71.7, w: 3, h: 6.3 },
+    { slug: 'G.Pozniaky', x: 77.4, y: 67.4 },
+    { slug: 'G.Kharkivska', x: 80.6, y: 63 },
+    { slug: 'G.Vyrlytsia', x: 83.9, y: 58.7 },
+    { slug: 'G.Boryspilska', x: 87.1, y: 54.3 },
+    { slug: 'G.Chervonyi_khutir', x: 90.3, y: 47.9, tall: true },
+
+    // Пересадки (transfer)
+    { slug: 'B.Maidan_Nezalezhnosti', x: 45.2, y: 32.6, type: 'transfer' },
+    { slug: 'B.Ploshcha_Ukrainskikh_heroiv', x: 45.2, y: 50, type: 'transfer' },
+    { slug: 'R.Khreshchatyk', x: 45.2, y: 41.4, type: 'transfer' },
+    { slug: 'R.Teatralna', x: 38.7, y: 50, type: 'transfer' },
+    { slug: 'G.Palats_sportu', x: 51.6, y: 50, type: 'transfer' },
+    { slug: 'G.Zoloti_vorota', x: 38.7, y: 41.4, type: 'transfer' }
+  ];
+
+  function renderMapZones() {
+    const mapInner = document.getElementById('mapInner');
+    if (!mapInner) return;
+
+    MAP_ZONES_DATA.forEach(z => {
+      const zone = document.createElement('a');
+      const lineCode = z.slug.charAt(0); // R, B або G
+      
+      zone.className = `zone ${z.type || lineCode}`;
+      if (z.tall) zone.classList.add('tall');
+      
+      zone.dataset.slug = z.slug;
+      zone.style.left = z.x + '%';
+      zone.style.top = z.y + '%';
+      
+      // Якщо задано кастомні розміри (для складних зон)
+      if (z.w) zone.style.width = z.w + '%';
+      if (z.h) zone.style.height = z.h + '%';
+
+      mapInner.appendChild(zone);
+    });
+  }
+
+  // Викликаємо генерацію відразу
+  renderMapZones();
+
+
+
+
+
+
+
+  MetroApp.reloadStationsData = reloadStationsData;
 
   reloadStationsData().catch(err => console.error('stations.json load failed', err));
 
@@ -398,7 +505,7 @@ favBody.innerHTML = itemsToRender.map(item => {
 
 
 
-      
+
             ${(formattedDir && item.exits.length > 0) ? `<span class="fav-dir-name ${item.exits.length > 1 ? 'fav-small-dir' : ''}">${formattedDir}</span>` : ''}
           </div>
           ${squaresHtml}
@@ -549,14 +656,14 @@ favBody.innerHTML = itemsToRender.map(item => {
 if (positions.length === 1) {
       const p = positions[0];
       const isMulti = String(p.wagon).includes(',');
-      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${window.MetroIcons.pencil}</span>` : '';
+      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${MetroApp.Icons.pencil}</span>` : '';
       const spacer = p._edited ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}${generatePills(p.wagon, p.doors)}${spacer}</div>`;
     }
 
     if (multiRow) {
       const editedPos = positions.find(p => p._edited);
-      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${window.MetroIcons.pencil}</span>` : '';
+      const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${MetroApp.Icons.pencil}</span>` : '';
       const spacer = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
       return `<div class="position-row position-row-multi">${editedMark}${positions.map((p, i) => `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${generatePills(p.wagon, p.doors)}`).join('')}${spacer}</div>`;
     }
@@ -692,12 +799,12 @@ if (tapCount >= 2) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
   }
 
   function openStation(slug) {
-    if (typeof window.hasUnsavedFeedback === 'function' && window.hasUnsavedFeedback()) {
-      window.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
-        if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
-        window.fbUnsaved = false;
+    if (typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
+      MetroApp.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+        if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
+        MetroApp.fbUnsaved = false;
         actualOpenStation(); 
-      }, () => { window.fbUnsaved = false; actualOpenStation(); });
+      }, () => { MetroApp.fbUnsaved = false; actualOpenStation(); });
       return; 
     }
 
@@ -744,22 +851,22 @@ if (tapCount >= 2) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
      7. УПРАВЛІННЯ ВІКНАМИ, МЕНЮ ТА ТЕМАМИ
      ========================================================================== */
   function closeAllSheets(force = false) {
-    if (!force && typeof window.hasUnsavedFeedback === 'function' && window.hasUnsavedFeedback()) {
-      window.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
-        if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
-        window.fbUnsaved = false; closeAllSheets(true); 
-      }, () => { window.fbUnsaved = false; closeAllSheets(true); });
+    if (!force && typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
+      MetroApp.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+        if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
+        MetroApp.fbUnsaved = false; closeAllSheets(true); 
+      }, () => { MetroApp.fbUnsaved = false; closeAllSheets(true); });
       return false;
     }
     document.querySelectorAll('.station-sheet').forEach(el => { el.classList.remove('sheet-open'); el.style.maxHeight = ''; });
     sheetOverlay.classList.remove('overlay-visible');
     return true;
   }
-  window.closeAllSheets = closeAllSheets;
+  MetroApp.closeAllSheets = closeAllSheets;
 
-  window.refreshCurrentStation = function() {
+  MetroApp.refreshCurrentStation = function() {
     if (!currentStationSlug) return;
-    if (typeof window.applyExitLabels === 'function') window.applyExitLabels(stationsData);
+    if (typeof MetroApp.applyExitLabels === 'function') MetroApp.applyExitLabels(stationsData);
     if (stationsData[currentStationSlug] && sheet.classList.contains('sheet-open')) {
       const s = stationsData[currentStationSlug];
       const color = LINE_COLOR[s.line] || '#888';
@@ -851,7 +958,7 @@ if (tapCount >= 2) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
 
 panel = document.createElement('div');
       panel.className = 'edit-info-panel';
-panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;margin:4px 0 0"><span class="fb-closed-note">Значення змінено користувачем</span><button class="fb-restore-exit edit-info-cancel" style="pointer-events:auto" data-slug="' + slug + '" data-idx="' + idx + '">' + window.MetroIcons.undo + '</button></div>';      row.after(panel);
+panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;margin:4px 0 0"><span class="fb-closed-note">Значення змінено користувачем</span><button class="fb-restore-exit edit-info-cancel" style="pointer-events:auto" data-slug="' + slug + '" data-idx="' + idx + '">' + MetroApp.Icons.undo + '</button></div>';      row.after(panel);
       requestAnimationFrame(() => panel.classList.add('panel-open'));
 
       panel.querySelector('.edit-info-cancel').addEventListener('click', (ev) => {
@@ -888,7 +995,7 @@ panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;m
   function applyTheme(theme) {
     root.setAttribute('data-theme', theme);
     const icon = document.getElementById('themeIcon');
-    if (icon) icon.innerHTML = theme === 'dark' ? window.MetroIcons.sun : window.MetroIcons.moon;
+    if (icon) icon.innerHTML = theme === 'dark' ? MetroApp.Icons.sun : MetroApp.Icons.moon;
     localStorage.setItem(THEME_KEY, theme);
   }
   applyTheme(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
@@ -915,18 +1022,18 @@ panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;m
       e.preventDefault(); e.stopPropagation();
       dropMenu.classList.remove('show'); dropMenu.hidden = true;
       document.getElementById('aboutSheet')?.classList.remove('sheet-open');
-      if (typeof openFeedbackSheet === 'function') openFeedbackSheet(stationsData);
+      if (typeof MetroApp.openFeedbackSheet === 'function') MetroApp.openFeedbackSheet(stationsData);
     });
 
     document.getElementById('aboutItem')?.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
       dropMenu.classList.remove('show'); dropMenu.hidden = true;
       
-      if (typeof window.hasUnsavedFeedback === 'function' && window.hasUnsavedFeedback()) {
-        window.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
-          if (typeof window.triggerFeedbackSubmit === 'function') window.triggerFeedbackSubmit(true);
-          window.fbUnsaved = false; executeAboutTransition();
-        }, () => { window.fbUnsaved = false; executeAboutTransition(); });
+      if (typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
+        MetroApp.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+          if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
+          MetroApp.fbUnsaved = false; executeAboutTransition();
+        }, () => { MetroApp.fbUnsaved = false; executeAboutTransition(); });
         return;
       }
       
@@ -989,7 +1096,7 @@ panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;m
 const searchBtnTop = document.createElement('button');
   searchBtnTop.className = 'search-btn-top';
   searchBtnTop.setAttribute('aria-label', 'Пошук станції');
-  searchBtnTop.innerHTML = window.MetroIcons.search;
+  searchBtnTop.innerHTML = MetroApp.Icons.search;
   document.body.appendChild(searchBtnTop);
 
   function openSearchSheet() {
@@ -1130,10 +1237,10 @@ function renderSearchResults(query, container) {
 
 
 /* ГЛОБАЛЬНИЙ ЕКСПОРТ (Вікно підтвердження) */
-  window.showCustomConfirm = function(message, onYes, onNo) {
+  MetroApp.showCustomConfirm = function(message, onYes, onNo) {
     const overlay = document.createElement('div');
     overlay.className = 'global-confirm-overlay';
-    overlay.innerHTML = `<div class="global-confirm-card"><div class="global-confirm-text">${message}</div><div class="global-confirm-btns"><button class="confirm-square confirm-square-yes" id="confirmYes">${window.MetroIcons.check}</button><button class="confirm-square confirm-square-no" id="confirmNo">${window.MetroIcons.cross}</button></div></div>`;
+    overlay.innerHTML = `<div class="global-confirm-card"><div class="global-confirm-text">${message}</div><div class="global-confirm-btns"><button class="confirm-square confirm-square-yes" id="confirmYes">${MetroApp.Icons.check}</button><button class="confirm-square confirm-square-no" id="confirmNo">${MetroApp.Icons.cross}</button></div></div>`;
     document.body.appendChild(overlay);
 
     overlay.querySelector('#confirmYes').addEventListener('click', () => { overlay.remove(); if (onYes) onYes(); });
