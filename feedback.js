@@ -3,37 +3,32 @@ window.MetroApp = window.MetroApp || {};
 
 /* ══ ГЛОБАЛЬНИЙ СЛОВНИК ІКОНОК (SVG) ══ */
 MetroApp.Icons = {
-  pencil: `<svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
-  undo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`,
-  info: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg>`,
-  check: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  cross: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
-  sun: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
-  moon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
-  search: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+  pencil: `<svg aria-hidden="true" focusable="false" viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
+  undo: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`,
+  info: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg>`,
+  check: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  cross: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  sun: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
+  moon: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
+  search: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
   heartPath: `M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z`
 };
 
-/* ══ FEEDBACK SHEET ══ */
+MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
+MetroApp.ALWAYS_CAP = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
+
 (function() {
 
-  /* ==========================================================================
-     1. КОНСТАНТИ ТА ГЛОБАЛЬНИЙ СТАН
-     ========================================================================== */
   const FORMSPREE_URL = 'https://formspree.io/f/mgopobnd';
-  const LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
   const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
   const LINE_ORDER = ['red', 'blue', 'green'];
   const LOCAL_EDITS_KEY = 'metro_local_edits';
-
-  /* ==========================================================================
-     EXIT LABEL EDITS (custom exit descriptions)
-     ========================================================================== */
   const EXIT_LABELS_KEY = 'metro_exit_labels';
-  const PENCIL_SVG_LABEL = MetroApp.Icons.pencil; // Використовуємо словник
+  const PENCIL_SVG_LABEL = MetroApp.Icons.pencil;
 
-  function getExitLabels() {
-    try { return JSON.parse(localStorage.getItem(EXIT_LABELS_KEY) || '{}'); } catch { return {}; }
+function getExitLabels() {
+    try { return JSON.parse(localStorage.getItem(EXIT_LABELS_KEY) || '{}'); } 
+    catch (e) { console.warn('[KyivMetroGO] Помилка парсингу описів виходів:', e); return {}; }
   }
   function saveExitLabel(slug, posIdx, label) {
     const labels = getExitLabels();
@@ -42,13 +37,13 @@ MetroApp.Icons = {
     else { delete labels[slug][posIdx]; if (!Object.keys(labels[slug]).length) delete labels[slug]; }
     localStorage.setItem(EXIT_LABELS_KEY, JSON.stringify(labels));
   }
-  function getExitLabel(slug, posIdx) {
+  
+  MetroApp.getExitLabel = function(slug, posIdx) {
     const labels = getExitLabels();
     return labels[slug]?.[posIdx] ?? null;
-  }
-  MetroApp.getExitLabel = getExitLabel;
+  };
 
-  function applyExitLabels(stationsData) {
+  MetroApp.applyExitLabels = function(stationsData) {
     const labels = getExitLabels();
     for (const [slug, posLabels] of Object.entries(labels)) {
       if (!stationsData[slug]) continue;
@@ -62,30 +57,34 @@ MetroApp.Icons = {
         }
       }
     }
-  }
-  MetroApp.applyExitLabels = applyExitLabels;
+  };
 
-  let currentStationsData = null; 
+  let currentStationsData = null;
+  let localEditsCache = null;
+  MetroApp.fbUnsaved = false;
 
-  /* ==========================================================================
-     2. РОБОТА З LOCAL STORAGE
-     ========================================================================== */
-  function getLocalEdits() {
-    try { return JSON.parse(localStorage.getItem(LOCAL_EDITS_KEY) || '{}'); } catch { return {}; }
+function getLocalEdits() {
+    if (localEditsCache) return localEditsCache;
+    try { localEditsCache = JSON.parse(localStorage.getItem(LOCAL_EDITS_KEY) || '{}'); }
+    catch (e) { console.warn('[KyivMetroGO] Помилка парсингу локальних змін:', e); localEditsCache = {}; }
+    return localEditsCache;
   }
-  
+
   function saveLocalEdit(slug, posIdx, data) {
     const edits = getLocalEdits();
     if (!edits[slug]) edits[slug] = {};
     edits[slug][posIdx] = data;
     localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
   }
-  
-  function clearAllLocalEdits() { localStorage.removeItem(LOCAL_EDITS_KEY); }
-  
+
+  function clearAllLocalEdits() {
+    localEditsCache = null;
+    localStorage.removeItem(LOCAL_EDITS_KEY);
+  }
+
   function hasLocalEdits() { return Object.keys(getLocalEdits()).length > 0; }
 
-  function applyLocalEdits(stationsData) {
+  MetroApp.applyLocalEdits = function(stationsData) {
     const edits = getLocalEdits();
     let editsChanged = false;
     for (const [slug, posEdits] of Object.entries(edits)) {
@@ -112,14 +111,11 @@ MetroApp.Icons = {
       if (Object.keys(posEdits).length === 0) delete edits[slug];
     }
     if (editsChanged) {
-      if (Object.keys(edits).length === 0) localStorage.removeItem('metro_local_edits');
+      if (Object.keys(edits).length === 0) { localEditsCache = null; localStorage.removeItem('metro_local_edits'); }
       else localStorage.setItem('metro_local_edits', JSON.stringify(edits));
     }
-  }
+  };
 
-  /* ==========================================================================
-     3. ДОПОМІЖНІ ФУНКЦІЇ (HELPERS)
-     ========================================================================== */
   function stepperHtml(id, value, min, max, label) {
     return `<div class="fb-input-wrap">
       <span class="fb-input-label">${label}</span>
@@ -149,7 +145,7 @@ MetroApp.Icons = {
     MetroApp.fbUnsaved = true;
     const sendBtn = document.getElementById('fbSend');
     if (sendBtn) {
-      sendBtn.textContent = 'Запропонувати зміни';
+      sendBtn.textContent = 'Застосувати';
       sendBtn.disabled = false;
     }
   }
@@ -230,8 +226,12 @@ MetroApp.Icons = {
     return { wMain, dMain, wEx, dEx, wEx2, dEx2, hasExtra, hasThird };
   }
 
-  function normalizeStationsData(targetData) {
-    Object.values(targetData).forEach(s => {
+function normalizeStationsData(targetData) {
+    // Перевіряємо першу станцію. Якщо масив positions вже є, значить дані нормалізовані
+    const firstStation = Object.values(targetData)[0];
+    if (!firstStation || firstStation.positions) return;
+
+    Object.values(targetData).forEach(s => {      
       s.positions = [];
       s.directions?.forEach(dir => {
         dir.exits?.forEach(exit => {
@@ -243,9 +243,6 @@ MetroApp.Icons = {
     });
   }
 
-  /* ==========================================================================
-     5. РЕНДЕРИНГ ІНТЕРФЕЙСУ ТА КЕРУВАННЯ ФОРМОЮ
-     ========================================================================== */
   function bindSteppersOptimized(container) {
     if (container._fbSteppersBound) return;
     container._fbSteppersBound = true;
@@ -458,6 +455,16 @@ MetroApp.Icons = {
     });
   }
 
+
+
+
+
+
+
+
+
+
+
   function openFeedbackSheet(stationsData) {
     try {
       currentStationsData = stationsData;
@@ -487,6 +494,88 @@ MetroApp.Icons = {
       const resetWrap = document.getElementById('fbResetWrap');
       let lineEl, stationEl;
 
+      if (!posEl._hasActionListeners) {
+        posEl.addEventListener('click', (e) => {
+          const slug = stationEl.value;
+          if (!slug) return;
+          const s = currentStationsData[slug];
+
+          const restoreBtn = e.target.closest('.fb-restore-exit');
+          if (restoreBtn) {
+            e.preventDefault(); e.stopPropagation(); 
+            const idx = restoreBtn.dataset.idx; 
+            const edits = getLocalEdits();
+            if (edits[slug] && edits[slug][idx]) {
+              delete edits[slug][idx];
+              if (Object.keys(edits[slug]).length === 0) delete edits[slug];
+              if (Object.keys(edits).length === 0) clearAllLocalEdits(); 
+              else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+            }
+            renderPositions(slug); 
+            if (typeof renderResetBtn === 'function') renderResetBtn();
+            return;
+          }
+
+          const closeBtn = e.target.closest('.fb-close-exit');
+          if (closeBtn) {
+            const idx = parseInt(closeBtn.dataset.idx); 
+            const p = s.positions[idx];
+            const loc = [p.dir.startsWith('попередня') ? p.dir : `Попередня ${p.dir}`, p.exit].filter(Boolean).join(' · ');
+            
+            const exWrap = document.getElementById(`fbExtraWrap${idx}`);
+            if (exWrap && exWrap.style.display !== 'none') {
+                document.getElementById(`fbW${idx}`).textContent = document.getElementById(`fbW_ex${idx}`).textContent;
+                document.getElementById(`fbD${idx}`).textContent = document.getElementById(`fbD_ex${idx}`).textContent;
+                document.getElementById(`fbW_ex${idx}`).textContent = '-'; document.getElementById(`fbD_ex${idx}`).textContent = '-';
+                exWrap.style.display = 'none';
+                if (document.getElementById(`fbAddDoorsRow${idx}`)) document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'flex';
+                document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
+                MetroApp.fbUnsaved = true; sendBtn.textContent = 'Застосувати'; sendBtn.disabled = false;
+                return;
+            }
+
+            const itemEl = document.getElementById(`fbItemInner${idx}`);
+            let confirmEl = itemEl?.nextElementSibling;
+            if (confirmEl && confirmEl.classList.contains('fb-inline-confirm')) {
+              confirmEl.classList.remove('fb-inline-open');
+              setTimeout(() => confirmEl?.remove(), 300);
+              return;
+            }
+            document.querySelectorAll('.fb-inline-confirm').forEach(el => {
+              el.classList.remove('fb-inline-open'); setTimeout(() => el.remove(), 300);
+            });
+            
+            confirmEl = document.createElement('div');
+            confirmEl.className = 'fb-inline-confirm';
+            confirmEl.innerHTML = '<div class="fb-inline-confirm-inner">'
+              + '<div class="fb-inline-confirm-note">Позначити як недоступний?</div>'
+              + '<div class="fb-inline-confirm-btns">'
+              + '<button class="fb-inline-confirm-yes">' + MetroApp.Icons.check + '</button>'
+              + '<button class="fb-inline-confirm-no">' + MetroApp.Icons.cross + '</button>'
+              + '</div></div>';
+            itemEl.after(confirmEl);
+            requestAnimationFrame(() => confirmEl.classList.add('fb-inline-open'));
+
+            confirmEl.querySelector('.fb-inline-confirm-yes').addEventListener('click', () => {
+              confirmEl.classList.remove('fb-inline-open');
+              setTimeout(() => confirmEl.remove(), 300);
+              saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
+              MetroApp.applyLocalEdits(currentStationsData); 
+              MetroApp.fbUnsaved = false; 
+              renderPositions(slug);
+              fetch(FORMSPREE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` }) }).catch(e => console.warn(e));
+              resultEl.innerHTML = `<p class="fb-note fb-success" style="padding-bottom:0;margin-bottom:6px;">Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.</p><button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top:0;padding-top:8px;">Скасувати ці зміни</button>`;
+              attachUndoBtn(slug, resultEl, renderPositions, renderResetBtn);
+            });
+            confirmEl.querySelector('.fb-inline-confirm-no').addEventListener('click', () => {
+              confirmEl.classList.remove('fb-inline-open');
+              setTimeout(() => confirmEl.remove(), 300);
+            });
+          }
+        });
+        posEl._hasActionListeners = true;
+      }
+
       const lineHidden = document.getElementById('fbLine'), stationHidden = document.getElementById('fbStation');
       const lineBtn = document.getElementById('fbLineBtn'), stationBtn = document.getElementById('fbStationBtn');
       const lineLbl = document.getElementById('fbLineLabel'), stationLbl = document.getElementById('fbStationLabel');
@@ -500,7 +589,6 @@ MetroApp.Icons = {
         lineBtn.classList.remove('fb-select-open'); stationBtn.classList.remove('fb-select-open');
       }
 
-// Функції тепер лише генерують HTML (працюють блискавично)
       function buildLineDD() {
         const items = [{ value: '', label: '— всі —' }, ...LINE_ORDER.map(l => ({ value: l, label: LINE_NAMES[l] }))];
         lineDD.innerHTML = items.map(it => `<button type="button" class="fb-dropdown-item${it.value === lineEl.value ? ' fb-dropdown-selected' : ''}" data-value="${it.value}">${it.label}</button>`).join('');
@@ -511,7 +599,6 @@ MetroApp.Icons = {
         stationDD.innerHTML = list.map(s => `<button type="button" class="fb-dropdown-item${s.slug === stationEl.value ? ' fb-dropdown-selected' : ''}" data-value="${s.slug}">${s.name}</button>`).join('');
       }
 
-      // ДЕЛЕГУВАННЯ ПОДІЙ: Слухачі вішаються один раз на самі списки
       if (!lineDD._hasListener) {
         lineDD.addEventListener('click', (e) => {
           const b = e.target.closest('.fb-dropdown-item');
@@ -535,11 +622,22 @@ MetroApp.Icons = {
       }
 
       lineDD.addEventListener('click', e => e.stopPropagation()); stationDD.addEventListener('click', e => e.stopPropagation());
-      lineBtn.addEventListener('click', e => { e.stopPropagation(); const open = !lineDD.hidden; closeAllDD(); if (!open) { buildLineDD(); lineDD.hidden = false; lineBtn.classList.add('fb-select-open'); } });
-      stationBtn.addEventListener('click', e => { e.stopPropagation(); const open = !stationDD.hidden; closeAllDD(); if (!open) { buildStationDD(); stationDD.hidden = false; stationBtn.classList.add('fb-select-open'); } });
+      if (!lineBtn._hasListener) {
+        lineBtn.addEventListener('click', e => { e.stopPropagation(); const open = !lineDD.hidden; closeAllDD(); if (!open) { buildLineDD(); lineDD.hidden = false; lineBtn.classList.add('fb-select-open'); } });
+        lineBtn._hasListener = true;
+      }
+      if (!stationBtn._hasListener) {
+        stationBtn.addEventListener('click', e => { e.stopPropagation(); const open = !stationDD.hidden; closeAllDD(); if (!open) { buildStationDD(); stationDD.hidden = false; stationBtn.classList.add('fb-select-open'); } });
+        stationBtn._hasListener = true;
+      }
       if (sheet._closeAllDD) document.removeEventListener('click', sheet._closeAllDD);
       setTimeout(() => { document.addEventListener('click', closeAllDD); }, 0);
       sheet._closeAllDD = closeAllDD;
+
+
+
+
+
 
       function renderResetBtn() {
         resetWrap.innerHTML = (hasLocalEdits() && !stationEl.value) ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
@@ -550,9 +648,9 @@ MetroApp.Icons = {
               MetroApp.reloadStationsData(true);
             } else {
               fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
-                Object.keys(stationsData).forEach(k => delete stationsData[k]);
-                d.stations.forEach(s => { stationsData[s.slug] = s; });
-                applyLocalEdits(stationsData);
+                Object.keys(currentStationsData).forEach(k => delete currentStationsData[k]);
+                d.stations.forEach(s => { currentStationsData[s.slug] = s; });
+                MetroApp.applyLocalEdits(currentStationsData);
               });
             }
             resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
@@ -579,11 +677,13 @@ MetroApp.Icons = {
         });
         const groups = [...groupsMap.values()];
 
-        function properCase(name) {
-          const alwaysCap = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
+function properCase(name) {
           return name.split(/[\s\u00a0\u202f]+/).map((w, index) => {
             const wl = w.toLowerCase();
-            return (index === 0 || alwaysCap.has(wl)) ? wl.charAt(0).toUpperCase() + wl.slice(1) : wl;
+            const cleanWl = wl.replace(/[^а-яіїєґ]/g, ''); // Очищаємо від лапок для перевірки
+            return (index === 0 || MetroApp.ALWAYS_CAP.has(cleanWl)) 
+              ? wl.replace(/[а-яіїєґ]/i, m => m.toUpperCase()) // Робимо великою саме ПЕРШУ ЛІТЕРУ
+              : wl;
           }).join(' ');
         }
 
@@ -600,7 +700,7 @@ MetroApp.Icons = {
             const isClosed = edits[item.i]?.closed;
             const dividerHtml = (index !== g.items.length - 1) ? `<div class="fb-item-divider"></div>` : '';
 
-            const customLbl = getExitLabel(slug, item.i);
+            const customLbl = MetroApp.getExitLabel(slug, item.i);
             const rawExit = customLbl ?? (item.p.exit ? item.p.exit.replace(/[🟥🟦🟩]/g,'').trim() : '');
             
             const exitLabelHtml = '<div class="fb-exit-label-row">'
@@ -629,76 +729,11 @@ MetroApp.Icons = {
               }
             </div>${dividerHtml}`;
           }).join('');
-          return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>${itemsHtml}</div>`;
+return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>${itemsHtml}</div>`;
         }).join('');
 
         bindSteppersOptimized(posEl);
-        sendBtn.disabled = false;
-
-        posEl.querySelectorAll('.fb-restore-exit').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.preventDefault(); e.stopPropagation(); 
-            const idx = btn.dataset.idx; const slug = document.getElementById('fbStation').value; const edits = getLocalEdits();
-            if (edits[slug] && edits[slug][idx]) {
-              delete edits[slug][idx];
-              if (Object.keys(edits[slug]).length === 0) delete edits[slug];
-              if (Object.keys(edits).length === 0) clearAllLocalEdits(); else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
-            }
-            renderPositions(slug); if (typeof renderResetBtn === 'function') renderResetBtn();
-          });
-        });
-
-        posEl.querySelectorAll('.fb-close-exit').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const idx = parseInt(btn.dataset.idx); const p = s.positions[idx];
-            const loc = [p.dir.startsWith('попередня') ? p.dir : `Попередня ${p.dir}`, p.exit].filter(Boolean).join(' · ');
-            const exWrap = document.getElementById(`fbExtraWrap${idx}`);
-            if (exWrap && exWrap.style.display !== 'none') {
-                document.getElementById(`fbW${idx}`).textContent = document.getElementById(`fbW_ex${idx}`).textContent;
-                document.getElementById(`fbD${idx}`).textContent = document.getElementById(`fbD_ex${idx}`).textContent;
-                document.getElementById(`fbW_ex${idx}`).textContent = '-'; document.getElementById(`fbD_ex${idx}`).textContent = '-';
-                exWrap.style.display = 'none';
-                if (document.getElementById(`fbAddDoorsRow${idx}`)) document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'flex';
-                document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
-                MetroApp.fbUnsaved = true; sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false;
-                return;
-            }
-            const itemEl = document.getElementById(`fbItemInner${idx}`);
-            let confirmEl = itemEl?.nextElementSibling;
-            if (confirmEl && confirmEl.classList.contains('fb-inline-confirm')) {
-              confirmEl.classList.remove('fb-inline-open');
-              setTimeout(() => confirmEl?.remove(), 300);
-              return;
-            }
-            document.querySelectorAll('.fb-inline-confirm').forEach(el => {
-              el.classList.remove('fb-inline-open'); setTimeout(() => el.remove(), 300);
-            });
-            confirmEl = document.createElement('div');
-            confirmEl.className = 'fb-inline-confirm';
-            confirmEl.innerHTML = '<div class="fb-inline-confirm-inner">'
-              + '<div class="fb-inline-confirm-note">Позначити як недоступний?</div>'
-              + '<div class="fb-inline-confirm-btns">'
-              + '<button class="fb-inline-confirm-yes">' + MetroApp.Icons.check + '</button>'
-              + '<button class="fb-inline-confirm-no">' + MetroApp.Icons.cross + '</button>'
-              + '</div></div>';
-            itemEl.after(confirmEl);
-            requestAnimationFrame(() => confirmEl.classList.add('fb-inline-open'));
-
-            confirmEl.querySelector('.fb-inline-confirm-yes').addEventListener('click', () => {
-              confirmEl.classList.remove('fb-inline-open');
-              setTimeout(() => confirmEl.remove(), 300);
-              saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
-              applyLocalEdits(stationsData); MetroApp.fbUnsaved = false; renderPositions(slug);
-              fetch(FORMSPREE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` }) }).catch(e => console.warn(e));
-              resultEl.innerHTML = `<p class="fb-note fb-success" style="padding-bottom:0;margin-bottom:6px;">Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.</p><button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top:0;padding-top:8px;">Скасувати ці зміни</button>`;
-              attachUndoBtn(slug, resultEl, renderPositions, renderResetBtn);
-            });
-            confirmEl.querySelector('.fb-inline-confirm-no').addEventListener('click', () => {
-              confirmEl.classList.remove('fb-inline-open');
-              setTimeout(() => confirmEl.remove(), 300);
-            });
-          });
-        });
+        sendBtn.disabled = true; /* <--- Тепер кнопка вимкнена за замовчуванням */
         renderResetBtn();
       }
 
@@ -719,7 +754,7 @@ MetroApp.Icons = {
 
           Promise.resolve(reloadPromise).then(() => {
             normalizeStationsData(currentStationsData);
-            applyLocalEdits(currentStationsData);
+            MetroApp.applyLocalEdits(currentStationsData);
             resultContainer.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
             renderFn(slug); if (typeof resetBtnFn === 'function') resetBtnFn();
           });
@@ -760,7 +795,7 @@ MetroApp.Icons = {
           }
         } catch (error) {
           if (!background) {
-            sendBtn.textContent = 'Запропонувати зміни'; sendBtn.disabled = false;
+            sendBtn.textContent = 'Застосувати'; sendBtn.disabled = false;
             resultEl.innerHTML = `<p class="fb-note" style="color: #c8523a; padding-bottom: 0; margin-bottom: 6px;">Немає зв'язку з сервером.<br>Але зміни збережено локально.</p><button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top: 0; padding-top: 8px;">Скасувати ці зміни</button>`;
             attachUndoBtn(slug, resultEl, renderPositions, renderResetBtn);
           }
@@ -771,19 +806,19 @@ MetroApp.Icons = {
       document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
       renderResetBtn();
       
-      document.getElementById('aboutSheet')?.classList.remove('sheet-open'); document.getElementById('stationSheet')?.classList.remove('sheet-open');
+document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
       sheet.classList.add('sheet-open'); document.getElementById('sheetOverlay').classList.add('overlay-visible');
       
-      let swY = 0; let isHandleSwipeFB = false;
-      sheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isHandleSwipeFB = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
-      sheet.addEventListener('touchend', e => { if (isHandleSwipeFB && (e.changedTouches[0].clientY - swY > 60)) closeFeedbackSheet(); });
-      
+// GUARD: Вішаємо слухачі свайпу лише один раз
+      if (!sheet._swipeBound) {
+        let swY = 0; let isHandleSwipeFB = false;
+        sheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isHandleSwipeFB = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
+        sheet.addEventListener('touchend', e => { if (isHandleSwipeFB && (e.changedTouches[0].clientY - swY > 60)) closeFeedbackSheet(); });
+        sheet._swipeBound = true;
+      }      
     } catch(err) { console.error('[FeedbackSheet ERROR]', err); alert('Помилка: ' + err.message); }
   }
 
-  /* ==========================================================================
-     6. СТАН ФОРМИ ТА ЗАКРИТТЯ
-     ========================================================================== */
   function forceCloseFeedbackSheet() {
     MetroApp.fbUnsaved = false;
     const s = document.getElementById('feedbackSheet');
@@ -829,7 +864,7 @@ MetroApp.Icons = {
         }
       });
       return dirty;
-    } catch(e) { return false; }
+    } catch(e) { console.warn('[hasUnsavedFeedback]', e); return false; }
   };
 
   function closeFeedbackSheet() {
@@ -849,6 +884,5 @@ MetroApp.Icons = {
 
   MetroApp.openFeedbackSheet  = openFeedbackSheet;
   MetroApp.closeFeedbackSheet = closeFeedbackSheet;
-  MetroApp.applyLocalEdits    = applyLocalEdits;
 
 })();

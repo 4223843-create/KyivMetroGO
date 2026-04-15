@@ -1,145 +1,19 @@
-/* ══ ЗАГАЛЬНІ СТИЛІ ЗОН ══ */
-.zone {
-  position: absolute;
-  display: block;
-  border: none;
-  background: transparent;
-  outline: none;
-  z-index: var(--z-map-zones);;
-  cursor: pointer;
-}
-
-/* Стандартні розміри для кольорових зон */
-.zone.R, .zone.B, .zone.G {
-  width: 9.55%;
-  height: 4.28%;
-}
-
-/* Станції зі збільшеною висотою (кінцеві та глибокі) */
-.zone.tall {
-  height: 6.4% !important;
-}
-
-/* Зони пересадок (білі кола) */
-.zone.transfer {
-  width: 6.4%;
-  height: 8.6%;
-}
-
-/* 1. Підключаємо твій файл шрифту */
-@font-face {
-  font-family: 'ProbaNav2';
-  src: url('ProbaNav2-Medium.woff2') format('woff2');
-  font-weight: 500; /* Medium зазвичай відповідає жирності 500 */
-  font-style: normal;
-  font-display: swap;
-}
-
-/* 2. Застосовуємо до всього тіла документа */
-html, body {
-  margin: 0;
-  padding: 0;
-  background: #1c1c1e;
-  color: #fff;
-  font-family: 'ProbaNav2', Arial, Helvetica, sans-serif;
-  text-align: center;
-}
-
-/* 3. Примусово кажемо кнопкам та інпутам використовувати цей же шрифт */
-button, input, select, textarea {
-  font-family: inherit;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-main {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-
-body.loading { visibility: hidden; }
-body.loaded { visibility: visible; }
-
-a, a:visited, a:active, a:focus {
-  color: #0a84ff;
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
-}
-
-p {
-  margin-top: -12px;
-  font-size: 1.5em;
-}
-
-h1, h2 {
-  margin-top: 42px;
-  line-height: 42px;
-}
-
-
-.map-viewport {
-  width: 100%;
-  height: 100vh;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.map-inner {
-  position: relative;
-  width: 100%;
-  height: auto;
-  transform-origin: 0 0;
-}
+/* ══ КАРТА ТА ЗОНИ ══ */
+.map-viewport { width: 100%; height: 100vh; overflow: auto; -webkit-overflow-scrolling: touch; position: relative; }
+.map-inner { position: relative; transform-origin: 0 0; }
+.map { display: block; width: 100%; height: 100%; -webkit-touch-callout: none; }
 
 .zone {
-  position: absolute;
-  display: block;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  outline: none;
-  pointer-events: auto;
-  z-index: 999;
-  cursor: pointer;
+  position: absolute; display: block; border: none; background: transparent;
+  z-index: var(--z-map-zones); cursor: pointer; outline: none;
 }
-
-.zone:hover {
-  background: transparent;
-}
-
-.zone.R,
-.zone.B,
-.zone.G {
-  width: 9.55%;
-  height: 4.28%;
-}
+.zone.R, .zone.B, .zone.G { width: 9.55%; height: 4.28%; }
+.zone.tall { height: 6.4% !important; }
+.zone.transfer { width: 6.4%; height: 8.6%; }
 
 
 
 
-.zone.transfer {
-  width: 6.4%;
-}
-
-.zone.transfer[data-slug="B.Maidan_Nezalezhnosti"],
-.zone.transfer[data-slug="R.Khreshchatyk"],
-.zone.transfer[data-slug="R.Teatralna"],
-.zone.transfer[data-slug="B.Ploshcha_Ukrainskikh_heroiv"],
-.zone.transfer[data-slug="G.Palats_sportu"],
-
-.zone.transfer[data-slug="G.Zoloti_vorota"] {
-  height: 8.6%;
-}
 
 /* Налаштування ТІЛЬКИ для map page */
 body#map-page {
@@ -163,7 +37,23 @@ body#map-page .map-viewport {
 
 
 
-/* ══ THEME VARIABLES ══ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ══ THEME VARIABLES & Z-INDEX ══ */
 :root {
   --bg:         #1c1c1e;
   --bg-sheet:   #2c2c2e;
@@ -171,38 +61,71 @@ body#map-page .map-viewport {
   --bg-pill:    #1c1c1e;
   --text:       #ffffff;
   --text-muted: #ababab;
-  --text-exit:  #8e8e93;
   --icon-color: #ababab;
   --border:     rgba(255,255,255,0.08);
   --overlay:    rgba(0,0,0,0.55);
-  /* 🎯 СИСТЕМА Z-INDEX (Ієрархія шарів) */
-  --z-fav-toast: 10;           /* Сповіщення про додавання виходу */
-  --z-fb-sticky: 100;          /* Фіксована кнопка у формі змін */
-  --z-map-zones: 999;          /* Клікабельні зони на карті */
-  --z-ui-buttons: 1010;        /* Плаваючі кнопки (Обране) */
-  --z-overlay: 1020;           /* Темне тло під вікнами */
-  --z-bottom-sheet: 1030;      /* Звичайні вікна станцій */
-  --z-dropdown: 1050;          /* Меню три крапки */
-  --z-btn-top: 1055;           /* Кнопки пошуку та меню у верхньому куті */
-  --z-fullscreen-sheet: 1060;  /* Повноекранні вікна (Хрещатик) */
-  --z-dropdown-active: 1070;   /* Відкрите меню поверх усього */
-  --z-popup-confirm: 1100;     /* Спливаюче вікно підтвердження */
-  --z-global-modal: 2000;      /* Глобальне вікно (Застосувати зміни?) */
+
+  --z-fav-toast: 10;
+  --z-fb-sticky: 100;
+  --z-map-zones: 999;
+  --z-ui-buttons: 1010;
+  --z-overlay: 1020;
+  --z-bottom-sheet: 1030;
+  --z-dropdown: 1050;
+  --z-btn-top: 1055;
+  --z-fullscreen-sheet: 1060;
+  --z-dropdown-active: 1070;
+  --z-popup-confirm: 1100;
+  --z-global-modal: 2000;
+
+--pluh-bg:    #2c2c2e;
+  --pluh-text:  #ababab;
 }
+
 [data-theme="light"] {
   --bg:         #e5e5ea;
   --bg-sheet:   #d0d0d5;
   --bg-card:    #e0e0e6;
   --bg-pill:    #cacace;
   --text:       #1c1c1e;
+  
+  /* Оригінальні кольори з твого файлу */
   --text-muted: #2c2c2e;
   --icon-color: #2c2c2e;
   --text-exit:  #3a3a3c;
+  
   --border:     rgba(0,0,0,0.14);
   --overlay:    rgba(0,0,0,0.35);
+
+  --pluh-bg:    #d0d0d5;
+  --pluh-text:  #1c1c1e;
 }
-html { background: var(--bg); color: var(--text); }
-body { background: var(--bg); }
+
+/* ══ ЗАГАЛЬНІ СТИЛІ ══ */
+@font-face {
+  font-family: 'ProbaNav2';
+  src: url('ProbaNav2-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg); color: var(--text);
+  font-family: 'ProbaNav2', Arial, sans-serif;
+  text-align: center;
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none; user-select: none;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+input, textarea { -webkit-user-select: text; user-select: text; font-family: inherit; }
+button { font-family: inherit; }
+
+
+
+
 
 .ui-buttons {
   position: fixed;
@@ -279,6 +202,7 @@ z-index: var(--z-fullscreen-sheet);
   padding: 10px 16px 8px;
   flex-shrink: 0;
   background: var(--bg-sheet);
+  position: relative;
 }
 .sheet-handle {
   width: 40px; height: 3px;
@@ -329,8 +253,8 @@ z-index: var(--z-fullscreen-sheet);
   flex-direction: column;
   align-items: center;
   gap: 0;
-  margin-bottom: 16px;
-  padding: 0 48px 8px;
+margin-bottom: 12px; /* Зменшили з 16px */
+  padding: 0 48px 4px; /* Зменшили з 8px */
   position: relative;
 }
 
@@ -351,8 +275,6 @@ z-index: var(--z-fullscreen-sheet);
   padding: 4px 8px;
   transition: transform 0.15s;
 }
-.fav-btn:active { }
-.fav-btn.fav-active { color: #ffcc00; }
 
 /* ══ DIRECTION BLOCKS ══ */
 .direction-block {
@@ -410,9 +332,25 @@ z-index: var(--z-fullscreen-sheet);
   gap: 8px;
   padding: 6px 0;
   border-top: 0.5px solid var(--border);
+  position: relative;
 }
-.position-row:first-of-type { border-top: none; }
 
+/* Надійно прибираємо лінію зверху для найпершого елемента */
+.position-row:first-child { 
+  border-top: none; 
+}
+
+/* ЗАБОРОНЯЄМО малювати лінію між текстом опису і його пілюлями */
+.exit-label + .position-row { 
+  border-top: none; 
+}
+
+/* ПЕРЕНОСИМО лінію так, щоб вона розділяла різні групи (над текстом) */
+.position-row + .exit-label {
+  border-top: 0.5px solid var(--border);
+  margin-top: 9px;   /* <--- Відступ НАД лінією (від пілюль до лінії). Зменшили, щоб підтягнути лінію вгору */
+  padding-top: 6px; /* <--- Відступ ПІД лінією (від лінії до тексту). Збільшили, щоб відштовхнути текст */
+}
 .position-row-multi {
   flex-wrap: wrap;
   align-items: center;
@@ -421,6 +359,11 @@ z-index: var(--z-fullscreen-sheet);
 .pos-multi-sep {
   color: var(--text-muted);
   font-size: 18px; padding: 0 2px;
+}
+
+/* Прибираємо лінію, якщо пілюлі йдуть одразу під головним заголовком (коли немає опису) */
+.direction-label + .position-row { 
+  border-top: none; 
 }
 
 /* ══ PILLS ══ */
@@ -434,12 +377,15 @@ z-index: var(--z-fullscreen-sheet);
 .pos-pill-label {
   font-size: 9px;
   letter-spacing: .06em;
-  color: var(--text-muted);
+color: var(--text-muted);
   text-transform: uppercase;
   margin-bottom: 1px;
 }
 .pos-pill-num {
-  font-size: 26px; font-weight: 700; line-height: 1;
+  font-size: 26px; 
+  font-weight: 700; 
+  line-height: 1;
+  color: var(--text-muted);
 }
 
 /* ══ ХРЕЩАТИК: компактний блок довгого переходу ══ */
@@ -546,7 +492,7 @@ z-index: var(--z-fullscreen-sheet);
   font-size: 11px;
   color: var(--text-muted);
   opacity: 0.7;
-  white-space: nowrap !important; /* Жорстко забороняємо розрив на 2 рядки */
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   transition: font-size 0.2s ease, letter-spacing 0.2s ease;
@@ -628,7 +574,6 @@ z-index: var(--z-fullscreen-sheet);
   transition: transform 0.15s;
   flex-shrink: 0;
 }
-.fav-btn-bar:active { }
 .fav-btn-bar.fav-active { color: #ffcc00; }
 
 /* ══ КЛІКАБЕЛЬНІ НАЗВИ СТАНЦІЙ ══ */
@@ -636,7 +581,7 @@ z-index: var(--z-fullscreen-sheet);
   cursor: pointer;
   position: relative;
   -webkit-tap-highlight-color: transparent;
-  text-decoration: none !important;
+  text-decoration: none;
   outline: none;
   -webkit-user-select: none;
   user-select: none;
@@ -651,43 +596,6 @@ z-index: var(--z-fullscreen-sheet);
   transition: width 0.2s;
 }
 .nav-link:hover::after { width: 80%; }
-
-/* ══ ШТРИХОВАНИЙ ФОН КАРТИ (світла тема) ══ */
-[data-theme="light"] .map-viewport {
-  background-color: #d0d0d5;
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(0,0,0,0.07) 0px,
-    rgba(0,0,0,0.07) 1px,
-    transparent 1px,
-    transparent 8px
-  );
-}
-
-/* ══ ШТРИХОВАНИЙ ФОН КАРТИ (темна тема) ══ */
-[data-theme="dark"] .map-viewport {
-  background-color: #111113;
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(255,255,255,0.03) 0px,
-    rgba(255,255,255,0.03) 1px,
-    transparent 1px,
-    transparent 8px
-  );
-}
-
-
-/* ══ ШТРИХУВАННЯ sheet-body У СВІТЛІЙ ТЕМІ ══ */
-[data-theme="light"] .station-sheet .sheet-body {
-  background-color: #d0d0d5;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgba(0,0,0,0.055) 0px,
-    rgba(0,0,0,0.055) 1px,
-    transparent 1px,
-    transparent 8px
-  );
-}
 
 
 .drop-menu {
@@ -733,11 +641,7 @@ z-index: var(--z-dropdown);
   margin: 20px 0 8px;
   opacity: 0.7;
 }
-.about-version {
-  font-size: 13px;
-  opacity: 0.5;
-  margin-bottom: 16px;
-}
+
 
 
 /* ══ FAV EMPTY TEXT ══ */
@@ -785,20 +689,7 @@ z-index: var(--z-dropdown);
 .fb-select-wrap { display: flex; flex-direction: column-reverse; gap: 0; }
 .fb-select-inner { display: flex; flex-direction: column; gap: 4px; }
 .fb-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); display: grid; grid-template-columns: 40px 1fr 40px; text-align: center; } .fb-label::before, .fb-label::after { content: ''; }
-.fb-select {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  text-align: center;
-  text-align-last: center;
-  background: var(--bg-card);
-  color: var(--text);
-  border: 0.5px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 15px;
-  width: 100%;
-}
+
 
 
 /* ══ КАСТОМНИЙ DROPDOWN для Android ══ */
@@ -861,9 +752,10 @@ z-index: var(--z-dropdown);
 .fb-pos-row {
   background: var(--bg-card);
   border-radius: 12px;
-  padding: 16px 12px;
+  /*ЗГОРИ | СПРАВА | ЗНИЗУ | ЗЛІВА */
+  padding: 11px 12px 16px 12px; 
   margin-bottom: 10px;
-  margin-top: 10px;
+  margin-top: 0;
 }
 .fb-pos-label {
   font-size: 12px;
@@ -948,12 +840,7 @@ z-index: var(--z-dropdown);
   color: var(--text-muted);
   opacity: 0.6;
 }
-/* Олівець в position-row при рендері станції */
-.pos-edited-mark {
-  font-size: 10px;
-  color: var(--text-muted);
-  opacity: 0.5;
-}
+
 
 
 /* ══ П.6: тло кнопок у світлій темі ══ */
@@ -962,9 +849,6 @@ z-index: var(--z-dropdown);
   background: #b8b8bf;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-
-/* ══ П.8: штрихування на шітах (протилежний напрям) у світлій темі ══ */
-
 
 /* ══ П.10: скидання локальних змін ══ */
 .fb-reset-btn {
@@ -983,67 +867,12 @@ z-index: var(--z-dropdown);
 }
 .fb-reset-btn:active { opacity: 1; }
 
-/* ══ ОЛІВЕЦЬ ТА ПОПАП РЕДАГУВАННЯ ══ */
-.position-row { position: relative; }
 
-.pos-edited-mark {
-  font-size: 16px;
-  color: var(--text-muted);
-  opacity: 0.6;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 4px 8px 4px 0;
-  -webkit-tap-highlight-color: transparent;
-}
-.pos-edited-mark:active { opacity: 1; transform: scale(1.1); }
-.pos-edited-spacer {
-  width: 24px; /* Невидима розпірка праворуч, зберігає ідеальний центр */
-}
 
-/* Сам попап */
-.edit-popup {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  padding: 12px 16px;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  z-index: 1100;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  width: max-content;
-  cursor: default;
-}
-.edit-popup-text {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.edit-popup-btns {
-  display: flex;
-  gap: 16px;
-}
-.edit-popup-btn {
-  background: var(--bg-pill);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  width: 40px; height: 40px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
-}
-.edit-popup-btn:active { transform: scale(0.9); }
-/* Наші фірмові кольори для кнопок попапу */
-.edit-popup-btn.btn-reset { color: #c8523a; } /* Червоний метро */
-.edit-popup-btn.btn-ok { color: #5aaa6a; }    /* Зелений метро */
+
+
+
+
 
 /* Квадратні кнопки підтвердження */
 .confirm-square {
@@ -1141,7 +970,7 @@ z-index: var(--z-global-modal);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #2C2C2E;
+  background: var(--bg-sheet);
   border-radius: 12px;
   width: 226px;
   box-sizing: border-box;
@@ -1160,7 +989,7 @@ z-index: var(--z-global-modal);
 /* Кнопка-хвостик (менший виступ вниз, жорстко по центру) */
 .fb-restore-exit {
   position: relative;
-  background: #2C2C2E;
+  background: var(--bg-sheet);
   border: none;
   color: var(--text-muted);
   width: 44px;
@@ -1187,21 +1016,13 @@ z-index: var(--z-global-modal);
   opacity: 0.7;
 }
 
-/* Підтримка світлої теми */
-[data-theme="light"] .fb-closed-note,
-[data-theme="light"] .fb-restore-exit {
-  background: var(--bg-pill); 
-  color: var(--text); 
-}
-
-
 [data-theme="light"] .fb-closed-note {
   background: var(--bg-pill); 
   color: var(--text-muted); /* Текст сірий, як і "Попередня..." */
 }
-[data-theme="light"] .fb-restore-exit {
-  background: var(--bg-pill) !important; 
-  color: var(--text) !important; /* А стрілка лишається контрастною чорною */
+[data-theme="light"] .fb-item-inner .fb-restore-exit {
+  background: var(--bg-pill); 
+  color: var(--text);
 }
 
 
@@ -1211,7 +1032,7 @@ z-index: var(--z-global-modal);
 .nav-link:hover,
 .nav-link:active,
 .nav-link:focus {
-  text-decoration: none !important;
+  text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   outline: none;
   -webkit-user-select: none;
@@ -1225,7 +1046,8 @@ z-index: var(--z-global-modal);
   letter-spacing: .04em;
   color: var(--text-muted);
   text-align: center;
-  margin: 0 0 16px 0;
+  margin: 0 0 4px 0;
+  line-height: 1;
   padding: 0;
   line-height: 1.2;
   display: block;
@@ -1249,42 +1071,15 @@ z-index: var(--z-global-modal);
 
 /* Кастомний колір для серця (сірий в темній, темно-сірий в світлій) */
 #favListBtn { font-size: 22px; }
-#favListBtn svg path { fill: var(--icon-color) !important; }
+#favListBtn svg path { fill: var(--text-muted) !important; }
 
-/* ══ Штрихування drop-menu по темах ══ */
-[data-theme="light"] .drop-menu {
-  background-color: #D0D0D5;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    #C1C1C6 0px,
-    #C1C1C6 1px,
-    transparent 1px,
-    transparent 8px
-  );
-}
-[data-theme="dark"] .drop-menu {
-  background-image: none;
-  background-color: var(--bg-sheet);
-}
-
-/* ══ П.4: Обрані станції по центру блоків ══ */
-.sheet-handle-bar { position: relative; }
-.sheet-sheet-title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  text-align: center;
-  pointer-events: none;
-}
 
 /* Піднімаємо заголовок саме у вікні "Обрані станції" */
 #favSheet .sheet-sheet-title {
-  top: 19px; /* Чим менше число, тим вище напис */
+  top: 19px;
+  transform: translateX(-50%); /* Додати це */
 }
 
-
-/* ══ П.8: більший ⓘ ══ */
 
 .fb-transfer-bar {
   display: inline-block;
@@ -1295,83 +1090,14 @@ z-index: var(--z-global-modal);
   vertical-align: middle;
 }
 
-/* ══ П.10: штрихування в about ══ */
-.about-station-sheet {
-  background-color: #D0D0D5;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    #C1C1C6 0px,
-    #C1C1C6 1px,
-    transparent 1px,
-    transparent 8px
-  );
-}
-[data-theme="dark"] .about-station-sheet {
-  background-color: #2c2c2e;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgba(255,255,255,0.04) 0px,
-    rgba(255,255,255,0.04) 1px,
-    transparent 1px,
-    transparent 8px
-  );
-}
-/* about-content має білий фон щоб текст читався ══ */
-.about-station-sheet .sheet-body {
-  background: transparent;
-}
-
-.fb-transfer-prefix {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-right: 4px;
-}
-
-/* ══ П.7: штрихування handle-bar в about (світла тема) ══ */
-[data-theme="light"] .about-station-sheet .sheet-handle-bar {
-  background-color: #d0d0d5;
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(0,0,0,0.07) 0px,
-    rgba(0,0,0,0.07) 1px,
-    transparent 1px,
-    transparent 8px
-  );
-}
-/* Основний контент — без штрихування */
-[data-theme="light"] .about-station-sheet .sheet-body {
-  background: #d0d0d5;
-}
 
 
-.fb-dir-caps {
-  font-size: 11px;
-  letter-spacing: .06em;
-}
-/* ══ ШТРИХОВКА ДЛЯ ТІЛА МЕНЮ ЗМІН ══ */
-#feedbackSheet .sheet-body {
-  background-color: #D0D0D5;
-  background-image: repeating-linear-gradient(-45deg, #C1C1C6 0px, #C1C1C6 1px, transparent 1px, transparent 8px);
-}
-[data-theme="dark"] #feedbackSheet .sheet-body {
-  background-color: #2c2c2e;
-  background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 8px);
-}
 
 
-[data-theme="light"] .about-station-sheet .sheet-body,
-[data-theme="light"] #feedbackSheet .sheet-body {
-  background-color: #D0D0D5;
-  background-image: repeating-linear-gradient(-45deg, #C1C1C6 0px, #C1C1C6 1px, transparent 1px, transparent 8px);
-}
 
-[data-theme="dark"] .about-station-sheet,
-[data-theme="dark"] .about-station-sheet .sheet-body,
-[data-theme="dark"] #feedbackSheet,
-[data-theme="dark"] #feedbackSheet .sheet-body {
-  background-image: none;
-  background-color: var(--bg-sheet);
-}
+
+
+
 /* --- ВІДСТУПИ ДЛЯ ТЕКСТУ ВЕРСІЇ --- */
 /* ══ ФІНАЛЬНИЙ БЛОК: ШТРИХОВКА, ПОВЗУНОК ТА ВІДСТУПИ ══ */
 
@@ -1381,7 +1107,8 @@ z-index: var(--z-global-modal);
   letter-spacing: normal; 
   font-weight: normal; 
   opacity: 0.5; 
-  top: 24px; /* Нижній край лінії (11px) + 10px відступ */
+  top: 24px;
+  transform: translateX(-50%); /* Додати це */
 }
 
 /* 2. Повзунок на самий верх */
@@ -1389,36 +1116,8 @@ z-index: var(--z-global-modal);
   top: 8px;
 }
 
-/* 3. ШТРИХОВКА: Тільки для СВІТЛОЇ теми (векторна SVG-ялинка) */
-[data-theme="light"] .about-station-sheet,
-[data-theme="light"] #feedbackSheet {
-  background-image: none;
-  background-color: #D0D0D5; 
-}
 
-[data-theme="light"] .about-station-sheet .sheet-handle-bar,
-[data-theme="light"] #feedbackSheet .sheet-handle-bar {
-  background-color: #D0D0D5;
-  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E");
-  background-position: bottom left; 
-}
 
-[data-theme="light"] .about-station-sheet .sheet-body,
-[data-theme="light"] #feedbackSheet .sheet-body {
-  background-color: #D0D0D5 !important;
-  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
-  background-position: top left !important;
-}
-
-/* 4. ВАЖЛИВО: Вимикаємо будь-яку штриховку для ТЕМНОЇ теми (це те, що злетіло минулого разу) */
-[data-theme="dark"] .about-station-sheet,
-[data-theme="dark"] .about-station-sheet .sheet-body,
-[data-theme="dark"] #feedbackSheet,
-[data-theme="dark"] #feedbackSheet .sheet-body,
-[data-theme="dark"] .drop-menu {
-  background-image: none;
-  background-color: var(--bg-sheet);
-}
 
 /* 5. Двоколірний повзунок для вікна "Про додаток" */
 .about-station-sheet .sheet-handle {
@@ -1435,12 +1134,12 @@ z-index: var(--z-global-modal);
    ІНДИВІДУАЛЬНІ ВІДСТУПИ ДЛЯ КОЖНОГО ВІКНА
    ========================================= */
 
-/* --- 1. ВІКНО "ЗАПРОПОНУВАТИ ЗМІНИ" (залишаємо твої ідеальні значення) --- */
+/* --- 1. ВІКНО "ЗАПРОПОНУВАТИ ЗМІНИ" --- */
 #feedbackSheet .sheet-handle-bar {
-  padding-bottom: 28px;
+  padding-bottom: 1px;
 }
 #feedbackSheet .sheet-sheet-title {
-  top: 32px;
+  top: 34px;
 }
 
 /* ══ ЗАБОРОНА ВИДІЛЕННЯ ТЕКСТУ ══ */
@@ -1465,23 +1164,21 @@ img {
 html {
   touch-action: pan-x pan-y;
 }
+
+
 /* ══ ФІКСОВАНА КНОПКА У ФОРМІ ЗМІН ══ */
 .fb-footer-sticky {
   position: sticky;
-  bottom: -32px; /* Компенсуємо внутрішній відступ вікна */
+  bottom: -32px;
   padding: 12px 16px 32px;
   margin: 0 -16px -32px;
-z-index: var(--z-fb-sticky);
+  z-index: var(--z-fb-sticky);
   border-top: 1px solid var(--border);
+  background-color: var(--bg-sheet); /* Базовий фон */
 }
-/* Щоб кнопка не зливалася з текстом, який під неї заїжджає, задаємо фон */
-[data-theme="light"] .fb-footer-sticky {
-  background-color: #D0D0D5;
-  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E");
-}
-[data-theme="dark"] .fb-footer-sticky {
-  background-color: var(--bg-sheet);
-}
+
+
+
 .fb-footer-sticky .fb-send-btn {
   margin: 0 0 8px 0;
 }
@@ -1638,18 +1335,14 @@ z-index: var(--z-popup-confirm);
   -webkit-overflow-scrolling: touch;
 }
 
-
-/* ══ Старі fb-add-plus — лишаємо для зворотної сумісності, але ховаємо ══ */
-.fb-add-plus { display: none !important; }
-/* ══ Рядок "i · Додати двері" ══ */
 .fb-add-doors-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 0;
   margin: 16px 0 0 0;
 }
+
 /* ══ Рукописна зелена "i" (довідка) ══ */
 .fb-add-doors-info {
   flex-shrink: 0;
@@ -1720,49 +1413,8 @@ z-index: var(--z-popup-confirm);
   margin-top: 8px;
   text-align: center;
 }
-.about-info-demo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px; /* Оптимальний розмір, щоб виглядати на рівні з емоджі 22px */
-  height: 26px;
-  border: 2px solid var(--text); /* Автоматично білий або чорний */
-  border-radius: 50%;
-  color: var(--text); /* Автоматично білий або чорний */
-  font-size: 16px;
-  font-style: italic;
-  font-weight: 700;
-  font-family: Georgia, serif;
-  pointer-events: none; /* Щоб іконка була просто декоративною */
-}
 /* ══ КЛАСИЧНИЙ СПИСОК (ІКОНКА ЗЛІВА, ТЕКСТ СПРАВА) ══ */
 /* ══ ВАРІАНТ: ІКОНКА ЗЛІВА + КАРТКИ ══ */
-.about-list-item {
-  display: flex;
-  align-items: center;
-  gap: 16px; /* Відстань між іконкою та текстом */
-  margin-bottom: 12px; /* Відстань між картками (робимо меншою) */
-  padding: 16px; /* Внутрішній відступ картки */
-  background: var(--bg-card); /* Колір фону картки */
-  border: 0.5px solid var(--border); /* Тонка рамка */
-  border-radius: 14px; /* Заокруглені кути */
-}
-
-.about-list-icon {
-  flex-shrink: 0;
-  width: 26px; /* Фіксована ширина для рівної колонки іконок */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* ══ КЛАСИЧНИЙ СПИСОК (ІКОНКА ЗЛІВА, ТЕКСТ СПРАВА) ══ */
-.about-list-text {
-  flex: 1;
-  text-align: left;
-  font-size: 15px;
-  line-height: 1.4;
-}
 
 /* Прибираємо велику порожнечу в самому низу вікна "Про додаток" */
 #aboutSheet .sheet-body {
@@ -1787,13 +1439,9 @@ z-index: var(--z-popup-confirm);
 
 /* ══ КОЛЬОРИ ДЛЯ ІКОНКИ "ПлУГ" ══ */
 
-/* Світла тема */
-[data-theme="light"] .pluh-bg { fill: #D0D0D5 !important; }
-[data-theme="light"] .pluh-text { fill: #1C1C1E !important; }
-
-/* Темна тема */
-[data-theme="dark"] .pluh-bg { fill: #2C2C2E !important; }
-[data-theme="dark"] .pluh-text { fill: #ABABAB !important; }
+/* ══ КОЛЬОРИ ДЛЯ ІКОНКИ ПлУГ ══ */
+.pluh-bg { fill: var(--pluh-bg); }
+.pluh-text { fill: var(--pluh-text); }
 /* ══ ЛІВА КОЛОНКА ДЛЯ КНОПКИ "i" (Симетрія до хрестика) ══ */
 .fb-side-actions-left {
   grid-column: 1;
@@ -1813,8 +1461,7 @@ z-index: var(--z-popup-confirm);
   color: var(--text-muted);
   text-align: center;
   line-height: 1.4;
-  margin: 0 0 16px 0;
-  padding: 0 8px;
+margin: 14px 0 18px 0; /* Було 16px, тепер ближче до меню */  padding: 0 8px;
 }
 /* ══ ІДЕАЛЬНА СИМЕТРІЯ КАРТКИ ЗМІН ══ */
 
@@ -1825,7 +1472,6 @@ z-index: var(--z-popup-confirm);
 }
 
 
-/* ══ 1. ЗМЕНШЕНА КНОПКА "+1" ══ */
 .fb-add-doors-link {
   display: inline-flex;
   align-items: center;
@@ -1879,7 +1525,8 @@ z-index: var(--z-popup-confirm);
   height: 1px;
   background: var(--text-muted);
   opacity: 0.15;
-  margin: 16px 10%;
+  /* Значення: ЗГОРИ | СПРАВА | ЗНИЗУ | ЗЛІВА */
+margin: 17px 10% 8px 10%; /* <--- Відтягнули від кнопки і притисли до тексту */
 }
 /* ══ П.8: Заборона підкреслення nav-link при тапі на iOS ══ */
 .nav-link:active,
@@ -1982,6 +1629,10 @@ z-index: var(--z-dropdown-active);
 }
 .edit-info-panel-cancel:active { opacity: 1; }
 
+
+
+
+
 /* ══ Task 5: SVG pencil mark ══ */
 .pos-edited-mark {
   display: flex;
@@ -1993,7 +1644,14 @@ z-index: var(--z-dropdown-active);
   -webkit-tap-highlight-color: transparent;
 }
 .pos-edited-mark:active { opacity: 1; transform: scale(1.1); }
-.pos-edited-mark svg { display: block; }
+.pos-edited-mark svg { 
+  display: block; 
+  width: 17px; 
+  height: 17px; 
+}
+
+
+
 
 /* ══ Task 9: Blue ✕ for third door in feedback ══ */
 .fb-item-inner.has-three-doors .fb-cancel-third-btn {
@@ -2042,32 +1700,26 @@ z-index: var(--z-dropdown-active);
 /* ══ Exit info in fav list ══ */
 .fav-exit-info { font-size: 16px; font-weight: 500; color: var(--text-muted); }
 
-/* ══ Exit fav toast — inline left of pills ══ */
-/* position-row becomes grid when toast present */
-.position-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-top: 0.5px solid var(--border);
-  position: relative;
-}
+
+
 .position-row:first-of-type { border-top: none; }
+
+
+
 
 .exit-fav-toast {
   position: absolute;
-  right: calc(50% + 82px); /* Магія: прив'язуємо до центру і відступаємо вліво до краю пілюль */
+  right: calc(50% + 82px);
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  align-items: center; /* Можна змінити на flex-end, якщо захочеш вирівняти текст по правому краю */
+  align-items: flex-end; /* <--- Тепер тулиться до правого краю контейнера */
   gap: 2px;
   opacity: 0;
   transition: opacity 0.25s ease;
   pointer-events: none;
-z-index: var(--z-fav-toast);
+  z-index: var(--z-fav-toast);
 }
 .exit-fav-toast.fav-note-open {
   opacity: 1;
@@ -2076,7 +1728,7 @@ z-index: var(--z-fav-toast);
 .exit-fav-toast-text {
   font-size: 9px;
   color: var(--text-muted);
-  text-align: center;
+  text-align: right; /* <--- Текст вирівняно по правому краю */
   line-height: 1.3;
   white-space: nowrap;
 }
@@ -2155,7 +1807,7 @@ z-index: var(--z-fav-toast);
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 0 0 6px;
+margin: 0 0 4px 0;
   min-height: 22px;
 }
 .fb-exit-label-row-inner {
@@ -2198,7 +1850,9 @@ z-index: var(--z-fav-toast);
   padding: 2px 8px;
   text-transform: none;
   -webkit-tap-highlight-color: transparent;
+  line-height: 1;
 }
+
 .fb-add-desc-btn:active { opacity: 1; }
 .fb-exit-label-input-wrap {
   margin: 0 0 6px;
@@ -2265,7 +1919,7 @@ z-index: var(--z-fav-toast);
   justify-content: center; /* Рівно по центру своїх 36px */
   align-items: center;
   font-size: 22px;
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
   opacity: 0.5;
   cursor: grab;
   flex-shrink: 0;
@@ -2411,23 +2065,56 @@ z-index: var(--z-btn-top);
   flex-shrink: 0;
 }
 
-/* Додаємо вікно пошуку до правил штрихування фону */
-[data-theme="light"] .search-station-sheet .sheet-body,
-[data-theme="light"] .search-station-sheet .sheet-handle-bar,
-[data-theme="light"] .search-station-sheet {
-  background-color: #D0D0D5;
+
+/* ══ ІКОНКИ ══ */
+.fb-exit-label-edit-btn svg { width: 11px; height: 11px; }
+.fb-restore-exit svg { width: 18px; height: 18px; }
+.search-btn-top svg { width: 24px; height: 24px; }
+.confirm-square svg { width: 18px; height: 18px; }
+
+/* ══ ФІНАЛЬНИЙ БЛОК ШТРИХУВАННЯ (Тільки світла тема) ══ */
+[data-theme="light"] .map-viewport {
+  background-color: #d0d0d5;
+  background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.07) 0px, rgba(0,0,0,0.07) 1px, transparent 1px, transparent 8px);
 }
-[data-theme="dark"] .search-station-sheet .sheet-body,
-[data-theme="dark"] .search-station-sheet {
+
+[data-theme="light"] .station-sheet .sheet-handle-bar,
+[data-theme="light"] .search-station-sheet .sheet-handle-bar,
+[data-theme="light"] .about-station-sheet .sheet-handle-bar,
+[data-theme="light"] #feedbackSheet .sheet-handle-bar,
+[data-theme="light"] .drop-menu {
+  background-color: #d0d0d5;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E");
+  background-position: bottom left;
+}
+
+[data-theme="light"] .sheet-body,
+[data-theme="light"] .fb-footer-sticky {
+  background-color: #d0d0d5 !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: top left !important;
+}
+
+/* Вимикаємо штриховку для темної теми */
+[data-theme="dark"] .about-station-sheet,
+[data-theme="dark"] .about-station-sheet .sheet-body,
+[data-theme="dark"] #feedbackSheet,
+[data-theme="dark"] #feedbackSheet .sheet-body,
+[data-theme="dark"] .drop-menu {
   background-image: none;
   background-color: var(--bg-sheet);
 }
-/* ══ РОЗМІРИ ІКОНОК ЗІ СЛОВНИКА METRO ICONS ══ */
-.fb-exit-label-edit-btn svg { width: 11px; height: 11px; }
-.pos-edited-mark svg { width: 17px; height: 17px; }
-.fb-restore-exit svg { width: 18px; height: 18px; }
-.search-btn-top svg { width: 24px; height: 24px; }
-.fb-inline-confirm-yes svg { width: 16px; height: 16px; }
-.fb-inline-confirm-no svg { width: 14px; height: 14px; }
-.confirm-square-yes svg { width: 18px; height: 18px; }
-.confirm-square-no svg { width: 16px; height: 16px; }
+
+/* ══ Адаптація демо-пігулок (ВАГОН/ДВЕРІ) під світлу та темну тему ══ */
+.about-content svg rect[fill="#2C2C2E"] {
+  fill: var(--bg-pill) !important; /* Фон пігулок адаптується до теми */
+}
+.about-content svg path[aria-label="ВАГОН"],
+.about-content svg path[aria-label="ДВЕРІ"] {
+  fill: var(--text-muted) !important; /* Написи ВАГОН і ДВЕРІ */
+}
+.about-content svg path[aria-label="3"],
+.about-content svg path[aria-label="2"] {
+  fill: var(--text) !important; /* Цифри 3 і 2 */
+}
+

@@ -5,7 +5,10 @@
   "start_url": "index.html",
   "display": "fullscreen",
 "background_color": "#1c1c1e",
-"theme_color": "#1c1c1e",
+  "theme_color": [
+    { "color": "#1c1c1e", "media": "(prefers-color-scheme: dark)" },
+    { "color": "#f2f2f7", "media": "(prefers-color-scheme: light)" }
+  ],
   "orientation": "portrait-primary",
   "scope": "./",
   "icons": [
