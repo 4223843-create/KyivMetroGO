@@ -141,12 +141,53 @@ function getLocalEdits() {
     document.querySelectorAll('.fb-add-doors-hint.fb-hint-open').forEach(h => h.classList.remove('fb-hint-open'));
   }
 
-  function markFeedbackDirty() {
-    MetroApp.fbUnsaved = true;
+function markFeedbackDirty() {
+    const stationEl = document.getElementById('fbStation');
+    if (!stationEl || !stationEl.value) return;
+    
+    const slug = stationEl.value;
+    const s = MetroApp.currentStationsData[slug];
+    if (!s || !s.positions) return;
+
+    // Беремо збережені локальні зміни (якщо вони вже є)
+    const edits = getLocalEdits()[slug] || {};
+    let isDirty = false;
+    
+    // Скануємо всі ряди виходів на екрані
+    s.positions.forEach((p, i) => {
+      if (document.getElementById(`fbW${i}`)) {
+        // Отримуємо оригінальні значення для цього виходу
+        const rawW = String(edits[i]?.wagon ?? p.wagon);
+        const rawD = String(edits[i]?.doors ?? p.doors);
+        const parsed = parseDoorValues(rawW, rawD);
+
+        // Отримуємо значення, які зараз накликав юзер на екрані
+        const cWMain = document.getElementById(`fbW${i}`)?.textContent ?? '-';
+        const cDMain = document.getElementById(`fbD${i}`)?.textContent ?? '-';
+        const cWEx   = document.getElementById(`fbW_ex${i}`)?.textContent ?? '-';
+        const cDEx   = document.getElementById(`fbD_ex${i}`)?.textContent ?? '-';
+        const cWEx2  = document.getElementById(`fbW_ex2_${i}`)?.textContent ?? '-';
+        const cDEx2  = document.getElementById(`fbD_ex2_${i}`)?.textContent ?? '-';
+
+        // Якщо хоча б одна цифра не збігається з оригіналом — форма "брудна"
+        if (cWMain !== String(parsed.wMain) || cDMain !== String(parsed.dMain) ||
+            cWEx   !== String(parsed.wEx)   || cDEx   !== String(parsed.dEx) ||
+            cWEx2  !== String(parsed.wEx2)  || cDEx2  !== String(parsed.dEx2)) {
+          isDirty = true;
+        }
+      }
+    });
+document.querySelectorAll('.fb-exit-label-input').forEach(inp => {
+      if (inp.dataset.changed === "true") isDirty = true;
+    });
+    // Оновлюємо глобальний статус (для попередження при закритті вікна)
+    MetroApp.fbUnsaved = isDirty;
+    
+    // Вмикаємо або вимикаємо кнопку
     const sendBtn = document.getElementById('fbSend');
     if (sendBtn) {
       sendBtn.textContent = 'Застосувати';
-      sendBtn.disabled = false;
+      sendBtn.disabled = !isDirty;
     }
   }
 
@@ -226,30 +267,11 @@ function getLocalEdits() {
     return { wMain, dMain, wEx, dEx, wEx2, dEx2, hasExtra, hasThird };
   }
 
-function normalizeStationsData(targetData) {
-    // Перевіряємо першу станцію. Якщо масив positions вже є, значить дані нормалізовані
-    const firstStation = Object.values(targetData)[0];
-    if (!firstStation || firstStation.positions) return;
-
-    Object.values(targetData).forEach(s => {      
-      s.positions = [];
-      s.directions?.forEach(dir => {
-        dir.exits?.forEach(exit => {
-          exit.positions?.forEach(pos => {
-            s.positions.push({ dir: dir.from, exit: exit.label || '', wagon: pos.wagon, doors: pos.doors });
-          });
-        });
-      });
-    });
-  }
-
-  function bindSteppersOptimized(container) {
-    if (container._fbSteppersBound) return;
-    container._fbSteppersBound = true;
-
+function bindSteppersOptimized(container) {
     container.addEventListener('change', (event) => {
       const input = event.target.closest('.fb-exit-label-input');
       if (input) {
+        input.dataset.changed = "true";
         const slug = document.getElementById('fbStation')?.value;
         const wrapId = input.id.replace('fbLabelInput', '');
         if (slug && wrapId !== '') {
@@ -281,7 +303,17 @@ function normalizeStationsData(targetData) {
       }
     });
 
-    container.addEventListener('click', (event) => {
+
+
+
+
+
+
+
+
+
+
+container.addEventListener('click', (event) => {
       const btn = event.target.closest('.fb-step');
       if (btn) {
         const id = btn.dataset.id;
@@ -289,6 +321,16 @@ function normalizeStationsData(targetData) {
         if (!el) return;
         const isExtra = id.includes('_ex');
         const idx = id.replace(/[^0-9]/g, '');
+
+        // 1. ФІКСУЄМО СТАН ДО КЛІКУ
+        const stateBefore = [
+          document.getElementById(`fbW${idx}`)?.textContent,
+          document.getElementById(`fbD${idx}`)?.textContent,
+          document.getElementById(`fbW_ex${idx}`)?.textContent,
+          document.getElementById(`fbD_ex${idx}`)?.textContent,
+          document.getElementById(`fbW_ex2_${idx}`)?.textContent,
+          document.getElementById(`fbD_ex2_${idx}`)?.textContent
+        ].join('|');
 
         if (isExtra) {
           const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
@@ -321,7 +363,7 @@ function normalizeStationsData(targetData) {
           const ex2WNode2 = document.getElementById(`fbW_ex2_${idx}`);
           const ex2DNode2 = document.getElementById(`fbD_ex2_${idx}`);
           const wrap2b = document.getElementById(`fbExtraWrap2_${idx}`);
-          if (ex2WNode2 && ex2DNode2 && wrap2b && wrap2b.style.display !== 'none') {
+          if (ex2WNode2 && ex2DNode2 && wrap2b && !wrap2b.classList.contains('is-hidden')) {
             const adj3 = getAdjacentDoors(curW, curD);
             const mainW3 = parseInt(document.getElementById(`fbW${idx}`).textContent);
             const mainD3 = parseInt(document.getElementById(`fbD${idx}`).textContent);
@@ -348,7 +390,7 @@ function normalizeStationsData(targetData) {
             const ex2WNode = document.getElementById(`fbW_ex2_${idx}`);
             const ex2DNode = document.getElementById(`fbD_ex2_${idx}`);
             const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
-            if (ex2WNode && ex2DNode && wrap2 && wrap2.style.display !== 'none') {
+            if (ex2WNode && ex2DNode && wrap2 && !wrap2.classList.contains('is-hidden')) {
               const curExW = parseInt(exWNode.textContent);
               const curExD = parseInt(exDNode.textContent);
               const adj2 = getAdjacentDoors(curExW, curExD);
@@ -360,9 +402,22 @@ function normalizeStationsData(targetData) {
           }
         }
 
-        const noteEl = document.getElementById(`fbExtraNote${idx}`);
-        if (noteEl && noteEl.style.display === 'none') noteEl.style.display = 'block';
-        markFeedbackDirty();
+        // 2. ФІКСУЄМО СТАН ПІСЛЯ КЛІКУ
+        const stateAfter = [
+          document.getElementById(`fbW${idx}`)?.textContent,
+          document.getElementById(`fbD${idx}`)?.textContent,
+          document.getElementById(`fbW_ex${idx}`)?.textContent,
+          document.getElementById(`fbD_ex${idx}`)?.textContent,
+          document.getElementById(`fbW_ex2_${idx}`)?.textContent,
+          document.getElementById(`fbD_ex2_${idx}`)?.textContent
+        ].join('|');
+
+        // 3. ВИКЛИКАЄМО ОНОВЛЕННЯ ТІЛЬКИ ЯКЩО БУЛИ ЗМІНИ
+        if (stateBefore !== stateAfter) {
+          const noteEl = document.getElementById(`fbExtraNote${idx}`);
+          if (noteEl && noteEl.classList.contains('is-hidden')) noteEl.classList.remove('is-hidden');
+          markFeedbackDirty();
+        }
         return;
       }
 
@@ -382,8 +437,8 @@ function normalizeStationsData(targetData) {
       if (addDoorsBtn) {
         const idx = addDoorsBtn.dataset.idx;
         const canHaveThird = addDoorsBtn.dataset.canHaveThird === '1';
-        document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'none';
-        document.getElementById(`fbExtraWrap${idx}`).style.display = 'block';
+        document.getElementById(`fbAddDoorsRow${idx}`).classList.add('is-hidden');
+        document.getElementById(`fbExtraWrap${idx}`).classList.remove('is-hidden');
         document.getElementById(`fbItemInner${idx}`).classList.add('has-extra-doors');
 
         const exWNode = document.getElementById(`fbW_ex${idx}`);
@@ -398,10 +453,10 @@ function normalizeStationsData(targetData) {
 
         if (canHaveThird) {
           const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
-          if (wrap2 && wrap2.style.display === 'none') {
-            document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'flex';
-          } else if (wrap2 && wrap2.style.display !== 'none') {
-            document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'none';
+          if (wrap2 && wrap2.classList.contains('is-hidden')) {
+            document.getElementById(`fbAddDoorsRow${idx}`).classList.remove('is-hidden');
+          } else if (wrap2 && !wrap2.classList.contains('is-hidden')) {
+            document.getElementById(`fbAddDoorsRow${idx}`).classList.add('is-hidden');
           }
         }
 
@@ -414,11 +469,11 @@ function normalizeStationsData(targetData) {
         const idx = cancelExtraBtn.dataset.idx;
         document.getElementById(`fbW_ex${idx}`).textContent = '-';
         document.getElementById(`fbD_ex${idx}`).textContent = '-';
-        document.getElementById(`fbExtraWrap${idx}`).style.display = 'none';
+        document.getElementById(`fbExtraWrap${idx}`).classList.add('is-hidden');
         const w2 = document.getElementById(`fbExtraWrap2_${idx}`);
-        if (w2) { document.getElementById(`fbW_ex2_${idx}`).textContent = '-'; document.getElementById(`fbD_ex2_${idx}`).textContent = '-'; w2.style.display = 'none'; }
+        if (w2) { document.getElementById(`fbW_ex2_${idx}`).textContent = '-'; document.getElementById(`fbD_ex2_${idx}`).textContent = '-'; w2.classList.add('is-hidden'); }
         const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
-        if (addRow) addRow.style.display = 'flex';
+        if (addRow) addRow.classList.remove('is-hidden');
         document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
         markFeedbackDirty();
       }
@@ -444,32 +499,23 @@ function normalizeStationsData(targetData) {
         const idx = cancelThirdBtn.dataset.idx;
         document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
         document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
-        document.getElementById(`fbExtraWrap2_${idx}`).style.display = 'none';
+        document.getElementById(`fbExtraWrap2_${idx}`).classList.add('is-hidden');
         const addBtn3 = document.getElementById(`fbAddBtn${idx}`);
         if (addBtn3 && addBtn3.dataset.canHaveThird === '1') {
           const addRow3 = document.getElementById(`fbAddDoorsRow${idx}`);
-          if (addRow3) addRow3.style.display = 'flex';
+          if (addRow3) addRow3.classList.remove('is-hidden');
         }
         markFeedbackDirty();
       }
     });
-  }
+}
 
 
 
-
-
-
-
-
-
-
-
-  function openFeedbackSheet(stationsData) {
+function openFeedbackSheet(stationsData) {
     try {
       currentStationsData = stationsData;
       MetroApp.currentStationsData = currentStationsData;
-      normalizeStationsData(currentStationsData);
       MetroApp.fbUnsaved = false;
 
       let sheet = document.getElementById('feedbackSheet');
@@ -482,23 +528,26 @@ function normalizeStationsData(targetData) {
         sheet.appendChild(template.content.cloneNode(true));
         
         document.body.appendChild(sheet);
-      }
 
-      const allStations = Object.entries(currentStationsData)
-        .map(([slug, s]) => ({ slug, ...s }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+        // =========================================================
+        // ІНІЦІАЛІЗАЦІЯ СЛУХАЧІВ (ВИКОНУЄТЬСЯ РІВНО 1 РАЗ)
+        // =========================================================
+        const posEl     = document.getElementById('fbPositions');
+        const sendBtn   = document.getElementById('fbSend');
+        const resultEl  = document.getElementById('fbResult');
+        const stationHidden = document.getElementById('fbStation');
+        const lineHidden = document.getElementById('fbLine');
+        const lineBtn = document.getElementById('fbLineBtn');
+        const stationBtn = document.getElementById('fbStationBtn');
+        const lineLbl = document.getElementById('fbLineLabel');
+        const stationLbl = document.getElementById('fbStationLabel');
+        const lineDD = document.getElementById('fbLineDropdown');
+        const stationDD = document.getElementById('fbStationDropdown');
 
-      const posEl     = document.getElementById('fbPositions');
-      const sendBtn   = document.getElementById('fbSend');
-      const resultEl  = document.getElementById('fbResult');
-      const resetWrap = document.getElementById('fbResetWrap');
-      let lineEl, stationEl;
-
-      if (!posEl._hasActionListeners) {
         posEl.addEventListener('click', (e) => {
-          const slug = stationEl.value;
+          const slug = stationHidden.value;
           if (!slug) return;
-          const s = currentStationsData[slug];
+          const s = MetroApp.currentStationsData[slug];
 
           const restoreBtn = e.target.closest('.fb-restore-exit');
           if (restoreBtn) {
@@ -516,145 +565,129 @@ function normalizeStationsData(targetData) {
             return;
           }
 
-          const closeBtn = e.target.closest('.fb-close-exit');
+
+
+
+
+
+const closeBtn = e.target.closest('.fb-close-exit');
           if (closeBtn) {
             const idx = parseInt(closeBtn.dataset.idx); 
             const p = s.positions[idx];
             const loc = [p.dir.startsWith('попередня') ? p.dir : `Попередня ${p.dir}`, p.exit].filter(Boolean).join(' · ');
             
             const exWrap = document.getElementById(`fbExtraWrap${idx}`);
-            if (exWrap && exWrap.style.display !== 'none') {
+            if (exWrap && !exWrap.classList.contains('is-hidden')) {
                 document.getElementById(`fbW${idx}`).textContent = document.getElementById(`fbW_ex${idx}`).textContent;
                 document.getElementById(`fbD${idx}`).textContent = document.getElementById(`fbD_ex${idx}`).textContent;
                 document.getElementById(`fbW_ex${idx}`).textContent = '-'; document.getElementById(`fbD_ex${idx}`).textContent = '-';
-                exWrap.style.display = 'none';
-                if (document.getElementById(`fbAddDoorsRow${idx}`)) document.getElementById(`fbAddDoorsRow${idx}`).style.display = 'flex';
+                exWrap.classList.add('is-hidden');
+                if (document.getElementById(`fbAddDoorsRow${idx}`)) document.getElementById(`fbAddDoorsRow${idx}`).classList.remove('is-hidden');
                 document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
                 MetroApp.fbUnsaved = true; sendBtn.textContent = 'Застосувати'; sendBtn.disabled = false;
                 return;
             }
 
-            const itemEl = document.getElementById(`fbItemInner${idx}`);
-            let confirmEl = itemEl?.nextElementSibling;
-            if (confirmEl && confirmEl.classList.contains('fb-inline-confirm')) {
-              confirmEl.classList.remove('fb-inline-open');
-              setTimeout(() => confirmEl?.remove(), 300);
-              return;
-            }
-            document.querySelectorAll('.fb-inline-confirm').forEach(el => {
-              el.classList.remove('fb-inline-open'); setTimeout(() => el.remove(), 300);
-            });
+            // МИТТЄВЕ ЗАКРИТТЯ ВИХОДУ
+            saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
+            if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
             
-            confirmEl = document.createElement('div');
-            confirmEl.className = 'fb-inline-confirm';
-            confirmEl.innerHTML = '<div class="fb-inline-confirm-inner">'
-              + '<div class="fb-inline-confirm-note">Позначити як недоступний?</div>'
-              + '<div class="fb-inline-confirm-btns">'
-              + '<button class="fb-inline-confirm-yes">' + MetroApp.Icons.check + '</button>'
-              + '<button class="fb-inline-confirm-no">' + MetroApp.Icons.cross + '</button>'
-              + '</div></div>';
-            itemEl.after(confirmEl);
-            requestAnimationFrame(() => confirmEl.classList.add('fb-inline-open'));
+            // Оновлюємо інтерфейс — одразу з'явиться плашка "Вихід недоступний" з кнопкою відміни (стрілкою)
+            renderPositions(slug);
+            if (typeof renderResetBtn === 'function') renderResetBtn();
 
-            confirmEl.querySelector('.fb-inline-confirm-yes').addEventListener('click', () => {
-              confirmEl.classList.remove('fb-inline-open');
-              setTimeout(() => confirmEl.remove(), 300);
-              saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
-              MetroApp.applyLocalEdits(currentStationsData); 
-              MetroApp.fbUnsaved = false; 
-              renderPositions(slug);
-              fetch(FORMSPREE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` }) }).catch(e => console.warn(e));
-              resultEl.innerHTML = `<p class="fb-note fb-success" style="padding-bottom:0;margin-bottom:6px;">Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.</p><button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top:0;padding-top:8px;">Скасувати ці зміни</button>`;
-              attachUndoBtn(slug, resultEl, renderPositions, renderResetBtn);
-            });
-            confirmEl.querySelector('.fb-inline-confirm-no').addEventListener('click', () => {
-              confirmEl.classList.remove('fb-inline-open');
-              setTimeout(() => confirmEl.remove(), 300);
-            });
+            // Відправляємо розробнику у фоні (тихо)
+            fetch(FORMSPREE_URL, { 
+              method: 'POST', 
+              headers: { 'Content-Type': 'application/json' }, 
+              body: JSON.stringify({ 
+                station: s.name, 
+                slug, 
+                line: LINE_NAMES[s.line], 
+                changes: `${loc}: ВИХІД ЗАКРИТО` 
+              }) 
+            }).catch(e => console.warn('[Feedback] Background report failed', e));
           }
         });
-        posEl._hasActionListeners = true;
-      }
 
-      const lineHidden = document.getElementById('fbLine'), stationHidden = document.getElementById('fbStation');
-      const lineBtn = document.getElementById('fbLineBtn'), stationBtn = document.getElementById('fbStationBtn');
-      const lineLbl = document.getElementById('fbLineLabel'), stationLbl = document.getElementById('fbStationLabel');
-      const lineDD = document.getElementById('fbLineDropdown'), stationDD = document.getElementById('fbStationDropdown');
 
-      lineEl = { get value() { return lineHidden.value; }, set value(v) { lineHidden.value = v; } };
-      stationEl = { get value() { return stationHidden.value; }, set value(v) { stationHidden.value = v; } };
 
-      function closeAllDD() {
-        lineDD.hidden = true; stationDD.hidden = true;
-        lineBtn.classList.remove('fb-select-open'); stationBtn.classList.remove('fb-select-open');
-      }
 
-      function buildLineDD() {
-        const items = [{ value: '', label: '— всі —' }, ...LINE_ORDER.map(l => ({ value: l, label: LINE_NAMES[l] }))];
-        lineDD.innerHTML = items.map(it => `<button type="button" class="fb-dropdown-item${it.value === lineEl.value ? ' fb-dropdown-selected' : ''}" data-value="${it.value}">${it.label}</button>`).join('');
-      }
+        function closeAllDD() {
+          lineDD.hidden = true; stationDD.hidden = true;
+          lineBtn.classList.remove('fb-select-open'); stationBtn.classList.remove('fb-select-open');
+        }
+        sheet._closeAllDD = closeAllDD;
 
-      function buildStationDD() {
-        const list = lineEl.value ? allStations.filter(s => s.line === lineEl.value) : allStations;
-        stationDD.innerHTML = list.map(s => `<button type="button" class="fb-dropdown-item${s.slug === stationEl.value ? ' fb-dropdown-selected' : ''}" data-value="${s.slug}">${s.name}</button>`).join('');
-      }
-
-      if (!lineDD._hasListener) {
         lineDD.addEventListener('click', (e) => {
           const b = e.target.closest('.fb-dropdown-item');
           if (!b) return;
-          e.stopPropagation(); lineEl.value = b.dataset.value; lineLbl.textContent = b.textContent; closeAllDD();
-          stationEl.value = ''; stationLbl.textContent = '— оберіть —'; posEl.innerHTML = ''; sendBtn.disabled = true;
+          e.stopPropagation(); lineHidden.value = b.dataset.value; lineLbl.textContent = b.textContent; closeAllDD();
+          stationHidden.value = ''; stationLbl.textContent = '— оберіть —'; posEl.innerHTML = ''; sendBtn.disabled = true;
         });
-        lineDD._hasListener = true;
-      }
 
-      if (!stationDD._hasListener) {
         stationDD.addEventListener('click', (e) => {
           const b = e.target.closest('.fb-dropdown-item');
           if (!b) return;
-          e.stopPropagation(); stationEl.value = b.dataset.value; stationLbl.textContent = b.textContent; closeAllDD();
-          const s = currentStationsData[stationEl.value];
-          if (s && !lineEl.value) { lineEl.value = s.line; lineLbl.textContent = LINE_NAMES[s.line]; }
-          MetroApp.fbUnsaved = false; closeAllHints(); renderPositions(stationEl.value);
+          e.stopPropagation(); stationHidden.value = b.dataset.value; stationLbl.textContent = b.textContent; closeAllDD();
+          const s = MetroApp.currentStationsData[stationHidden.value];
+          if (s && !lineHidden.value) { lineHidden.value = s.line; lineLbl.textContent = LINE_NAMES[s.line]; }
+          MetroApp.fbUnsaved = false; closeAllHints(); renderPositions(stationHidden.value);
         });
-        stationDD._hasListener = true;
+
+        lineDD.addEventListener('click', e => e.stopPropagation()); 
+        stationDD.addEventListener('click', e => e.stopPropagation());
+        
+        lineBtn.addEventListener('click', e => { 
+          e.stopPropagation(); const open = !lineDD.hidden; closeAllDD(); 
+          if (!open) { 
+            lineDD.innerHTML = [{ value: '', label: '— всі —' }, ...LINE_ORDER.map(l => ({ value: l, label: LINE_NAMES[l] }))].map(it => `<button type="button" class="fb-dropdown-item${it.value === lineHidden.value ? ' fb-dropdown-selected' : ''}" data-value="${it.value}">${it.label}</button>`).join('');
+            lineDD.hidden = false; lineBtn.classList.add('fb-select-open'); 
+          } 
+        });
+        
+        stationBtn.addEventListener('click', e => { 
+          e.stopPropagation(); const open = !stationDD.hidden; closeAllDD(); 
+          if (!open) { 
+            const allSt = Object.entries(MetroApp.currentStationsData).map(([sl, st]) => ({ slug: sl, ...st })).sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+            const list = lineHidden.value ? allSt.filter(st => st.line === lineHidden.value) : allSt;
+            stationDD.innerHTML = list.map(st => `<button type="button" class="fb-dropdown-item${st.slug === stationHidden.value ? ' fb-dropdown-selected' : ''}" data-value="${st.slug}">${st.name}</button>`).join('');
+            stationDD.hidden = false; stationBtn.classList.add('fb-select-open'); 
+          } 
+        });
+
+sendBtn.addEventListener('click', () => { if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(false); });
+        document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
+
+        // ВІШАЄМО СКЛАДНУ ЛОГІКУ ПЛЮСІВ/МІНУСІВ РІВНО 1 РАЗ!
+        bindSteppersOptimized(posEl);
+
+        let swY = 0; let isHandleSwipeFB = false;
+        sheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isHandleSwipeFB = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
+        sheet.addEventListener('touchend', e => { if (isHandleSwipeFB && (e.changedTouches[0].clientY - swY > 60)) closeFeedbackSheet(); });
       }
 
-      lineDD.addEventListener('click', e => e.stopPropagation()); stationDD.addEventListener('click', e => e.stopPropagation());
-      if (!lineBtn._hasListener) {
-        lineBtn.addEventListener('click', e => { e.stopPropagation(); const open = !lineDD.hidden; closeAllDD(); if (!open) { buildLineDD(); lineDD.hidden = false; lineBtn.classList.add('fb-select-open'); } });
-        lineBtn._hasListener = true;
-      }
-      if (!stationBtn._hasListener) {
-        stationBtn.addEventListener('click', e => { e.stopPropagation(); const open = !stationDD.hidden; closeAllDD(); if (!open) { buildStationDD(); stationDD.hidden = false; stationBtn.classList.add('fb-select-open'); } });
-        stationBtn._hasListener = true;
-      }
-      if (sheet._closeAllDD) document.removeEventListener('click', sheet._closeAllDD);
-      setTimeout(() => { document.addEventListener('click', closeAllDD); }, 0);
-      sheet._closeAllDD = closeAllDD;
+      if (sheet._closeDDTimer) clearTimeout(sheet._closeDDTimer);
+            sheet._closeDDTimer = setTimeout(() => { document.addEventListener('click', sheet._closeAllDD); }, 0);
 
+      // Глобальні змінні для інших функцій всередині форми
+      const posEl = document.getElementById('fbPositions');
+      const sendBtn = document.getElementById('fbSend');
+      const resultEl = document.getElementById('fbResult');
+      const resetWrap = document.getElementById('fbResetWrap');
+      const stationEl = { get value() { return document.getElementById('fbStation').value; }, set value(v) { document.getElementById('fbStation').value = v; } };
 
-
-
-
-
-      function renderResetBtn() {
+function renderResetBtn() {
         resetWrap.innerHTML = (hasLocalEdits() && !stationEl.value) ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
         document.getElementById('fbReset')?.addEventListener('click', () => {
           MetroApp.showCustomConfirm('Скинути всі локальні зміни та повернутись до стандартних даних?', () => {
             clearAllLocalEdits();
             if (typeof MetroApp.reloadStationsData === 'function') {
-              MetroApp.reloadStationsData(true);
-            } else {
-              fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
-                Object.keys(currentStationsData).forEach(k => delete currentStationsData[k]);
-                d.stations.forEach(s => { currentStationsData[s.slug] = s; });
-                MetroApp.applyLocalEdits(currentStationsData);
+              MetroApp.reloadStationsData(true).then(() => {
+                resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
+                renderPositions(stationEl.value);
               });
             }
-            resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
-            renderPositions(stationEl.value);
           });
         });
       }
@@ -677,22 +710,15 @@ function normalizeStationsData(targetData) {
         });
         const groups = [...groupsMap.values()];
 
-function properCase(name) {
-          return name.split(/[\s\u00a0\u202f]+/).map((w, index) => {
-            const wl = w.toLowerCase();
-            const cleanWl = wl.replace(/[^а-яіїєґ]/g, ''); // Очищаємо від лапок для перевірки
-            return (index === 0 || MetroApp.ALWAYS_CAP.has(cleanWl)) 
-              ? wl.replace(/[а-яіїєґ]/i, m => m.toUpperCase()) // Робимо великою саме ПЕРШУ ЛІТЕРУ
-              : wl;
-          }).join(' ');
-        }
 
-        posEl.innerHTML = groups.map(g => {
+
+posEl.innerHTML = groups.map(g => {
           let dirLabel = g.dir === '__long_transfer__' ? 'Довгий перехід на Майдан Незалежності'
                          : (['кінцева', 'вихід праворуч'].includes(g.dir.toLowerCase())) ? g.dir
-                         : `Попередня ${properCase(g.dir.replace(/^[Пп]опередня[\s\u00a0]+/, ''))}`;
+                         : `Попередня ${MetroApp.properCase(g.dir.replace(/^[Пп]опередня[\s\u00a0]+/, ''))}`;
 
           const itemsHtml = g.items.map((item, index) => {
+
             const rawW = String(edits[item.i]?.wagon ?? item.p.wagon);
             const rawD = String(edits[item.i]?.doors ?? item.p.doors);
             const { wMain, dMain, wEx, dEx, wEx2, dEx2, hasExtra, hasThird } = parseDoorValues(rawW, rawD);
@@ -700,9 +726,9 @@ function properCase(name) {
             const isClosed = edits[item.i]?.closed;
             const dividerHtml = (index !== g.items.length - 1) ? `<div class="fb-item-divider"></div>` : '';
 
-            const customLbl = MetroApp.getExitLabel(slug, item.i);
-            const rawExit = customLbl ?? (item.p.exit ? item.p.exit.replace(/[🟥🟦🟩]/g,'').trim() : '');
-            
+const customLbl = MetroApp.getExitLabel(slug, item.i);
+            const rawExit = customLbl ?? (item.p.exit ? item.p.exit.trim() : '');
+
             const exitLabelHtml = '<div class="fb-exit-label-row">'
               + '<div class="fb-exit-label-row-inner">'
               + '<span class="fb-exit-label-text">' + rawExit + '</span>'
@@ -712,32 +738,31 @@ function properCase(name) {
               + '</div>'
               + '</div>'
               + '<div class="fb-exit-label-input-wrap" id="fbLabelWrap' + item.i + '">'
-              + '<input type="text" class="fb-exit-label-input" id="fbLabelInput' + item.i + '" placeholder="Короткий опис виходу" value="' + rawExit.replace(/"/g, '&quot;') + '" maxlength="60">'
+              + '<input type="text" class="fb-exit-label-input" id="fbLabelInput' + item.i + '" value="' + rawExit.replace(/"/g, '&quot;') + '" maxlength="60">'
               + '</div>';
               
-            return exitLabelHtml + `
+return exitLabelHtml + `
             <div class="fb-item-inner ${hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${hasThird ? 'has-three-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
               ${isClosed
                 ? `<div class="fb-closed-note-wrap"><span class="fb-closed-note">Вихід позначено як недоступний</span><button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід">${MetroApp.Icons.undo}</button></div>`
                 : `<div class="fb-pos-wrap"><div class="fb-side-actions-left"><button type="button" class="fb-add-doors-info" data-idx="${item.i}">${MetroApp.Icons.info}</button></div>
                    <div class="fb-pos-inputs">${stepperHtml(`fbW${item.i}`, wMain, 1, 5, 'вагон')}${stepperHtml(`fbD${item.i}`, dMain, 1, 4, 'двері')}</div>
                    <div class="fb-side-actions"><button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button></div></div>
-                   <div class="fb-extra-door-wrap" id="fbExtraWrap${item.i}" style="display: ${hasExtra ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
-                   <div class="fb-extra-door-wrap" id="fbExtraWrap2_${item.i}" style="display: ${hasThird ? 'block' : 'none'};"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex2_${item.i}`, wEx2, 1, 5, 'вагон')}${stepperHtml(`fbD_ex2_${item.i}`, dEx2, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-third-btn" data-idx="${item.i}">✕</button></div></div></div>
-                   <div class="fb-add-doors-row" id="fbAddDoorsRow${item.i}" style="display:${hasExtra ? 'none' : 'flex'}; justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}" data-can-have-third="${hasThird ? '1' : '0'}">+1</button></div>
-                   <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері.</p><p>Якщо двері лише одні, <span style="color:#c8523a">✕</span> позначить&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:#5B9BD5">✕</span> скасовує додавання других дверей.</p></div></div></div>`
+                   <div class="fb-extra-door-wrap ${hasExtra ? '' : 'is-hidden'}" id="fbExtraWrap${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
+                   <div class="fb-extra-door-wrap ${hasThird ? '' : 'is-hidden'}" id="fbExtraWrap2_${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex2_${item.i}`, wEx2, 1, 5, 'вагон')}${stepperHtml(`fbD_ex2_${item.i}`, dEx2, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-third-btn" data-idx="${item.i}">✕</button></div></div></div>
+                   <div class="fb-add-doors-row ${hasExtra ? 'is-hidden' : ''}" id="fbAddDoorsRow${item.i}" style="justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}" data-can-have-third="${hasThird ? '1' : '0'}">+1</button></div>
+                   <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері</p><p><span style="color:#c8523a">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:#5B9BD5">✕</span> скасовує додавання других дверей.</p></div></div></div>`
               }
             </div>${dividerHtml}`;
           }).join('');
 return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>${itemsHtml}</div>`;
         }).join('');
 
-        bindSteppersOptimized(posEl);
         sendBtn.disabled = true; /* <--- Тепер кнопка вимкнена за замовчуванням */
         renderResetBtn();
       }
 
-      function attachUndoBtn(slug, resultContainer, renderFn, resetBtnFn) {
+function attachUndoBtn(slug, resultContainer, renderFn, resetBtnFn) {
         document.getElementById('fbUndoCurrent')?.addEventListener('click', () => {
           const edits = getLocalEdits();
           if (edits[slug]) {
@@ -745,80 +770,127 @@ return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-di
             if (Object.keys(edits).length === 0) clearAllLocalEdits(); else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
           }
 
-          const reloadPromise = typeof MetroApp.reloadStationsData === 'function'
-            ? MetroApp.reloadStationsData(true)
-            : fetch(`stations.json?nc=${Date.now()}`).then(r => r.json()).then(d => {
-                Object.keys(currentStationsData).forEach(k => delete currentStationsData[k]);
-                d.stations.forEach(st => { currentStationsData[st.slug] = st; });
-              });
-
-          Promise.resolve(reloadPromise).then(() => {
-            normalizeStationsData(currentStationsData);
-            MetroApp.applyLocalEdits(currentStationsData);
-            resultContainer.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
-            renderFn(slug); if (typeof resetBtnFn === 'function') resetBtnFn();
-          });
+          if (typeof MetroApp.reloadStationsData === 'function') {
+            // reloadStationsData автоматично застосує локальні зміни (applyLocalEdits) та нормалізує масиви
+            MetroApp.reloadStationsData(true).then(() => {
+              resultContainer.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
+              renderFn(slug); if (typeof resetBtnFn === 'function') resetBtnFn();
+            });
+          }
         });
       }
 
-      MetroApp.triggerFeedbackSubmit = async function(background = false) {
+
+
+MetroApp.triggerFeedbackSubmit = async function(background = false) {
+        // Запобіжник від подвійних кліків
+        if (MetroApp._isSubmitting) return;
+        MetroApp._isSubmitting = true;
+
         const slug = stationEl.value;
-        if (!slug) return;
-        const s = currentStationsData[slug];
-        const changes = s.positions.map((p, i) => {
-          const vals = extractFinalValues(i);
-          if (!vals) return null;
-          return (vals.finalW !== String(p.wagon) || vals.finalD !== String(p.doors)) ? { i, p, nw: vals.finalW, nd: vals.finalD } : null;
-        }).filter(Boolean);
-
-        if (!changes.length) { 
-          if (!background) resultEl.innerHTML = '<p class="fb-note">Змін не виявлено.</p>'; 
-          MetroApp.fbUnsaved = false; return; 
-        }
+        if (!slug) { MetroApp._isSubmitting = false; return; }
         
-        changes.forEach(c => saveLocalEdit(slug, c.i, { wagon: c.nw, doors: c.nd }));
-        if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(currentStationsData);
-        MetroApp.fbUnsaved = false; 
-
-        if (!background) { sendBtn.disabled = true; sendBtn.textContent = 'Надсилаємо…'; renderPositions(slug); resultEl.innerHTML = ''; }
-
         try {
+          const s = currentStationsData[slug];
+          
+          // Збираємо зміни позицій
+          const posChanges = s.positions.map((p, i) => {
+            const vals = extractFinalValues(i);
+            if (!vals) return null;
+            return (vals.finalW !== String(p.wagon) || vals.finalD !== String(p.doors)) ? { i, p, nw: vals.finalW, nd: vals.finalD } : null;
+          }).filter(Boolean);
+
+          // Збираємо зміни описів
+          const labelChanges = [];
+          document.querySelectorAll('.fb-exit-label-input').forEach(inp => {
+             if (inp.dataset.changed === "true") {
+                const idx = inp.id.replace('fbLabelInput', '');
+                const p = s.positions[idx];
+                const loc = [p?.dir, p?.exit].filter(Boolean).join(' · '); 
+                labelChanges.push(`${loc}: НОВИЙ ОПИС [${inp.value}]`);
+                inp.dataset.changed = "false";
+             }
+          });
+
+          // Якщо змін немає
+          if (!posChanges.length && !labelChanges.length) { 
+            if (!background) {
+                resultEl.innerHTML = '<p class="fb-note">Змін не виявлено.</p>';
+                // Видаляємо напис через 3 секунди, щоб повернути розмір
+                setTimeout(() => { resultEl.innerHTML = ''; }, 3000);
+            }
+            MetroApp.fbUnsaved = false; 
+            MetroApp._isSubmitting = false;
+            return; 
+          }
+          
+          // Застосовуємо локально
+          posChanges.forEach(c => saveLocalEdit(slug, c.i, { wagon: c.nw, doors: c.nd }));
+          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(currentStationsData);
+          MetroApp.fbUnsaved = false; 
+
+          if (!background) { 
+            sendBtn.disabled = true; 
+            sendBtn.textContent = 'Надсилаємо…'; 
+            renderPositions(slug); 
+            resultEl.innerHTML = ''; // Очищуємо, щоб розмір вікна не змінювався
+          }
+
+          let formspreeBody = posChanges.map(c => changeText(c.p, c.nw, c.nd, false));
+          formspreeBody = formspreeBody.concat(labelChanges); 
+
           const response = await fetch(FORMSPREE_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: changes.map(c => changeText(c.p, c.nw, c.nd, false)).join('\n') })
+            body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeBody.join('\n') })
           });
+          
           if (!response.ok) throw new Error('Помилка сервера');
+          
+          // === УСПІШНЕ ЗАВЕРШЕННЯ ===
           if (!background) {
-            sendBtn.textContent = '✓'; sendBtn.disabled = true; 
-            resultEl.innerHTML = `<p class="fb-note fb-success" style="padding-bottom: 0; margin-bottom: 6px;">Дякуємо, пропозицію надіслано,<br>зміни застосовано локально.</p><button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top: 0; padding-top: 8px;">Скасувати ці зміни</button>`;
-            attachUndoBtn(slug, resultEl, renderPositions, renderResetBtn);
+            sendBtn.textContent = 'Зміни застосовано';
+            sendBtn.style.color = 'var(--text-muted)'; // Темно-сірий колір (адаптивний до теми)
+            sendBtn.disabled = true; 
+            resultEl.innerHTML = ''; // Нічого не вискакує знизу
           }
         } catch (error) {
+          console.error('[KyivMetroGO] Помилка відправки:', error);
           if (!background) {
-            sendBtn.textContent = 'Застосувати'; sendBtn.disabled = false;
-            resultEl.innerHTML = `<p class="fb-note" style="color: #c8523a; padding-bottom: 0; margin-bottom: 6px;">Немає зв'язку з сервером.<br>Але зміни збережено локально.</p><button id="fbUndoCurrent" class="fb-reset-btn" style="margin-top: 0; padding-top: 8px;">Скасувати ці зміни</button>`;
-            attachUndoBtn(slug, resultEl, renderPositions, renderResetBtn);
+            sendBtn.textContent = 'Спробувати ще раз'; 
+            sendBtn.disabled = false;
+            resultEl.innerHTML = ''; // Навіть при помилці тримаємо вікно стабільним
           }
+        } finally {
+          MetroApp._isSubmitting = false;
         }
       };
 
-      sendBtn.addEventListener('click', () => { if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(false); });
-      document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
+// === СКИДАННЯ ФОРМИ ДО СТАРТОВОГО СТАНУ ===
+      const stationHidden = document.getElementById('fbStation');
+      const lineHidden = document.getElementById('fbLine');
+      const stationLbl = document.getElementById('fbStationLabel');
+      const lineLbl = document.getElementById('fbLineLabel');
+      
+      if (stationHidden) stationHidden.value = '';
+      if (lineHidden) lineHidden.value = '';
+      if (stationLbl) stationLbl.textContent = '— оберіть —';
+      if (lineLbl) lineLbl.textContent = '— всі —';
+      if (posEl) posEl.innerHTML = '';
+      if (resultEl) resultEl.innerHTML = '';
+      if (sendBtn) {
+        sendBtn.textContent = 'Застосувати';
+        sendBtn.disabled = true;
+        sendBtn.style.color = ''; // Повертаємо стандартний колір
+      }
+      if (sheet._closeAllDD) sheet._closeAllDD(); // Закриваємо дропдауни, якщо вони були відкриті
+
       renderResetBtn();
       
-document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-      sheet.classList.add('sheet-open'); document.getElementById('sheetOverlay').classList.add('overlay-visible');
-      
-// GUARD: Вішаємо слухачі свайпу лише один раз
-      if (!sheet._swipeBound) {
-        let swY = 0; let isHandleSwipeFB = false;
-        sheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isHandleSwipeFB = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
-        sheet.addEventListener('touchend', e => { if (isHandleSwipeFB && (e.changedTouches[0].clientY - swY > 60)) closeFeedbackSheet(); });
-        sheet._swipeBound = true;
-      }      
-    } catch(err) { console.error('[FeedbackSheet ERROR]', err); alert('Помилка: ' + err.message); }
+      document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+      sheet.classList.add('sheet-open'); 
+      document.getElementById('sheetOverlay').classList.add('overlay-visible');      
+    } catch(err) { console.error('[FeedbackSheet ERROR]', err); }
   }
-
   function forceCloseFeedbackSheet() {
     MetroApp.fbUnsaved = false;
     const s = document.getElementById('feedbackSheet');
@@ -828,59 +900,32 @@ document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('s
     if (!anyOpen) document.getElementById('sheetOverlay')?.classList.remove('overlay-visible');
   }
 
-  MetroApp.hasUnsavedFeedback = function() {
-    try {
-      const fbSheet = document.getElementById('feedbackSheet');
-      if (!fbSheet || !fbSheet.classList.contains('sheet-open')) return false;
-
-      const stationEl = document.getElementById('fbStation');
-      if (!stationEl || !stationEl.value) return false;
-      
-      const s = currentStationsData[stationEl.value];
-      if (!s || !s.positions) return false;
-
-      const edits = getLocalEdits()[stationEl.value] || {};
-      let dirty = false;
-      
-      s.positions.forEach((p, i) => {
-        const vals = extractFinalValues(i);
-        if (vals) {
-          const rawW = String(edits[i]?.wagon ?? p.wagon);
-          const rawD = String(edits[i]?.doors ?? p.doors);
-          const { wMain, dMain, wEx, dEx, wEx2, dEx2 } = parseDoorValues(rawW, rawD);
-
-          const currentWMain = document.getElementById(`fbW${i}`)?.textContent ?? '-';
-          const currentDMain = document.getElementById(`fbD${i}`)?.textContent ?? '-';
-          const currentWEx   = document.getElementById(`fbW_ex${i}`)?.textContent ?? '-';
-          const currentDEx   = document.getElementById(`fbD_ex${i}`)?.textContent ?? '-';
-          const currentWEx2  = document.getElementById(`fbW_ex2_${i}`)?.textContent ?? '-';
-          const currentDEx2  = document.getElementById(`fbD_ex2_${i}`)?.textContent ?? '-';
-
-          if (currentWMain !== String(wMain) || currentDMain !== String(dMain) ||
-              currentWEx !== String(wEx)   || currentDEx !== String(dEx) ||
-              currentWEx2 !== String(wEx2) || currentDEx2 !== String(dEx2)) {
-            dirty = true;
-          }
-        }
-      });
-      return dirty;
-    } catch(e) { console.warn('[hasUnsavedFeedback]', e); return false; }
+MetroApp.hasUnsavedFeedback = function() {
+    // Надійне читання стану з JS-змінної замість парсингу DOM
+    return !!MetroApp.fbUnsaved;
   };
 
-  function closeFeedbackSheet() {
+
+function closeFeedbackSheet() {
     try {
       if (MetroApp.hasUnsavedFeedback && MetroApp.hasUnsavedFeedback()) {
         if (typeof MetroApp.showCustomConfirm === 'function') {
-          MetroApp.showCustomConfirm('Застосувати зміни локально та повідомити&nbsp;розробника?', () => {
+          const stationName = document.getElementById('fbStationLabel')?.textContent || '';
+          const question = stationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>` : 'Зберегти зміни?';
+          
+          MetroApp.showCustomConfirm(question, () => {
             if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
             forceCloseFeedbackSheet();
-          }, () => { forceCloseFeedbackSheet(); });
+          }, () => { forceCloseFeedbackSheet(); }, () => { /* Скасувати */ });
           return;
         }
       }
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+      console.error('[KyivMetroGO] Критична помилка збереження:', e); 
+    }
     forceCloseFeedbackSheet(); 
   }
+
 
   MetroApp.openFeedbackSheet  = openFeedbackSheet;
   MetroApp.closeFeedbackSheet = closeFeedbackSheet;

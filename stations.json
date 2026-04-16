@@ -4,6 +4,12 @@
       "slug": "B.Demiivska",
       "name": "Деміївська",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 45.2,
+          "y": 71.7
+        }
+      ],
       "directions": [
         {
           "from": "попередня Либідська",
@@ -39,6 +45,13 @@
       "slug": "B.Heroiv_Dnipra",
       "name": "Героїв Дніпра",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 35.5,
+          "y": 0,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "кінцева",
@@ -64,6 +77,12 @@
       "slug": "B.Holosiivska",
       "name": "Голосіївська",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 42,
+          "y": 76.1
+        }
+      ],
       "directions": [
         {
           "from": "попередня Деміївська",
@@ -99,6 +118,12 @@
       "slug": "B.Ipodrom",
       "name": "Іподром",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 32.3,
+          "y": 89.1
+        }
+      ],
       "directions": [
         {
           "from": "попередня Виставковий центр",
@@ -142,6 +167,12 @@
       "slug": "B.Kontraktova_ploshcha",
       "name": "Контрактова площа",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 38.7,
+          "y": 23.9
+        }
+      ],
       "directions": [
         {
           "from": "попередня Поштова площа",
@@ -195,6 +226,12 @@
       "slug": "B.Lybidska",
       "name": "Либідська",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 48.4,
+          "y": 67.4
+        }
+      ],
       "directions": [
         {
           "from": "попередня Палац „Україна“",
@@ -230,12 +267,19 @@
       "slug": "B.Maidan_Nezalezhnosti",
       "name": "Майдан Незалежності",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 45.2,
+          "y": 32.6,
+          "type": "transfer"
+        }
+      ],
       "directions": [
         {
           "from": "попередня Площа Українських героїв",
           "exits": [
             {
-              "label": "пересадка на 🟥 Хрещатик 🟥",
+              "label": "пересадка на  Хрещатик ",
               "positions": [
                 {
                   "wagon": "5",
@@ -258,7 +302,7 @@
           "from": "попередня Поштова площа",
           "exits": [
             {
-              "label": "пересадка на 🟥 Хрещатик 🟥",
+              "label": "пересадка на Хрещатик",
               "positions": [
                 {
                   "wagon": "1",
@@ -283,6 +327,12 @@
       "slug": "B.Minska",
       "name": "Мінська",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 32.3,
+          "y": 6.4
+        }
+      ],
       "directions": [
         {
           "from": "попередня Оболонь",
@@ -336,6 +386,12 @@
       "slug": "B.Obolon",
       "name": "Оболонь",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 35.5,
+          "y": 10.8
+        }
+      ],
       "directions": [
         {
           "from": "попередня Почайна",
@@ -389,6 +445,12 @@
       "slug": "B.Olimpiiska",
       "name": "Олімпійська",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 42,
+          "y": 58.7
+        }
+      ],
       "directions": [
         {
           "from": "попередня Площа Українських героїв",
@@ -424,6 +486,13 @@
       "slug": "B.Palats_Ukraina",
       "name": "Палац „Україна“",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 45.2,
+          "y": 63,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "попередня Олімпійська",
@@ -459,12 +528,19 @@
       "slug": "B.Ploshcha_Ukrainskikh_heroiv",
       "name": "Площа Українських героїв",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 45.2,
+          "y": 50,
+          "type": "transfer"
+        }
+      ],
       "directions": [
         {
           "from": "попередня Майдан Незалежності",
           "exits": [
             {
-              "label": "пересадка на 🟩 Палац спорту 🟩",
+              "label": "пересадка на Палац спорту",
               "positions": [
                 {
                   "wagon": "2",
@@ -487,7 +563,7 @@
           "from": "попередня Олімпійська",
           "exits": [
             {
-              "label": "пересадка на 🟩 Палац спорту 🟩",
+              "label": "пересадка на Палац спорту",
               "positions": [
                 {
                   "wagon": "4",
@@ -512,6 +588,12 @@
       "slug": "B.Pochaina",
       "name": "Почайна",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 32.3,
+          "y": 15.2
+        }
+      ],
       "directions": [
         {
           "from": "попередня Тараса Шевченко",
@@ -565,6 +647,12 @@
       "slug": "B.Poshtova_ploshcha",
       "name": "Поштова площа",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 42,
+          "y": 28.2
+        }
+      ],
       "directions": [
         {
           "from": "попередня Майдан Незалежності",
@@ -600,6 +688,12 @@
       "slug": "B.Tarasa_Shevchenko",
       "name": "Тараса Шевченко",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 35.5,
+          "y": 19.45
+        }
+      ],
       "directions": [
         {
           "from": "попередня Контрактова площа",
@@ -635,6 +729,13 @@
       "slug": "B.Teremky",
       "name": "Теремки",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 29,
+          "y": 93.6,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "кінцева",
@@ -660,6 +761,12 @@
       "slug": "B.Vasylkivska",
       "name": "Васильківська",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 38.7,
+          "y": 80.4
+        }
+      ],
       "directions": [
         {
           "from": "попередня Голосіївська",
@@ -703,6 +810,12 @@
       "slug": "B.Vystavkovyi_tsentr",
       "name": "Виставковий центр",
       "line": "blue",
+      "map_zones": [
+        {
+          "x": 35.5,
+          "y": 84.7
+        }
+      ],
       "directions": [
         {
           "from": "попередня Васильківська",
@@ -738,6 +851,12 @@
       "slug": "G.Boryspilska",
       "name": "Бориспільська",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 87.1,
+          "y": 54.3
+        }
+      ],
       "directions": [
         {
           "from": "попередня Вирлиця",
@@ -781,6 +900,13 @@
       "slug": "G.Chervonyi_khutir",
       "name": "Червоний Хутір",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 90.3,
+          "y": 47.9,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "кінцева",
@@ -802,6 +928,12 @@
       "slug": "G.Dorohozhychi",
       "name": "Дорогожичі",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 29.1,
+          "y": 32.6
+        }
+      ],
       "directions": [
         {
           "from": "попередня Лукʼянівська",
@@ -837,6 +969,12 @@
       "slug": "G.Kharkivska",
       "name": "Харківська",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 80.6,
+          "y": 63
+        }
+      ],
       "directions": [
         {
           "from": "попередня Позняки",
@@ -880,6 +1018,12 @@
       "slug": "G.Klovska",
       "name": "Кловська",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 51.6,
+          "y": 58.7
+        }
+      ],
       "directions": [
         {
           "from": "попередня Палац спорту",
@@ -915,6 +1059,18 @@
       "slug": "G.Lukianivska",
       "name": "Лукʼянівська",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 32.3,
+          "y": 36.9
+        },
+        {
+          "x": 35.6,
+          "y": 36.9,
+          "w": 3,
+          "h": 6.3
+        }
+      ],
       "directions": [
         {
           "from": "попередня Золоті ворота",
@@ -950,6 +1106,18 @@
       "slug": "G.Osokorky",
       "name": "Осокорки",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 74.2,
+          "y": 71.7
+        },
+        {
+          "x": 77.4,
+          "y": 71.7,
+          "w": 3,
+          "h": 6.3
+        }
+      ],
       "directions": [
         {
           "from": "попередня Славутич",
@@ -985,12 +1153,19 @@
       "slug": "G.Palats_sportu",
       "name": "Палац спорту",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 51.6,
+          "y": 50,
+          "type": "transfer"
+        }
+      ],
       "directions": [
         {
           "from": "попередня Золоті ворота",
           "exits": [
             {
-              "label": "пересадка на 🟦 Площу Українських героїв 🟦",
+              "label": "пересадка на Площу Українських героїв",
               "positions": [
                 {
                   "wagon": "5",
@@ -1013,7 +1188,7 @@
           "from": "попередня Кловська",
           "exits": [
             {
-              "label": "пересадка на 🟦 Площу Українських героїв 🟦",
+              "label": "пересадка на Площу Українських героїв",
               "positions": [
                 {
                   "wagon": "1",
@@ -1038,6 +1213,12 @@
       "slug": "G.Pecherska",
       "name": "Печерська",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 54.9,
+          "y": 63
+        }
+      ],
       "directions": [
         {
           "from": "попередня Кловська",
@@ -1073,6 +1254,12 @@
       "slug": "G.Pozniaky",
       "name": "Позняки",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 77.4,
+          "y": 67.4
+        }
+      ],
       "directions": [
         {
           "from": "попередня Осокорки",
@@ -1116,6 +1303,13 @@
       "slug": "G.Slavutych",
       "name": "Славутич",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 67.7,
+          "y": 76.1,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "попередня Видубичі",
@@ -1151,6 +1345,13 @@
       "slug": "G.Syrets",
       "name": "Сирець",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 25.9,
+          "y": 26,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "кінцева",
@@ -1172,6 +1373,18 @@
       "slug": "G.Vydubychi",
       "name": "Видубичі",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 61.3,
+          "y": 71.7
+        },
+        {
+          "x": 64.6,
+          "y": 71.7,
+          "w": 3,
+          "h": 6.3
+        }
+      ],
       "directions": [
         {
           "from": "попередня Звіринецька",
@@ -1225,6 +1438,12 @@
       "slug": "G.Vyrlytsia",
       "name": "Вирлиця",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 83.9,
+          "y": 58.7
+        }
+      ],
       "directions": [
         {
           "from": "вихід праворуч",
@@ -1264,12 +1483,19 @@
       "slug": "G.Zoloti_vorota",
       "name": "Золоті ворота",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 38.7,
+          "y": 41.4,
+          "type": "transfer"
+        }
+      ],
       "directions": [
         {
           "from": "попередня Палац спорту",
           "exits": [
             {
-              "label": "пересадка на 🟥 Театральну 🟥",
+              "label": "пересадка на Театральну",
               "positions": [
                 {
                   "wagon": "5",
@@ -1292,7 +1518,7 @@
           "from": "попередня Лукʼянівська",
           "exits": [
             {
-              "label": "пересадка на 🟥 Театральну 🟥",
+              "label": "пересадка на Театральну",
               "positions": [
                 {
                   "wagon": "1",
@@ -1317,6 +1543,12 @@
       "slug": "G.Zvirynetska",
       "name": "Звіринецька",
       "line": "green",
+      "map_zones": [
+        {
+          "x": 58.1,
+          "y": 67.4
+        }
+      ],
       "directions": [
         {
           "from": "попередня Печерська",
@@ -1352,6 +1584,13 @@
       "slug": "R.Akademmistechko",
       "name": "Академмістечко",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 0,
+          "y": 30.4,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "кінцева",
@@ -1377,6 +1616,13 @@
       "slug": "R.Arsenalna",
       "name": "Арсенальна",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 51.6,
+          "y": 43.5,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "попередня Хрещатик",
@@ -1412,6 +1658,12 @@
       "slug": "R.Beresteiska",
       "name": "Берестейська",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 12.9,
+          "y": 49.9
+        }
+      ],
       "directions": [
         {
           "from": "попередня Шулявська",
@@ -1447,6 +1699,12 @@
       "slug": "R.Chernihivska",
       "name": "Чернігівська",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 74.2,
+          "y": 32.6
+        }
+      ],
       "directions": [
         {
           "from": "попередня Дарниця",
@@ -1490,6 +1748,12 @@
       "slug": "R.Darnytsia",
       "name": "Дарниця",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 70.9,
+          "y": 36.9
+        }
+      ],
       "directions": [
         {
           "from": "попередня Лівобережна",
@@ -1533,6 +1797,13 @@
       "slug": "R.Dnipro",
       "name": "Дніпро",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 58,
+          "y": 50,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "вихід праворуч",
@@ -1572,6 +1843,18 @@
       "slug": "R.Hidropark",
       "name": "Гідропарк",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 64.5,
+          "y": 45.6
+        },
+        {
+          "x": 67.7,
+          "y": 45.7,
+          "w": 3,
+          "h": 6.3
+        }
+      ],
       "directions": [
         {
           "from": "попередня Дніпро",
@@ -1615,12 +1898,19 @@
       "slug": "R.Khreshchatyk",
       "name": "Хрещатик",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 45.2,
+          "y": 41.4,
+          "type": "transfer"
+        }
+      ],
       "directions": [
         {
           "from": "попередня Театральна",
           "exits": [
             {
-              "label": "короткий перехід на 🟦 Майдан Незалежності 🟦",
+              "label": "короткий перехід на Майдан Незалежності",
               "positions": [
                 {
                   "wagon": "2",
@@ -1652,7 +1942,7 @@
           "from": "попередня Арсенальна",
           "exits": [
             {
-              "label": "короткий перехід на 🟦 Майдан Незалежності 🟦",
+              "label": "короткий перехід на Майдан Незалежності",
               "positions": [
                 {
                   "wagon": "5",
@@ -1721,6 +2011,13 @@
       "slug": "R.Lisova",
       "name": "Лісова",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 77.5,
+          "y": 26,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "кінцева",
@@ -1751,6 +2048,12 @@
       "slug": "R.Livoberezhna",
       "name": "Лівобережна",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 67.7,
+          "y": 41.3
+        }
+      ],
       "directions": [
         {
           "from": "попередня Гідропарк",
@@ -1794,6 +2097,12 @@
       "slug": "R.Nyvky",
       "name": "Нивки",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 9.7,
+          "y": 45.6
+        }
+      ],
       "directions": [
         {
           "from": "попередня Берестейська",
@@ -1837,6 +2146,18 @@
       "slug": "R.Politekhnychnyi_instytut",
       "name": "Політехнічний інститут",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 19.4,
+          "y": 58.7
+        },
+        {
+          "x": 22.6,
+          "y": 58.8,
+          "w": 3,
+          "h": 6.3
+        }
+      ],
       "directions": [
         {
           "from": "попередня Вокзальна",
@@ -1872,6 +2193,12 @@
       "slug": "R.Shuliavska",
       "name": "Шулявська",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 16.1,
+          "y": 54.3
+        }
+      ],
       "directions": [
         {
           "from": "попередня Політехнічний інститут",
@@ -1907,6 +2234,12 @@
       "slug": "R.Sviatoshyn",
       "name": "Святошин",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 6.5,
+          "y": 41.2
+        }
+      ],
       "directions": [
         {
           "from": "попередня Нивки",
@@ -1960,12 +2293,19 @@
       "slug": "R.Teatralna",
       "name": "Театральна",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 38.7,
+          "y": 50,
+          "type": "transfer"
+        }
+      ],
       "directions": [
         {
           "from": "попередня Хрещатик",
           "exits": [
             {
-              "label": "пересадка на 🟩 Золоті ворота 🟩",
+              "label": "пересадка на Золоті ворота",
               "positions": [
                 {
                   "wagon": "2",
@@ -1992,7 +2332,7 @@
           "from": "попередня Університет",
           "exits": [
             {
-              "label": "пересадка на 🟩 Золоті ворота 🟩",
+              "label": "пересадка на Золоті ворота",
               "positions": [
                 {
                   "wagon": "4",
@@ -2017,6 +2357,18 @@
       "slug": "R.Universytet",
       "name": "Університет",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 32.3,
+          "y": 58.7
+        },
+        {
+          "x": 35.6,
+          "y": 56.5,
+          "w": 3,
+          "h": 8.7
+        }
+      ],
       "directions": [
         {
           "from": "попередня Театральна",
@@ -2052,6 +2404,13 @@
       "slug": "R.Vokzalna",
       "name": "Вокзальна",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 25.8,
+          "y": 63,
+          "tall": true
+        }
+      ],
       "directions": [
         {
           "from": "попередня Університет",
@@ -2087,6 +2446,12 @@
       "slug": "R.Zhytomyrska",
       "name": "Житомирська",
       "line": "red",
+      "map_zones": [
+        {
+          "x": 3.3,
+          "y": 36.9
+        }
+      ],
       "directions": [
         {
           "from": "попередня Святошин",

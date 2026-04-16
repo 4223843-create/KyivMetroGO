@@ -64,14 +64,18 @@ window.MetroApp = window.MetroApp || {};
     vp.style.height = Math.max(120, avail) + 'px';
   }
 
-  if (img.complete) applyZoomAndCenter(); else img.addEventListener('load', applyZoomAndCenter);
-  MetroApp.applyZoomAndCenter = applyZoomAndCenter;
-  adjustViewportHeight();
-  img.addEventListener('load', () => { adjustViewportHeight(); applyZoomAndCenter(); });
-
+MetroApp.applyZoomAndCenter = applyZoomAndCenter;
+  if (img.complete) {
+    adjustViewportHeight();
+    applyZoomAndCenter();
+  } else {
+    img.addEventListener('load', () => {
+      adjustViewportHeight();
+      applyZoomAndCenter();
+    });
+  }
 let resizeTimer;
-  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120); };
-  window.addEventListener('resize', onResize);
+  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120); };  window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
   
   document.addEventListener('DOMContentLoaded', () => { 
@@ -97,16 +101,23 @@ let resizeTimer;
     if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
     e.preventDefault();
 
-    if (!isPinching && lastPinchDist) {
+if (!isPinching && lastPinchDist) {
       isPinching = true;
+      
+      // ✅ Кешуємо координати ДО відкладеного виклику rAF
+      const t0x = e.touches[0].clientX;
+      const t0y = e.touches[0].clientY;
+      const t1x = e.touches[1].clientX;
+      const t1y = e.touches[1].clientY;
+
       requestAnimationFrame(() => {
-        const t0 = e.touches[0], t1 = e.touches[1];
-        const dx = t0.clientX - t1.clientX;
-        const dy = t0.clientY - t1.clientY;
+        // Працюємо виключно зі збереженими цифрами
+        const dx = t0x - t1x;
+        const dy = t0y - t1y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
-        const midX = (t0.clientX + t1.clientX) / 2;
-        const midY = (t0.clientY + t1.clientY) / 2;
+        const midX = (t0x + t1x) / 2;
+        const midY = (t0y + t1y) / 2;
 
         const ratio = dist / lastPinchDist;
         const oldW = inner.offsetWidth;
@@ -156,23 +167,19 @@ let resizeTimer;
   /* ==========================================================================
      3. УТИЛІТИ, КОЛЬОРИ ТА ФОРМАТУВАННЯ
      ========================================================================== */
-  const EMOJI_TO_LINE = { '🟥': '#c8523a', '🟦': '#5b9bd5', '🟩': '#5aaa6a' };
 
-  const NAME_TO_SLUG = {
-    'деміївська': 'B.Demiivska', 'героїв дніпра': 'B.Heroiv_Dnipra', 'голосіївська': 'B.Holosiivska', 'іподром': 'B.Ipodrom',
-    'контрактова площа': 'B.Kontraktova_ploshcha', 'либідська': 'B.Lybidska', 'майдан незалежності': 'B.Maidan_Nezalezhnosti',
-    'мінська': 'B.Minska', 'оболонь': 'B.Obolon', 'олімпійська': 'B.Olimpiiska', 'палац „україна“': 'B.Palats_Ukraina',
-    'площа українських героїв': 'B.Ploshcha_Ukrainskikh_heroiv', 'почайна': 'B.Pochaina', 'поштова площа': 'B.Poshtova_ploshcha',
-    'тараса шевченко': 'B.Tarasa_Shevchenko', 'теремки': 'B.Teremky', 'васильківська': 'B.Vasylkivska', 'виставковий центр': 'B.Vystavkovyi_tsentr',
-    'бориспільська': 'G.Boryspilska', 'червоний хутір': 'G.Chervonyi_khutir', 'дорогожичі': 'G.Dorohozhychi', 'харківська': 'G.Kharkivska',
-    'кловська': 'G.Klovska', 'лукʼянівська': 'G.Lukianivska', 'осокорки': 'G.Osokorky', 'палац спорту': 'G.Palats_sportu',
-    'печерська': 'G.Pecherska', 'позняки': 'G.Pozniaky', 'славутич': 'G.Slavutych', 'сирець': 'G.Syrets',
-    'видубичі': 'G.Vydubychi', 'вирлиця': 'G.Vyrlytsia', 'золоті ворота': 'G.Zoloti_vorota', 'звіринецька': 'G.Zvirynetska',
-    'академмістечко': 'R.Akademmistechko', 'арсенальна': 'R.Arsenalna', 'берестейська': 'R.Beresteiska', 'чернігівська': 'R.Chernihivska',
-    'дарниця': 'R.Darnytsia', 'дніпро': 'R.Dnipro', 'гідропарк': 'R.Hidropark', 'хрещатик': 'R.Khreshchatyk',
-    'лісова': 'R.Lisova', 'лівобережна': 'R.Livoberezhna', 'нивки': 'R.Nyvky', 'політехнічний інститут': 'R.Politekhnychnyi_instytut',
-    'шулявська': 'R.Shuliavska', 'святошин': 'R.Sviatoshyn', 'театральна': 'R.Teatralna', 'університет': 'R.Universytet',
-    'вокзальна': 'R.Vokzalna', 'житомирська': 'R.Zhytomyrska'
+  MetroApp.NAME_TO_SLUG = {};
+
+  MetroApp.ALWAYS_CAP = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
+
+  MetroApp.properCase = function(name) {
+    return name.split(/[\s\u00a0\u202f]+/).map((w, index) => {
+      const wl = w.toLowerCase();
+      const cleanWl = wl.replace(/[^а-яіїєґ]/g, '');
+      return (index === 0 || MetroApp.ALWAYS_CAP.has(cleanWl)) 
+        ? wl.replace(/[а-яіїєґ]/i, m => m.toUpperCase()) 
+        : wl;
+    }).join(' ');
   };
 
 function heartSvg(isFav, slug, lineColor) {
@@ -181,14 +188,23 @@ function heartSvg(isFav, slug, lineColor) {
     return `<svg ${base} fill="${lineColor}"><path d="${MetroApp.Icons.heartPath}"/></svg>`;
   }
 
-  function formatLabel(raw) {
+function formatLabel(raw) {
     let text = raw.replace(/\u00a0/g, ' ').trim();
-    const emojiRe = /(🟥|🟦|🟩)/g;
-    const firstEmoji = text.match(emojiRe)?.[0];
-    const color = firstEmoji ? EMOJI_TO_LINE[firstEmoji] : null;
-    if (!color) return `<span class="exit-label-text">${text}</span>`;
-    const clean = text.replace(emojiRe, '').trim();
-    return `<span class="transfer-label"><span class="transfer-line" style="background:${color}"></span><span class="transfer-text">${clean}</span><span class="transfer-line" style="background:${color}"></span></span>`;
+
+    // Перевіряємо, чи це текст пересадки
+    const isTransfer = text.toLowerCase().includes('пересадка') || text.toLowerCase().includes('перехід');
+
+    if (isTransfer) {
+      // Скрипт автоматично розуміє, на яку станцію перехід, і бере її колір!
+      const targetSlug = slugByName(text);
+      if (targetSlug && stationsData && stationsData[targetSlug]) {
+        const targetLine = stationsData[targetSlug].line;
+        const color = MetroApp.LINE_COLOR[targetLine];
+        return `<span class="transfer-label"><span class="transfer-line" style="background:${color}"></span><span class="transfer-text">${text}</span><span class="transfer-line" style="background:${color}"></span></span>`;
+      }
+    }
+
+    return `<span class="exit-label-text">${text}</span>`;
   }
 
   function pill(label, value, color) {
@@ -201,19 +217,22 @@ const STATION_ALIASES = {
     'майдан незалежності': 'майдан незалежності',
     'палац спорту': 'палац спорту',
     'золоті ворота': 'золоті ворота',
-    'хрещатик': 'хрещатик'
+    'хрещатик': 'хрещатик',
+    'контрактову': 'контрактова площа',
+    'контрактова': 'контрактова площа'
   };
 
-  function slugByName(raw) {
+function slugByName(raw) {
     let normalized = raw.toLowerCase()
       .replace(/[\u00a0\u202f\u2009]/g, ' ')
-      .replace(/[🟥🟦🟩]/g, '')
       .replace(/(?:короткий |довгий )?пере(?:садка|хід) на\s*/g, '')
       .replace(/попередня\s*/g, '')
+      .replace(/["'„“«».,]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Заміна специфічних відмінків станцій
+    if (MetroApp.NAME_TO_SLUG[normalized]) return MetroApp.NAME_TO_SLUG[normalized];
+
     for (const [alias, realName] of Object.entries(STATION_ALIASES)) {
       if (normalized.includes(alias)) {
         normalized = normalized.replace(alias, realName);
@@ -221,108 +240,111 @@ const STATION_ALIASES = {
       }
     }
 
-    return NAME_TO_SLUG[normalized] || null;
+    if (MetroApp.NAME_TO_SLUG[normalized]) return MetroApp.NAME_TO_SLUG[normalized];
+
+    for (const name of Object.keys(MetroApp.NAME_TO_SLUG)) {
+      const stem = name.length > 6 ? name.slice(0, -2) : name;
+      if (normalized.includes(stem)) return MetroApp.NAME_TO_SLUG[name];
+    }
+
+    return null;
   }
+
   /* ==========================================================================
      4. ЗАВАНТАЖЕННЯ ДАНИХ ТА КЛІКИ ПО КАРТІ
      ========================================================================== */
 function hydrateStations(data) {
     if (!stationsData) stationsData = {};
     Object.keys(stationsData).forEach(key => delete stationsData[key]);
-    data.stations.forEach(s => { stationsData[s.slug] = s; });
+    
+    MetroApp.NAME_TO_SLUG = {};
+
+    data.stations.forEach(s => { 
+      s.positions = [];
+      s.directions?.forEach(dir => {
+        dir.exits?.forEach(exit => {
+          exit.positions?.forEach(pos => {
+            s.positions.push({ dir: dir.from, exit: exit.label || '', wagon: pos.wagon, doors: pos.doors });
+          });
+        });
+      });
+
+      const cleanName = s.name.toLowerCase().replace(/["'„“«».,]/g, '');
+      MetroApp.NAME_TO_SLUG[cleanName] = s.slug;
+
+      const stationWords = cleanName.split(/[\s\u00a0\u202f\-]+/);
+      const cleanEnName = s.slug.split('.')[1].replace(/_/g, ' ').toLowerCase();
+      const stationEnWords = cleanEnName.split(/\s+/);
+      const acronym = stationWords.map(w => w.charAt(0)).join('');
+
+      let aliases = [];
+      if (s.slug === 'R.Politekhnychnyi_instytut') aliases.push('кпі');
+      if (s.slug === 'B.Ploshcha_Ukrainskikh_heroiv') { aliases.push('плуг'); aliases.push('площа льва толстого'); }
+      if (s.slug === 'G.Zvirynetska') { aliases.push('дружби народів'); }
+
+      s._searchIndex = [
+        ...stationWords,
+        ...stationEnWords,
+        acronym,
+        ...aliases.flatMap(a => a.toLowerCase().split(/[\s\u00a0\u202f\-]+/))
+      ];
+
+      stationsData[s.slug] = s; 
+    });
+
     if (MetroApp.applyLocalEdits) MetroApp.applyLocalEdits(stationsData);
     if (MetroApp.applyExitLabels) MetroApp.applyExitLabels(stationsData);
     return stationsData;
   }
 
-  async function reloadStationsData(forceFresh = false) {
+
+
+
+
+
+
+
+
+
+async function reloadStationsData(forceFresh = false) {
     const url = forceFresh ? `stations.json?nc=${Date.now()}` : 'stations.json';
     const response = await fetch(url, forceFresh ? { cache: 'no-store' } : undefined);
     const data = await response.json();
-    return hydrateStations(data);
+    const hydrated = hydrateStations(data);
+    if (!forceFresh) renderMapZones();
+    return hydrated;
   }
   MetroApp.reloadStationsData = reloadStationsData;
 
-  const MAP_ZONES_DATA = [
-    { slug: 'R.Akademmistechko', x: 0, y: 30.4, tall: true },
-    { slug: 'R.Zhytomyrska', x: 3.3, y: 36.9 },
-    { slug: 'R.Sviatoshyn', x: 6.5, y: 41.2 },
-    { slug: 'R.Nyvky', x: 9.7, y: 45.6 },
-    { slug: 'R.Beresteiska', x: 12.9, y: 49.9 },
-    { slug: 'R.Shuliavska', x: 16.1, y: 54.3 },
-    { slug: 'R.Politekhnychnyi_instytut', x: 19.4, y: 58.7 },
-    { slug: 'R.Politekhnychnyi_instytut', x: 22.6, y: 58.8, w: 3, h: 6.3 },
-    { slug: 'R.Vokzalna', x: 25.8, y: 63, tall: true },
-    { slug: 'R.Universytet', x: 32.3, y: 58.7 },
-    { slug: 'R.Universytet', x: 35.6, y: 56.5, w: 3, h: 8.7 },
-    { slug: 'R.Arsenalna', x: 51.6, y: 43.5, tall: true },
-    { slug: 'R.Dnipro', x: 58, y: 50, tall: true },
-    { slug: 'R.Hidropark', x: 64.5, y: 45.6 },
-    { slug: 'R.Hidropark', x: 67.7, y: 45.7, w: 3, h: 6.3 },
-    { slug: 'R.Livoberezhna', x: 67.7, y: 41.3 },
-    { slug: 'R.Darnytsia', x: 70.9, y: 36.9 },
-    { slug: 'R.Chernihivska', x: 74.2, y: 32.6 },
-    { slug: 'R.Lisova', x: 77.5, y: 26, tall: true },
-    { slug: 'B.Heroiv_Dnipra', x: 35.5, y: 0, tall: true },
-    { slug: 'B.Minska', x: 32.3, y: 6.4 },
-    { slug: 'B.Obolon', x: 35.5, y: 10.8 },
-    { slug: 'B.Pochaina', x: 32.3, y: 15.2 },
-    { slug: 'B.Tarasa_Shevchenko', x: 35.5, y: 19.45 },
-    { slug: 'B.Kontraktova_ploshcha', x: 38.7, y: 23.9 },
-    { slug: 'B.Poshtova_ploshcha', x: 42, y: 28.2 },
-    { slug: 'B.Olimpiiska', x: 42, y: 58.7 },
-    { slug: 'B.Palats_Ukraina', x: 45.2, y: 63, tall: true },
-    { slug: 'B.Lybidska', x: 48.4, y: 67.4 },
-    { slug: 'B.Demiivska', x: 45.2, y: 71.7 },
-    { slug: 'B.Holosiivska', x: 42, y: 76.1 },
-    { slug: 'B.Vasylkivska', x: 38.7, y: 80.4 },
-    { slug: 'B.Vystavkovyi_tsentr', x: 35.5, y: 84.7 },
-    { slug: 'B.Ipodrom', x: 32.3, y: 89.1 },
-    { slug: 'B.Teremky', x: 29, y: 93.6, tall: true },
-    { slug: 'G.Syrets', x: 25.9, y: 26, tall: true },
-    { slug: 'G.Dorohozhychi', x: 29.1, y: 32.6 },
-    { slug: 'G.Lukianivska', x: 32.3, y: 36.9 },
-    { slug: 'G.Lukianivska', x: 35.6, y: 36.9, w: 3, h: 6.3 },
-    { slug: 'G.Klovska', x: 51.6, y: 58.7 },
-    { slug: 'G.Pecherska', x: 54.9, y: 63 },
-    { slug: 'G.Zvirynetska', x: 58.1, y: 67.4 },
-    { slug: 'G.Vydubychi', x: 61.3, y: 71.7 },
-    { slug: 'G.Vydubychi', x: 64.6, y: 71.7, w: 3, h: 6.3 },
-    { slug: 'G.Slavutych', x: 67.7, y: 76.1, tall: true },
-    { slug: 'G.Osokorky', x: 74.2, y: 71.7 },
-    { slug: 'G.Osokorky', x: 77.4, y: 71.7, w: 3, h: 6.3 },
-    { slug: 'G.Pozniaky', x: 77.4, y: 67.4 },
-    { slug: 'G.Kharkivska', x: 80.6, y: 63 },
-    { slug: 'G.Vyrlytsia', x: 83.9, y: 58.7 },
-    { slug: 'G.Boryspilska', x: 87.1, y: 54.3 },
-    { slug: 'G.Chervonyi_khutir', x: 90.3, y: 47.9, tall: true },
-    { slug: 'B.Maidan_Nezalezhnosti', x: 45.2, y: 32.6, type: 'transfer' },
-    { slug: 'B.Ploshcha_Ukrainskikh_heroiv', x: 45.2, y: 50, type: 'transfer' },
-    { slug: 'R.Khreshchatyk', x: 45.2, y: 41.4, type: 'transfer' },
-    { slug: 'R.Teatralna', x: 38.7, y: 50, type: 'transfer' },
-    { slug: 'G.Palats_sportu', x: 51.6, y: 50, type: 'transfer' },
-    { slug: 'G.Zoloti_vorota', x: 38.7, y: 41.4, type: 'transfer' }
-  ];
-
   function renderMapZones() {
     const mapInner = document.getElementById('mapInner');
-    if (!mapInner) return;
-    MAP_ZONES_DATA.forEach(z => {
-      const zone = document.createElement('a');
-      const lineCode = z.slug.charAt(0);
-      zone.className = `zone ${z.type || lineCode}`;
-      if (z.tall) zone.classList.add('tall');
-      zone.dataset.slug = z.slug;
-      zone.style.left = z.x + '%';
-      zone.style.top = z.y + '%';
-      if (z.w) zone.style.width = z.w + '%';
-      if (z.h) zone.style.height = z.h + '%';
-      mapInner.appendChild(zone);
+    if (!mapInner || !stationsData) return;
+    
+    mapInner.querySelectorAll('.zone').forEach(z => z.remove());
+
+    Object.values(stationsData).forEach(s => {
+      if (!s.map_zones) return;
+      s.map_zones.forEach(z => {
+        const zone = document.createElement('a');
+        const lineCode = s.slug.charAt(0);
+        zone.className = `zone ${z.type || lineCode}`;
+        if (z.tall) zone.classList.add('tall');
+        zone.dataset.slug = s.slug;
+        zone.style.left = z.x + '%';
+        zone.style.top = z.y + '%';
+        if (z.w) zone.style.width = z.w + '%';
+        if (z.h) zone.style.height = z.h + '%';
+        mapInner.appendChild(zone);
+      });
     });
   }
-  renderMapZones();
 
   reloadStationsData().catch(err => console.error('stations.json load failed', err));
+
+
+
+
+
 
   inner.addEventListener('click', e => {
     const zone = e.target.closest('a.zone');
@@ -331,7 +353,7 @@ function hydrateStations(data) {
     if (zone.dataset.slug) openStation(zone.dataset.slug);
   });
 
-  const FAV_KEY = 'metro_favs';
+const FAV_KEY = 'metro_favs';
   let favCache = null;
 const getFavs = () => {
     if (favCache) return [...favCache];
@@ -375,28 +397,33 @@ const EXIT_FAV_KEY = 'metro_exit_favs';
     return getExitFavs().some(f => f.id === exitFavId(slug, dir, wagon, doors));
   }
 
-  function toggleExitFav(slug, dir, wagon, doors) {
+function toggleExitFav(slug, dir, wagon, doors) {
     let favs = getExitFavs(); 
     const id = exitFavId(slug, dir, wagon, doors);
     const idx = favs.findIndex(f => f.id === id);
     
     if (idx >= 0) {
       favs.splice(idx, 1);
+      localStorage.setItem(EXIT_FAV_KEY, JSON.stringify(favs));
+      exitFavCache = [...favs];
+      return { status: 'removed' }; // 👈 Статус видалення
     } else {
       const slugDirFavs = favs.filter(f => f.slug === slug && f.dir === dir);
-      if (slugDirFavs.length >= 3) return false; 
+      if (slugDirFavs.length >= 3) return { status: 'limit' }; // 👈 Статус ліміту
+
       favs.push({ id, slug, dir, wagon, doors });
       let mainFavs = getFavs();
       if (!mainFavs.includes(slug)) {
         mainFavs.push(slug);
         saveFavs(mainFavs);
       }
+      localStorage.setItem(EXIT_FAV_KEY, JSON.stringify(favs));
+      exitFavCache = [...favs];
+      return { status: 'added' }; // 👈 Статус додавання
     }
-    
-localStorage.setItem(EXIT_FAV_KEY, JSON.stringify(favs));
-    exitFavCache = [...favs]; // <-- ДОДАТИ ЦЕЙ РЯДОК: Оновлюємо кеш після змін
-    return idx < 0; 
   }
+
+
 
   function renderFavList(favs) {
     if (!favs.length) {
@@ -463,13 +490,10 @@ let savedOrder = [];
         } else if (lower.includes('довгий перехід')) {
           formattedDir = 'довгий перехід на Майдан Незалежності';
         } else {
-          let stationName = lower.replace(/^попередня\s+/, '');
-let formattedStation = stationName.split(/[\s\u00a0\u202f]+/).map((w, index) => {
-            const cleanW = w.replace(/[^а-яіїєґ]/g, ''); // Очищаємо від лапок
-            return (index === 0 || MetroApp.ALWAYS_CAP.has(cleanW)) 
-              ? w.replace(/[а-яіїєґ]/i, m => m.toUpperCase()) 
-              : w;
-          }).join(' ');
+
+
+let stationName = lower.replace(/^попередня\s+/, '');
+          let formattedStation = MetroApp.properCase(stationName);
 
           if (item.exits.length > 1) {
             const fsLower = formattedStation.toLowerCase();
@@ -550,11 +574,21 @@ let formattedStation = stationName.split(/[\s\u00a0\u202f]+/).map((w, index) => 
     function getItemAtY(y) { return getDragItems().find(item => { const r = item.getBoundingClientRect(); return y >= r.top && y <= r.bottom; }); }
     function clearDragState() { getDragItems().forEach(i => i.classList.remove('fav-over')); }
 
+
+
+
+
+
+// Створюємо глобальний контролер для миші
+    if (favBody._dragController) favBody._dragController.abort();
+    favBody._dragController = new AbortController();
+
     favBody.querySelectorAll('.fav-drag-handle').forEach(handle => {
       const item = handle.closest('.fav-item');
-      handle.addEventListener('touchstart', e => { e.preventDefault(); dragSrc = item; dragSrc.classList.add('fav-dragging'); }, { passive: false });
       
-      handle.addEventListener('touchmove', e => {
+      // Touch events залишаємо як були...
+      handle.addEventListener('touchstart', e => { e.preventDefault(); dragSrc = item; dragSrc.classList.add('fav-dragging'); }, { passive: false });
+      handle.addEventListener('touchmove', e => { /* твій існуючий touchmove код */
         if (!dragSrc) return;
         e.preventDefault();
         if (!handle._isDragging) {
@@ -571,7 +605,6 @@ let formattedStation = stationName.split(/[\s\u00a0\u202f]+/).map((w, index) => 
           });
         }
       }, { passive: false });
-      
       handle.addEventListener('touchend', () => {
         if (!dragSrc) return;
         dragSrc.classList.remove('fav-dragging');
@@ -579,7 +612,21 @@ let formattedStation = stationName.split(/[\s\u00a0\u202f]+/).map((w, index) => 
         saveOrder(); dragSrc = null;
       });
 
-      handle.addEventListener('mousedown', () => { dragSrc = item; dragSrc.classList.add('fav-dragging'); document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); });
+      // Mouse events з AbortController
+      handle.addEventListener('mousedown', () => { 
+        dragSrc = item; 
+        dragSrc.classList.add('fav-dragging'); 
+        
+        // Якщо контролер було обірвано попереднім mouseup, створюємо новий
+        if (favBody._dragController.signal.aborted) {
+          favBody._dragController = new AbortController();
+        }
+        const { signal } = favBody._dragController;
+
+        // Передаємо signal. Коли ми викличемо abort(), ці слухачі зникнуть самі!
+        document.addEventListener('mousemove', onMouseMove, { signal }); 
+        document.addEventListener('mouseup', onMouseUp, { signal }); 
+      });
     });
 
     function onMouseMove(e) {
@@ -603,12 +650,17 @@ let formattedStation = stationName.split(/[\s\u00a0\u202f]+/).map((w, index) => 
       if (!dragSrc) return;
       dragSrc.classList.remove('fav-dragging');
       clearDragState();
-      saveOrder(); dragSrc = null;
-      document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp);
+      saveOrder(); 
+      dragSrc = null;
+      favBody._isMouseDragging = false;
+      
+      // ВБИВАЄМО ВСІ СЛУХАЧІ МИШІ ОДНИМ ВИКЛИКОМ!
+      favBody._dragController.abort();
     }
   }
 
   favBody.addEventListener('click', e => {
+
     const btn = e.target.closest('.fav-open-btn');
     if (!btn?.dataset.slug) return;
     openStation(btn.dataset.slug);
@@ -653,10 +705,10 @@ function openFavSheet() {
     if (positions.length === 1) {
       const p = positions[0];
       const isMulti = String(p.wagon).includes(',');
-      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${MetroApp.Icons.pencil}</span>` : '';
-      const spacer = p._edited ? `<span class="pos-edited-spacer"></span>` : '';
-      return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}${generatePills(p.wagon, p.doors)}${spacer}</div>`;
-    }
+const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${MetroApp.Icons.pencil}</span>` : '';
+      // Спейсер більше не потрібен, бо олівець має position: absolute
+      return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}${generatePills(p.wagon, p.doors)}</div>`;
+          }
 
     if (multiRow) {
       const editedPos = positions.find(p => p._edited);
@@ -689,7 +741,7 @@ function openFavSheet() {
           const posRows = exit.positions.map(p => `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`).join('');
           return `<div class="long-transfer-exit"><div class="long-transfer-exit-label">${exit.label}</div>${posRows}</div>`;
         }).join('');
-        longHtml = `<div class="long-transfer-block"><div class="long-transfer-title"><span class="transfer-label"><span class="transfer-line" style="background:${color}"></span><span class="transfer-text">довгий&nbsp;перехід на&nbsp;Майдан&nbsp;Незалежності</span><span class="transfer-line" style="background:${color}"></span></span></div>${rows}</div>`;
+        longHtml = `<div class="long-transfer-block"><div class="long-transfer-title"><span class="transfer-label"><span class="transfer-line" style="background:${MetroApp.LINE_COLOR['blue']}"></span><span class="transfer-text">довгий&nbsp;перехід на&nbsp;Майдан&nbsp;Незалежності</span><span class="transfer-line" style="background:${MetroApp.LINE_COLOR['blue']}"></span></span></div>${rows}</div>`;
       }
       return mainHtml + longHtml;
     }
@@ -709,8 +761,9 @@ function applyFavPillStyles(container, lineColor, isFaved) {
         pill.style.background = lineColor;
         const num = pill.querySelector('.pos-pill-num');
         const lbl = pill.querySelector('.pos-pill-label');
-        if (num) num.style.color = '#1c1c1e'; /* <--- Тепер завжди контрастний темний! */
-        if (lbl) lbl.style.color = '#1c1c1e'; /* <--- Для напису ВАГОН/ДВЕРІ теж */
+        // Використовуємо колір фону додатку як колір тексту на акцентній пілюлі
+        if (num) num.style.color = 'var(--bg)'; 
+        if (lbl) lbl.style.color = 'var(--bg)';
       } else {
         pill.style.background = '';
         const num = pill.querySelector('.pos-pill-num');
@@ -749,13 +802,25 @@ function applyFavPillStyles(container, lineColor, isFaved) {
         }, 10000);
       }
 
-      function triggerExitFav() {
+function triggerExitFav() {
         const pv = getPillValues(); if (!pv) return;
         const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
         const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
         const dirLabel = labelEl ? labelEl.textContent.trim() : '';
-        const added = toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
-        applyFavPillStyles(row, lineColor, added);
+        
+// Викликаємо оновлену функцію
+        const result = toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
+
+        // Перевіряємо, чи не влучили ми в ліміт
+        if (result.status === 'limit') {
+          if (typeof MetroApp.showCustomConfirm === 'function') {
+            MetroApp.showCustomConfirm('Ліміт: можна зберегти не більше 3 виходів для одного напрямку.', () => {});
+          }
+          return; // Перериваємо функцію, жодні кольори не міняються!
+        }
+
+        const added = result.status === 'added';
+                applyFavPillStyles(row, lineColor, added);
         showExitFavToast(row, added);
 
         const favBtnBar = document.querySelector('.fav-btn-bar');
@@ -794,13 +859,16 @@ function applyFavPillStyles(container, lineColor, isFaved) {
     });
   }
 
-  function openStation(slug) {
+function openStation(slug) {
     if (typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
-      MetroApp.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+      // Отримуємо назву поточної станції, яку ми редагували
+const currentStationName = document.getElementById('fbStationLabel')?.textContent || '';
+      const question = currentStationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${currentStationName}?</span>` : 'Зберегти зміни?';
+      MetroApp.showCustomConfirm(question, () => {
         if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
         MetroApp.fbUnsaved = false;
         actualOpenStation(); 
-      }, () => { MetroApp.fbUnsaved = false; actualOpenStation(); });
+      }, () => { MetroApp.fbUnsaved = false; actualOpenStation(); }, () => { /* Скасувати */ });
       return; 
     }
 
@@ -808,7 +876,7 @@ function applyFavPillStyles(container, lineColor, isFaved) {
       if (!stationsData?.[slug]) return;
       currentStationSlug = slug;
       const s = stationsData[slug];
-      const color = MetroApp.LINE_COLOR[s.line] || '#888';
+      const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
       const fav = isFav(slug);
 
       sheetBody.innerHTML = `<div class="sheet-header"><span class="sheet-title">${s.name}</span></div>${renderDirections(s, color)}`;
@@ -843,17 +911,28 @@ function applyFavPillStyles(container, lineColor, isFaved) {
     actualOpenStation();
   }
 
-  function closeAllSheets(force = false) {
+function closeAllSheets(force = false) {
     if (!force && typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
-      MetroApp.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+      const stationName = document.getElementById('fbStationLabel')?.textContent || '';
+      const question = stationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>` : 'Зберегти зміни?';
+      
+      MetroApp.showCustomConfirm(question, () => {
         if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
         MetroApp.fbUnsaved = false; closeAllSheets(true); 
-      }, () => { MetroApp.fbUnsaved = false; closeAllSheets(true); });
+      }, () => { MetroApp.fbUnsaved = false; closeAllSheets(true); }, () => { /* Скасувати */ });
       return false;
     }
-    document.querySelectorAll('.station-sheet').forEach(el => { el.classList.remove('sheet-open'); el.style.maxHeight = ''; });
-    sheetOverlay.classList.remove('overlay-visible');
-    return true;
+    
+    // --- Цей шматок був загублений ---
+    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+    const overlay = document.getElementById('sheetOverlay');
+    if (overlay) overlay.classList.remove('overlay-visible');
+    
+    const dropMenu = document.getElementById('dropMenu');
+    if (dropMenu) {
+        dropMenu.classList.remove('show');
+        dropMenu.hidden = true;
+    }
   }
   MetroApp.closeAllSheets = closeAllSheets;
 
@@ -862,7 +941,7 @@ function applyFavPillStyles(container, lineColor, isFaved) {
     if (typeof MetroApp.applyExitLabels === 'function') MetroApp.applyExitLabels(stationsData);
     if (stationsData[currentStationSlug] && sheet.classList.contains('sheet-open')) {
       const s = stationsData[currentStationSlug];
-      const color = MetroApp.LINE_COLOR[s.line] || '#888';
+      const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
       const prevScrollTop = sheetBody.scrollTop;
       sheetBody.innerHTML = `<div class="sheet-header"><span class="sheet-title">${s.name}</span></div>${renderDirections(s, color)}`;
       sheetBody.querySelectorAll('.nav-label').forEach(el => {
@@ -892,7 +971,7 @@ function applyFavPillStyles(container, lineColor, isFaved) {
     const btn = e.currentTarget;
     const slug = btn.dataset.slug;
     if (!slug) return;
-    const color = btn.dataset.color || '#888';
+    const color = btn.dataset.color || 'var(--text-muted)';
     const nowFav = toggleFav(slug);
     btn.innerHTML = heartSvg(nowFav, slug, color);
     btn.classList.toggle('fav-active', nowFav);
@@ -903,17 +982,24 @@ function applyFavPillStyles(container, lineColor, isFaved) {
     const dropMenu = document.getElementById('dropMenu');
     if (dropMenu && dropMenu.classList.contains('show')) return;
 
-    sheetOverlay.style.pointerEvents = 'none';
-    const below = document.elementFromPoint(e.clientX, e.clientY);
-    sheetOverlay.style.pointerEvents = '';
+    let clickedSlug = null;
+    // Блискавичний геометричний пошук замість маніпуляцій з DOM
+    const zones = document.querySelectorAll('a.zone');
+    for (const zone of zones) {
+      const rect = zone.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right &&
+          e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        clickedSlug = zone.dataset.slug;
+        break;
+      }
+    }
 
-    if (below && below.closest('a.zone')) {
-      const slug = below.closest('a.zone').dataset.slug;
-      if (slug) openStation(slug);
+    if (clickedSlug) {
+      openStation(clickedSlug);
       return;
     }
     closeAllSheets();
-  });  
+  });
 
   let isHandleSwipeMain = false;
   let swipeScrollTop = 0;
@@ -1012,11 +1098,14 @@ function applyFavPillStyles(container, lineColor, isFaved) {
       e.preventDefault(); e.stopPropagation();
       dropMenu.classList.remove('show'); dropMenu.hidden = true;
       
-      if (typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
-        MetroApp.showCustomConfirm('Зберегти зміни та застосувати їх локально?', () => {
+if (typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
+        const stationName = document.getElementById('fbStationLabel')?.textContent || '';
+        const question = stationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>` : 'Зберегти зміни?';
+        
+        MetroApp.showCustomConfirm(question, () => {
           if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
           MetroApp.fbUnsaved = false; executeAboutTransition();
-        }, () => { MetroApp.fbUnsaved = false; executeAboutTransition(); });
+        }, () => { MetroApp.fbUnsaved = false; executeAboutTransition(); }, () => { /* Скасувати */ });
         return;
       }
       
@@ -1053,10 +1142,10 @@ document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('s
   const searchBtnTop = document.createElement('button');
   searchBtnTop.className = 'search-btn-top';
   searchBtnTop.setAttribute('aria-label', 'Пошук станції');
-  searchBtnTop.innerHTML = MetroApp.Icons.search;
+  searchBtnTop.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
   document.body.appendChild(searchBtnTop);
 
-  function openSearchSheet() {
+function openSearchSheet() {
     let searchSheet = document.getElementById('searchSheet');
     
     if (!searchSheet) {
@@ -1077,6 +1166,7 @@ document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('s
         }
       });
 
+      // ВСІ СЛУХАЧІ ВІШАЮТЬСЯ РІВНО 1 РАЗ ПРИ СТВОРЕННІ HTML
       const input = document.getElementById('searchInput');
       const resultsContainer = document.getElementById('searchResults');
 
@@ -1084,17 +1174,14 @@ document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('s
         renderSearchResults(e.target.value.trim().toLowerCase(), resultsContainer);
       });
 
-      if (!resultsContainer._hasListener) {
-        resultsContainer.addEventListener('click', (e) => {
-          const item = e.target.closest('.search-item');
-          if (!item) return;
-          
-          document.getElementById('searchInput').blur(); 
-          document.getElementById('searchClose').click(); 
-          setTimeout(() => openStation(item.dataset.slug), 200); 
-        });
-        resultsContainer._hasListener = true;
-      }
+      resultsContainer.addEventListener('click', (e) => {
+        const item = e.target.closest('.search-item');
+        if (!item) return;
+        
+        document.getElementById('searchInput').blur(); 
+        document.getElementById('searchClose').click(); 
+        setTimeout(() => openStation(item.dataset.slug), 200); 
+      });
 
       let swY = 0; let isHandleSearch = false;
       searchSheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isHandleSearch = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
@@ -1122,35 +1209,18 @@ document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('s
     const allStations = Object.values(stationsData);
     let filtered = allStations;
 
-    if (query) {
-      const rawQuery = query.toLowerCase().trim();
+if (query) {
+      const rawQuery = query.toLowerCase().trim().replace(/['’`]/g, '');
       const queryWords = rawQuery.split(/\s+/).filter(w => w.length > 0);
       const queryNoSpaces = rawQuery.replace(/\s+/g, '');
       
       filtered = allStations.filter(s => {
-        const cleanName = s.name.toLowerCase().replace(/["'„“«».,]/g, '');
-        const stationWords = cleanName.split(/[\s\u00a0\u202f\-]+/);
-        
-        const matchWords = queryWords.every(qWord => stationWords.some(sWord => sWord.startsWith(qWord)));
-        if (matchWords) return true;
-
-        const aliases = [];
-        if (s.slug === 'R.Politekhnychnyi_instytut') aliases.push('кпі');
-        if (s.slug === 'B.Ploshcha_Ukrainskikh_heroiv') { aliases.push('плуг'); aliases.push('площа льва толстого'); aliases.push('льва толстого'); }
-        if (s.slug === 'G.Zvirynetska') { aliases.push('дружби народів'); }
-
-        const matchAliases = aliases.some(alias => {
-          const aliasWords = alias.toLowerCase().split(/[\s\u00a0\u202f\-]+/);
-          return queryWords.every(qWord => aliasWords.some(aWord => aWord.startsWith(qWord)));
-        });
-        if (matchAliases) return true;
-
-        const acronym = stationWords.map(w => w.charAt(0)).join('');
-        if (acronym.length > 1 && acronym.startsWith(queryNoSpaces)) return true;
-
-        return false;
+        return queryWords.every(qWord => 
+          s._searchIndex.some(idxWord => idxWord.startsWith(qWord))
+        ) || s._searchIndex.includes(queryNoSpaces);
       });
     }
+
 
     filtered.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
@@ -1172,15 +1242,47 @@ document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('s
 
   searchBtnTop.addEventListener('click', openSearchSheet);
 
-  MetroApp.showCustomConfirm = function(message, onYes, onNo) {
+MetroApp.showCustomConfirm = function(message, onYes, onNo, onCancel) {
     const overlay = document.createElement('div');
     overlay.className = 'global-confirm-overlay';
-    overlay.innerHTML = `<div class="global-confirm-card"><div class="global-confirm-text">${message}</div><div class="global-confirm-btns"><button class="confirm-square confirm-square-yes" id="confirmYes">${MetroApp.Icons.check}</button><button class="confirm-square confirm-square-no" id="confirmNo">${MetroApp.Icons.cross}</button></div></div>`;
+    
+    overlay.innerHTML = `
+      <div class="global-confirm-card">
+        <div class="global-confirm-text">${message}</div>
+        <div class="global-confirm-btns-main">
+          <button class="confirm-main-btn confirm-btn-save" id="confirmYes">Зберегти</button>
+          <button class="confirm-main-btn confirm-btn-discard" id="confirmNo">Не зберігати</button>
+        </div>
+        ${onCancel ? `<button class="confirm-text-btn" id="confirmCancel">Скасувати</button>` : ''}
+      </div>
+    `;
     document.body.appendChild(overlay);
 
-    overlay.querySelector('#confirmYes').addEventListener('click', () => { overlay.remove(); if (onYes) onYes(); });
-    overlay.querySelector('#confirmNo').addEventListener('click', () => { overlay.remove(); if (onNo) onNo(); });
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); if (onNo) onNo(); } });
-  };
+    // Обробники кліків
+    overlay.querySelector('#confirmYes').addEventListener('click', () => { 
+      overlay.remove(); 
+      if (onYes) onYes(); 
+    });
+    
+    overlay.querySelector('#confirmNo').addEventListener('click', () => { 
+      overlay.remove(); 
+      if (onNo) onNo(); 
+    });
+    
+    const cancelBtn = overlay.querySelector('#confirmCancel');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => { 
+        overlay.remove(); 
+        if (onCancel) onCancel(); 
+      });
+    }
 
+    // Клік по фону закриває попап (діє як Скасувати)
+    overlay.addEventListener('click', (e) => { 
+      if (e.target === overlay) { 
+        overlay.remove(); 
+        if (onCancel) onCancel(); 
+      } 
+    });
+  };
 })();

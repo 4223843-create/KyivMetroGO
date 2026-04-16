@@ -62,6 +62,9 @@ body#map-page .map-viewport {
   --text:       #ffffff;
   --text-muted: #ababab;
   --icon-color: #ababab;
+  --line-red:   #c8523a;
+  --line-blue:  #5b9bd5;
+  --line-green: #5aaa6a;
   --border:     rgba(255,255,255,0.08);
   --overlay:    rgba(0,0,0,0.55);
 
@@ -203,6 +206,7 @@ z-index: var(--z-fullscreen-sheet);
   flex-shrink: 0;
   background: var(--bg-sheet);
   position: relative;
+  min-height: 44px; /* Задаємо мінімальну висоту для стабільності */
 }
 .sheet-handle {
   width: 40px; height: 3px;
@@ -211,19 +215,22 @@ z-index: var(--z-fullscreen-sheet);
   position: absolute;
   left: 50%; transform: translateX(-50%);
   transition: background 0.25s;
+  top: 8px;
 }
 .sheet-sheet-title {
-  font-size: 13px; font-weight: 600;
+  font-size: 13px; 
+  font-weight: 600;
   color: var(--text-muted);
+  
+  /* ІДЕАЛЬНЕ АБСОЛЮТНЕ ЦЕНТРУВАННЯ: незалежно від кнопок по краях */
   position: absolute;
   left: 50%;
-  top: 50%; /* Центрування по вертикалі */
-  transform: translate(-50%, -50%); /* Корегування для ідеального центру */
+  transform: translateX(-50%);
+  
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  text-align: center;
   white-space: nowrap;
-  pointer-events: none; /* Щоб клік пробивав наскрізь до handle-bar */
+  pointer-events: none;
 }
 .sheet-close-btn {
   margin-left: auto;
@@ -664,7 +671,18 @@ z-index: var(--z-dropdown);
   justify-content: center;
   padding: 0;
   letter-spacing: 0;
+  
+  /* Прибираємо фон і тінь (обводку) в усіх темах */
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
+
+/* Легкий ефект при натисканні, щоб кнопка відчувалась живою */
+.menu-btn:active {
+  opacity: 0.6;
+}
+
 
 
 /* ══ DROPDOWN — тільки іконки ══ */
@@ -886,9 +904,6 @@ z-index: var(--z-dropdown);
   align-items: center;
   justify-content: center;
 }
-.confirm-square:active { transform: scale(0.9); opacity: 0.85; }
-.confirm-square-yes { background: var(--bg-card); color: #5aaa6a; border: 0.5px solid var(--border); }
-.confirm-square-no  { background: var(--bg-card); color: #c8523a; border: 0.5px solid var(--border); }
 
 /* Глобальне вікно підтвердження — дизайн як fb-closed-note-wrap */
 .global-confirm-overlay {
@@ -902,56 +917,75 @@ z-index: var(--z-global-modal);
   backdrop-filter: blur(2px);
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
 }
+
+
+
+
 .global-confirm-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: calc(100% - 32px);
-  max-width: 360px;
-  animation: popUpBottom 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
-  border-radius: 16px;
-  overflow: hidden;
-}
-.global-confirm-text {
-  width: 100%;
+  /* Змінюємо відступи: менше зверху/знизу, більше з боків для ефекту "пілюлі" */
+  padding: 14px 24px; 
   background: var(--bg-card);
-  padding: 16px 16px 0;
-  font-size: 15px;
-  color: var(--text);
-  text-align: center;
-  line-height: 1.4;
-  font-weight: 500;
-  box-sizing: border-box;
-}
-.global-confirm-btns {
-  display: flex;
-  width: 100%;
-  background: var(--bg-card);
-  padding: 12px 16px 14px;
-  gap: 10px;
-  box-sizing: border-box;
-}
-.global-confirm-btns .confirm-square {
-  flex: 1;
-  height: 40px;
+  /* Радіус як у пілюлі (8px), але збільшений пропорційно розміру вікна */
+  border-radius: 14px; 
   width: auto;
+  min-width: 280px;
+  max-width: 320px;
+  animation: popUpBottom 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.global-confirm-text {
+  font-size: 15px;
+  font-weight: 500; 
+  text-align: center;
+  margin-bottom: 14px;
+  color: var(--text);
+}
+
+.global-confirm-btns-main {
+  display: flex;
+  flex-direction: row; /* Чітко в один ряд */
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.confirm-main-btn {
+  flex: 1;
+  height: 38px;
   border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500; 
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0.5px solid var(--border);
-}
-.global-confirm-btns .confirm-square-yes {
-  border-radius: 10px;
-}
-.global-confirm-btns .confirm-square-no {
-  border-radius: 10px;
-}
-@keyframes popIn {
-  from { transform: scale(0.85); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  font-family: inherit;
+  white-space: nowrap;
 }
 
+/* Решта стилів кнопок (обводки та "Скасувати") */
+.confirm-btn-save { border: 1.5px solid var(--line-green); }
+.confirm-btn-discard { border: 1.5px solid var(--line-red); }
+
+.confirm-text-btn {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400; 
+  cursor: pointer;
+  padding: 6px;
+  font-family: inherit;
+  opacity: 0.6;
+}
 
 /* ══ 2. ДИЗАЙН ЗАКРИТОГО ВИХОДУ (Фігурна плашка з "хвостиком") ══ */
 .fb-closed-note-wrap {
@@ -1070,15 +1104,17 @@ z-index: var(--z-global-modal);
 .ui-btn svg path { fill: var(--icon-color) !important; }
 
 /* Кастомний колір для серця (сірий в темній, темно-сірий в світлій) */
-#favListBtn { font-size: 22px; }
+#favListBtn {
+  font-size: 22px;
+  /* === ВИДАЛЯЄМО ФОН ТА ТІНЬ === */
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important; /* На всяк випадок */
+  /* ============================ */
+}
 #favListBtn svg path { fill: var(--text-muted) !important; }
 
 
-/* Піднімаємо заголовок саме у вікні "Обрані станції" */
-#favSheet .sheet-sheet-title {
-  top: 19px;
-  transform: translateX(-50%); /* Додати це */
-}
 
 
 .fb-transfer-bar {
@@ -1111,17 +1147,9 @@ z-index: var(--z-global-modal);
   transform: translateX(-50%); /* Додати це */
 }
 
-/* 2. Повзунок на самий верх */
-.sheet-handle {
-  top: 8px;
-}
-
-
-
-
 /* 5. Двоколірний повзунок для вікна "Про додаток" */
 .about-station-sheet .sheet-handle {
-  background: linear-gradient(to right, #5b9bd5 50%, #5aaa6a 50%);
+background: linear-gradient(to right, var(--line-blue) 50%, var(--line-green) 50%);
 }
 
 /* 6. НАЛАШТУВАННЯ ВІДСТУПІВ ШАПКИ */
@@ -1138,9 +1166,7 @@ z-index: var(--z-global-modal);
 #feedbackSheet .sheet-handle-bar {
   padding-bottom: 1px;
 }
-#feedbackSheet .sheet-sheet-title {
-  top: 34px;
-}
+
 
 /* ══ ЗАБОРОНА ВИДІЛЕННЯ ТЕКСТУ ══ */
 body, .station-sheet, .sheet-body, .about-content, .drop-menu, .sheet-handle-bar {
@@ -1246,7 +1272,7 @@ z-index: var(--z-popup-confirm);
   position: static;
   background: none;
   border: none;
-  color: #c8523a;
+{ color: var(--line-red); }
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -1348,7 +1374,7 @@ z-index: var(--z-popup-confirm);
   flex-shrink: 0;
   background: none;
   border: none;
-  color: #5aaa6a;
+{ color: var(--line-green); }
   width: 24px;
   height: 24px;
   cursor: pointer;
@@ -1509,7 +1535,7 @@ margin: 14px 0 18px 0; /* Було 16px, тепер ближче до меню *
 /* Колір обох хрестиків, коли активні 2 двері - Синій */
 .fb-item-inner.has-extra-doors .fb-close-exit,
 .fb-item-inner.has-extra-doors .fb-cancel-extra-btn {
-  color: #5B9BD5 !important;
+{ color: var(--line-blue) !important; }
 }
 
 /* Логіка відображення текстів підказок */
@@ -1528,14 +1554,7 @@ margin: 14px 0 18px 0; /* Було 16px, тепер ближче до меню *
   /* Значення: ЗГОРИ | СПРАВА | ЗНИЗУ | ЗЛІВА */
 margin: 17px 10% 8px 10%; /* <--- Відтягнули від кнопки і притисли до тексту */
 }
-/* ══ П.8: Заборона підкреслення nav-link при тапі на iOS ══ */
-.nav-link:active,
-.nav-link:focus {
-  text-decoration: none !important;
-  -webkit-tap-highlight-color: transparent;
-  outline: none;
-}
-.nav-link::after { display: none; }
+
 
 /* ══ Task 11: drop-menu поверх fullscreen sheet ══ */
 .drop-menu.show {
@@ -1635,13 +1654,18 @@ z-index: var(--z-dropdown-active);
 
 /* ══ Task 5: SVG pencil mark ══ */
 .pos-edited-mark {
+  position: absolute; /* Тепер він не займає місце у флекс-контейнері */
+  right: calc(50% + 76px); /* Ставимо його зліва від центральної групи пілюль */
+  top: 50%;
+  transform: translateY(-50%); /* Центруємо вертикально */
   display: flex;
   align-items: center;
-  padding: 4px 8px 4px 0;
+  padding: 4px;
   cursor: pointer;
   color: var(--text-muted);
   opacity: 0.55;
   -webkit-tap-highlight-color: transparent;
+  z-index: 2;
 }
 .pos-edited-mark:active { opacity: 1; transform: scale(1.1); }
 .pos-edited-mark svg { 
@@ -1655,13 +1679,13 @@ z-index: var(--z-dropdown-active);
 
 /* ══ Task 9: Blue ✕ for third door in feedback ══ */
 .fb-item-inner.has-three-doors .fb-cancel-third-btn {
-  color: #5B9BD5;
+{ color: var(--line-blue); };
 }
 .fb-cancel-third-btn {
   position: static;
   background: none;
   border: none;
-  color: #5B9BD5;
+{ color: var(--line-blue); }
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -1689,11 +1713,7 @@ z-index: var(--z-dropdown-active);
 /* When used in station card, ensure it respects z-index */
 .position-row + .exit-fav-slide { margin-top: 0; }
 
-/* ══ Task 6: Pencil slide-in panel (same as edit-info-panel with fb-closed-note-wrap inside) ══ */
-/* Override pointer-events for fb-closed-note-wrap inside edit-info-panel */
-.edit-info-panel .fb-closed-note-wrap {
-  pointer-events: auto;
-}
+
 
 /* ══ Remove old edit-info-panel styles now that we use fb-closed-note-wrap ══ */
 
@@ -1746,61 +1766,27 @@ z-index: var(--z-dropdown-active);
 }
 .exit-fav-toast-cancel:active { opacity: 1; }
 
-/* ══ Task 5: Inline exit-close confirm panel ══ */
-.fb-inline-confirm {
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height 0.28s cubic-bezier(0.32,0.72,0,1);
+
+
+
+/* Фікс відомого бага Safari: жорстко фіксуємо розмір SVG у кнопках */
+.fb-inline-confirm-yes svg,
+.fb-inline-confirm-no svg {
+  flex-shrink: 0;
+  display: block;
 }
-.fb-inline-confirm.fb-inline-open {
-  max-height: 80px;
+
+.fb-inline-confirm-yes svg {
+  width: 18px !important;
+  height: 18px !important;
 }
-.fb-inline-confirm-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 4px 0 0;
+
+.fb-inline-confirm-no svg {
+  width: 15px !important;
+  height: 15px !important;
 }
-.fb-inline-confirm-note {
-  width: 100%;
-  background: var(--bg-card);
-  border-radius: 12px 12px 0 0;
-  padding: 10px 14px 8px;
-  font-size: 13px;
-  color: var(--text-muted);
-  text-align: center;
-  box-sizing: border-box;
-}
-.fb-inline-confirm-btns {
-  display: flex;
-  width: 60%;
-}
-.fb-inline-confirm-yes,
-.fb-inline-confirm-no {
-  flex: 1;
-  padding: 8px 0;
-  border: none;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-card);
-  -webkit-tap-highlight-color: transparent;
-  border-top: 0.5px solid var(--border);
-}
-.fb-inline-confirm-yes {
-  color: #5aaa6a;
-  border-radius: 0 0 0 12px;
-  border-right: 0.25px solid var(--border);
-}
-.fb-inline-confirm-no {
-  color: #c8523a;
-  border-radius: 0 0 12px 0;
-  border-left: 0.25px solid var(--border);
-}
-.fb-inline-confirm-yes:active, .fb-inline-confirm-no:active { opacity: 0.6; }
+
+
 
 /* ══ Task 3: Exit label editor ══ */
 .fb-exit-label-row {
@@ -1865,11 +1851,10 @@ margin: 0 0 4px 0;
 }
 .fb-exit-label-input {
   width: 100%;
-  background: var(--bg-pill);
-  border: 0.5px solid var(--border);
-  border-radius: 7px;
+  background: transparent;
+  border: none;
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: 13px; /* Зробимо шрифт трохи більшим для кращої читабельності */
   color: var(--text);
   font-family: inherit;
   text-align: center;
@@ -1878,12 +1863,15 @@ margin: 0 0 4px 0;
   -webkit-user-select: text;
   user-select: text;
 }
-.fb-exit-label-input:focus { border-color: var(--text-muted); }
+.fb-exit-label-input:focus { outline: none; }
 .fav-exit-info {
   font-size: 13px;
+  font-weight: 500;
   color: var(--text-muted);
-  opacity: 0.8;
   text-align: left;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.8;
 }
 /* ══ Fav list: direction label below station name ══ */
 .fav-dir-label {
@@ -2001,12 +1989,12 @@ margin: 0 0 4px 0;
   background-color: #fff;
 }
 
-/* ══ КНОПКА ПОШУКУ ══ */
+/* ══ ВІКНО ПОШУКУ ══ */
 .search-btn-top {
   position: fixed;
   top: calc(12px + env(safe-area-inset-top));
   right: 64px; /* Відступаємо від правої кнопки меню */
-z-index: var(--z-btn-top);
+  z-index: 1055;
   width: 40px; 
   height: 40px;
   background: transparent; /* Без фону */
@@ -2018,9 +2006,17 @@ z-index: var(--z-btn-top);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* === ЗМЕНШУЄМО ТІЛЬКИ ІКОНКУ ПОШУКУ (ЛУПУ) === */
+.search-btn-top svg {
+    width: 14px; /* Або інший підходящий розмір, наприклад, 18px-20px */
+    height: 18px;
+    display: block; /* Забезпечуємо правильне відображення */
+}
+/* =========================================== */
+
 .search-btn-top:active { opacity: 0.6; }
 
-/* ══ ВІКНО ПОШУКУ ══ */
 .search-input-wrap {
   padding: 0 16px 12px;
 }
@@ -2069,7 +2065,7 @@ z-index: var(--z-btn-top);
 /* ══ ІКОНКИ ══ */
 .fb-exit-label-edit-btn svg { width: 11px; height: 11px; }
 .fb-restore-exit svg { width: 18px; height: 18px; }
-.search-btn-top svg { width: 24px; height: 24px; }
+.search-btn-top svg { width: 20px; height: 20px; }
 .confirm-square svg { width: 18px; height: 18px; }
 
 /* ══ ФІНАЛЬНИЙ БЛОК ШТРИХУВАННЯ (Тільки світла тема) ══ */
@@ -2118,3 +2114,7 @@ z-index: var(--z-btn-top);
   fill: var(--text) !important; /* Цифри 3 і 2 */
 }
 
+/* ══ УТИЛІТИ ДЛЯ ПРИХОВУВАННЯ ЕЛЕМЕНТІВ ══ */
+.is-hidden {
+  display: none !important;
+}

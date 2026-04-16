@@ -3,12 +3,9 @@
   "short_name": "MetroGO",
   "description": "Інтерактивна карта виходів з київського метро",
   "start_url": "index.html",
-  "display": "fullscreen",
-"background_color": "#1c1c1e",
-  "theme_color": [
-    { "color": "#1c1c1e", "media": "(prefers-color-scheme: dark)" },
-    { "color": "#f2f2f7", "media": "(prefers-color-scheme: light)" }
-  ],
+"display": "fullscreen",
+  "background_color": "#1c1c1e",
+  "theme_color": "#1c1c1e",
   "orientation": "portrait-primary",
   "scope": "./",
   "icons": [
