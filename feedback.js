@@ -1,21 +1,6 @@
-/* ══ ГЛОБАЛЬНИЙ ПРОСТІР ІМЕН ══ */
-window.MetroApp = window.MetroApp || {};
-
-/* ══ ГЛОБАЛЬНИЙ СЛОВНИК ІКОНОК (SVG) ══ */
-MetroApp.Icons = {
-  pencil: `<svg aria-hidden="true" focusable="false" viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
-  undo: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`,
-  info: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg>`,
-  check: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  cross: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
-  sun: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
-  moon: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
-  search: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
-  heartPath: `M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z`
+MetroApp.addExitToStation = function(slug, dir) {
+  console.log('[KyivMetroGO] TODO addExit:', slug, dir);
 };
-
-MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
-MetroApp.ALWAYS_CAP = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
 
 (function() {
 
@@ -59,7 +44,6 @@ function getExitLabels() {
     }
   };
 
-  let currentStationsData = null;
   let localEditsCache = null;
   MetroApp.fbUnsaved = false;
 
@@ -187,6 +171,7 @@ document.querySelectorAll('.fb-exit-label-input').forEach(inp => {
     const sendBtn = document.getElementById('fbSend');
     if (sendBtn) {
       sendBtn.textContent = 'Застосувати';
+      sendBtn.style.color = '';
       sendBtn.disabled = !isDirty;
     }
   }
@@ -514,9 +499,7 @@ container.addEventListener('click', (event) => {
 
 function openFeedbackSheet(stationsData) {
     try {
-      currentStationsData = stationsData;
-      MetroApp.currentStationsData = currentStationsData;
-      MetroApp.fbUnsaved = false;
+      MetroApp.currentStationsData = stationsData;
 
       let sheet = document.getElementById('feedbackSheet');
       if (!sheet) {
@@ -560,7 +543,7 @@ function openFeedbackSheet(stationsData) {
               if (Object.keys(edits).length === 0) clearAllLocalEdits(); 
               else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
             }
-            renderPositions(slug); 
+            renderFeedbackPositions(slug); 
             if (typeof renderResetBtn === 'function') renderResetBtn();
             return;
           }
@@ -593,7 +576,7 @@ const closeBtn = e.target.closest('.fb-close-exit');
             if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
             
             // Оновлюємо інтерфейс — одразу з'явиться плашка "Вихід недоступний" з кнопкою відміни (стрілкою)
-            renderPositions(slug);
+            renderFeedbackPositions(slug);
             if (typeof renderResetBtn === 'function') renderResetBtn();
 
             // Відправляємо розробнику у фоні (тихо)
@@ -632,7 +615,7 @@ const closeBtn = e.target.closest('.fb-close-exit');
           e.stopPropagation(); stationHidden.value = b.dataset.value; stationLbl.textContent = b.textContent; closeAllDD();
           const s = MetroApp.currentStationsData[stationHidden.value];
           if (s && !lineHidden.value) { lineHidden.value = s.line; lineLbl.textContent = LINE_NAMES[s.line]; }
-          MetroApp.fbUnsaved = false; closeAllHints(); renderPositions(stationHidden.value);
+          MetroApp.fbUnsaved = false; closeAllHints(); renderFeedbackPositions(stationHidden.value);
         });
 
         lineDD.addEventListener('click', e => e.stopPropagation()); 
@@ -685,16 +668,16 @@ function renderResetBtn() {
             if (typeof MetroApp.reloadStationsData === 'function') {
               MetroApp.reloadStationsData(true).then(() => {
                 resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
-                renderPositions(stationEl.value);
+                renderFeedbackPositions(stationEl.value);
               });
             }
           });
         });
       }
 
-      function renderPositions(slug) {
+      function renderFeedbackPositions(slug) {
         if (!slug) { posEl.innerHTML = ''; sendBtn.disabled = true; return; }
-        const s = currentStationsData[slug];
+        const s = MetroApp.currentStationsData[slug];
         if (!s?.positions?.length) { posEl.innerHTML = '<p class="fb-note">Для цієї станції немає позицій.</p>'; return; }
         const edits = getLocalEdits()[slug] || {};
 
@@ -755,30 +738,13 @@ return exitLabelHtml + `
               }
             </div>${dividerHtml}`;
           }).join('');
-return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>${itemsHtml}</div>`;
+return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>${itemsHtml}${MetroApp.STATIONS_WITH_ADDABLE_EXITS?.has(slug) ? `<div class="fb-add-exit-row is-hidden" data-slug="${slug}" data-dir="${g.key}"><button type="button" class="fb-add-exit-btn">+ Додати вихід</button></div>` : ''}</div>`;
         }).join('');
 
         sendBtn.disabled = true; /* <--- Тепер кнопка вимкнена за замовчуванням */
         renderResetBtn();
       }
 
-function attachUndoBtn(slug, resultContainer, renderFn, resetBtnFn) {
-        document.getElementById('fbUndoCurrent')?.addEventListener('click', () => {
-          const edits = getLocalEdits();
-          if (edits[slug]) {
-            delete edits[slug];
-            if (Object.keys(edits).length === 0) clearAllLocalEdits(); else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
-          }
-
-          if (typeof MetroApp.reloadStationsData === 'function') {
-            // reloadStationsData автоматично застосує локальні зміни (applyLocalEdits) та нормалізує масиви
-            MetroApp.reloadStationsData(true).then(() => {
-              resultContainer.innerHTML = '<p class="fb-note">Зміни скасовано.</p>';
-              renderFn(slug); if (typeof resetBtnFn === 'function') resetBtnFn();
-            });
-          }
-        });
-      }
 
 
 
@@ -791,7 +757,7 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
         if (!slug) { MetroApp._isSubmitting = false; return; }
         
         try {
-          const s = currentStationsData[slug];
+          const s = MetroApp.currentStationsData[slug];
           
           // Збираємо зміни позицій
           const posChanges = s.positions.map((p, i) => {
@@ -826,14 +792,14 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
           
           // Застосовуємо локально
           posChanges.forEach(c => saveLocalEdit(slug, c.i, { wagon: c.nw, doors: c.nd }));
-          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(currentStationsData);
+          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
           MetroApp.fbUnsaved = false; 
 
           if (!background) { 
-            sendBtn.disabled = true; 
-            sendBtn.textContent = 'Надсилаємо…'; 
-            renderPositions(slug); 
-            resultEl.innerHTML = ''; // Очищуємо, щоб розмір вікна не змінювався
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="fb-send-spinner"></span>';
+            renderFeedbackPositions(slug); 
+            resultEl.innerHTML = '';
           }
 
           let formspreeBody = posChanges.map(c => changeText(c.p, c.nw, c.nd, false));
@@ -849,9 +815,9 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
           // === УСПІШНЕ ЗАВЕРШЕННЯ ===
           if (!background) {
             sendBtn.textContent = 'Зміни застосовано';
-            sendBtn.style.color = 'var(--text-muted)'; // Темно-сірий колір (адаптивний до теми)
-            sendBtn.disabled = true; 
-            resultEl.innerHTML = ''; // Нічого не вискакує знизу
+            sendBtn.style.color = 'var(--text-muted)';
+            sendBtn.disabled = true;
+            resultEl.innerHTML = '';
           }
         } catch (error) {
           console.error('[KyivMetroGO] Помилка відправки:', error);

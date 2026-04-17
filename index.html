@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="utf-8">
@@ -6,11 +6,16 @@
   <title>KyivMetroGO</title>
   
 <style id="critical-theme">
-    html, body { background: #1c1c1e; }
+    html, body { background: #000000; }
     @media (prefers-color-scheme: light) { html, body { background: #e5e5ea; } }
-  </style>
-  <link rel="stylesheet" href="styles.css?v=26">
-  
+</style>
+<script>
+    /* Миттєво застосовуємо збережену тему ДО малювання сторінки браузером */
+    const t = localStorage.getItem('metro_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', t);
+</script>
+  <link rel="stylesheet" href="styles.css">
+
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192x192.png">
   <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
@@ -21,19 +26,23 @@
 <body id="map-page">
 
 <main class="container">
-  <div id="mapViewport" class="map-viewport">
+<div id="mapViewport" class="map-viewport is-loading">
     <div id="mapInner" class="map-inner">
       <img id="mapImg" class="map" src="KyivMetroScheme.svg" alt="Карта метро">
       </div>
   </div>
 </main>
 
-  <button id="menuBtn" class="theme-btn-top menu-btn" aria-label="Меню">
+<button id="menuBtn" class="theme-btn-top menu-btn" aria-label="Меню">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
       <circle cx="12" cy="5" r="2.2"/>
       <circle cx="12" cy="12" r="2.2"/>
       <circle cx="12" cy="19" r="2.2"/>
     </svg>
+  </button>
+
+  <button id="searchBtnTop" class="search-btn-top" aria-label="Пошук станції">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
   </button>
   
   <div id="dropMenu" class="drop-menu" hidden>
@@ -101,7 +110,7 @@
     <div class="sheet-body">
       <div class="about-content">
         <img src="icon-96x96.png" width="64" height="64" style="border-radius: 16px; margin-bottom: -10px;">
-        <p style="text-align: center;">Додаток для заощадження часопростору у київському метро</p>
+        <p style="text-align: center;">Заощадження часопростору у київському&nbsp;метро</p>
         <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px;">
           <p style="margin:0; flex-shrink: 0; width: 96px; display: flex; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 5" style="width: 96px; height: auto; border-radius: 4px;"><path class="pluh-bg" fill="#D0D0D5" d="M0 0h10v5H0z"/><path class="pluh-text" fill="#1C1C1E" transform="translate(-112.36 -152.57) scale(.26458)" d="m433.82 582.27v8.6389h1.2917v-9.7222h-7.1944v9.7222h1.3056v-8.6389zm5.5972 4.8611v-2.0694h2.375v5.8472h1.2917v-6.875h-4.9583v3.0417c0 2.6667-0.5 2.9861-1.2639 2.9861v0.84722c0.125 0.0417 0.44445 0.0695 0.65278 0.0695 1.1667 0 1.9028-0.65278 1.9028-3.8472zm11.681-5.9444-2.5556 5.1389-2.5556-5.1389h-1.4028l3.3472 6.6667-1.6806 3.0556h1.4028l4.8472-9.7222zm7.9861 1.0833v-1.0833h-4.9722v9.7222h1.3056v-8.6389z"/></svg></p>
           <p style="margin: 0; text-align: left; font-size: 18px; line-height: 1.4; flex: 1;">Натисніть на станцію, і отримаєте вагон та двері, які&nbsp;будуть якнайближче до&nbsp;виходу з&nbsp;підземки</p>
@@ -154,7 +163,7 @@
     </div>
   </template>
 
-  <script defer src="feedback.js?v=26"></script>
-  <script defer src="script.js?v=26"></script>
+<script defer src="script.js"></script>
+  <script defer src="feedback.js"></script>
 </body>
 </html>

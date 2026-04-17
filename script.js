@@ -1,6 +1,21 @@
 window.MetroApp = window.MetroApp || {};
 
+/* ══ ГЛОБАЛЬНИЙ СЛОВНИК ІКОНОК (SVG) ══ */
+MetroApp.Icons = {
+  pencil: `<svg aria-hidden="true" focusable="false" viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
+  undo: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`,
+  info: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg>`,
+  check: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  cross: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  sun: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
+  moon: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
+  search: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+  heartPath: `M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z`
+};
+
+MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
 (function () {
+
   /* ==========================================================================
      1. ГЛОБАЛЬНІ ЗМІННІ ТА DOM ЕЛЕМЕНТИ
      ========================================================================== */
@@ -20,8 +35,30 @@ window.MetroApp = window.MetroApp || {};
 
   let stationsData = null;
   let currentStationSlug = null;
+  let isMapReady = false;
+  let isZonesReady = false;
 
-  /* ==========================================================================
+  function removeLoader() {
+    requestAnimationFrame(() => {
+      document.getElementById('mapViewport')?.classList.remove('is-loading');
+    });
+  }
+
+  function checkAppReady() {
+    if (isMapReady && isZonesReady) {
+      removeLoader();
+    }
+  }
+
+// Запобіжник (прибирає лоадер через 10 сек примусово, даючи час повільному інтернету)
+  setTimeout(() => {
+    const vp = document.getElementById('mapViewport');
+    if (vp && vp.classList.contains('is-loading')) removeLoader();
+  }, 10000);
+
+
+
+/* ==========================================================================
      2. УПРАВЛІННЯ КАРТОЮ (ZOOM ТА PAN)
      ========================================================================== */
   const centerX = 0.485, centerY = 0.5;
@@ -29,7 +66,11 @@ window.MetroApp = window.MetroApp || {};
   function applyZoomAndCenter() {
     const natW = img.naturalWidth || img.width;
     const natH = img.naturalHeight || img.height;
-    if (!natW || !natH) return;
+    
+    if (!natW || !natH) {
+      if (img.complete) setTimeout(applyZoomAndCenter, 50);
+      return;
+    }
     
     const w = Math.min(window.innerWidth, document.documentElement.clientWidth);
     const sf = w <= 500 ? 4.5 : 1.5;
@@ -54,8 +95,11 @@ window.MetroApp = window.MetroApp || {};
       const targetY = padY + newH * centerY;
       vp.scrollLeft = Math.max(0, targetX - vp.clientWidth / 2);
       vp.scrollTop = Math.max(0, targetY - vp.clientHeight / 2);
+      
+      isMapReady = true;
+      checkAppReady();
     });
-  }
+  } // <--- ОСЬ ЦЯ ДУЖКА ЗАГУБИЛАСЯ МИНУЛОГО РАЗУ!
 
   function adjustViewportHeight() {
     if (!vp) return;
@@ -64,7 +108,8 @@ window.MetroApp = window.MetroApp || {};
     vp.style.height = Math.max(120, avail) + 'px';
   }
 
-MetroApp.applyZoomAndCenter = applyZoomAndCenter;
+  MetroApp.applyZoomAndCenter = applyZoomAndCenter;
+  
   if (img.complete) {
     adjustViewportHeight();
     applyZoomAndCenter();
@@ -74,15 +119,17 @@ MetroApp.applyZoomAndCenter = applyZoomAndCenter;
       applyZoomAndCenter();
     });
   }
-let resizeTimer;
-  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120); };  window.addEventListener('resize', onResize);
+
+  let resizeTimer;
+  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120); };  
+  window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
+
+
+
+
   
-  document.addEventListener('DOMContentLoaded', () => { 
-    document.body.classList.remove('loading'); 
-    document.body.classList.add('loaded'); 
-    
-    // ЛОГІКА СТАРТУ: Відкриваємо Обране, якщо користувач так налаштував
+document.addEventListener('DOMContentLoaded', () => { 
     if (localStorage.getItem('metro_start_on_fav') === 'true') {
       setTimeout(() => { openFavSheet(); }, 50);
     }
@@ -214,12 +261,6 @@ function formatLabel(raw) {
 const STATION_ALIASES = {
     'театральну': 'театральна',
     'площу українських героїв': 'площа українських героїв',
-    'майдан незалежності': 'майдан незалежності',
-    'палац спорту': 'палац спорту',
-    'золоті ворота': 'золоті ворота',
-    'хрещатик': 'хрещатик',
-    'контрактову': 'контрактова площа',
-    'контрактова': 'контрактова площа'
   };
 
 function slugByName(raw) {
@@ -312,6 +353,12 @@ async function reloadStationsData(forceFresh = false) {
     const data = await response.json();
     const hydrated = hydrateStations(data);
     if (!forceFresh) renderMapZones();
+    // Якщо вікно Обраного відкрилось до завантаження даних — перемалюємо його
+    if (favSheet?.classList.contains('sheet-open') && favBody?.querySelector('.fav-empty-text')) {
+      const favs = getFavs();
+if (favs.length === 0) favBody.innerHTML = `<div class="fav-empty-state"><p class="fav-empty-text">Немає збережених станцій</p><div class="onboarding-hint"><span class="hint-icon-wrap">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div></div>`;
+      else renderFavList(favs);
+    }
     return hydrated;
   }
   MetroApp.reloadStationsData = reloadStationsData;
@@ -337,6 +384,8 @@ async function reloadStationsData(forceFresh = false) {
         mapInner.appendChild(zone);
       });
     });
+isZonesReady = true;
+    checkAppReady();
   }
 
   reloadStationsData().catch(err => console.error('stations.json load failed', err));
@@ -426,8 +475,8 @@ function toggleExitFav(slug, dir, wagon, doors) {
 
 
   function renderFavList(favs) {
-    if (!favs.length) {
-      favBody.innerHTML = `<p class="fav-empty-text">Немає збережених станцій.<br>Натисніть ♡ на картці станції,<br>щоб зберегти її до вибраного.</p>`;
+if (!favs.length) {
+      favBody.innerHTML = `<div class="fav-empty-state"><p class="fav-empty-text">Немає збережених станцій</p><div class="onboarding-hint"><span class="hint-icon-wrap">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div></div>`;
       return;
     }
 
@@ -669,8 +718,7 @@ let stationName = lower.replace(/^попередня\s+/, '');
 function openFavSheet() {
     document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
     const favs = getFavs();    if (!stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
-    else if (favs.length === 0) favBody.innerHTML = `<p class="fav-empty-text">Немає збережених станцій.<br>Натисніть ♡ на картці станції,<br>щоб додати її до вибраного</p>`;
-    else renderFavList(favs);
+else if (favs.length === 0) favBody.innerHTML = `<div class="fav-empty-state"><p class="fav-empty-text">Немає збережених станцій</p><div class="onboarding-hint"><span class="hint-icon-wrap">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div></div>`;    else renderFavList(favs);
     favSheet.classList.add('sheet-open');
     sheetOverlay.classList.add('overlay-visible');
   }
@@ -796,12 +844,11 @@ function applyFavPillStyles(container, lineColor, isFaved) {
         row.prepend(toast);
         requestAnimationFrame(() => toast.classList.add('fav-note-open'));
 
-        setTimeout(() => {
+setTimeout(() => {
           toast.classList.remove('fav-note-open');
           setTimeout(() => toast.remove(), 300);
-        }, 10000);
+        }, 3000);
       }
-
 function triggerExitFav() {
         const pv = getPillValues(); if (!pv) return;
         const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
@@ -810,6 +857,15 @@ function triggerExitFav() {
         
 // Викликаємо оновлену функцію
         const result = toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
+
+        // Ховаємо підказку назавжди, якщо це перше успішне додавання
+        if (result.status === 'added') {
+          const hint = document.getElementById('onboardingHint');
+          if (hint) {
+            hint.style.opacity = '0';
+            setTimeout(() => hint.remove(), 300);
+          }
+        }
 
         // Перевіряємо, чи не влучили ми в ліміт
         if (result.status === 'limit') {
@@ -879,8 +935,12 @@ const currentStationName = document.getElementById('fbStationLabel')?.textConten
       const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
       const fav = isFav(slug);
 
-      sheetBody.innerHTML = `<div class="sheet-header"><span class="sheet-title">${s.name}</span></div>${renderDirections(s, color)}`;
-      sheetBody.querySelectorAll('.nav-label').forEach(el => {
+// Перевіряємо, чи є в користувача збережені виходи
+// Оновлена підказка з іконкою та новим текстом
+      const onboardingHtml = getExitFavs().length === 0 ? `<div class="onboarding-hint" id="onboardingHint"><span class="hint-icon-wrap">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div>` : '';
+
+      sheetBody.innerHTML = `<div class="sheet-header"><span class="sheet-title">${s.name}</span></div>${onboardingHtml}${renderDirections(s, color)}`;
+            sheetBody.querySelectorAll('.nav-label').forEach(el => {
         const target = slugByName(el.dataset.name || '');
         if (target && target !== slug) el.classList.add('nav-link');
       });
@@ -1135,15 +1195,11 @@ if (typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeed
       });
     }
 document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-    aboutSheet.classList.add('sheet-open');
+    aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
     document.getElementById('sheetOverlay').classList.add('overlay-visible');
   }
 
-  const searchBtnTop = document.createElement('button');
-  searchBtnTop.className = 'search-btn-top';
-  searchBtnTop.setAttribute('aria-label', 'Пошук станції');
-  searchBtnTop.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
-  document.body.appendChild(searchBtnTop);
+const searchBtnTop = document.getElementById('searchBtnTop');
 
 function openSearchSheet() {
     let searchSheet = document.getElementById('searchSheet');
@@ -1168,6 +1224,7 @@ function openSearchSheet() {
 
       // ВСІ СЛУХАЧІ ВІШАЮТЬСЯ РІВНО 1 РАЗ ПРИ СТВОРЕННІ HTML
       const input = document.getElementById('searchInput');
+      input.placeholder = ''; // Прибираємо підказку
       const resultsContainer = document.getElementById('searchResults');
 
       input.addEventListener('input', (e) => {
@@ -1196,8 +1253,6 @@ function openSearchSheet() {
     document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
     searchSheet.classList.add('sheet-open');
     document.getElementById('sheetOverlay').classList.add('overlay-visible');
-
-    setTimeout(() => input.focus(), 350);
   }
 
   function renderSearchResults(query, container) {
@@ -1258,31 +1313,60 @@ MetroApp.showCustomConfirm = function(message, onYes, onNo, onCancel) {
     `;
     document.body.appendChild(overlay);
 
-    // Обробники кліків
-    overlay.querySelector('#confirmYes').addEventListener('click', () => { 
-      overlay.remove(); 
-      if (onYes) onYes(); 
-    });
-    
-    overlay.querySelector('#confirmNo').addEventListener('click', () => { 
-      overlay.remove(); 
-      if (onNo) onNo(); 
-    });
-    
-    const cancelBtn = overlay.querySelector('#confirmCancel');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => { 
-        overlay.remove(); 
-        if (onCancel) onCancel(); 
+function animateClose(callback) {
+      const card = overlay.querySelector('.global-confirm-card');
+      if (!card) {
+        overlay.remove();
+        if (callback) callback();
+        return;
+      }
+
+      const rect = card.getBoundingClientRect();
+      const leftDoor = card.cloneNode(true);
+      const rightDoor = card.cloneNode(true);
+
+      [leftDoor, rightDoor].forEach(door => {
+        door.style.position = 'fixed';
+        door.style.top = rect.top + 'px';
+        door.style.left = rect.left + 'px';
+        door.style.width = rect.width + 'px';
+        door.style.height = rect.height + 'px';
+        door.style.margin = '0';
+        door.style.animation = 'none';
+        door.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease';
       });
+
+      leftDoor.style.clipPath = 'inset(0 50% 0 0)';
+      rightDoor.style.clipPath = 'inset(0 0 0 50%)';
+
+      overlay.appendChild(leftDoor);
+      overlay.appendChild(rightDoor);
+      card.style.display = 'none';
+
+      // 🛑 МАГІЯ ДЛЯ FIREFOX: Примусовий reflow. 
+      // Читаючи offsetWidth, ми змушуємо браузер відмалювати елементи прямо зараз.
+      void leftDoor.offsetWidth;
+
+      // Тепер браузер точно знає стартову позицію і плавно відіграє зміну стилів
+      overlay.style.transition = 'background-color 0.35s, backdrop-filter 0.35s';
+      overlay.style.backgroundColor = 'transparent';
+      overlay.style.backdropFilter = 'blur(0px)';
+      
+      leftDoor.style.transform = 'translateX(-50%)';
+      rightDoor.style.transform = 'translateX(50%)';
+      leftDoor.style.opacity = '0';
+      rightDoor.style.opacity = '0';
+
+      setTimeout(() => {
+        overlay.remove();
+        if (callback) callback();
+      }, 350);
     }
 
-    // Клік по фону закриває попап (діє як Скасувати)
-    overlay.addEventListener('click', (e) => { 
-      if (e.target === overlay) { 
-        overlay.remove(); 
-        if (onCancel) onCancel(); 
-      } 
-    });
+    overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));
+    overlay.querySelector('#confirmNo').addEventListener('click', () => animateClose(onNo));
+    const cancelBtn = overlay.querySelector('#confirmCancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => animateClose(onCancel));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) animateClose(onCancel); });
   };
 })();
