@@ -21,8 +21,12 @@ MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
      ========================================================================== */
   const vp = document.getElementById('mapViewport');
   const inner = document.getElementById('mapInner');
-  const img = document.getElementById('mapImg');
-  
+
+
+
+
+
+// Прибрали img, бо тепер у нас чистий SVG
   const sheet = document.getElementById('stationSheet');
   const sheetBody = document.getElementById('sheetBody');
   const sheetClose = document.getElementById('sheetClose');
@@ -50,35 +54,38 @@ MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
     }
   }
 
-// Запобіжник (прибирає лоадер через 10 сек примусово, даючи час повільному інтернету)
   setTimeout(() => {
     const vp = document.getElementById('mapViewport');
     if (vp && vp.classList.contains('is-loading')) removeLoader();
   }, 10000);
 
-
-
 /* ==========================================================================
      2. УПРАВЛІННЯ КАРТОЮ (ZOOM ТА PAN)
      ========================================================================== */
   const centerX = 0.485, centerY = 0.5;
+  let baseMapWidth = 1195.84; // Збережемо базові розміри глобально
+  let baseMapHeight = 840;
 
   function applyZoomAndCenter() {
-    const natW = img.naturalWidth || img.width;
-    const natH = img.naturalHeight || img.height;
+    const svgEl = inner.querySelector('svg');
     
-    if (!natW || !natH) {
-      if (img.complete) setTimeout(applyZoomAndCenter, 50);
-      return;
+    // Якщо SVG є, намагаємося витягти його оригінальні пропорції
+    if (svgEl) {
+      const vb = svgEl.viewBox?.baseVal;
+      baseMapWidth = (vb && vb.width > 0) ? vb.width : (parseFloat(svgEl.getAttribute('width')) || 1195.84);
+      baseMapHeight = (vb && vb.height > 0) ? vb.height : (parseFloat(svgEl.getAttribute('height')) || 840);
+      svgEl.style.width = '100%';
+      svgEl.style.height = '100%';
+      svgEl.style.display = 'block';
     }
     
     const w = Math.min(window.innerWidth, document.documentElement.clientWidth);
     const sf = w <= 500 ? 4.5 : 1.5;
-    const minZoom = vp.clientWidth / natW; 
-    const zoom = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / natW));
+    const minZoom = vp.clientWidth / baseMapWidth; 
+    const zoom = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / baseMapWidth));
     
-    const newW = Math.round(natW * zoom);
-    const newH = Math.round(natH * zoom);
+    const newW = Math.round(baseMapWidth * zoom);
+    const newH = Math.round(baseMapHeight * zoom);
     
     inner.style.width = newW + 'px';
     inner.style.height = newH + 'px';
@@ -88,18 +95,17 @@ MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
     inner.style.marginLeft = padX + 'px';
     inner.style.marginTop = padY + 'px';
     
-    img.style.width = img.style.height = '100%';
-    
     requestAnimationFrame(() => {
       const targetX = padX + newW * centerX;
       const targetY = padY + newH * centerY;
       vp.scrollLeft = Math.max(0, targetX - vp.clientWidth / 2);
       vp.scrollTop = Math.max(0, targetY - vp.clientHeight / 2);
       
+      // Завжди знімаємо лоадер, навіть якщо SVG порожній чи видав помилку
       isMapReady = true;
       checkAppReady();
     });
-  } // <--- ОСЬ ЦЯ ДУЖКА ЗАГУБИЛАСЯ МИНУЛОГО РАЗУ!
+  }
 
   function adjustViewportHeight() {
     if (!vp) return;
@@ -109,38 +115,57 @@ MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
   }
 
   MetroApp.applyZoomAndCenter = applyZoomAndCenter;
-  
-  if (img.complete) {
-    adjustViewportHeight();
-    applyZoomAndCenter();
-  } else {
-    img.addEventListener('load', () => {
+
+  // НОВИЙ МЕТОД ЗАВАНТАЖЕННЯ: Вбудовуємо SVG прямо в HTML
+  async function loadInlineSVG() {
+    try {
+      const response = await fetch('KyivMetroScheme.svg'); 
+      if (!response.ok) throw new Error('HTTP Помилка: ' + response.status);
+      const svgText = await response.text();
+      inner.innerHTML = svgText;
+      
+      // БЕЗ ЦЬОГО РЯДКА КАРТА ЗАВИСНЕ, ЯКЩО SVG ЗАВАНТАЖИТЬСЯ ПІСЛЯ JSON!
+      renderMapZones(); 
+    } catch (err) {
+      console.error('Помилка завантаження SVG (Переконайтесь, що працює локальний сервер):', err);
+      // Якщо файл не завантажився (наприклад, через CORS), показуємо повідомлення замість карти
+      inner.innerHTML = '<div style="color:var(--text); padding: 40px; text-align:center;">Помилка завантаження карти.<br>Запустіть проект через локальний сервер (напр. Live Server).</div>';
+    } finally {
+      // Завжди застосовуємо зум (навіть якщо помилка, щоб зняти нескінченний лоадер)
       adjustViewportHeight();
       applyZoomAndCenter();
-    });
+    }
   }
+  loadInlineSVG();
 
   let resizeTimer;
   const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120); };  
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
 
+  document.addEventListener('DOMContentLoaded', () => { 
+    // Читаємо параметри з URL (для PWA Shortcuts)
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get('action');
 
+    // Пріоритет 1: PWA Shortcuts
+    if (action === 'search') {
+      setTimeout(() => openSearchSheet(), 50);
+    } else if (action === 'fav') {
+      setTimeout(() => openFavSheet(), 50);
+    } 
+    // Пріоритет 2: Налаштування юзера "Стартувати з обраного"
+    else if (localStorage.getItem('metro_start_on_fav') === 'true') {
+      setTimeout(() => openFavSheet(), 50);
+    }
 
-
-  
-document.addEventListener('DOMContentLoaded', () => { 
-    if (localStorage.getItem('metro_start_on_fav') === 'true') {
-      setTimeout(() => { openFavSheet(); }, 50);
+    // Очищаємо URL, щоб при оновленні сторінки дія не повторювалася
+    if (action) {
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   });
 
-
-
-
-
-
-/* Pinch zoom (ОПТИМІЗОВАНО з Throttling) */
+  /* Pinch zoom (ОПТИМІЗОВАНО з Throttling) */
   let lastPinchDist = null;
   let isPinching = false;
 
@@ -148,17 +173,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
     e.preventDefault();
 
-if (!isPinching && lastPinchDist) {
+    if (!isPinching && lastPinchDist) {
       isPinching = true;
       
-      // ✅ Кешуємо координати ДО відкладеного виклику rAF
       const t0x = e.touches[0].clientX;
       const t0y = e.touches[0].clientY;
       const t1x = e.touches[1].clientX;
       const t1y = e.touches[1].clientY;
 
       requestAnimationFrame(() => {
-        // Працюємо виключно зі збереженими цифрами
         const dx = t0x - t1x;
         const dy = t0y - t1y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -173,9 +196,9 @@ if (!isPinching && lastPinchDist) {
         const relX = (midX - imgRect.left) / oldW;
         const relY = (midY - imgRect.top) / oldH;
 
-        const natW = img.naturalWidth || img.width;
+        // Використовуємо глобальну baseMapWidth замість старого img.naturalWidth
         const minW = vp.clientWidth;
-        const maxW = Math.round(natW * 4.0);
+        const maxW = Math.round(baseMapWidth * 4.0);
         const newW = Math.max(minW, Math.min(maxW, Math.round(oldW * ratio)));
         const newH = Math.round(newW * oldH / oldW);
 
@@ -205,10 +228,7 @@ if (!isPinching && lastPinchDist) {
       lastPinchDist = null;
       isPinching = false;
     }
-  });
-
-
-
+  }); 
 
 
   /* ==========================================================================
@@ -335,6 +355,7 @@ function hydrateStations(data) {
 
     if (MetroApp.applyLocalEdits) MetroApp.applyLocalEdits(stationsData);
     if (MetroApp.applyExitLabels) MetroApp.applyExitLabels(stationsData);
+    MetroApp.currentStationsData = stationsData;
     return stationsData;
   }
 
@@ -348,7 +369,7 @@ function hydrateStations(data) {
 
 
 async function reloadStationsData(forceFresh = false) {
-    const url = forceFresh ? `stations.json?nc=${Date.now()}` : 'stations.json';
+    const url = 'stations.json';
     const response = await fetch(url, forceFresh ? { cache: 'no-store' } : undefined);
     const data = await response.json();
     const hydrated = hydrateStations(data);
@@ -363,28 +384,37 @@ if (favs.length === 0) favBody.innerHTML = `<div class="fav-empty-state"><p clas
   }
   MetroApp.reloadStationsData = reloadStationsData;
 
-  function renderMapZones() {
-    const mapInner = document.getElementById('mapInner');
-    if (!mapInner || !stationsData) return;
+function renderMapZones() {
+    const svgEl = inner.querySelector('svg');
     
-    mapInner.querySelectorAll('.zone').forEach(z => z.remove());
+    // Якщо немає карти АБО немає даних зі станціями — чекаємо
+    if (!svgEl || !stationsData) return; 
 
-    Object.values(stationsData).forEach(s => {
-      if (!s.map_zones) return;
-      s.map_zones.forEach(z => {
-        const zone = document.createElement('a');
-        const lineCode = s.slug.charAt(0);
-        zone.className = `zone ${z.type || lineCode}`;
-        if (z.tall) zone.classList.add('tall');
-        zone.dataset.slug = s.slug;
-        zone.style.left = z.x + '%';
-        zone.style.top = z.y + '%';
-        if (z.w) zone.style.width = z.w + '%';
-        if (z.h) zone.style.height = z.h + '%';
-        mapInner.appendChild(zone);
-      });
+    // Якщо все є — активуємо зони
+    const allElementsWithId = svgEl.querySelectorAll('[id]');
+    
+    allElementsWithId.forEach(el => {
+      const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+      
+      // Замість просто true/false, беремо точний ключ (slug), щоб дістати назву
+      const slug = Object.keys(stationsData).find(key => key.toLowerCase() === rawId);
+      
+      if (slug) {
+        el.style.fill = 'transparent';
+        el.style.stroke = 'transparent';
+        el.style.pointerEvents = 'all';
+        el.style.cursor = 'pointer';
+        el.style.webkitTapHighlightColor = 'transparent';
+        
+        // --- МАГІЯ ДОСТУПНОСТІ (a11y) ---
+        el.setAttribute('role', 'button'); // Кажемо телефону, що це кнопка
+        el.setAttribute('tabindex', '0');  // Робимо її видимою для свайпів і клавіатури
+        el.setAttribute('aria-label', `Станція ${stationsData[slug].name}`); // Промовляє назву!
+      }
     });
-isZonesReady = true;
+
+    // Зони готові!
+    isZonesReady = true;
     checkAppReady();
   }
 
@@ -393,13 +423,20 @@ isZonesReady = true;
 
 
 
-
-
-  inner.addEventListener('click', e => {
-    const zone = e.target.closest('a.zone');
-    if (!zone) return;
-    e.preventDefault();
-    if (zone.dataset.slug) openStation(zone.dataset.slug);
+inner.addEventListener('click', e => {
+    // Тепер нам не потрібен #ClickZones. Шукаємо будь-який об'єкт з ID
+    const zone = e.target.closest('[id]');
+    if (!zone || !zone.id) return;
+    
+    const rawId = zone.id.replace(/\d+$/, '').toLowerCase(); 
+    
+    // Шукаємо правильний slug з бази, порівнюючи їх у нижньому регістрі
+    const slug = Object.keys(stationsData).find(key => key.toLowerCase() === rawId);
+    
+    if (slug) {
+      e.preventDefault();
+      openStation(slug);
+    }
   });
 
 const FAV_KEY = 'metro_favs';
@@ -838,16 +875,18 @@ function applyFavPillStyles(container, lineColor, isFaved) {
         if (!added) return;
         const pv = getPillValues(); if (!pv) return;
 
-        const toast = document.createElement('div');
+const toast = document.createElement('div');
         toast.className = 'exit-fav-toast';
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
         toast.innerHTML = '<span class="exit-fav-toast-text">Вихід&nbsp;додано<br>до&nbsp;вибраного</span>';
-        row.prepend(toast);
+                row.prepend(toast);
         requestAnimationFrame(() => toast.classList.add('fav-note-open'));
 
 setTimeout(() => {
           toast.classList.remove('fav-note-open');
           setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        }, 2500);
       }
 function triggerExitFav() {
         const pv = getPillValues(); if (!pv) return;
@@ -1043,14 +1082,19 @@ function closeAllSheets(force = false) {
     if (dropMenu && dropMenu.classList.contains('show')) return;
 
     let clickedSlug = null;
-    // Блискавичний геометричний пошук замість маніпуляцій з DOM
-    const zones = document.querySelectorAll('a.zone');
+    // Беремо всі елементи з ID, які ми "активували" під час завантаження
+    const zones = inner.querySelectorAll('svg [id]');
     for (const zone of zones) {
+      // Пропускаємо все векторне сміття, перевіряємо лише клікабельні зони станцій
+      if (zone.style.pointerEvents !== 'all') continue;
+
       const rect = zone.getBoundingClientRect();
       if (e.clientX >= rect.left && e.clientX <= rect.right &&
           e.clientY >= rect.top && e.clientY <= rect.bottom) {
-        clickedSlug = zone.dataset.slug;
-        break;
+        
+        const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
+        clickedSlug = Object.keys(stationsData).find(key => key.toLowerCase() === rawId);
+        if (clickedSlug) break;
       }
     }
 
@@ -1109,6 +1153,7 @@ function closeAllSheets(force = false) {
             delete edits[slug][idx];
             if (Object.keys(edits[slug]).length === 0) delete edits[slug];
             localStorage.setItem('metro_local_edits', JSON.stringify(edits));
+            MetroApp.invalidateLocalEditsCache?.();
           }
           panel.classList.remove('panel-open');
           setTimeout(() => panel.remove(), 300);
@@ -1215,16 +1260,17 @@ function openSearchSheet() {
       document.body.appendChild(searchSheet);
 
       document.getElementById('searchClose').addEventListener('click', () => {
-        searchSheet.classList.remove('sheet-open');
-        document.getElementById('searchInput').blur();
-        if (document.querySelectorAll('.station-sheet.sheet-open').length === 0) {
-          document.getElementById('sheetOverlay').classList.remove('overlay-visible');
-        }
-      });
+  searchSheet._cleanupVP?.();
+  searchSheet.style.maxHeight = '';
+  searchSheet.classList.remove('sheet-open');
+  document.getElementById('searchInput').blur();
+  if (document.querySelectorAll('.station-sheet.sheet-open').length === 0) {
+    document.getElementById('sheetOverlay').classList.remove('overlay-visible');
+  }
+});
 
-      // ВСІ СЛУХАЧІ ВІШАЮТЬСЯ РІВНО 1 РАЗ ПРИ СТВОРЕННІ HTML
+// ВСІ СЛУХАЧІ ВІШАЮТЬСЯ РІВНО 1 РАЗ ПРИ СТВОРЕННІ HTML
       const input = document.getElementById('searchInput');
-      input.placeholder = ''; // Прибираємо підказку
       const resultsContainer = document.getElementById('searchResults');
 
       input.addEventListener('input', (e) => {
@@ -1250,9 +1296,20 @@ function openSearchSheet() {
     input.value = '';
     renderSearchResults('', resultsContainer);
 
-    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-    searchSheet.classList.add('sheet-open');
-    document.getElementById('sheetOverlay').classList.add('overlay-visible');
+document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+searchSheet.classList.add('sheet-open');
+document.getElementById('sheetOverlay').classList.add('overlay-visible');
+
+// Підлаштовуємо висоту під клавіатуру через visualViewport
+if (window.visualViewport) {
+  const onVPResize = () => {
+    searchSheet.style.maxHeight = window.visualViewport.height + 'px';
+  };
+  onVPResize(); // застосувати одразу при відкритті
+  window.visualViewport.addEventListener('resize', onVPResize);
+  searchSheet._cleanupVP = () =>
+    window.visualViewport.removeEventListener('resize', onVPResize);
+}
   }
 
   function renderSearchResults(query, container) {

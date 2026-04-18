@@ -57,5 +57,36 @@
       "type": "image/png",
       "purpose": "maskable any"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Пошук станції",
+      "short_name": "Пошук",
+      "description": "Швидко знайти станцію",
+      "url": "/?action=search",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Обрані виходи",
+      "short_name": "Обране",
+      "description": "Переглянути збережені виходи",
+      "url": "/?action=fav",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-mobile-1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "screenshot-mobile-2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
   ]
+
 }

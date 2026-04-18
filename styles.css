@@ -71,11 +71,11 @@ body#map-page .map-viewport {
   --z-fav-toast: 10;
   --z-fb-sticky: 100;
   --z-map-zones: 999;
-  --z-ui-buttons: 1010;
+--z-ui-buttons: 1010;
   --z-overlay: 1020;
   --z-bottom-sheet: 1030;
   --z-dropdown: 1050;
-  --z-btn-top: 1055;
+  --z-btn-top: 1010;
   --z-fullscreen-sheet: 1060;
   --z-dropdown-active: 1070;
   --z-popup-confirm: 1100;
@@ -129,15 +129,7 @@ button { font-family: inherit; }
 
 
 
-.ui-buttons {
-  position: fixed;
-  right: 12px; /* Було 14px. Тепер центр 44px-кнопки ідеально збігається з 40px-кнопкою зверху */
-  bottom: calc(14px + env(safe-area-inset-bottom));
-z-index: var(--z-ui-buttons);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+
 .ui-btn {
   width: 44px; height: 44px;
   border-radius: 50%;
@@ -151,21 +143,40 @@ z-index: var(--z-ui-buttons);
 }
 
 
-/* ══ THEME BUTTON TOP ══ */
-.theme-btn-top {
+/* ══ НИЖНІЙ ЦЕНТРАЛЬНИЙ ДОК ══ */
+.bottom-nav-dock {
   position: fixed;
-  top: calc(12px + env(safe-area-inset-top));
-  right: 14px;
-z-index: var(--z-btn-top);
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: var(--bg-card);
-  font-size: 18px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-ui-buttons);
+  
+  display: flex;
+  align-items: center;
+  gap: 16px; /* Трохи збільшив відступ між іконками, бо фону більше немає */
 }
+
+.dock-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--icon-color);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dock-btn:active {
+  opacity: 0.5;
+  transform: scale(0.9);
+}
+
+/* Колір серця в доці */
+#favListBtn { color: var(--text-muted); }
 
 /* ══ OVERLAY ══ */
 .sheet-overlay {
@@ -626,17 +637,22 @@ color: var(--text-muted);
 
 
 .drop-menu {
+  display: none;
   position: fixed;
-  top: calc(56px + env(safe-area-inset-top));
-  right: 34px;
-  transform: translateX(50%);
-z-index: var(--z-dropdown);
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  /* 50% екрану мінус 60px = ідеальний центр першої кнопки */
+  left: calc(50% - 60px);
+  transform: translateX(-50%);
+  z-index: var(--z-dropdown);
   background: var(--bg-sheet);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   min-width: auto;
   overflow: hidden;
   border: 0.5px solid var(--border);
+}
+.drop-menu.show {
+  display: block;
 }
 .drop-item {
   display: flex;
@@ -861,9 +877,7 @@ z-index: var(--z-dropdown);
 }
 
 
-
 /* ══ П.6: тло кнопок у світлій темі ══ */
-[data-theme="light"] .theme-btn-top,
 [data-theme="light"] .ui-btn {
   background: #b8b8bf;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -1095,15 +1109,7 @@ z-index: var(--z-global-modal);
 /* Дефолтні кольори для кнопок внизу */
 .ui-btn svg path { fill: var(--icon-color) !important; }
 
-/* Кастомний колір для серця (сірий в темній, темно-сірий в світлій) */
-#favListBtn {
-  font-size: 22px;
-  /* === ВИДАЛЯЄМО ФОН ТА ТІНЬ === */
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important; /* На всяк випадок */
-  /* ============================ */
-}
+
 #favListBtn svg path { fill: var(--text-muted) !important; }
 
 
@@ -1820,29 +1826,7 @@ margin: 0 0 4px 0;
   background-color: #fff;
 }
 
-/* ══ ВІКНО ПОШУКУ ══ */
-.search-btn-top {
-  position: fixed;
-  /* П.8: Відступаємо знизу на висоту кнопки серця (44px) + її відступ (14px) + проміжок (10px) = 68px */
-  bottom: calc(68px + env(safe-area-inset-bottom)); 
-  right: 12px;
-  left: auto;
-  top: auto;
-  
-  /* П.2: Знижуємо z-index, щоб вікна (1030) перекривали кнопку (1010) */
-  z-index: var(--z-ui-buttons); 
-  
-  width: 44px; /* П.1: Повертаємо нормальний розмір самої кнопки */
-  height: 44px;
-  background: transparent;
-  border: none;
-  color: var(--icon-color);
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
+
 
 /* П.1: Трохи збільшуємо саму лупу (була 20, стала 22) */
 .search-btn-top svg {
@@ -2048,4 +2032,13 @@ margin: 0 0 4px 0;
   font-size: 18px;
   line-height: 1.4;
   flex: 1;
+}
+
+/* ══ ІНТЕРАКТИВНІ ЗОНИ SVG ══ */
+#ClickZones > * {
+  fill: transparent !important;
+  stroke: transparent !important;
+  cursor: pointer;
+  pointer-events: all;
+  -webkit-tap-highlight-color: transparent;
 }
