@@ -55,6 +55,7 @@ MetroApp.DIR_SHORT_NAMES = {
   let currentStationSlug = null;
   let isMapReady = false;
   let isZonesReady = false;
+  let emptyFavColorIdx = 0;
 
   function removeLoader() {
     requestAnimationFrame(() => {
@@ -255,14 +256,16 @@ MetroApp.DIR_SHORT_NAMES = {
 
   MetroApp.ALWAYS_CAP = new Set(['україна','україни','українських','дніпра','незалежності','небесної','сотні','спорту','центр','площа','площі','героїв','лівий','правий']);
 
-  MetroApp.properCase = function(name) {
-    return name.split(/[\s\u00a0\u202f]+/).map((w, index) => {
-      const wl = w.toLowerCase();
-      const cleanWl = wl.replace(/[^а-яіїєґ]/g, '');
-      return (index === 0 || MetroApp.ALWAYS_CAP.has(cleanWl)) 
-        ? wl.replace(/[а-яіїєґ]/i, m => m.toUpperCase()) 
-        : wl;
-    }).join(' ');
+MetroApp.properCase = function(name) {
+    let wordIndex = 0;
+    // Шукаємо саме українські слова, ігноруючи &nbsp;, дефіси та інші символи (щоб не ламати розмітку)
+    return name.replace(/[а-яіїєґА-ЯІЇЄҐ]+/g, (match) => {
+      const wl = match.toLowerCase();
+      // Робимо велику літеру для першого слова АБО якщо слово є в нашому списку ALWAYS_CAP
+      const shouldCap = wordIndex === 0 || MetroApp.ALWAYS_CAP.has(wl);
+      wordIndex++;
+      return shouldCap ? wl.charAt(0).toUpperCase() + wl.slice(1) : wl;
+    });
   };
 
 function heartSvg(isFav, slug, lineColor) {
@@ -376,10 +379,24 @@ function hydrateStations(data) {
   }
 
 
+function getEmptyFavHtml() {
+    const colors = ['var(--line-blue)', 'var(--line-red)', 'var(--line-green)'];
+    const currentColor = colors[emptyFavColorIdx % colors.length];
+    emptyFavColorIdx++; // Збільшуємо для наступного разу
 
-
-
-
+    return `
+      <div class="fav-empty-state" style="text-align: center; padding: 40px 16px;">
+        <p style="font-size: 18px; color: var(--text-muted); line-height: 1.4; margin: 0 0 16px 0;">
+          Для збереження до вибраного,<br>натисніть 
+          <svg viewBox="0 0 24 22" fill="none" stroke="${currentColor}" stroke-width="2.5" style="width: 20px; height: 20px; vertical-align: -4px; display: inline-block; margin: 0 2px;">
+            <path d="${MetroApp.Icons.heartPath}"></path>
+          </svg> на&nbsp;картці&nbsp;станції
+        </p>
+        <p style="font-size: 18px; color: var(--text-muted); line-height: 1.4; margin: 0;">
+          Знаєте, який вихід вам знадобиться?<br>Збережіть його подвійним тапом по вагону і&nbsp;дверям
+        </p>
+      </div>`;
+  }
 
 
 
@@ -393,7 +410,7 @@ async function reloadStationsData(forceFresh = false) {
     // Якщо вікно Обраного відкрилось до завантаження даних — перемалюємо його
     if (favSheet?.classList.contains('sheet-open') && favBody?.querySelector('.fav-empty-text')) {
       const favs = getFavs();
-if (favs.length === 0) favBody.innerHTML = `<div class="fav-empty-state"><p class="fav-empty-text">Немає збережених станцій</p><div class="onboarding-hint"><span class="hint-icon-wrap">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div></div>`;
+      if (favs.length === 0) favBody.innerHTML = getEmptyFavHtml();
       else renderFavList(favs);
     }
     return hydrated;
@@ -425,7 +442,6 @@ function renderMapZones() {
 // --- МАГІЯ ДОСТУПНОСТІ (a11y) ---
         el.setAttribute('role', 'button'); 
         el.setAttribute('tabindex', '0');  
-        el.setAttribute('focusable', 'true'); // <--- Додай цей рядок
         el.setAttribute('aria-label', `Станція ${stationsData[slug].name}`);      }
     });
 
@@ -527,11 +543,9 @@ function toggleExitFav(slug, dir, wagon, doors) {
     }
   }
 
-
-
   function renderFavList(favs) {
-if (!favs.length) {
-      favBody.innerHTML = `<div class="fav-empty-state"><p class="fav-empty-text">Немає збережених станцій</p><div class="onboarding-hint"><span class="hint-icon-wrap">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div></div>`;
+    if (!favs.length) {
+      favBody.innerHTML = getEmptyFavHtml();
       return;
     }
 
@@ -696,8 +710,10 @@ function saveOrder() {
 
 function openFavSheet() {
     document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-    const favs = getFavs();    if (!stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
-else if (favs.length === 0) favBody.innerHTML = `<div class="fav-empty-state"><p class="fav-empty-text">Немає збережених станцій</p><div class="onboarding-hint"><span class="hint-icon-wrap">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div></div>`;    else renderFavList(favs);
+    const favs = getFavs();    
+    if (!stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
+    else if (favs.length === 0) favBody.innerHTML = getEmptyFavHtml();
+    else renderFavList(favs);
     favSheet.classList.add('sheet-open');
     sheetOverlay.classList.add('overlay-visible');
   }
@@ -716,6 +732,7 @@ else if (favs.length === 0) favBody.innerHTML = `<div class="fav-empty-state"><p
   favSheet.addEventListener('touchend', e => { if (isHandleSwipeFav && (e.changedTouches[0].clientY - swipeStartYFav > 60)) closeFavSheet(); });
 
   function renderPositions(positions, color, multiRow) {
+    positions = positions.filter(p => !p.closed);
     if (!positions.length) return '';
 
     function generatePills(wStr, dStr) {
@@ -927,8 +944,9 @@ function openStation(slug) {
 // Оновлена підказка з іконкою та новим текстом
       const onboardingHtml = getExitFavs().length === 0 ? `<div class="onboarding-hint" id="onboardingHint"><span class="hint-icon-wrap">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div>` : '';
 
-      sheetBody.innerHTML = `<div class="sheet-header"><span class="sheet-title">${s.name}</span></div>${onboardingHtml}${renderDirections(s, color)}`;
-            sheetBody.querySelectorAll('.nav-label').forEach(el => {
+document.getElementById('stationTitleMain').textContent = s.name;
+      sheetBody.innerHTML = `${onboardingHtml}${renderDirections(s, color)}`;
+                  sheetBody.querySelectorAll('.nav-label').forEach(el => {
         const target = slugByName(el.dataset.name || '');
         if (target && target !== slug) el.classList.add('nav-link');
       });
@@ -945,20 +963,25 @@ function openStation(slug) {
       if (handle) handle.style.background = color;
 
       const favBtnBar = sheet.querySelector('.fav-btn-bar');
-      if (favBtnBar) {
+ if (favBtnBar) {
         favBtnBar.dataset.slug = slug;
         favBtnBar.dataset.color = color;
         favBtnBar.innerHTML = heartSvg(fav, slug, color);
         favBtnBar.classList.toggle('fav-active', fav);
       }
 
-      document.querySelectorAll('.station-sheet').forEach(el => { if (el.id !== 'stationSheet') el.classList.remove('sheet-open'); });
-      if (!sheet.classList.contains('sheet-open')) { sheet.classList.add('sheet-open'); sheetOverlay.classList.add('overlay-visible'); }
+      // ЗАКРИВАЄМО ВСІ ІНШІ ВІКНА (Вибране, Пошук тощо), щоб вони не висіли фоном
+      document.querySelectorAll('.station-sheet').forEach(el => {
+        if (el.id !== 'stationSheet') el.classList.remove('sheet-open');
+      });
+
+      if (!sheet.classList.contains('sheet-open')) { 
+        sheet.classList.add('sheet-open'); 
+        sheetOverlay.classList.add('overlay-visible'); 
+      }
       attachExitFavListeners(sheetBody, slug, color);
     }
-    actualOpenStation();
   }
-
 function closeAllSheets(force = false) {
     if (!force) {
       if (withUnsavedCheck(() => closeAllSheets(true))) return false;
@@ -983,8 +1006,9 @@ function closeAllSheets(force = false) {
     if (stationsData[currentStationSlug] && sheet.classList.contains('sheet-open')) {
       const s = stationsData[currentStationSlug];
       const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
-      const prevScrollTop = sheetBody.scrollTop;
-      sheetBody.innerHTML = `<div class="sheet-header"><span class="sheet-title">${s.name}</span></div>${renderDirections(s, color)}`;
+const prevScrollTop = sheetBody.scrollTop;
+      document.getElementById('stationTitleMain').textContent = s.name;
+      sheetBody.innerHTML = `${renderDirections(s, color)}`;
       sheetBody.querySelectorAll('.nav-label').forEach(el => {
         const target = slugByName(el.dataset.name || '');
         if (target && target !== currentStationSlug) el.classList.add('nav-link');
@@ -1044,8 +1068,13 @@ function closeAllSheets(force = false) {
             MetroApp.invalidateLocalEditsCache?.();
           }
           panel.classList.remove('panel-open');
-          setTimeout(() => panel.remove(), 300);
-          reloadStationsData(true).then(() => openStation(slug));
+setTimeout(() => panel.remove(), 300);
+          reloadStationsData(true)
+            .then(() => openStation(slug))
+            .catch(err => {
+              console.error('Помилка оновлення даних після скидання правок', err);
+              alert('Помилка з\'єднання. Перевірте інтернет.');
+            });
         } catch(err) { console.error('edit reset failed', err); }
       });
     }
@@ -1221,7 +1250,15 @@ function openSearchSheet() {
       searchSheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isHandleSearch = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
       searchSheet.addEventListener('touchend', e => { if (isHandleSearch && (e.changedTouches[0].clientY - swY > 60)) document.getElementById('searchClose').click(); });
     }
-
+// Адаптація під клавіатуру (visualViewport)
+    if (window.visualViewport) {
+      const onVPResize = () => {
+        searchSheet.style.maxHeight = window.visualViewport.height + 'px';
+      };
+      onVPResize();
+      window.visualViewport.addEventListener('resize', onVPResize);
+      searchSheet._cleanupVP = () => window.visualViewport.removeEventListener('resize', onVPResize);
+    }
     const input = document.getElementById('searchInput');
     const resultsContainer = document.getElementById('searchResults');
     input.value = '';

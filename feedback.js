@@ -68,32 +68,43 @@ function getLocalEdits() {
   MetroApp.applyLocalEdits = function(stationsData) {
     const edits = getLocalEdits();
     let editsChanged = false;
+    
     for (const [slug, posEdits] of Object.entries(edits)) {
       if (!stationsData[slug]) continue;
+      const s = stationsData[slug];
+      
+      // 1. Спочатку застосовуємо правки до існуючих позицій
       let posIdx = 0;
-      for (const dir of stationsData[slug].directions) {
+      for (const dir of s.directions) {
         for (const exit of dir.exits) {
           for (let i = 0; i < exit.positions.length; i++) {
-            if (posEdits[posIdx] !== undefined) {
+            if (posEdits[posIdx] !== undefined && !posEdits[posIdx].isNew) {
               const edit = posEdits[posIdx];
-              const wStr = String(edit.wagon ?? '');
-              const dStr = String(edit.doors ?? '');
-              if (wStr.includes('NaN') || dStr.includes('NaN') || wStr === 'undefined' || dStr === 'undefined') {
-                delete posEdits[posIdx];
-                editsChanged = true;
-              } else {
-                exit.positions[i] = { ...exit.positions[i], ...edit, _edited: true, _slug: slug, _posIdx: posIdx };
-              }
+              exit.positions[i] = { ...exit.positions[i], ...edit, _edited: true, _slug: slug, _posIdx: posIdx };
             }
             posIdx++;
           }
         }
       }
-      if (Object.keys(posEdits).length === 0) delete edits[slug];
-    }
-    if (editsChanged) {
-      if (Object.keys(edits).length === 0) { localEditsCache = null; localStorage.removeItem('metro_local_edits'); }
-      else localStorage.setItem('metro_local_edits', JSON.stringify(edits));
+
+      // 2. ДОДАЄМО НОВІ ВИХОДИ, ЯКИХ НЕМАЄ В БАЗІ
+      Object.keys(posEdits).forEach(idx => {
+        const edit = posEdits[idx];
+        if (edit.isNew) {
+          // Шукаємо потрібний напрямок у станції
+          const targetDir = s.directions.find(d => d.from === edit.dir);
+          if (targetDir) {
+            // Створюємо новий об'єкт виходу
+            const newExit = {
+              label: edit.label || '',
+              positions: [{ wagon: String(edit.wagon), doors: String(edit.doors), _edited: true, _slug: slug, _posIdx: parseInt(idx) }]
+            };
+            targetDir.exits.push(newExit);
+            // Також додаємо в загальний список positions (для внутрішньої логіки)
+            s.positions.push({ dir: edit.dir, exit: newExit.label, wagon: String(edit.wagon), doors: String(edit.doors) });
+          }
+        }
+      });
     }
   };
 
@@ -117,6 +128,11 @@ function getLocalEdits() {
     return adj;
   }
 
+  function getOppositeDoors(w, d) {
+    // Дзеркальне відображення: вагон (6 - w), двері (5 - d)
+    return { w: 6 - parseInt(w), d: 5 - parseInt(d) };
+  }
+
   function closeAllHints() {
     document.getElementById('feedbackInfoPanel')?.classList.remove('fb-info-open');
     document.querySelectorAll('.fb-add-doors-hint.fb-hint-open').forEach(h => h.classList.remove('fb-hint-open'));
@@ -134,25 +150,40 @@ function getLocalEdits() {
     cur.dEx2  = rd(`fbD_ex2_${idx}`);
   }
 
-  function markFeedbackDirty() {
+
+
+
+
+function markFeedbackDirty() {
     if (!fbState.slug) return;
     let isDirty = false;
 
-    // Порівнюємо поточний Стейт з Оригіналом
-    for (const i in fbState.original) {
-      const orig = fbState.original[i];
-      const cur = fbState.current[i];
-      if (
-        String(orig.wMain) !== String(cur.wMain) || 
-        String(orig.dMain) !== String(cur.dMain) ||
-        String(orig.wEx) !== String(cur.wEx) || 
-        String(orig.dEx) !== String(cur.dEx) ||
-        String(orig.wEx2) !== String(cur.wEx2) || 
-        String(orig.dEx2) !== String(cur.dEx2) ||
-        orig.isClosed !== cur.isClosed
-      ) {
+    // 1. Спочатку перевіряємо, чи є АБСОЛЮТНО НОВІ додані виходи
+    for (const i in fbState.current) {
+      if (fbState.current[i] && fbState.current[i].isNew) {
         isDirty = true;
         break;
+      }
+    }
+
+    // 2. Якщо нових немає, порівнюємо всі поточні значення зі старими
+    if (!isDirty) {
+      for (const i in fbState.original) {
+        const orig = fbState.original[i];
+        const cur = fbState.current[i];
+        if (!cur) continue;
+        if (
+          String(orig.wMain) !== String(cur.wMain) || 
+          String(orig.dMain) !== String(cur.dMain) ||
+          String(orig.wEx) !== String(cur.wEx) || 
+          String(orig.dEx) !== String(cur.dEx) ||
+          String(orig.wEx2) !== String(cur.wEx2) || 
+          String(orig.dEx2) !== String(cur.dEx2) ||
+          orig.isClosed !== cur.isClosed
+        ) {
+          isDirty = true;
+          break;
+        }
       }
     }
 
@@ -163,9 +194,11 @@ function getLocalEdits() {
       });
     }
 
+    // Запам'ятовуємо результат
     fbState.isDirty = isDirty;
     MetroApp.fbUnsaved = isDirty;
     
+    // Вмикаємо або вимикаємо кнопку
     const sendBtn = document.getElementById('fbSend');
     if (sendBtn) {
       sendBtn.textContent = 'Застосувати';
@@ -173,6 +206,8 @@ function getLocalEdits() {
       sendBtn.disabled = !isDirty;
     }
   }
+
+
 
   function changeText(p, nw, nd, closed) {
     const loc = [p.dir, p.exit].filter(Boolean).join(' · ');
@@ -352,90 +387,6 @@ container.addEventListener('click', (event) => {
           const max = parseInt(btn.dataset.max);
           let val = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
           el.textContent = Math.max(min, Math.min(max, val));
-
-          const exWNode = document.getElementById(`fbW_ex${idx}`);
-          const exDNode = document.getElementById(`fbD_ex${idx}`);
-          if (exWNode && exDNode && exWNode.textContent !== '-') {
-            const newMainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
-            const newMainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
-            const adj = getAdjacentDoors(newMainW, newMainD);
-            const isValid = adj.some(a => a.w === parseInt(exWNode.textContent) && a.d === parseInt(exDNode.textContent));
-            if (!isValid) {
-              exWNode.textContent = adj[0].w;
-              exDNode.textContent = adj[0].d;
-            }
-            const ex2WNode = document.getElementById(`fbW_ex2_${idx}`);
-            const ex2DNode = document.getElementById(`fbD_ex2_${idx}`);
-            const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
-            if (ex2WNode && ex2DNode && wrap2 && !wrap2.classList.contains('is-hidden')) {
-              const curExW = parseInt(exWNode.textContent);
-              const curExD = parseInt(exDNode.textContent);
-              const adj2 = getAdjacentDoors(curExW, curExD);
-              const mainW2 = parseInt(document.getElementById(`fbW${idx}`).textContent);
-              const mainD2 = parseInt(document.getElementById(`fbD${idx}`).textContent);
-              const validAdj2 = adj2.filter(a => !(a.w === mainW2 && a.d === mainD2));
-              if (validAdj2.length) { ex2WNode.textContent = validAdj2[0].w; ex2DNode.textContent = validAdj2[0].d; }
-            }
-          }
-        }
-
-        // 2. ФІКСУЄМО СТАН ПІСЛЯ КЛІКУ
-        const stateAfter = [
-          document.getElementById(`fbW${idx}`)?.textContent,
-          document.getElementById(`fbD${idx}`)?.textContent,
-          document.getElementById(`fbW_ex${idx}`)?.textContent,
-          document.getElementById(`fbD_ex${idx}`)?.textContent,
-          document.getElementById(`fbW_ex2_${idx}`)?.textContent,
-          document.getElementById(`fbD_ex2_${idx}`)?.textContent
-        ].join('|');
-
-        // 3. ВИКЛИКАЄМО ОНОВЛЕННЯ ТІЛЬКИ ЯКЩО БУЛИ ЗМІНИ
-        if (stateBefore !== stateAfter) {
-          syncCurrentStateFromDOM(parseInt(idx));
-          const noteEl = document.getElementById(`fbExtraNote${idx}`);
-          if (noteEl && noteEl.classList.contains('is-hidden')) noteEl.classList.remove('is-hidden');
-          markFeedbackDirty();
-        }
-        return;
-      }
-
-      const infoBtn = event.target.closest('.fb-add-doors-info');
-      if (infoBtn) {
-        event.preventDefault();
-        event.stopPropagation();
-        const hint = document.getElementById(`fbHint${infoBtn.dataset.idx}`);
-        document.querySelectorAll('.fb-add-doors-hint.fb-hint-open').forEach(h => {
-          if (h !== hint) h.classList.remove('fb-hint-open');
-        });
-        if (hint) hint.classList.toggle('fb-hint-open');
-        return;
-      }
-
-      const addDoorsBtn = event.target.closest('.fb-add-doors-link');
-      if (addDoorsBtn) {
-        const idx = addDoorsBtn.dataset.idx;
-        const canHaveThird = addDoorsBtn.dataset.canHaveThird === '1';
-        document.getElementById(`fbAddDoorsRow${idx}`).classList.add('is-hidden');
-        document.getElementById(`fbExtraWrap${idx}`).classList.remove('is-hidden');
-        document.getElementById(`fbItemInner${idx}`).classList.add('has-extra-doors');
-
-        const exWNode = document.getElementById(`fbW_ex${idx}`);
-        const exDNode = document.getElementById(`fbD_ex${idx}`);
-        if (exWNode.textContent === '-') {
-          const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
-          const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
-          const adj = getAdjacentDoors(mainW, mainD);
-          exWNode.textContent = adj[0].w;
-          exDNode.textContent = adj[0].d;
-        }
-
-        if (canHaveThird) {
-          const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
-          if (wrap2 && wrap2.classList.contains('is-hidden')) {
-            document.getElementById(`fbAddDoorsRow${idx}`).classList.remove('is-hidden');
-          } else if (wrap2 && !wrap2.classList.contains('is-hidden')) {
-            document.getElementById(`fbAddDoorsRow${idx}`).classList.add('is-hidden');
-          }
         }
 
         syncCurrentStateFromDOM(parseInt(idx));
@@ -471,6 +422,66 @@ container.addEventListener('click', (event) => {
           if (!isOpen) { wrap.classList.add('label-input-open'); setTimeout(() => input.focus(), 250); }
           else wrap.classList.remove('label-input-open');
         }
+        return;
+      }
+// --- ЛОГІКА ДОДАВАННЯ НОВОГО ВИХОДУ ---
+      const addExitBtn = event.target.closest('.fb-add-exit-btn');
+      if (addExitBtn) {
+        const dir = addExitBtn.dataset.dir;
+        const newIdx = Object.keys(fbState.current).length;
+        
+        // Шукаємо, які вагони/двері ВЖЕ є в цьому напрямку
+        let defaultW = 1;
+        let defaultD = 1;
+        
+        const existingExits = Object.values(fbState.current).filter(st => st.dir === dir && !st.isNew);
+        if (existingExits.length > 0) {
+          // Беремо перший існуючий вихід в цьому напрямку і робимо йому "дзеркало"
+          const existing = existingExits[0];
+          const opposite = getOppositeDoors(existing.wMain, existing.dMain);
+          defaultW = opposite.w;
+          defaultD = opposite.d;
+        }
+        
+        // Створюємо стан для нового виходу з розумними дефолтами
+        fbState.current[newIdx] = { 
+          wMain: defaultW, dMain: defaultD, wEx: '-', dEx: '-', wEx2: '-', dEx2: '-', 
+          hasExtra: false, hasThird: false, isClosed: false, isNew: true, dir: dir 
+        };
+        fbState.labels[newIdx] = '';
+        
+        // Миттєво перемальовуємо через глобальне посилання
+        if (typeof MetroApp._renderFeedbackPositions === 'function') {
+          MetroApp._renderFeedbackPositions(fbState.slug);
+        }
+        
+        // Фокусуємось на полі "додати опис" нового виходу
+        setTimeout(() => {
+          const btn = document.querySelector(`.fb-add-desc-btn[data-item-idx="${newIdx}"]`);
+          btn?.click(); 
+        }, 100);
+
+        markFeedbackDirty();
+        return;
+      }
+
+      // --- ЛОГІКА ДОДАВАННЯ ДРУГИХ ДВЕРЕЙ (+1) ---
+      const addDoorsBtn = event.target.closest('.fb-add-doors-link');
+      if (addDoorsBtn) {
+        const idx = addDoorsBtn.dataset.idx;
+        document.getElementById(`fbExtraWrap${idx}`).classList.remove('is-hidden');
+        addDoorsBtn.parentNode.classList.add('is-hidden');
+        document.getElementById(`fbItemInner${idx}`).classList.add('has-extra-doors');
+
+        const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+        const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+        const adj = getAdjacentDoors(mainW, mainD);
+        
+        document.getElementById(`fbW_ex${idx}`).textContent = adj[0].w;
+        document.getElementById(`fbD_ex${idx}`).textContent = adj[0].d;
+
+        syncCurrentStateFromDOM(parseInt(idx));
+        markFeedbackDirty();
         return;
       }
 
@@ -584,6 +595,12 @@ function openFeedbackSheet(stationsData) {
               if (Object.keys(edits).length === 0) clearAllLocalEdits(); 
               else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
             }
+            // Скидаємо стан у пам'яті та інвалідуємо кеш
+            MetroApp.invalidateLocalEditsCache?.();
+            if (fbState.current[idx]) fbState.current[idx].isClosed = false;
+            // Застосовуємо до даних і оновлюємо картку станції
+            if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
+            MetroApp.refreshCurrentStation?.();
             renderFeedbackPositions(slug); 
             if (typeof renderResetBtn === 'function') renderResetBtn();
             return;
@@ -597,8 +614,31 @@ function openFeedbackSheet(stationsData) {
 const closeBtn = e.target.closest('.fb-close-exit');
           if (closeBtn) {
             const idx = parseInt(closeBtn.dataset.idx); 
-            const p = s.positions[idx];
-            const loc = [p.dir.startsWith('попередня') ? p.dir : `Попередня ${p.dir}`, p.exit].filter(Boolean).join(' · ');
+            
+            // --- НОВА ЛОГІКА: ЯКЩО ЦЕ "САМОРОБНИЙ" ВИХІД — ПРОСТО ЗНИЩУЄМО ЙОГО ---
+            if (fbState.current[idx] && fbState.current[idx].isNew) {
+              delete fbState.current[idx];
+              delete fbState.labels[idx];
+              delete fbState.original[idx];
+              
+              // Якщо юзер вже встиг зберегти його локально — чистимо і там
+              const edits = getLocalEdits();
+              if (edits[slug] && edits[slug][idx]) {
+                delete edits[slug][idx];
+                if (Object.keys(edits[slug]).length === 0) delete edits[slug];
+                if (Object.keys(edits).length === 0) clearAllLocalEdits();
+                else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+              }
+              
+              renderFeedbackPositions(slug);
+              markFeedbackDirty();
+              if (typeof renderResetBtn === 'function') renderResetBtn();
+              return; // Перериваємо функцію!
+            }
+            
+            // --- СТАРА ЛОГІКА ДЛЯ ІСНУЮЧИХ ВИХОДІВ ---
+            const p = MetroApp.currentStationsData[fbState.slug]?.positions[idx];
+            if (!p) return; 
             
             const exWrap = document.getElementById(`fbExtraWrap${idx}`);
             if (exWrap && !exWrap.classList.contains('is-hidden')) {
@@ -606,30 +646,32 @@ const closeBtn = e.target.closest('.fb-close-exit');
                 document.getElementById(`fbD${idx}`).textContent = document.getElementById(`fbD_ex${idx}`).textContent;
                 document.getElementById(`fbW_ex${idx}`).textContent = '-'; document.getElementById(`fbD_ex${idx}`).textContent = '-';
                 exWrap.classList.add('is-hidden');
-                if (document.getElementById(`fbAddDoorsRow${idx}`)) document.getElementById(`fbAddDoorsRow${idx}`).classList.remove('is-hidden');
+                const addRow = document.getElementById(`fbAddDoorsRow${idx}`);
+                if (addRow) addRow.classList.remove('is-hidden');
                 document.getElementById(`fbItemInner${idx}`).classList.remove('has-extra-doors');
-                MetroApp.fbUnsaved = true; sendBtn.textContent = 'Застосувати'; sendBtn.disabled = false;
+                syncCurrentStateFromDOM(idx);
+                markFeedbackDirty();
                 return;
             }
 
-            // МИТТЄВЕ ЗАКРИТТЯ ВИХОДУ
+            // Одразу позначаємо як недоступний — кнопка скасувати (↩) вже є в інтерфейсі
+            const loc = [p.dir, p.exit].filter(Boolean).join(' · ');
             saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
             if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
-            
-            // Оновлюємо інтерфейс — одразу з'явиться плашка "Вихід недоступний" з кнопкою відміни (стрілкою)
+            MetroApp.invalidateLocalEditsCache?.();
+            fbState.current[idx].isClosed = true;
             renderFeedbackPositions(slug);
             if (typeof renderResetBtn === 'function') renderResetBtn();
-
-            // Відправляємо розробнику у фоні (тихо)
-            fetch(FORMSPREE_URL, { 
-              method: 'POST', 
-              headers: { 'Content-Type': 'application/json' }, 
-              body: JSON.stringify({ 
-                station: s.name, 
-                slug, 
-                line: LINE_NAMES[s.line], 
-                changes: `${loc}: ВИХІД ЗАКРИТО` 
-              }) 
+            // Оновлюємо картку станції
+            MetroApp.refreshCurrentStation?.();
+            // Повідомляємо розробника у фоні
+            fetch(FORMSPREE_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                station: s.name, slug, line: LINE_NAMES[s.line],
+                changes: `${loc}: ВИХІД ЗАКРИТО`
+              })
             }).catch(e => console.warn('[Feedback] Background report failed', e));
           }
         });
@@ -718,23 +760,35 @@ function renderResetBtn() {
         });
       }
 
-      function renderFeedbackPositions(slug) {
-        if (!slug) { posEl.innerHTML = ''; sendBtn.disabled = true; return; }
-        initFeedbackState(slug);
-        const s = MetroApp.currentStationsData[slug];
-        if (!s?.positions?.length) { posEl.innerHTML = '<p class="fb-note">Для цієї станції немає позицій.</p>'; return; }
-        const edits = getLocalEdits()[slug] || {};
 
+function renderFeedbackPositions(slug) {
+        if (!slug) { posEl.innerHTML = ''; sendBtn.disabled = true; return; }
+        
+        // Ініціалізуємо стан лише при ПЕРШОМУ виборі станції, 
+        // щоб при додаванні виходу (перемальовуванні) дані не скидались
+        if (fbState.slug !== slug) initFeedbackState(slug);
+        
+        const s = MetroApp.currentStationsData[slug];
         const groupsMap = new Map();
-        s.positions.forEach((p, i) => {
-          const key = p.dir;
-          let g = groupsMap.get(key);
-          if (!g) {
-            g = { key, dir: p.dir, items: [] };
-            groupsMap.set(key, g);
-          }
+
+        // 1. Спочатку додаємо існуючі позиції з бази
+        s?.positions?.forEach((p, i) => {
+          let g = groupsMap.get(p.dir);
+          if (!g) { g = { dir: p.dir, items: [] }; groupsMap.set(p.dir, g); }
           g.items.push({ p, i });
         });
+
+        // 2. Додаємо абсолютно нові виходи, які юзер створив кнопкою "+"
+        Object.keys(fbState.current).forEach(idx => {
+          const state = fbState.current[idx];
+          if (state.isNew) {
+            let g = groupsMap.get(state.dir);
+            if (!g) { g = { dir: state.dir, items: [] }; groupsMap.set(state.dir, g); }
+            // Створюємо фейковий об'єкт позиції для рендеру
+            g.items.push({ p: { dir: state.dir, exit: fbState.labels[idx] || '', wagon: state.wMain, doors: state.dMain }, i: parseInt(idx) });
+          }
+        });
+
         const groups = [...groupsMap.values()];
 
 
@@ -778,83 +832,125 @@ posEl.innerHTML = groups.map(g => {
             </div>${dividerHtml}`;
           }).join('');
           
-          // Звідси також прибрано 'мертвий код' про додавання виходів, який ти просив видалити раніше
-          return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>${itemsHtml}</div>`;
+// Дозволяємо додавати лише для конкретних станцій
+          const canAddMore = ['R.Zhytomyrska', 'G.Osokorky', 'G.Chervonyi_khutir'].includes(slug);
+          // Перевіряємо, чи юзер ВЖЕ додав новий вихід у цьому напрямку
+          const hasNewAlready = Object.values(fbState.current).some(st => st.isNew && st.dir === g.dir);
+          
+          // Показуємо кнопку, ТІЛЬКИ якщо ще не додано новий вихід
+         const addBtnHtml = (canAddMore && !hasNewAlready) ? `<div class="fb-add-exit-row"><button type="button" class="fb-add-exit-btn" data-dir="${g.dir}">+ Додати ще один вихід</button></div>` : '';
+
+          return `<div class="fb-pos-row"><div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>${itemsHtml}${addBtnHtml}</div>`;
         }).join('');
-
-        sendBtn.disabled = true;
+        
         renderResetBtn();
+        markFeedbackDirty(); // <--- Дозволяємо системі самій вирішити, вмикати кнопку чи ні
       }
-
+      MetroApp._renderFeedbackPositions = renderFeedbackPositions;
 
 
 
 MetroApp.triggerFeedbackSubmit = async function(background = false) {
-        // Запобіжник від подвійних кліків
         if (MetroApp._isSubmitting) return;
         MetroApp._isSubmitting = true;
 
         const slug = stationEl.value;
         if (!slug) { MetroApp._isSubmitting = false; return; }
-        
+
         try {
           const s = MetroApp.currentStationsData[slug];
-          
-          // Збираємо зміни позицій
-          const posChanges = s.positions.map((p, i) => {
-            // Передаємо в функцію об'єкт стану, а не індекс!
-            const vals = extractFinalValues(fbState.current[i]);
-            if (!vals) return null;
-            return (vals.finalW !== String(p.wagon) || vals.finalD !== String(p.doors)) ? { i, p, nw: vals.finalW, nd: vals.finalD } : null;
-          }).filter(Boolean);
 
-          // Збираємо зміни описів
-          const labelChanges = [];
-          document.querySelectorAll('.fb-exit-label-input').forEach(inp => {
-             if (inp.dataset.changed === "true") {
-                const idx = inp.id.replace('fbLabelInput', '');
-                const p = s.positions[idx];
-                const loc = [p?.dir, p?.exit].filter(Boolean).join(' · '); 
-                labelChanges.push(`${loc}: НОВИЙ ОПИС [${inp.value}]`);
-                inp.dataset.changed = "false";
-             }
+          // Збираємо змінені позиції, порівнюючи current з original
+          const posChanges = [];
+          s.positions.forEach((p, i) => {
+            const orig = fbState.original[i];
+            const cur  = fbState.current[i];
+            if (!orig || !cur) return;
+
+            // Вихід щойно позначено як закритий
+            if (cur.isClosed && !orig.isClosed) {
+              posChanges.push({ i, p, closed: true });
+              return;
+            }
+
+            // Числові зміни вагону/дверей
+            const vals     = extractFinalValues(cur);
+            const origVals = extractFinalValues(orig);
+            if (!vals || !origVals) return;
+            if (vals.finalW !== origVals.finalW || vals.finalD !== origVals.finalD) {
+              posChanges.push({ i, p, nw: vals.finalW, nd: vals.finalD });
+            }
           });
 
-          // Якщо змін немає
-          if (!posChanges.length && !labelChanges.length) { 
-            if (!background) {
-                resultEl.innerHTML = '<p class="fb-note">Змін не виявлено.</p>';
-                // Видаляємо напис через 3 секунди, щоб повернути розмір
-                setTimeout(() => { resultEl.innerHTML = ''; }, 3000);
-            }
-            MetroApp.fbUnsaved = false; 
-            MetroApp._isSubmitting = false;
-            return; 
-          }
-          
-          // Застосовуємо локально
-          posChanges.forEach(c => saveLocalEdit(slug, c.i, { wagon: c.nw, doors: c.nd }));
-          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
-          MetroApp.fbUnsaved = false; 
+          // Абсолютно нові виходи
+          const newExits = Object.keys(fbState.current)
+            .filter(idx => fbState.current[idx].isNew)
+            .map(idx => {
+              const st   = fbState.current[idx];
+              const vals = extractFinalValues(st);
+              return vals ? { idx, st, vals } : null;
+            }).filter(Boolean);
 
-          if (!background) { 
+          // Зміни текстових описів
+          const labelChanges = [];
+          document.querySelectorAll('.fb-exit-label-input').forEach(inp => {
+            if (inp.dataset.changed === 'true') {
+              const idx = inp.id.replace('fbLabelInput', '');
+              const p   = s.positions[idx];
+              const loc = [p?.dir, p?.exit].filter(Boolean).join(' · ');
+              labelChanges.push(`${loc}: НОВИЙ ОПИС [${inp.value}]`);
+              inp.dataset.changed = 'false';
+            }
+          });
+
+          if (!posChanges.length && !newExits.length && !labelChanges.length) {
+            if (!background) {
+              resultEl.innerHTML = '<p class="fb-note">Змін не виявлено.</p>';
+              setTimeout(() => { resultEl.innerHTML = ''; }, 3000);
+            }
+            MetroApp.fbUnsaved = false;
+            MetroApp._isSubmitting = false;
+            return;
+          }
+
+          // Зберігаємо локально
+          posChanges.forEach(c => saveLocalEdit(slug, c.i,
+            c.closed
+              ? { wagon: c.p.wagon, doors: c.p.doors, closed: true }
+              : { wagon: c.nw, doors: c.nd }
+          ));
+          newExits.forEach(({ idx, st, vals }) => saveLocalEdit(slug, idx, {
+            wagon: vals.finalW, doors: vals.finalD,
+            dir: st.dir, label: fbState.labels[idx], isNew: true
+          }));
+
+          MetroApp.invalidateLocalEditsCache?.();
+          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
+          MetroApp.refreshCurrentStation?.();
+          MetroApp.fbUnsaved = false;
+
+          if (!background) {
             sendBtn.disabled = true;
             sendBtn.innerHTML = '<span class="fb-send-spinner"></span>';
-            renderFeedbackPositions(slug); 
+            renderFeedbackPositions(slug);
             resultEl.innerHTML = '';
           }
 
-          let formspreeBody = posChanges.map(c => changeText(c.p, c.nw, c.nd, false));
-          formspreeBody = formspreeBody.concat(labelChanges); 
+          // Формуємо текст для Formspree
+          const formspreeLines = [
+            ...posChanges.map(c => changeText(c.p, c.nw ?? c.p.wagon, c.nd ?? c.p.doors, !!c.closed)),
+            ...newExits.map(({ st, vals }) => `${st.dir}: НОВИЙ ВИХІД (вагон ${vals.finalW}, двері ${vals.finalD})`),
+            ...labelChanges
+          ];
 
           const response = await fetch(FORMSPREE_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeBody.join('\n') })
+            body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeLines.join('\n') })
           });
-          
-          if (!response.ok) throw new Error('Помилка сервера');
-          
-          // === УСПІШНЕ ЗАВЕРШЕННЯ ===
+
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+
+          // Успіх
           if (!background) {
             sendBtn.textContent = 'Зміни застосовано';
             sendBtn.style.color = 'var(--text-muted)';
@@ -862,11 +958,13 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
             resultEl.innerHTML = '';
           }
         } catch (error) {
-          console.error('[KyivMetroGO] Помилка відправки:', error);
+          // Локальні зміни вже збережено — просто повертаємо кнопку в нейтральний стан
+          console.warn('[KyivMetroGO] Formspree недоступний, зміни збережено локально:', error);
           if (!background) {
-            sendBtn.textContent = 'Спробувати ще раз'; 
-            sendBtn.disabled = false;
-            resultEl.innerHTML = ''; // Навіть при помилці тримаємо вікно стабільним
+            sendBtn.textContent = 'Застосувати';
+            sendBtn.style.color = '';
+            sendBtn.disabled = true;
+            resultEl.innerHTML = '';
           }
         } finally {
           MetroApp._isSubmitting = false;
