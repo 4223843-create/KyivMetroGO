@@ -1,8 +1,9 @@
-const CACHE_NAME = 'kyivmetro-v5';
+const CACHE_NAME = 'kyivmetro-v6';
 
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
+  '/sortable.min.js',
   '/script.js',
   '/feedback.js',
   '/styles.css',

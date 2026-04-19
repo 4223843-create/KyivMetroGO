@@ -1,7 +1,3 @@
-MetroApp.addExitToStation = function(slug, dir) {
-  console.log('[KyivMetroGO] TODO addExit:', slug, dir);
-};
-
 (function() {
 
   const FORMSPREE_URL = 'https://formspree.io/f/mgopobnd';

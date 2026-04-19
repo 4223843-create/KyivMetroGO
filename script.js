@@ -14,6 +14,20 @@ MetroApp.Icons = {
 };
 
 MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
+
+/* Скорочені назви для відображення в «Обраному» */
+MetroApp.FAV_DISPLAY_NAMES = {
+  'B.Ploshcha_Ukrainskikh_heroiv': 'Пл. Українських героїв',
+};
+
+/* Скорочення напрямків коли виходів > 1 (ключ — нижній регістр) */
+MetroApp.DIR_SHORT_NAMES = {
+  'контрактова площа':    'Контрактова',
+  'поштова площа':        'Поштова',
+  'майдан незалежності':  'Майдан',
+  'політехнічний інститут': 'Політехнічний',
+  'золоті ворота':        'Золоті',
+};
 (function () {
 
   /* ==========================================================================
@@ -55,7 +69,6 @@ MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
   }
 
   setTimeout(() => {
-    const vp = document.getElementById('mapViewport');
     if (vp && vp.classList.contains('is-loading')) removeLoader();
   }, 10000);
 
@@ -69,17 +82,20 @@ MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
   function applyZoomAndCenter() {
     const svgEl = inner.querySelector('svg');
     
-    // Якщо SVG є, намагаємося витягти його оригінальні пропорції
     if (svgEl) {
-      const vb = svgEl.viewBox?.baseVal;
-      baseMapWidth = (vb && vb.width > 0) ? vb.width : (parseFloat(svgEl.getAttribute('width')) || 1195.84);
-      baseMapHeight = (vb && vb.height > 0) ? vb.height : (parseFloat(svgEl.getAttribute('height')) || 840);
       svgEl.style.width = '100%';
       svgEl.style.height = '100%';
       svgEl.style.display = 'block';
     }
     
+    // Жорстко фіксуємо розміри, щоб уникнути багів до повного рендеру SVG
+    baseMapWidth = 1195.84;
+    baseMapHeight = 840;
+    
     const w = Math.min(window.innerWidth, document.documentElement.clientWidth);
+
+
+
     const sf = w <= 500 ? 4.5 : 1.5;
     const minZoom = vp.clientWidth / baseMapWidth; 
     const zoom = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / baseMapWidth));
@@ -406,11 +422,11 @@ function renderMapZones() {
         el.style.cursor = 'pointer';
         el.style.webkitTapHighlightColor = 'transparent';
         
-        // --- МАГІЯ ДОСТУПНОСТІ (a11y) ---
-        el.setAttribute('role', 'button'); // Кажемо телефону, що це кнопка
-        el.setAttribute('tabindex', '0');  // Робимо її видимою для свайпів і клавіатури
-        el.setAttribute('aria-label', `Станція ${stationsData[slug].name}`); // Промовляє назву!
-      }
+// --- МАГІЯ ДОСТУПНОСТІ (a11y) ---
+        el.setAttribute('role', 'button'); 
+        el.setAttribute('tabindex', '0');  
+        el.setAttribute('focusable', 'true'); // <--- Додай цей рядок
+        el.setAttribute('aria-label', `Станція ${stationsData[slug].name}`);      }
     });
 
     // Зони готові!
@@ -423,21 +439,23 @@ function renderMapZones() {
 
 
 
-inner.addEventListener('click', e => {
-    // Тепер нам не потрібен #ClickZones. Шукаємо будь-який об'єкт з ID
+function handleMapInteraction(e) {
+    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+
     const zone = e.target.closest('[id]');
     if (!zone || !zone.id) return;
     
     const rawId = zone.id.replace(/\d+$/, '').toLowerCase(); 
-    
-    // Шукаємо правильний slug з бази, порівнюючи їх у нижньому регістрі
     const slug = Object.keys(stationsData).find(key => key.toLowerCase() === rawId);
     
     if (slug) {
       e.preventDefault();
       openStation(slug);
     }
-  });
+  }
+
+  inner.addEventListener('click', handleMapInteraction);
+  inner.addEventListener('keydown', handleMapInteraction);
 
 const FAV_KEY = 'metro_favs';
   let favCache = null;
@@ -563,10 +581,7 @@ let savedOrder = [];
     });
 
     const listHtml = itemsToRender.map(item => {
-      let displayName = item.name;
-      if (item.slug === 'B.Ploshcha_Ukrainskikh_heroiv') {
-        displayName = 'Пл. Українських героїв';
-      }
+      let displayName = MetroApp.FAV_DISPLAY_NAMES[item.slug] || item.name;
 
       let formattedDir = '';
       if (item.dir && item.dir !== 'undefined') {
@@ -583,11 +598,7 @@ let stationName = lower.replace(/^попередня\s+/, '');
 
           if (item.exits.length > 1) {
             const fsLower = formattedStation.toLowerCase();
-            if (fsLower === 'контрактова площа') formattedStation = 'Контрактова';
-            else if (fsLower === 'поштова площа') formattedStation = 'Поштова';
-            else if (fsLower === 'майдан незалежності') formattedStation = 'Майдан';
-            else if (fsLower === 'політехнічний інститут') formattedStation = 'Політехнічний';
-            else if (fsLower === 'золоті ворота') formattedStation = 'Золоті';
+            formattedStation = MetroApp.DIR_SHORT_NAMES[fsLower] || formattedStation;
           }
 
           formattedDir = lower.startsWith('попередня') ? `попередня ${formattedStation}` : formattedStation;
@@ -645,103 +656,34 @@ let stationName = lower.replace(/^попередня\s+/, '');
       });
     }
 
-    let dragSrc = null;
-    function getDragItems() { return [...favBody.querySelectorAll('.fav-item')]; }
-    function saveOrder() { 
-      const items = getDragItems();
-      const rowIds = items.map(i => i.dataset.rowId);
+    
+
+
+
+function saveOrder() { 
+      const items = [...favBody.querySelectorAll('.fav-item')];
+      // Запобіжник від порожніх значень
+      const rowIds = items.map(i => i.dataset.rowId).filter(Boolean);
       localStorage.setItem('metro_fav_rows_order', JSON.stringify(rowIds));
       
-      const currentSlugs = items.map(i => i.dataset.slug);
-      const uniqueSlugs = [...new Set(currentSlugs)];
+      const uniqueSlugs = [...new Set(items.map(i => i.dataset.slug).filter(Boolean))];
       saveFavs(uniqueSlugs); 
     }
 
-    function getItemAtY(y) { return getDragItems().find(item => { const r = item.getBoundingClientRect(); return y >= r.top && y <= r.bottom; }); }
-    function clearDragState() { getDragItems().forEach(i => i.classList.remove('fav-over')); }
-
-
-
-
-
-
-// Створюємо глобальний контролер для миші
-    if (favBody._dragController) favBody._dragController.abort();
-    favBody._dragController = new AbortController();
-
-    favBody.querySelectorAll('.fav-drag-handle').forEach(handle => {
-      const item = handle.closest('.fav-item');
+    // Ініціалізуємо SortableJS (бібліотека працює локально)
+    if (window.Sortable) {
+      if (favBody._sortable) favBody._sortable.destroy();
       
-      // Touch events залишаємо як були...
-      handle.addEventListener('touchstart', e => { e.preventDefault(); dragSrc = item; dragSrc.classList.add('fav-dragging'); }, { passive: false });
-      handle.addEventListener('touchmove', e => { /* твій існуючий touchmove код */
-        if (!dragSrc) return;
-        e.preventDefault();
-        if (!handle._isDragging) {
-          handle._isDragging = true;
-          requestAnimationFrame(() => {
-            const target = getItemAtY(e.touches[0].clientY);
-            if (target && target !== dragSrc) {
-              clearDragState();
-              target.classList.add('fav-over');
-              const items = getDragItems();
-              if (items.indexOf(dragSrc) < items.indexOf(target)) target.after(dragSrc); else target.before(dragSrc);
-            }
-            handle._isDragging = false;
-          });
-        }
-      }, { passive: false });
-      handle.addEventListener('touchend', () => {
-        if (!dragSrc) return;
-        dragSrc.classList.remove('fav-dragging');
-        clearDragState();
-        saveOrder(); dragSrc = null;
+      favBody._sortable = new Sortable(favBody, {
+        draggable: '.fav-item',
+        handle: '.fav-drag-handle',
+        animation: 250,
+        ghostClass: 'fav-ghost',
+        dragClass: 'fav-dragging',
+        fallbackOnBody: true,
+        swapThreshold: 0.65,
+        onEnd: saveOrder
       });
-
-      // Mouse events з AbortController
-      handle.addEventListener('mousedown', () => { 
-        dragSrc = item; 
-        dragSrc.classList.add('fav-dragging'); 
-        
-        // Якщо контролер було обірвано попереднім mouseup, створюємо новий
-        if (favBody._dragController.signal.aborted) {
-          favBody._dragController = new AbortController();
-        }
-        const { signal } = favBody._dragController;
-
-        // Передаємо signal. Коли ми викличемо abort(), ці слухачі зникнуть самі!
-        document.addEventListener('mousemove', onMouseMove, { signal }); 
-        document.addEventListener('mouseup', onMouseUp, { signal }); 
-      });
-    });
-
-    function onMouseMove(e) {
-      if (!dragSrc) return;
-      if (!favBody._isMouseDragging) {
-        favBody._isMouseDragging = true;
-        requestAnimationFrame(() => {
-          const target = getItemAtY(e.clientY);
-          if (target && target !== dragSrc) {
-            clearDragState();
-            target.classList.add('fav-over');
-            const items = getDragItems();
-            if (items.indexOf(dragSrc) < items.indexOf(target)) target.after(dragSrc); else target.before(dragSrc);
-          }
-          favBody._isMouseDragging = false;
-        });
-      }
-    }
-    
-    function onMouseUp() {
-      if (!dragSrc) return;
-      dragSrc.classList.remove('fav-dragging');
-      clearDragState();
-      saveOrder(); 
-      dragSrc = null;
-      favBody._isMouseDragging = false;
-      
-      // ВБИВАЄМО ВСІ СЛУХАЧІ МИШІ ОДНИМ ВИКЛИКОМ!
-      favBody._dragController.abort();
     }
   }
 
@@ -954,18 +896,25 @@ function triggerExitFav() {
     });
   }
 
-function openStation(slug) {
-    if (typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
-      // Отримуємо назву поточної станції, яку ми редагували
-const currentStationName = document.getElementById('fbStationLabel')?.textContent || '';
-      const question = currentStationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${currentStationName}?</span>` : 'Зберегти зміни?';
-      MetroApp.showCustomConfirm(question, () => {
-        if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
-        MetroApp.fbUnsaved = false;
-        actualOpenStation(); 
-      }, () => { MetroApp.fbUnsaved = false; actualOpenStation(); }, () => { /* Скасувати */ });
-      return; 
+function withUnsavedCheck(proceed) {
+    if (MetroApp.hasUnsavedFeedback?.()) {
+      const stationName = document.getElementById('fbStationLabel')?.textContent || '';
+      const question = stationName
+        ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>`
+        : 'Зберегти зміни?';
+      MetroApp.showCustomConfirm(question,
+        () => { MetroApp.triggerFeedbackSubmit?.(true); MetroApp.fbUnsaved = false; proceed(); },
+        () => { MetroApp.fbUnsaved = false; proceed(); },
+        () => {}
+      );
+      return true;
     }
+    proceed();
+    return false;
+  }
+
+function openStation(slug) {
+    withUnsavedCheck(actualOpenStation);
 
     function actualOpenStation() {
       if (!stationsData?.[slug]) return;
@@ -1011,15 +960,8 @@ const currentStationName = document.getElementById('fbStationLabel')?.textConten
   }
 
 function closeAllSheets(force = false) {
-    if (!force && typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
-      const stationName = document.getElementById('fbStationLabel')?.textContent || '';
-      const question = stationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>` : 'Зберегти зміни?';
-      
-      MetroApp.showCustomConfirm(question, () => {
-        if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
-        MetroApp.fbUnsaved = false; closeAllSheets(true); 
-      }, () => { MetroApp.fbUnsaved = false; closeAllSheets(true); }, () => { /* Скасувати */ });
-      return false;
+    if (!force) {
+      if (withUnsavedCheck(() => closeAllSheets(true))) return false;
     }
     
     // --- Цей шматок був загублений ---
@@ -1055,6 +997,7 @@ function closeAllSheets(force = false) {
   sheetClose.addEventListener('click', () => closeAllSheets());
 
   sheetBody.addEventListener('click', e => {
+    // --- навігаційні мітки (пересадки) ---
     const navLabel = e.target.closest('.nav-label');
     if (navLabel) {
       const target = slugByName(navLabel.dataset.name || '');
@@ -1063,6 +1006,48 @@ function closeAllSheets(force = false) {
         openStation(target);
         return;
       }
+    }
+
+    // --- олівець «значення змінено користувачем» ---
+    const pencil = e.target.closest('.pos-edited-mark');
+    if (pencil) {
+      e.stopPropagation();
+      const row = pencil.closest('.position-row');
+      const slug = pencil.dataset.slug; const idx = pencil.dataset.idx;
+
+      let panel = row.nextElementSibling;
+      if (panel && panel.classList.contains('edit-info-panel')) {
+        panel.classList.remove('panel-open');
+        setTimeout(() => { if (!panel.classList.contains('panel-open')) panel.remove(); }, 300);
+        return;
+      }
+
+      document.querySelectorAll('.edit-info-panel').forEach(p => {
+        p.classList.remove('panel-open');
+        setTimeout(() => p.remove(), 300);
+      });
+
+      panel = document.createElement('div');
+      panel.className = 'edit-info-panel';
+      panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;margin:4px 0 0"><span class="fb-closed-note">Значення змінено користувачем</span><button class="fb-restore-exit edit-info-cancel" style="pointer-events:auto" data-slug="' + slug + '" data-idx="' + idx + '">' + MetroApp.Icons.undo + '</button></div>';
+      row.after(panel);
+      requestAnimationFrame(() => panel.classList.add('panel-open'));
+
+      panel.querySelector('.edit-info-cancel').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        try {
+          const edits = JSON.parse(localStorage.getItem('metro_local_edits') || '{}');
+          if (edits[slug] && edits[slug][idx]) {
+            delete edits[slug][idx];
+            if (Object.keys(edits[slug]).length === 0) delete edits[slug];
+            localStorage.setItem('metro_local_edits', JSON.stringify(edits));
+            MetroApp.invalidateLocalEditsCache?.();
+          }
+          panel.classList.remove('panel-open');
+          setTimeout(() => panel.remove(), 300);
+          reloadStationsData(true).then(() => openStation(slug));
+        } catch(err) { console.error('edit reset failed', err); }
+      });
     }
   });
 
@@ -1120,49 +1105,6 @@ function closeAllSheets(force = false) {
       else { if (dy > 60) closeAllSheets(); }
   });
 
-  sheetBody.addEventListener('click', e => {
-    const pencil = e.target.closest('.pos-edited-mark');
-    if (pencil) {
-      e.stopPropagation();
-      const row = pencil.closest('.position-row');
-      const slug = pencil.dataset.slug; const idx = pencil.dataset.idx;
-
-      let panel = row.nextElementSibling;
-      if (panel && panel.classList.contains('edit-info-panel')) {
-        panel.classList.remove('panel-open');
-        setTimeout(() => { if (!panel.classList.contains('panel-open')) panel.remove(); }, 300);
-        return;
-      }
-
-      document.querySelectorAll('.edit-info-panel').forEach(p => {
-        p.classList.remove('panel-open');
-        setTimeout(() => p.remove(), 300);
-      });
-
-      panel = document.createElement('div');
-      panel.className = 'edit-info-panel';
-      panel.innerHTML = '<div class="fb-closed-note-wrap" style="pointer-events:auto;margin:4px 0 0"><span class="fb-closed-note">Значення змінено користувачем</span><button class="fb-restore-exit edit-info-cancel" style="pointer-events:auto" data-slug="' + slug + '" data-idx="' + idx + '">' + MetroApp.Icons.undo + '</button></div>';      
-      row.after(panel);
-      requestAnimationFrame(() => panel.classList.add('panel-open'));
-
-      panel.querySelector('.edit-info-cancel').addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        try {
-          const edits = JSON.parse(localStorage.getItem('metro_local_edits') || '{}');
-          if (edits[slug] && edits[slug][idx]) {
-            delete edits[slug][idx];
-            if (Object.keys(edits[slug]).length === 0) delete edits[slug];
-            localStorage.setItem('metro_local_edits', JSON.stringify(edits));
-            MetroApp.invalidateLocalEditsCache?.();
-          }
-          panel.classList.remove('panel-open');
-          setTimeout(() => panel.remove(), 300);
-          reloadStationsData(true).then(() => openStation(slug));
-        } catch(err) { console.error('edit reset failed', err); }
-      });
-    }
-  });
-
   const THEME_KEY = 'metro_theme';
   const root = document.documentElement;
 
@@ -1202,23 +1144,12 @@ function closeAllSheets(force = false) {
     document.getElementById('aboutItem')?.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
       dropMenu.classList.remove('show'); dropMenu.hidden = true;
-      
-if (typeof MetroApp.hasUnsavedFeedback === 'function' && MetroApp.hasUnsavedFeedback()) {
-        const stationName = document.getElementById('fbStationLabel')?.textContent || '';
-        const question = stationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>` : 'Зберегти зміни?';
-        
-        MetroApp.showCustomConfirm(question, () => {
-          if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
-          MetroApp.fbUnsaved = false; executeAboutTransition();
-        }, () => { MetroApp.fbUnsaved = false; executeAboutTransition(); }, () => { /* Скасувати */ });
-        return;
-      }
-      
+
       function executeAboutTransition() {
         document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
         if (typeof openAboutSheet === 'function') openAboutSheet();
       }
-      executeAboutTransition(); 
+      withUnsavedCheck(executeAboutTransition);
     });
   }
 
@@ -1300,16 +1231,6 @@ document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('s
 searchSheet.classList.add('sheet-open');
 document.getElementById('sheetOverlay').classList.add('overlay-visible');
 
-// Підлаштовуємо висоту під клавіатуру через visualViewport
-if (window.visualViewport) {
-  const onVPResize = () => {
-    searchSheet.style.maxHeight = window.visualViewport.height + 'px';
-  };
-  onVPResize(); // застосувати одразу при відкритті
-  window.visualViewport.addEventListener('resize', onVPResize);
-  searchSheet._cleanupVP = () =>
-    window.visualViewport.removeEventListener('resize', onVPResize);
-}
   }
 
   function renderSearchResults(query, container) {
@@ -1391,6 +1312,7 @@ function animateClose(callback) {
         door.style.margin = '0';
         door.style.animation = 'none';
         door.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease';
+        door.style.pointerEvents = 'none';
       });
 
       leftDoor.style.clipPath = 'inset(0 50% 0 0)';
