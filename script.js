@@ -784,32 +784,47 @@ function openFavSheet() {
     function renderCheckinContent() {
       const s = document.getElementById('checkinSheet');
       const all = getCheckins();
-      const entries = Object.values(all).sort((a, b) => b.ts - a.ts);
+      const entries = Object.values(all);
       let bodyHtml = '';
       if (!entries.length) {
         bodyHtml = `<p class="fav-empty-text">Поки що немає відміток.<br>Увімкніть режим check‑in і натисніть<br>на шпильку поруч із виходом.</p>`;
       } else {
+        // Групуємо по slug
         const byStation = {};
         entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
+
         bodyHtml = Object.entries(byStation).map(([slug, items]) => {
           const st = stationsData?.[slug];
           const color = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
           const name  = st?.name || slug;
-          const itemsHtml = items.map(e => `
-            <div class="checkin-entry">
-              <div class="checkin-pin-icon">${checkinPinSvg(true, color)}</div>
-              <div class="checkin-entry-info">
-                <span class="checkin-dir">${e.dir || '—'}</span>
-                <span class="checkin-pos" style="color:${color}">вагон ${e.wagon} · двері ${e.doors}</span>
+
+          // Загальна кількість виходів станції
+          const totalExits = st?.positions?.filter(p => !p.closed).length ?? '?';
+          const checkedCount = items.length;
+          const lastTs = Math.max(...items.map(e => e.ts || 0));
+
+          // Лінійний прогрес-бар
+          const pct = totalExits > 0 ? Math.round((checkedCount / totalExits) * 100) : 0;
+
+          return `<div class="checkin-station-group">
+            <div class="checkin-station-row" style="--ci-color:${color}">
+              <div class="checkin-station-left">
+                <span class="checkin-station-name-text">${name}</span>
+                <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
               </div>
-              <span class="checkin-time">${formatCheckinTime(e.ts)}</span>
-            </div>`).join('');
-          return `<div class="checkin-station-group"><div class="checkin-station-name" style="border-left-color:${color}">${name}</div>${itemsHtml}</div>`;
+              <div class="checkin-station-right">
+                <span class="checkin-fraction" style="color:${color}">${checkedCount}<span class="checkin-fraction-total">/${totalExits}</span></span>
+              </div>
+            </div>
+            <div class="checkin-progress-wrap">
+              <div class="checkin-progress-bar" style="width:${pct}%;background:${color}"></div>
+            </div>
+          </div>`;
         }).join('');
         bodyHtml += `<div style="padding:16px 0 4px;text-align:center;"><button id="checkinClearBtn" class="fb-reset-btn">Очистити журнал</button></div>`;
       }
       s.innerHTML = `
-        <div class="sheet-handle-bar"><div class="sheet-handle"></div><span class="sheet-sheet-title">Журнал виходів</span><button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button></div>
+        <div class="sheet-handle-bar"><div class="sheet-handle"></div><span class="sheet-sheet-title">Check-in</span><button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button></div>
         <div class="sheet-body">${bodyHtml}</div>`;
       s.querySelector('#checkinClose')?.addEventListener('click', closeHandler);
       s.querySelector('#checkinClearBtn')?.addEventListener('click', () => {
@@ -1605,6 +1620,16 @@ function updateCheckinDock() {
         });
       }
 
+      const checkinInfoBtn = document.getElementById('settingsCheckinInfo');
+      const checkinHint    = document.getElementById('settingsCheckinHint');
+      if (checkinInfoBtn && checkinHint) {
+        checkinInfoBtn.addEventListener('click', () => {
+          const open = !checkinHint.hidden;
+          checkinHint.hidden = open;
+          checkinInfoBtn.classList.toggle('settings-info-btn-active', !open);
+        });
+      }
+
       let swY = 0, isSwipeSettings = false;
       settingsSheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isSwipeSettings = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
       settingsSheet.addEventListener('touchend',   e => { if (isSwipeSettings && e.changedTouches[0].clientY - swY > 60) document.getElementById('settingsClose').click(); });
@@ -1625,6 +1650,11 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
     const rect = sheetEl.getBoundingClientRect();
     if (rect.height < 10) { callback?.(); return; }
 
+    // Миттєво вимикаємо рідну CSS-transition шторки —
+    // щоб після видалення клонів вона не з'їжджала вниз на очах
+    sheetEl.style.transition = 'none';
+    sheetEl.style.visibility = 'hidden';
+
     const baseStyle = [
       `position:fixed`, `top:${rect.top}px`, `left:${rect.left}px`,
       `width:${rect.width}px`, `height:${rect.height}px`,
@@ -1634,12 +1664,11 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
 
     const leftDoor  = sheetEl.cloneNode(true);
     const rightDoor = sheetEl.cloneNode(true);
-    leftDoor.setAttribute('style',  baseStyle + ';clip-path:inset(0 50% 0 0)');
-    rightDoor.setAttribute('style', baseStyle + ';clip-path:inset(0 0 0 50%)');
+    leftDoor.style.cssText  = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
+    rightDoor.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
 
     document.body.appendChild(leftDoor);
     document.body.appendChild(rightDoor);
-    sheetEl.style.visibility = 'hidden';
 
     void leftDoor.offsetWidth; // reflow
 
@@ -1648,14 +1677,18 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
     leftDoor.style.opacity    = '0';
     rightDoor.style.opacity   = '0';
 
-setTimeout(() => {
+    setTimeout(() => {
       leftDoor.remove();
       rightDoor.remove();
-      callback?.(); // Спочатку відпрацьовує закриття
-      // Чекаємо мить, поки CSS "вб'є" позицію, і тільки тоді повертаємо видимість
-      setTimeout(() => { sheetEl.style.visibility = ''; }, 50);
+      callback?.();
+      // Відновлюємо після того, як callback прибрав sheet-open:
+      // елемент вже translateY(100%) без анімації — не видно
+      requestAnimationFrame(() => {
+        sheetEl.style.transition = '';
+        sheetEl.style.visibility = '';
+      });
     }, 360);
-}; // <--- ОСЬ ЦЯ ДУЖКА ВРЯТУЄ ДОДАТОК! Вона закриває animateSheetClose.
+  };
 
 MetroApp.showCustomConfirm = function(message, onYes, onNo, onCancel) {
     const overlay = document.createElement('div');
