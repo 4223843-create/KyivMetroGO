@@ -189,8 +189,6 @@ MetroApp.DIR_SHORT_NAMES = {
      PAN (1 палець) + PINCH ZOOM (2 пальці) — карта
      ═══════════════════════════════════════════════════ */
   let lastPinchDist = null;
-  let pendingPinch  = null;
-  let pinchRAFScheduled = false;
   let panStartX = null, panStartY = null;
   let panStartScrollLeft = 0, panStartScrollTop = 0;
   let isPanActive = false;
@@ -219,7 +217,7 @@ MetroApp.DIR_SHORT_NAMES = {
     vp.scrollTop  = panStartScrollTop  - (e.touches[0].clientY - panStartY);
   }, { passive: true });
 
-  // Pinch zoom: накопичуємо ratio на кожному touchmove, RAF застосовує останній
+  // Pinch zoom: застосовуємо кожен touchmove напряму для максимальної плавності
   document.addEventListener('touchmove', e => {
     if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
     e.preventDefault();
@@ -227,44 +225,34 @@ MetroApp.DIR_SHORT_NAMES = {
 
     const t0x = e.touches[0].clientX, t0y = e.touches[0].clientY;
     const t1x = e.touches[1].clientX, t1y = e.touches[1].clientY;
+    const midX = (t0x + t1x) / 2;
+    const midY = (t0y + t1y) / 2;
     const dist  = Math.hypot(t0x - t1x, t0y - t1y);
     const ratio = dist / lastPinchDist;
-    lastPinchDist = dist; // оновлюємо одразу — без накопиченого стрибка
+    lastPinchDist = dist;
 
-    pendingPinch = { ratio, midX: (t0x + t1x) / 2, midY: (t0y + t1y) / 2 };
+    const oldW = inner.offsetWidth;
+    const oldH = inner.offsetHeight;
+    const imgRect = inner.getBoundingClientRect();
+    const relX = (midX - imgRect.left) / oldW;
+    const relY = (midY - imgRect.top)  / oldH;
 
-    if (!pinchRAFScheduled) {
-      pinchRAFScheduled = true;
-      requestAnimationFrame(() => {
-        pinchRAFScheduled = false;
-        if (!pendingPinch) return;
-        const { ratio: r, midX, midY } = pendingPinch;
-        pendingPinch = null;
+    const minW = vp.clientWidth;
+    const maxW = Math.round(baseMapWidth * 4.0);
+    const newW = Math.max(minW, Math.min(maxW, oldW * ratio));
+    const newH = newW * oldH / oldW;
 
-        const oldW = inner.offsetWidth;
-        const oldH = inner.offsetHeight;
-        const imgRect = inner.getBoundingClientRect();
-        const relX = (midX - imgRect.left) / oldW;
-        const relY = (midY - imgRect.top) / oldH;
+    const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
+    const padY = Math.max(0, (vp.clientHeight - newH) / 2);
 
-        const minW = vp.clientWidth;
-        const maxW = Math.round(baseMapWidth * 4.0);
-        const newW = Math.max(minW, Math.min(maxW, Math.round(oldW * r)));
-        const newH = Math.round(newW * oldH / oldW);
+    inner.style.width      = newW + 'px';
+    inner.style.height     = newH + 'px';
+    inner.style.marginLeft = padX + 'px';
+    inner.style.marginTop  = padY + 'px';
 
-        const padX = Math.max(0, (vp.clientWidth - newW) / 2);
-        const padY = Math.max(0, (vp.clientHeight - newH) / 2);
-
-        inner.style.width  = newW + 'px';
-        inner.style.height = newH + 'px';
-        inner.style.marginLeft = padX + 'px';
-        inner.style.marginTop  = padY + 'px';
-
-        const vpRect = vp.getBoundingClientRect();
-        vp.scrollLeft = Math.round((relX * newW + padX) - (midX - vpRect.left));
-        vp.scrollTop  = Math.round((relY * newH + padY) - (midY - vpRect.top));
-      });
-    }
+    const vpRect = vp.getBoundingClientRect();
+    vp.scrollLeft = (relX * newW + padX) - (midX - vpRect.left);
+    vp.scrollTop  = (relY * newH + padY) - (midY - vpRect.top);
   }, { passive: false });
 
   document.addEventListener('touchend', e => {
@@ -786,59 +774,86 @@ function openFavSheet() {
       const all = getCheckins();
       const entries = Object.values(all);
       let bodyHtml = '';
+
       if (!entries.length) {
         bodyHtml = `<p class="fav-empty-text">Поки що немає відміток.<br>Увімкніть режим check‑in і натисніть<br>на шпильку поруч із виходом.</p>`;
       } else {
-        // Групуємо по slug
-        const byStation = {};
-        entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
+        // ── Загальна статистика ──
+        const totalCheckins = entries.length;
+        const totalExitsAll = stationsData
+          ? Object.values(stationsData).reduce((sum, st) => sum + (st.positions?.filter(p => !p.closed).length ?? 0), 0)
+          : 0;
 
-        bodyHtml = Object.entries(byStation).map(([slug, items]) => {
+        bodyHtml += `<div class="ci-stats-bar">
+          <div class="ci-stat">
+            <span class="ci-stat-num">${Object.keys(groupBySlug(entries)).length}</span>
+            <span class="ci-stat-lbl">станцій</span>
+          </div>
+          <div class="ci-stat-sep"></div>
+          <div class="ci-stat">
+            <span class="ci-stat-num">${totalCheckins}</span>
+            <span class="ci-stat-lbl">виходів</span>
+          </div>
+          <div class="ci-stat-sep"></div>
+          <div class="ci-stat">
+            <span class="ci-stat-num">${totalExitsAll > 0 ? Math.round(totalCheckins / totalExitsAll * 100) : 0}%</span>
+            <span class="ci-stat-lbl">охоплення</span>
+          </div>
+        </div>`;
+
+        const byStation = groupBySlug(entries);
+        bodyHtml += Object.entries(byStation).map(([slug, items]) => {
           const st = stationsData?.[slug];
           const color = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
           const name  = st?.name || slug;
-
-          // Загальна кількість виходів станції
-          const totalExits = st?.positions?.filter(p => !p.closed).length ?? '?';
+          const totalExits = st?.positions?.filter(p => !p.closed).length ?? 0;
           const checkedCount = items.length;
+          const pct = totalExits > 0 ? Math.round(checkedCount / totalExits * 100) : 0;
           const lastTs = Math.max(...items.map(e => e.ts || 0));
 
-          // Лінійний прогрес-бар
-          const pct = totalExits > 0 ? Math.round((checkedCount / totalExits) * 100) : 0;
-
-          return `<div class="checkin-station-group">
-            <div class="checkin-station-row" style="--ci-color:${color}">
-              <div class="checkin-station-left">
+          return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-color:${color}">
+            <div class="checkin-card-row">
+              <div class="checkin-card-left">
                 <span class="checkin-station-name-text">${name}</span>
                 <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
               </div>
-              <div class="checkin-station-right">
+              <div class="checkin-card-right">
                 <span class="checkin-fraction" style="color:${color}">${checkedCount}<span class="checkin-fraction-total">/${totalExits}</span></span>
               </div>
             </div>
             <div class="checkin-progress-wrap">
               <div class="checkin-progress-bar" style="width:${pct}%;background:${color}"></div>
             </div>
-          </div>`;
+          </button>`;
         }).join('');
-        bodyHtml += `<div style="padding:16px 0 4px;text-align:center;"><button id="checkinClearBtn" class="fb-reset-btn">Очистити журнал</button></div>`;
       }
+
       s.innerHTML = `
         <div class="sheet-handle-bar"><div class="sheet-handle"></div><span class="sheet-sheet-title">Check-in</span><button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button></div>
         <div class="sheet-body">${bodyHtml}</div>`;
+
       s.querySelector('#checkinClose')?.addEventListener('click', closeHandler);
-      s.querySelector('#checkinClearBtn')?.addEventListener('click', () => {
-        MetroApp.showCustomConfirm('Очистити весь журнал check‑in?', () => {
-          localStorage.removeItem(CHECKIN_KEY);
-          updateCheckinDock();
-          document.querySelectorAll('.pos-checkin-btn.is-checked-in').forEach(b => { b.classList.remove('is-checked-in'); b.innerHTML = CHECKIN_PIN_SVG_OFF; });
-          renderCheckinContent();
-        }, null, null);
+
+      // Кліки по картках — відкрити станцію
+      s.querySelectorAll('.checkin-station-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const slug = card.dataset.slug;
+          if (slug) {
+            closeHandler();
+            setTimeout(() => openStation(slug), 380);
+          }
+        });
       });
 
       let swY2 = 0, isSwipeCI = false;
       s.addEventListener('touchstart', e => { swY2 = e.touches[0].clientY; isSwipeCI = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
       s.addEventListener('touchend',   e => { if (isSwipeCI && e.changedTouches[0].clientY - swY2 > 60) closeHandler(); });
+    }
+
+    function groupBySlug(entries) {
+      const map = {};
+      entries.forEach(e => { if (!map[e.slug]) map[e.slug] = []; map[e.slug].push(e); });
+      return map;
     }
 
     if (!checkinSheet) {
@@ -1435,13 +1450,18 @@ function openSearchSheet() {
       searchSheet.addEventListener('touchend', e => { if (isHandleSearch && (e.changedTouches[0].clientY - swY > 60)) document.getElementById('searchClose').click(); });
     }
 // Адаптація під клавіатуру (visualViewport)
+    // iOS: відступ знизу для системних елементів управління (home indicator, тулбар Safari)
+    const IOS_BOTTOM_OFFSET = 56; // px — місце для жесту «додому» / адресного рядка
     if (window.visualViewport) {
       const onVPResize = () => {
-        searchSheet.style.maxHeight = window.visualViewport.height + 'px';
+        const safeH = window.visualViewport.height - IOS_BOTTOM_OFFSET;
+        searchSheet.style.maxHeight = Math.max(200, safeH) + 'px';
       };
       onVPResize();
       window.visualViewport.addEventListener('resize', onVPResize);
       searchSheet._cleanupVP = () => window.visualViewport.removeEventListener('resize', onVPResize);
+    } else {
+      searchSheet.style.maxHeight = (window.innerHeight - IOS_BOTTOM_OFFSET) + 'px';
     }
     const input = document.getElementById('searchInput');
     const resultsContainer = document.getElementById('searchResults');
@@ -1630,6 +1650,20 @@ function updateCheckinDock() {
         });
       }
 
+      const clearCheckinBtn = document.getElementById('settingsClearCheckin');
+      if (clearCheckinBtn) {
+        clearCheckinBtn.addEventListener('click', () => {
+          MetroApp.showCustomConfirm('Очистити весь журнал check‑in?', () => {
+            localStorage.removeItem(CHECKIN_KEY);
+            updateCheckinDock();
+            document.querySelectorAll('.pos-checkin-btn.is-checked-in').forEach(b => {
+              b.classList.remove('is-checked-in');
+              b.innerHTML = CHECKIN_PIN_SVG_OFF;
+            });
+          }, null, null);
+        });
+      }
+
       let swY = 0, isSwipeSettings = false;
       settingsSheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isSwipeSettings = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
       settingsSheet.addEventListener('touchend',   e => { if (isSwipeSettings && e.changedTouches[0].clientY - swY > 60) document.getElementById('settingsClose').click(); });
@@ -1650,11 +1684,6 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
     const rect = sheetEl.getBoundingClientRect();
     if (rect.height < 10) { callback?.(); return; }
 
-    // Миттєво вимикаємо рідну CSS-transition шторки —
-    // щоб після видалення клонів вона не з'їжджала вниз на очах
-    sheetEl.style.transition = 'none';
-    sheetEl.style.visibility = 'hidden';
-
     const baseStyle = [
       `position:fixed`, `top:${rect.top}px`, `left:${rect.left}px`,
       `width:${rect.width}px`, `height:${rect.height}px`,
@@ -1664,11 +1693,12 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
 
     const leftDoor  = sheetEl.cloneNode(true);
     const rightDoor = sheetEl.cloneNode(true);
-    leftDoor.style.cssText  = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
-    rightDoor.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
+    leftDoor.setAttribute('style',  baseStyle + ';clip-path:inset(0 50% 0 0)');
+    rightDoor.setAttribute('style', baseStyle + ';clip-path:inset(0 0 0 50%)');
 
     document.body.appendChild(leftDoor);
     document.body.appendChild(rightDoor);
+    sheetEl.style.visibility = 'hidden';
 
     void leftDoor.offsetWidth; // reflow
 
@@ -1677,18 +1707,14 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
     leftDoor.style.opacity    = '0';
     rightDoor.style.opacity   = '0';
 
-    setTimeout(() => {
+setTimeout(() => {
       leftDoor.remove();
       rightDoor.remove();
-      callback?.();
-      // Відновлюємо після того, як callback прибрав sheet-open:
-      // елемент вже translateY(100%) без анімації — не видно
-      requestAnimationFrame(() => {
-        sheetEl.style.transition = '';
-        sheetEl.style.visibility = '';
-      });
+      callback?.(); // Спочатку відпрацьовує закриття
+      // Чекаємо мить, поки CSS "вб'є" позицію, і тільки тоді повертаємо видимість
+      setTimeout(() => { sheetEl.style.visibility = ''; }, 50);
     }, 360);
-  };
+}; // <--- ОСЬ ЦЯ ДУЖКА ВРЯТУЄ ДОДАТОК! Вона закриває animateSheetClose.
 
 MetroApp.showCustomConfirm = function(message, onYes, onNo, onCancel) {
     const overlay = document.createElement('div');
