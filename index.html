@@ -33,6 +33,12 @@
 </main>
 
 <nav class="bottom-nav-dock">
+<button id="checkinBtn" class="dock-btn" aria-label="Журнал виходів" hidden>
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26">
+      <path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="var(--text-muted)"/>
+    </svg>
+  </button>
+
   <button id="favListBtn" class="dock-btn" aria-label="Вибране">
     <svg width="22" height="20" viewBox="0 0 24 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
@@ -54,7 +60,12 @@
 
   <div id="dropMenu" class="drop-menu" hidden>
     <button class="drop-item" id="themeToggleItem">
-      <div class="drop-item-icon" id="themeIcon"></div>
+      <div class="drop-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
     </button>
     <button class="drop-item" id="feedbackItem">
       <div class="drop-item-icon">
@@ -102,6 +113,12 @@
     <div class="search-input-wrap">
       <input type="text" id="searchInput" class="search-input" autocomplete="off">
     </div>
+    <div id="searchLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
+      <button class="search-line-btn is-active" data-line="">Всі</button>
+      <button class="search-line-btn" data-line="red">Червона</button>
+      <button class="search-line-btn" data-line="blue">Синя</button>
+      <button class="search-line-btn" data-line="green">Зелена</button>
+    </div>
 <div class="sheet-body" style="padding-top: 0;">
       <div id="searchResults" class="search-results" aria-live="polite" aria-atomic="true"></div>
     </div>
@@ -143,28 +160,71 @@
           <p class="about-card-text">Довідкові блоки</p>
         </div>
         <p class="about-footer">Зроблено з любовʼю до Києва</p>
-      </div>
+</div>
     </div>
   </template>
 
   <template id="tpl-feedback-sheet">
     <div class="sheet-handle-bar">
-      <div class="sheet-handle"></div><span class="sheet-sheet-title">Запропонувати зміни</span><button class="sheet-close-btn" id="feedbackClose">✕</button>
+      <div class="sheet-handle"></div>
+      <span class="sheet-sheet-title">Запропонувати зміни</span>
+      <button class="sheet-close-btn" id="feedbackClose" aria-label="Закрити">✕</button>
     </div>
     <div class="sheet-body" id="feedbackBody">
       <p class="fb-main-intro-text">Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
 
-<div class="fb-selectors">
-        <div class="fb-select-wrap"><div id="fbLineDropdown" class="fb-dropdown" role="listbox" hidden></div><div class="fb-select-inner"><label class="fb-label">Гілка</label><button type="button" class="fb-custom-select" id="fbLineBtn" aria-haspopup="listbox" aria-expanded="false"><span id="fbLineLabel">— всі —</span><span class="fb-select-arrow" aria-hidden="true">&#8964;</span></button><input type="hidden" id="fbLine" value=""></div></div>
-        <div class="fb-select-wrap"><div id="fbStationDropdown" class="fb-dropdown" role="listbox" hidden></div><div class="fb-select-inner"><label class="fb-label">Станція</label><button type="button" class="fb-custom-select" id="fbStationBtn" aria-haspopup="listbox" aria-expanded="false"><span id="fbStationLabel">— оберіть —</span><span class="fb-select-arrow" aria-hidden="true">&#8964;</span></button><input type="hidden" id="fbStation" value=""></div></div>
+      <div id="fbLineFilter" class="search-line-filter fb-line-filter" role="group" aria-label="Фільтр по гілці">
+        <button class="search-line-btn is-active" data-line="">Всі</button>
+        <button class="search-line-btn" data-line="red">Червона</button>
+        <button class="search-line-btn" data-line="blue">Синя</button>
+        <button class="search-line-btn" data-line="green">Зелена</button>
       </div>
+
+      <div id="fbStationList" class="fb-station-list" hidden></div>
+
+      <input type="hidden" id="fbLine" value="">
+      <input type="hidden" id="fbStation" value="">
+
       <div id="fbPositions"></div>
 
-      
       <div class="fb-footer-sticky">
         <button id="fbSend" class="fb-send-btn" disabled>Застосувати</button>
         <div id="fbResult"></div><div id="fbResetWrap"></div>
       </div>
+    </div>
+  </template>
+
+  <template id="tpl-settings-sheet">
+    <div class="sheet-handle-bar">
+      <div class="sheet-handle"></div>
+      <span class="sheet-sheet-title">Налаштування</span>
+      <button class="sheet-close-btn" id="settingsClose" aria-label="Закрити">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-label">Темна тема</span>
+          <label class="ios-toggle">
+            <input type="checkbox" id="settingsThemeToggle">
+            <span class="ios-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Відображати «Вибране» під час запуску</span>
+          <label class="ios-toggle">
+            <input type="checkbox" id="settingsStartFavToggle">
+            <span class="ios-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Режим check-in</span>
+          <label class="ios-toggle">
+            <input type="checkbox" id="settingsCheckinToggle">
+            <span class="ios-toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <p class="settings-hint">Режим check-in дозволяє відзначати виходи, якими ви скористалися</p>
     </div>
   </template>
 

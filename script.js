@@ -56,6 +56,9 @@ MetroApp.DIR_SHORT_NAMES = {
   let isMapReady = false;
   let isZonesReady = false;
   let emptyFavColorIdx = 0;
+  let activeLineFilter = new Set(); // порожній Set = «Всі»
+  const _startupSlug = new URLSearchParams(window.location.search).get('station');
+  if (_startupSlug) window.history.replaceState({}, document.title, window.location.pathname);
 
   function removeLoader() {
     requestAnimationFrame(() => {
@@ -182,70 +185,104 @@ MetroApp.DIR_SHORT_NAMES = {
     }
   });
 
-  /* Pinch zoom (ОПТИМІЗОВАНО з Throttling) */
+  /* ═══════════════════════════════════════════════════
+     PAN (1 палець) + PINCH ZOOM (2 пальці) — карта
+     ═══════════════════════════════════════════════════ */
   let lastPinchDist = null;
-  let isPinching = false;
+  let pendingPinch  = null;
+  let pinchRAFScheduled = false;
+  let panStartX = null, panStartY = null;
+  let panStartScrollLeft = 0, panStartScrollTop = 0;
+  let isPanActive = false;
 
+  // Ініціалізуємо стан при дотику
+  document.addEventListener('touchstart', e => {
+    if (sheetOverlay.classList.contains('overlay-visible')) return;
+    if (e.touches.length === 2) {
+      isPanActive = false;
+      const t0 = e.touches[0], t1 = e.touches[1];
+      lastPinchDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+      pendingPinch  = null;
+    } else if (e.touches.length === 1) {
+      isPanActive = true;
+      panStartX = e.touches[0].clientX;
+      panStartY = e.touches[0].clientY;
+      panStartScrollLeft = vp.scrollLeft;
+      panStartScrollTop  = vp.scrollTop;
+    }
+  }, { passive: true });
+
+  // Pan: встановлюємо scrollLeft/scrollTop вручну (SVG має touch-action:none)
+  vp.addEventListener('touchmove', e => {
+    if (!isPanActive || e.touches.length !== 1) return;
+    vp.scrollLeft = panStartScrollLeft - (e.touches[0].clientX - panStartX);
+    vp.scrollTop  = panStartScrollTop  - (e.touches[0].clientY - panStartY);
+  }, { passive: true });
+
+  // Pinch zoom: накопичуємо ratio на кожному touchmove, RAF застосовує останній
   document.addEventListener('touchmove', e => {
     if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
     e.preventDefault();
+    if (!lastPinchDist) return;
 
-    if (!isPinching && lastPinchDist) {
-      isPinching = true;
-      
-      const t0x = e.touches[0].clientX;
-      const t0y = e.touches[0].clientY;
-      const t1x = e.touches[1].clientX;
-      const t1y = e.touches[1].clientY;
+    const t0x = e.touches[0].clientX, t0y = e.touches[0].clientY;
+    const t1x = e.touches[1].clientX, t1y = e.touches[1].clientY;
+    const dist  = Math.hypot(t0x - t1x, t0y - t1y);
+    const ratio = dist / lastPinchDist;
+    lastPinchDist = dist; // оновлюємо одразу — без накопиченого стрибка
 
+    pendingPinch = { ratio, midX: (t0x + t1x) / 2, midY: (t0y + t1y) / 2 };
+
+    if (!pinchRAFScheduled) {
+      pinchRAFScheduled = true;
       requestAnimationFrame(() => {
-        const dx = t0x - t1x;
-        const dy = t0y - t1y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        const midX = (t0x + t1x) / 2;
-        const midY = (t0y + t1y) / 2;
+        pinchRAFScheduled = false;
+        if (!pendingPinch) return;
+        const { ratio: r, midX, midY } = pendingPinch;
+        pendingPinch = null;
 
-        const ratio = dist / lastPinchDist;
         const oldW = inner.offsetWidth;
         const oldH = inner.offsetHeight;
         const imgRect = inner.getBoundingClientRect();
         const relX = (midX - imgRect.left) / oldW;
         const relY = (midY - imgRect.top) / oldH;
 
-        // Використовуємо глобальну baseMapWidth замість старого img.naturalWidth
         const minW = vp.clientWidth;
         const maxW = Math.round(baseMapWidth * 4.0);
-        const newW = Math.max(minW, Math.min(maxW, Math.round(oldW * ratio)));
+        const newW = Math.max(minW, Math.min(maxW, Math.round(oldW * r)));
         const newH = Math.round(newW * oldH / oldW);
 
         const padX = Math.max(0, (vp.clientWidth - newW) / 2);
         const padY = Math.max(0, (vp.clientHeight - newH) / 2);
 
-        inner.style.width = newW + 'px';
+        inner.style.width  = newW + 'px';
         inner.style.height = newH + 'px';
         inner.style.marginLeft = padX + 'px';
-        inner.style.marginTop = padY + 'px';
+        inner.style.marginTop  = padY + 'px';
 
         const vpRect = vp.getBoundingClientRect();
         vp.scrollLeft = Math.round((relX * newW + padX) - (midX - vpRect.left));
-        vp.scrollTop = Math.round((relY * newH + padY) - (midY - vpRect.top));
-
-        lastPinchDist = dist;
-        isPinching = false;
+        vp.scrollTop  = Math.round((relY * newH + padY) - (midY - vpRect.top));
       });
-    } else if (!lastPinchDist) {
-      const t0 = e.touches[0], t1 = e.touches[1];
-      lastPinchDist = Math.sqrt(Math.pow(t0.clientX - t1.clientX, 2) + Math.pow(t0.clientY - t1.clientY, 2));
     }
   }, { passive: false });
 
   document.addEventListener('touchend', e => {
     if (e.touches.length < 2) {
       lastPinchDist = null;
-      isPinching = false;
+      pendingPinch  = null;
+      pinchRAFScheduled = false;
     }
-  }); 
+    // Плавний перехід pinch → pan: якщо залишився 1 палець
+    if (e.touches.length === 1 && !sheetOverlay.classList.contains('overlay-visible')) {
+      isPanActive = true;
+      panStartX = e.touches[0].clientX;
+      panStartY = e.touches[0].clientY;
+      panStartScrollLeft = vp.scrollLeft;
+      panStartScrollTop  = vp.scrollTop;
+    }
+    if (e.touches.length === 0) isPanActive = false;
+  }, { passive: true }); 
 
 
   /* ==========================================================================
@@ -382,17 +419,16 @@ function hydrateStations(data) {
 function getEmptyFavHtml() {
     const colors = ['var(--line-blue)', 'var(--line-red)', 'var(--line-green)'];
     const currentColor = colors[emptyFavColorIdx % colors.length];
-    emptyFavColorIdx++; // Збільшуємо для наступного разу
-
+    emptyFavColorIdx++;
     return `
-      <div class="fav-empty-state" style="text-align: center; padding: 40px 16px;">
-        <p style="font-size: 18px; color: var(--text-muted); line-height: 1.4; margin: 0 0 16px 0;">
+      <div class="fav-empty-state">
+        <p class="fav-empty-text-lg">
           Для збереження до вибраного,<br>натисніть 
-          <svg viewBox="0 0 24 22" fill="none" stroke="${currentColor}" stroke-width="2.5" style="width: 20px; height: 20px; vertical-align: -4px; display: inline-block; margin: 0 2px;">
+          <svg viewBox="0 0 24 22" fill="none" stroke="${currentColor}" stroke-width="2.5" class="fav-empty-heart">
             <path d="${MetroApp.Icons.heartPath}"></path>
           </svg> на&nbsp;картці&nbsp;станції
         </p>
-        <p style="font-size: 18px; color: var(--text-muted); line-height: 1.4; margin: 0;">
+        <p class="fav-empty-text-lg">
           Знаєте, який вихід вам знадобиться?<br>Збережіть його подвійним тапом по вагону і&nbsp;дверям
         </p>
       </div>`;
@@ -406,7 +442,7 @@ async function reloadStationsData(forceFresh = false) {
     const response = await fetch(url, forceFresh ? { cache: 'no-store' } : undefined);
     const data = await response.json();
     const hydrated = hydrateStations(data);
-    if (!forceFresh) renderMapZones();
+    if (!forceFresh) { renderMapZones(); handleStartupStation(hydrated); }
     // Якщо вікно Обраного відкрилось до завантаження даних — перемалюємо його
     if (favSheet?.classList.contains('sheet-open') && favBody?.querySelector('.fav-empty-text')) {
       const favs = getFavs();
@@ -417,7 +453,15 @@ async function reloadStationsData(forceFresh = false) {
   }
   MetroApp.reloadStationsData = reloadStationsData;
 
+  // Відкрити станцію з URL ?station=slug (один раз при старті)
+  function handleStartupStation(data) {
+    if (_startupSlug && data[_startupSlug]) {
+      requestAnimationFrame(() => openStation(_startupSlug));
+    }
+  }
+
 function renderMapZones() {
+    if (isZonesReady) return; // зони вже налаштовано
     const svgEl = inner.querySelector('svg');
     
     // Якщо немає карти АБО немає даних зі станціями — чекаємо
@@ -450,12 +494,14 @@ function renderMapZones() {
     checkAppReady();
   }
 
-  reloadStationsData().catch(err => console.error('stations.json load failed', err));
+  reloadStationsData()
+    .catch(err => console.error('stations.json load failed', err));
 
 
 
 
 function handleMapInteraction(e) {
+    if (!stationsData) return;
     if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
 
     const zone = e.target.closest('[id]');
@@ -646,29 +692,7 @@ let stationName = lower.replace(/^попередня\s+/, '');
       </div>`;
     }).join('');
 
-    const isStartOnFav = localStorage.getItem('metro_start_on_fav') === 'true';
-    const settingsHtml = `
-      <div class="fav-settings-container">
-        <div class="fav-settings-row">
-          <span class="fav-settings-label">Зробити стартовою сторінкою</span>
-        </div>
-        <div class="fav-settings-toggle-wrap">
-          <label class="ios-toggle">
-            <input type="checkbox" id="startPageToggle" ${isStartOnFav ? 'checked' : ''}>
-            <span class="ios-toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-    `;
-
-    favBody.innerHTML = listHtml + settingsHtml;
-
-    const toggleInput = document.getElementById('startPageToggle');
-    if (toggleInput) {
-      toggleInput.addEventListener('change', (e) => {
-        localStorage.setItem('metro_start_on_fav', e.target.checked);
-      });
-    }
+    favBody.innerHTML = listHtml;
 
     
 
@@ -684,18 +708,29 @@ function saveOrder() {
       saveFavs(uniqueSlugs); 
     }
 
-    // Ініціалізуємо SortableJS (бібліотека працює локально)
+// Ініціалізуємо SortableJS (бібліотека працює локально)
     if (window.Sortable) {
       if (favBody._sortable) favBody._sortable.destroy();
       
       favBody._sortable = new Sortable(favBody, {
         draggable: '.fav-item',
         handle: '.fav-drag-handle',
-        animation: 250,
-        ghostClass: 'fav-ghost',
-        dragClass: 'fav-dragging',
+        animation: 0, // <--- Вимикаємо стандартну анімацію ковзання елементів!
+        ghostClass: 'fav-ghost', // Клас для місця, куди впаде елемент
+        dragClass: 'fav-dragging', // Клас для елемента в "польоті"
         fallbackOnBody: true,
         swapThreshold: 0.65,
+        
+        // --- ПОВЕРТАЄМО ЕФЕКТ "МАГІЇ" ДЯКУЮЧИ ПЛАГІНУ ---
+        // Якщо бібліотека підтримує плагіни (у sortable.min.js він вшитий), вмикаємо swap
+        swap: true, // Вмикає режим обміну контентом
+        swapClass: "fav-swap-highlight", // Клас для картки-цілі, на яку ми наводимо
+        // ----------------------------------------------
+
+        // Потрібно також примусити бібліотеку використовувати чистий JS drag
+        // на iOS, щоб нативний ghost не перекривав текст під пальцем.
+        forceFallback: true, 
+        
         onEnd: saveOrder
       });
     }
@@ -719,8 +754,10 @@ function openFavSheet() {
   }
 
   function closeFavSheet() {
-    favSheet.classList.remove('sheet-open');
-    if (!sheet.classList.contains('sheet-open')) sheetOverlay.classList.remove('overlay-visible');
+    MetroApp.animateSheetClose(favSheet, () => {
+      favSheet.classList.remove('sheet-open');
+      if (!sheet.classList.contains('sheet-open')) sheetOverlay.classList.remove('overlay-visible');
+    });
   }
 
   favBtn.addEventListener('click', openFavSheet);
@@ -730,6 +767,86 @@ function openFavSheet() {
   let swipeStartYFav = 0;
   favSheet.addEventListener('touchstart', e => { swipeStartYFav = e.touches[0].clientY; isHandleSwipeFav = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
   favSheet.addEventListener('touchend', e => { if (isHandleSwipeFav && (e.changedTouches[0].clientY - swipeStartYFav > 60)) closeFavSheet(); });
+
+  document.getElementById('checkinBtn')?.addEventListener('click', openCheckinSheet);
+
+  function openCheckinSheet() {
+    let checkinSheet = document.getElementById('checkinSheet');
+    const closeHandler = () => {
+      const s = document.getElementById('checkinSheet');
+      MetroApp.animateSheetClose(s, () => {
+        s?.classList.remove('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
+        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
+          document.getElementById('sheetOverlay').classList.remove('overlay-visible');
+      });
+    };
+
+    function renderCheckinContent() {
+      const s = document.getElementById('checkinSheet');
+      const all = getCheckins();
+      const entries = Object.values(all).sort((a, b) => b.ts - a.ts);
+      let bodyHtml = '';
+      if (!entries.length) {
+        bodyHtml = `<p class="fav-empty-text">Поки що немає відміток.<br>Увімкніть режим check‑in і натисніть<br>на шпильку поруч із виходом.</p>`;
+      } else {
+        const byStation = {};
+        entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
+        bodyHtml = Object.entries(byStation).map(([slug, items]) => {
+          const st = stationsData?.[slug];
+          const color = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
+          const name  = st?.name || slug;
+          const itemsHtml = items.map(e => `
+            <div class="checkin-entry">
+              <div class="checkin-pin-icon">${checkinPinSvg(true, color)}</div>
+              <div class="checkin-entry-info">
+                <span class="checkin-dir">${e.dir || '—'}</span>
+                <span class="checkin-pos" style="color:${color}">вагон ${e.wagon} · двері ${e.doors}</span>
+              </div>
+              <span class="checkin-time">${formatCheckinTime(e.ts)}</span>
+            </div>`).join('');
+          return `<div class="checkin-station-group"><div class="checkin-station-name" style="border-left-color:${color}">${name}</div>${itemsHtml}</div>`;
+        }).join('');
+        bodyHtml += `<div style="padding:16px 0 4px;text-align:center;"><button id="checkinClearBtn" class="fb-reset-btn">Очистити журнал</button></div>`;
+      }
+      s.innerHTML = `
+        <div class="sheet-handle-bar"><div class="sheet-handle"></div><span class="sheet-sheet-title">Журнал виходів</span><button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button></div>
+        <div class="sheet-body">${bodyHtml}</div>`;
+      s.querySelector('#checkinClose')?.addEventListener('click', closeHandler);
+      s.querySelector('#checkinClearBtn')?.addEventListener('click', () => {
+        MetroApp.showCustomConfirm('Очистити весь журнал check‑in?', () => {
+          localStorage.removeItem(CHECKIN_KEY);
+          updateCheckinDock();
+          document.querySelectorAll('.pos-checkin-btn.is-checked-in').forEach(b => { b.classList.remove('is-checked-in'); b.innerHTML = CHECKIN_PIN_SVG_OFF; });
+          renderCheckinContent();
+        }, null, null);
+      });
+
+      let swY2 = 0, isSwipeCI = false;
+      s.addEventListener('touchstart', e => { swY2 = e.touches[0].clientY; isSwipeCI = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
+      s.addEventListener('touchend',   e => { if (isSwipeCI && e.changedTouches[0].clientY - swY2 > 60) closeHandler(); });
+    }
+
+    if (!checkinSheet) {
+      checkinSheet = document.createElement('div');
+      checkinSheet.id = 'checkinSheet';
+      checkinSheet.className = 'station-sheet about-station-sheet';
+      document.body.appendChild(checkinSheet);
+    }
+    renderCheckinContent();
+    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+    checkinSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
+    document.getElementById('sheetOverlay').classList.add('overlay-visible');
+  }
+
+  function formatCheckinTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const diffMs = Date.now() - ts;
+    const diffH = Math.floor(diffMs / 3600000);
+    if (diffH < 1) { const m = Math.floor(diffMs / 60000); return m < 1 ? 'щойно' : `${m} хв тому`; }
+    if (diffH < 24) return `${diffH} год тому`;
+    return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+  }
 
   function renderPositions(positions, color, multiRow) {
     positions = positions.filter(p => !p.closed);
@@ -915,7 +1032,9 @@ function triggerExitFav() {
 
 function withUnsavedCheck(proceed) {
     if (MetroApp.hasUnsavedFeedback?.()) {
-      const stationName = document.getElementById('fbStationLabel')?.textContent || '';
+      const _fbSlug = document.getElementById('fbStation')?.value || '';
+      const _fbData = _fbSlug ? MetroApp.currentStationsData?.[_fbSlug] : null;
+      const stationName = _fbData?.name || '';
       const question = stationName
         ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>`
         : 'Зберегти зміни?';
@@ -980,23 +1099,30 @@ document.getElementById('stationTitleMain').textContent = s.name;
         sheetOverlay.classList.add('overlay-visible'); 
       }
       attachExitFavListeners(sheetBody, slug, color);
+      MetroApp.attachCheckinButtons(sheetBody, slug, color);
     }
   }
 function closeAllSheets(force = false) {
     if (!force) {
       if (withUnsavedCheck(() => closeAllSheets(true))) return false;
     }
-    
-    // --- Цей шматок був загублений ---
-    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+
+    const openSheets = [...document.querySelectorAll('.station-sheet.sheet-open')];
     const overlay = document.getElementById('sheetOverlay');
-    if (overlay) overlay.classList.remove('overlay-visible');
-    
     const dropMenu = document.getElementById('dropMenu');
-    if (dropMenu) {
-        dropMenu.classList.remove('show');
-        dropMenu.hidden = true;
+    if (dropMenu) { dropMenu.classList.remove('show'); dropMenu.hidden = true; }
+
+    if (!openSheets.length) {
+      overlay?.classList.remove('overlay-visible');
+      return;
     }
+
+    // Анімуємо тільки верхню (останню відкриту) шторку
+    const topSheet = openSheets[openSheets.length - 1];
+    MetroApp.animateSheetClose(topSheet, () => {
+      openSheets.forEach(el => el.classList.remove('sheet-open'));
+      overlay?.classList.remove('overlay-visible');
+    });
   }
   MetroApp.closeAllSheets = closeAllSheets;
 
@@ -1014,6 +1140,7 @@ const prevScrollTop = sheetBody.scrollTop;
         if (target && target !== currentStationSlug) el.classList.add('nav-link');
       });
       attachExitFavListeners(sheetBody, currentStationSlug, color);
+      MetroApp.attachCheckinButtons(sheetBody, currentStationSlug, color);
       sheetBody.scrollTop = prevScrollTop;
     }
   };
@@ -1073,7 +1200,7 @@ setTimeout(() => panel.remove(), 300);
             .then(() => openStation(slug))
             .catch(err => {
               console.error('Помилка оновлення даних після скидання правок', err);
-              alert('Помилка з\'єднання. Перевірте інтернет.');
+              MetroApp.showCustomConfirm('Помилка з\'єднання. Спробуйте ще раз.', () => {}, null, null);
             });
         } catch(err) { console.error('edit reset failed', err); }
       });
@@ -1095,30 +1222,26 @@ setTimeout(() => panel.remove(), 300);
     const dropMenu = document.getElementById('dropMenu');
     if (dropMenu && dropMenu.classList.contains('show')) return;
 
-    let clickedSlug = null;
-    // Беремо всі елементи з ID, які ми "активували" під час завантаження
-    const zones = inner.querySelectorAll('svg [id]');
-    for (const zone of zones) {
-      // Пропускаємо все векторне сміття, перевіряємо лише клікабельні зони станцій
-      if (zone.style.pointerEvents !== 'all') continue;
+    // --- ВІДНОВЛЮЄМО ЛОГІКУ ПЕРЕКЛЮЧЕННЯ МІЖ СТАНЦІЯМИ ---
+    // Тимчасово ігноруємо оверлей, щоб зрозуміти, чи не натиснули ми на іншу станцію "під" ним
+    sheetOverlay.style.pointerEvents = 'none';
+    const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+    sheetOverlay.style.pointerEvents = '';
 
-      const rect = zone.getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right &&
-          e.clientY >= rect.top && e.clientY <= rect.bottom) {
-        
-        const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
-        clickedSlug = Object.keys(stationsData).find(key => key.toLowerCase() === rawId);
-        if (clickedSlug) break;
+    const zone = elUnder?.closest('[id]');
+    if (zone && zone.id) {
+      const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
+      const slug = Object.keys(stationsData).find(k => k.toLowerCase() === rawId);
+      if (slug && slug !== currentStationSlug) {
+        // Якщо натиснули на іншу станцію — відкриваємо її (стара оновиться автоматично)
+        openStation(slug);
+        return;
       }
     }
 
-    if (clickedSlug) {
-      openStation(clickedSlug);
-      return;
-    }
+    // Якщо натиснули просто на порожнє місце — закриваємо все
     closeAllSheets();
   });
-
   let isHandleSwipeMain = false;
   let swipeScrollTop = 0;
   let swipeStartYMain = 0;
@@ -1137,13 +1260,26 @@ setTimeout(() => panel.remove(), 300);
   const THEME_KEY = 'metro_theme';
   const root = document.documentElement;
 
-  function applyTheme(theme) {
+function applyTheme(theme) {
+    // Тимчасово блокуємо всі анімації на сторінці під час зміни теми
+    const css = document.createElement('style');
+    css.textContent = '*, *::before, *::after { transition: none !important; }';
+    document.head.appendChild(css);
+
     root.setAttribute('data-theme', theme);
-    const icon = document.getElementById('themeIcon');
-    if (icon) icon.innerHTML = theme === 'dark' ? MetroApp.Icons.sun : MetroApp.Icons.moon;
     localStorage.setItem(THEME_KEY, theme);
+    const t = document.getElementById('settingsThemeToggle');
+    if (t) t.checked = theme === 'dark';
+
+    // Знімаємо блокування після відмальовки
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        css.remove();
+      });
+    });
   }
-  applyTheme(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  
+    applyTheme(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 
   const menuBtn = document.getElementById('menuBtn');
   const dropMenu = document.getElementById('dropMenu');
@@ -1160,7 +1296,8 @@ setTimeout(() => panel.remove(), 300);
 
     document.getElementById('themeToggleItem')?.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
-      applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      dropMenu.classList.remove('show'); dropMenu.hidden = true;
+      openSettingsSheet();
     });
 
     document.getElementById('feedbackItem')?.addEventListener('click', (e) => {
@@ -1195,8 +1332,10 @@ setTimeout(() => panel.remove(), 300);
       document.body.appendChild(aboutSheet);
       
       document.getElementById('aboutClose').addEventListener('click', () => {
-        aboutSheet.classList.remove('sheet-open');
-        if (document.querySelectorAll('.station-sheet.sheet-open').length === 0) document.getElementById('sheetOverlay').classList.remove('overlay-visible');
+        MetroApp.animateSheetClose(aboutSheet, () => {
+          aboutSheet.classList.remove('sheet-open');
+          if (document.querySelectorAll('.station-sheet.sheet-open').length === 0) document.getElementById('sheetOverlay').classList.remove('overlay-visible');
+        });
       });
     }
 document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
@@ -1222,11 +1361,13 @@ function openSearchSheet() {
       document.getElementById('searchClose').addEventListener('click', () => {
   searchSheet._cleanupVP?.();
   searchSheet.style.maxHeight = '';
-  searchSheet.classList.remove('sheet-open');
   document.getElementById('searchInput').blur();
-  if (document.querySelectorAll('.station-sheet.sheet-open').length === 0) {
-    document.getElementById('sheetOverlay').classList.remove('overlay-visible');
-  }
+  MetroApp.animateSheetClose(searchSheet, () => {
+    searchSheet.classList.remove('sheet-open');
+    if (document.querySelectorAll('.station-sheet.sheet-open').length === 0) {
+      document.getElementById('sheetOverlay').classList.remove('overlay-visible');
+    }
+  });
 });
 
 // ВСІ СЛУХАЧІ ВІШАЮТЬСЯ РІВНО 1 РАЗ ПРИ СТВОРЕННІ HTML
@@ -1234,7 +1375,35 @@ function openSearchSheet() {
       const resultsContainer = document.getElementById('searchResults');
 
       input.addEventListener('input', (e) => {
-        renderSearchResults(e.target.value.trim().toLowerCase(), resultsContainer);
+        renderSearchResults(e.target.value.trim().toLowerCase(), resultsContainer, activeLineFilter);
+      });
+
+      document.getElementById('searchLineFilter').addEventListener('click', e => {
+        const btn = e.target.closest('.search-line-btn');
+        if (!btn) return;
+        const line = btn.dataset.line;
+        const allBtn = document.querySelector('.search-line-btn[data-line=""]');
+
+        if (line === '') {
+          // «Всі» — скидаємо всі активні фільтри гілок
+          activeLineFilter = new Set();
+          document.querySelectorAll('.search-line-btn').forEach(b => b.classList.toggle('is-active', b === btn));
+        } else {
+          // Гілка: знімаємо «Всі», перемикаємо вибрану
+          allBtn?.classList.remove('is-active');
+          if (activeLineFilter.has(line)) {
+            activeLineFilter.delete(line);
+          } else {
+            activeLineFilter.add(line);
+          }
+          btn.classList.toggle('is-active', activeLineFilter.has(line));
+          // Якщо жодної не вибрано — повертаємось до «Всі»
+          if (activeLineFilter.size === 0) {
+            activeLineFilter = new Set();
+            allBtn?.classList.add('is-active');
+          }
+        }
+        renderSearchResults(input.value.trim().toLowerCase(), resultsContainer, activeLineFilter);
       });
 
       resultsContainer.addEventListener('click', (e) => {
@@ -1261,8 +1430,10 @@ function openSearchSheet() {
     }
     const input = document.getElementById('searchInput');
     const resultsContainer = document.getElementById('searchResults');
+    activeLineFilter = new Set();
+    document.querySelectorAll('.search-line-btn').forEach((b, i) => b.classList.toggle('is-active', i === 0));
     input.value = '';
-    renderSearchResults('', resultsContainer);
+    renderSearchResults('', resultsContainer, '');
 
 document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
 searchSheet.classList.add('sheet-open');
@@ -1270,47 +1441,221 @@ document.getElementById('sheetOverlay').classList.add('overlay-visible');
 
   }
 
-  function renderSearchResults(query, container) {
+  function renderSearchResults(query, container, lineFilter) {
+    if (lineFilter === undefined) lineFilter = new Set();
     if (!stationsData) {
       container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються...</p>';
       return;
     }
-
     const allStations = Object.values(stationsData);
     let filtered = allStations;
-
-if (query) {
-      const rawQuery = query.toLowerCase().trim().replace(/['’`]/g, '');
+    if (query) {
+      const rawQuery = query.toLowerCase().trim().replace(/[''`]/g, '');
       const queryWords = rawQuery.split(/\s+/).filter(w => w.length > 0);
       const queryNoSpaces = rawQuery.replace(/\s+/g, '');
-      
-      filtered = allStations.filter(s => {
-        return queryWords.every(qWord => 
-          s._searchIndex.some(idxWord => idxWord.startsWith(qWord))
-        ) || s._searchIndex.includes(queryNoSpaces);
-      });
+      filtered = allStations.filter(s =>
+        queryWords.every(qWord => s._searchIndex.some(idxWord => idxWord.startsWith(qWord)))
+        || s._searchIndex.includes(queryNoSpaces)
+      );
     }
-
-
+    if (lineFilter instanceof Set && lineFilter.size > 0) {
+      filtered = filtered.filter(s => lineFilter.has(s.line));
+    } else if (typeof lineFilter === 'string' && lineFilter) {
+      filtered = filtered.filter(s => s.line === lineFilter);
+    }
     filtered.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-
     if (filtered.length === 0) {
       container.innerHTML = '<p class="fav-empty-text" style="padding-top:32px;">Станцію не знайдено</p>';
       return;
     }
-
     container.innerHTML = filtered.map(s => {
       const color = MetroApp.LINE_COLOR[s.line];
-      return `
-        <div class="search-item" data-slug="${s.slug}">
-          <div class="search-item-line" style="background-color: ${color}"></div>
-          <div>${s.name}</div>
-        </div>
-      `;
+      return `<div class="search-item" data-slug="${s.slug}"><div class="search-item-line" style="background-color:${color}"></div><div>${s.name}</div></div>`;
     }).join('');
   }
 
   searchBtnTop.addEventListener('click', openSearchSheet);
+
+// ══ ОФЛАЙН-ІНДИКАТОР ══
+  (function() {
+    const banner = document.createElement('div');
+    banner.id = 'offlineBanner';
+    banner.className = 'offline-banner';
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('aria-live', 'polite');
+    banner.textContent = 'Офлайн — відображаються кешовані дані';
+    banner.hidden = navigator.onLine;
+    document.body.appendChild(banner);
+    window.addEventListener('offline', () => { banner.hidden = false; });
+    window.addEventListener('online',  () => { banner.hidden = true; });
+  })();
+
+  // ══ CHECK-IN MODE ══
+  const CHECKIN_KEY = 'metro_checkins';
+
+  function getCheckins() {
+    try { return JSON.parse(localStorage.getItem(CHECKIN_KEY) || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function checkinId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
+
+  function isCheckedIn(slug, dir, wagon, doors) {
+    return !!getCheckins()[checkinId(slug, dir, wagon, doors)];
+  }
+
+  function toggleCheckin(slug, dir, wagon, doors, lineColor) {
+    const id = checkinId(slug, dir, wagon, doors);
+    const all = getCheckins();
+    if (all[id]) { delete all[id]; }
+    else { all[id] = { slug, dir, wagon, doors, color: lineColor, ts: Date.now() }; }
+    localStorage.setItem(CHECKIN_KEY, JSON.stringify(all));
+    updateCheckinDock();
+    return !!all[id];
+  }
+
+  function isCheckinMode() { return localStorage.getItem('metro_checkin_mode') === 'true'; }
+
+function updateCheckinDock() {
+    const btn = document.getElementById('checkinBtn');
+    if (!btn) return;
+    btn.hidden = !isCheckinMode();
+    // Лічильник повністю видалено
+  }
+
+  const CHECKIN_PIN_SVG_OFF = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor"/></svg>`;
+
+  function checkinPinSvg(checked, lineColor) {
+    if (!checked) return CHECKIN_PIN_SVG_OFF;
+    return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16,29.343C17.786,27.79,26.5,19.809,26.5,12c0-5.79-4.71-10.5-10.5-10.5S5.5,6.21,5.5,12 C5.5,19.809,14.214,27.79,16,29.343z" fill="${lineColor}"/>
+      <circle cx="16" cy="12" r="5.5" fill="var(--bg)"/>
+      <path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z" fill="${lineColor}"/>
+    </svg>`;
+  }
+
+  MetroApp.attachCheckinButtons = function(container, slug, lineColor) {
+    if (!isCheckinMode()) return;
+    container.querySelectorAll('.position-row').forEach(row => {
+      if (row.querySelector('.pos-checkin-btn')) return;
+      const nums = row.querySelectorAll('.pos-pill-num');
+      if (nums.length < 2) return;
+      const wagon = nums[0].textContent.trim();
+      const doors  = nums[1].textContent.trim();
+      const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
+      const labelEl  = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
+      const dir = labelEl ? labelEl.textContent.trim() : '';
+      const checked = isCheckedIn(slug, dir, wagon, doors);
+
+      const btn = document.createElement('button');
+      btn.className = 'pos-checkin-btn' + (checked ? ' is-checked-in' : '');
+      btn.setAttribute('aria-label', 'Позначити вихід');
+      btn.innerHTML = checkinPinSvg(checked, lineColor);
+      row.appendChild(btn);
+
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const nowChecked = toggleCheckin(slug, dir, wagon, doors, lineColor);
+        btn.classList.toggle('is-checked-in', nowChecked);
+        btn.innerHTML = checkinPinSvg(nowChecked, lineColor);
+      });
+    });
+  };
+
+  // ══ SETTINGS SHEET ══
+  function openSettingsSheet() {
+    let settingsSheet = document.getElementById('settingsSheet');
+    if (!settingsSheet) {
+      settingsSheet = document.createElement('div');
+      settingsSheet.id = 'settingsSheet';
+      settingsSheet.className = 'station-sheet settings-station-sheet';
+      const tpl = document.getElementById('tpl-settings-sheet');
+      settingsSheet.appendChild(tpl.content.cloneNode(true));
+      document.body.appendChild(settingsSheet);
+
+      document.getElementById('settingsClose').addEventListener('click', () => {
+        MetroApp.animateSheetClose(settingsSheet, () => {
+          settingsSheet.classList.remove('sheet-open');
+          if (!document.querySelectorAll('.station-sheet.sheet-open').length)
+            document.getElementById('sheetOverlay').classList.remove('overlay-visible');
+        });
+      });
+
+      const themeToggle = document.getElementById('settingsThemeToggle');
+      if (themeToggle) {
+        themeToggle.checked = (localStorage.getItem('metro_theme') || 'dark') === 'dark';
+        themeToggle.addEventListener('change', e => applyTheme(e.target.checked ? 'dark' : 'light'));
+      }
+      const startFavToggle = document.getElementById('settingsStartFavToggle');
+      if (startFavToggle) {
+        startFavToggle.checked = localStorage.getItem('metro_start_on_fav') === 'true';
+        startFavToggle.addEventListener('change', e => localStorage.setItem('metro_start_on_fav', e.target.checked));
+      }
+      const checkinToggle = document.getElementById('settingsCheckinToggle');
+      if (checkinToggle) {
+        checkinToggle.checked = isCheckinMode();
+        checkinToggle.addEventListener('change', e => {
+          localStorage.setItem('metro_checkin_mode', e.target.checked);
+          updateCheckinDock();
+          if (currentStationSlug && sheet.classList.contains('sheet-open')) {
+            const color = MetroApp.LINE_COLOR[stationsData[currentStationSlug]?.line] || 'var(--text-muted)';
+            if (e.target.checked) MetroApp.attachCheckinButtons(sheetBody, currentStationSlug, color);
+            else sheetBody.querySelectorAll('.pos-checkin-btn').forEach(b => b.remove());
+          }
+        });
+      }
+
+      let swY = 0, isSwipeSettings = false;
+      settingsSheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isSwipeSettings = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
+      settingsSheet.addEventListener('touchend',   e => { if (isSwipeSettings && e.changedTouches[0].clientY - swY > 60) document.getElementById('settingsClose').click(); });
+    } else {
+      const t = document.getElementById('settingsThemeToggle');    if (t) t.checked = (localStorage.getItem('metro_theme') || 'dark') === 'dark';
+      const s = document.getElementById('settingsStartFavToggle'); if (s) s.checked = localStorage.getItem('metro_start_on_fav') === 'true';
+      const c = document.getElementById('settingsCheckinToggle');  if (c) c.checked = isCheckinMode();
+    }
+    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+    settingsSheet.classList.add('sheet-open');
+    document.getElementById('sheetOverlay').classList.add('overlay-visible');
+  }
+
+  updateCheckinDock();
+
+MetroApp.animateSheetClose = function(sheetEl, callback) {
+    if (!sheetEl || !sheetEl.classList.contains('sheet-open')) { callback?.(); return; }
+    const rect = sheetEl.getBoundingClientRect();
+    if (rect.height < 10) { callback?.(); return; }
+
+    const baseStyle = [
+      `position:fixed`, `top:${rect.top}px`, `left:${rect.left}px`,
+      `width:${rect.width}px`, `height:${rect.height}px`,
+      `margin:0`, `transform:none`, `pointer-events:none`, `z-index:9999`,
+      `transition:transform 0.35s cubic-bezier(0.32,0.72,0,1),opacity 0.3s ease`
+    ].join(';');
+
+    const leftDoor  = sheetEl.cloneNode(true);
+    const rightDoor = sheetEl.cloneNode(true);
+    leftDoor.setAttribute('style',  baseStyle + ';clip-path:inset(0 50% 0 0)');
+    rightDoor.setAttribute('style', baseStyle + ';clip-path:inset(0 0 0 50%)');
+
+    document.body.appendChild(leftDoor);
+    document.body.appendChild(rightDoor);
+    sheetEl.style.visibility = 'hidden';
+
+    void leftDoor.offsetWidth; // reflow
+
+    leftDoor.style.transform  = 'translateX(-50%)';
+    rightDoor.style.transform = 'translateX(50%)';
+    leftDoor.style.opacity    = '0';
+    rightDoor.style.opacity   = '0';
+
+setTimeout(() => {
+      leftDoor.remove();
+      rightDoor.remove();
+      callback?.(); // Спочатку відпрацьовує закриття
+      // Чекаємо мить, поки CSS "вб'є" позицію, і тільки тоді повертаємо видимість
+      setTimeout(() => { sheetEl.style.visibility = ''; }, 50);
+    }, 360);
+}; // <--- ОСЬ ЦЯ ДУЖКА ВРЯТУЄ ДОДАТОК! Вона закриває animateSheetClose.
 
 MetroApp.showCustomConfirm = function(message, onYes, onNo, onCancel) {
     const overlay = document.createElement('div');
