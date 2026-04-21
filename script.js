@@ -10,7 +10,8 @@ MetroApp.Icons = {
   sun: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,1 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
   moon: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="currentColor"/><path d="M 30,0 A 30,30 0 0,0 30,60 Z" fill="var(--bg-sheet)"/></svg>`,
   search: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
-  heartPath: `M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z`
+  heartPath: `M12.5 0.658c-1.739 0-3.251 0.992-4 2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343 0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924 9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598 7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091 0-2.481-2.019-4.5-4.5-4.5z`,
+  heartOutlinePath: `M12.5 0.658c-1.739 0-3.251 0.992-4 2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343 0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924 9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598 7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091 0-2.481-2.019-4.5-4.5-4.5zM15.889 5.98l-0.113 0.37c-0.809 3.246-5.946 7.727-7.276 8.843-1.282-1.083-6.122-5.337-7.285-8.872l-0.1-0.316c-0.077-0.311-0.115-0.588-0.115-0.847 0-1.93 1.57-3.5 3.5-3.5s3.5 1.571 3.5 3.5v0.252h1v-0.252c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5c0 0.258-0.038 0.527-0.111 0.822z`
 };
 
 MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
@@ -189,6 +190,8 @@ MetroApp.DIR_SHORT_NAMES = {
      PAN (1 палець) + PINCH ZOOM (2 пальці) — карта
      ═══════════════════════════════════════════════════ */
   let lastPinchDist = null;
+  let pendingPinch  = null;
+  let pinchRAFScheduled = false;
   let panStartX = null, panStartY = null;
   let panStartScrollLeft = 0, panStartScrollTop = 0;
   let isPanActive = false;
@@ -217,7 +220,7 @@ MetroApp.DIR_SHORT_NAMES = {
     vp.scrollTop  = panStartScrollTop  - (e.touches[0].clientY - panStartY);
   }, { passive: true });
 
-  // Pinch zoom: застосовуємо кожен touchmove напряму для максимальної плавності
+  // Pinch zoom: накопичуємо ratio на кожному touchmove, RAF застосовує останній
   document.addEventListener('touchmove', e => {
     if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
     e.preventDefault();
@@ -225,34 +228,44 @@ MetroApp.DIR_SHORT_NAMES = {
 
     const t0x = e.touches[0].clientX, t0y = e.touches[0].clientY;
     const t1x = e.touches[1].clientX, t1y = e.touches[1].clientY;
-    const midX = (t0x + t1x) / 2;
-    const midY = (t0y + t1y) / 2;
     const dist  = Math.hypot(t0x - t1x, t0y - t1y);
     const ratio = dist / lastPinchDist;
-    lastPinchDist = dist;
+    lastPinchDist = dist; // оновлюємо одразу — без накопиченого стрибка
 
-    const oldW = inner.offsetWidth;
-    const oldH = inner.offsetHeight;
-    const imgRect = inner.getBoundingClientRect();
-    const relX = (midX - imgRect.left) / oldW;
-    const relY = (midY - imgRect.top)  / oldH;
+    pendingPinch = { ratio, midX: (t0x + t1x) / 2, midY: (t0y + t1y) / 2 };
 
-    const minW = vp.clientWidth;
-    const maxW = Math.round(baseMapWidth * 4.0);
-    const newW = Math.max(minW, Math.min(maxW, oldW * ratio));
-    const newH = newW * oldH / oldW;
+    if (!pinchRAFScheduled) {
+      pinchRAFScheduled = true;
+      requestAnimationFrame(() => {
+        pinchRAFScheduled = false;
+        if (!pendingPinch) return;
+        const { ratio: r, midX, midY } = pendingPinch;
+        pendingPinch = null;
 
-    const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
-    const padY = Math.max(0, (vp.clientHeight - newH) / 2);
+        const oldW = inner.offsetWidth;
+        const oldH = inner.offsetHeight;
+        const imgRect = inner.getBoundingClientRect();
+        const relX = (midX - imgRect.left) / oldW;
+        const relY = (midY - imgRect.top) / oldH;
 
-    inner.style.width      = newW + 'px';
-    inner.style.height     = newH + 'px';
-    inner.style.marginLeft = padX + 'px';
-    inner.style.marginTop  = padY + 'px';
+        const minW = vp.clientWidth;
+        const maxW = Math.round(baseMapWidth * 4.0);
+        const newW = Math.max(minW, Math.min(maxW, Math.round(oldW * r)));
+        const newH = Math.round(newW * oldH / oldW);
 
-    const vpRect = vp.getBoundingClientRect();
-    vp.scrollLeft = (relX * newW + padX) - (midX - vpRect.left);
-    vp.scrollTop  = (relY * newH + padY) - (midY - vpRect.top);
+        const padX = Math.max(0, (vp.clientWidth - newW) / 2);
+        const padY = Math.max(0, (vp.clientHeight - newH) / 2);
+
+        inner.style.width  = newW + 'px';
+        inner.style.height = newH + 'px';
+        inner.style.marginLeft = padX + 'px';
+        inner.style.marginTop  = padY + 'px';
+
+        const vpRect = vp.getBoundingClientRect();
+        vp.scrollLeft = Math.round((relX * newW + padX) - (midX - vpRect.left));
+        vp.scrollTop  = Math.round((relY * newH + padY) - (midY - vpRect.top));
+      });
+    }
   }, { passive: false });
 
   document.addEventListener('touchend', e => {
@@ -294,8 +307,8 @@ MetroApp.properCase = function(name) {
   };
 
 function heartSvg(isFav, slug, lineColor) {
-    const base = 'width="22" height="20" viewBox="0 0 24 22" xmlns="http://www.w3.org/2000/svg"';
-    if (!isFav) return `<svg ${base} fill="none" stroke="currentColor" stroke-width="2"><path d="${MetroApp.Icons.heartPath}"/></svg>`;
+    const base = 'width="18" height="18" viewBox="-1 -1 19 19" xmlns="http://www.w3.org/2000/svg"';
+    if (!isFav) return `<svg ${base} fill="none" stroke="currentColor" stroke-width="1.3"><path d="${MetroApp.Icons.heartPath}"/></svg>`;
     return `<svg ${base} fill="${lineColor}"><path d="${MetroApp.Icons.heartPath}"/></svg>`;
   }
 
@@ -412,8 +425,8 @@ function getEmptyFavHtml() {
       <div class="fav-empty-state">
         <p class="fav-empty-text-lg">
           Для збереження до вибраного,<br>натисніть 
-          <svg viewBox="0 0 24 22" fill="none" stroke="${currentColor}" stroke-width="2.5" class="fav-empty-heart">
-            <path d="${MetroApp.Icons.heartPath}"></path>
+          <svg viewBox="0 0 17 17" fill="${currentColor}" class="fav-empty-heart">
+            <path d="${MetroApp.Icons.heartOutlinePath}"></path>
           </svg> на&nbsp;картці&nbsp;станції
         </p>
         <p class="fav-empty-text-lg">
@@ -523,8 +536,13 @@ const getFavs = () => {
   const toggleFav = slug => {
     let favs = getFavs();
     favs = favs.includes(slug) ? favs.filter(s => s !== slug) : [...favs, slug];
-    saveFavs(favs); return favs.includes(slug);
+    saveFavs(favs); 
+    updateFavDock(); // Оновлюємо іконку в доці миттєво
+    return favs.includes(slug);
   };
+const EXIT_FAV_KEY = 'metro_exit_favs';
+  let exitFavCache = null;
+
 window.addEventListener('storage', e => {
     if (e.key === FAV_KEY) {
       try { favCache = JSON.parse(e.newValue || '[]'); }
@@ -534,9 +552,6 @@ window.addEventListener('storage', e => {
       catch (err) { console.warn('[KyivMetroGO] Помилка синхронізації Обраних виходів:', err); exitFavCache = []; }
     }
   });
-
-const EXIT_FAV_KEY = 'metro_exit_favs';
-  let exitFavCache = null;
 
   function getExitFavs() {
     if (exitFavCache) return [...exitFavCache];
@@ -775,85 +790,85 @@ function openFavSheet() {
       const entries = Object.values(all);
       let bodyHtml = '';
 
-      if (!entries.length) {
-        bodyHtml = `<p class="fav-empty-text">Поки що немає відміток.<br>Увімкніть режим check‑in і натисніть<br>на шпильку поруч із виходом.</p>`;
-      } else {
-        // ── Загальна статистика ──
+if (!entries.length) {
+  // Використовуємо той самий лічильник кольорів, що і для Обраного
+  const colors = ['#5b9bd5', '#c8523a', '#5aaa6a'];
+  const currentColor = colors[emptyFavColorIdx % colors.length];
+  emptyFavColorIdx++; // Збільшуємо, щоб при наступному заході колір змінився
+
+// Беремо ЗАПОВНЕНУ шпильку і замінюємо її стандартний колір на наш кольоровий
+      const coloredPin = DOCK_PIN_FILLED.replace(/currentColor/g, currentColor);
+  bodyHtml = `<p class="fav-empty-text">Натисніть ${coloredPin} на картці станції, щоб зберегти станцію та вихід.</p>`;
+}
+      else {
+        // Загальна статистика
+        const byStation = {};
+        entries.forEach(function(e) { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
         const totalCheckins = entries.length;
         const totalExitsAll = stationsData
-          ? Object.values(stationsData).reduce((sum, st) => sum + (st.positions?.filter(p => !p.closed).length ?? 0), 0)
+          ? Object.values(stationsData).reduce(function(sum, st) { return sum + (st.positions ? st.positions.filter(function(p) { return !p.closed; }).length : 0); }, 0)
           : 0;
+        const stationCount = Object.keys(byStation).length;
 
-        bodyHtml += `<div class="ci-stats-bar">
-          <div class="ci-stat">
-            <span class="ci-stat-num">${Object.keys(groupBySlug(entries)).length}</span>
-            <span class="ci-stat-lbl">станцій</span>
-          </div>
-          <div class="ci-stat-sep"></div>
-          <div class="ci-stat">
-            <span class="ci-stat-num">${totalCheckins}</span>
-            <span class="ci-stat-lbl">виходів</span>
-          </div>
-          <div class="ci-stat-sep"></div>
-          <div class="ci-stat">
-            <span class="ci-stat-num">${totalExitsAll > 0 ? Math.round(totalCheckins / totalExitsAll * 100) : 0}%</span>
-            <span class="ci-stat-lbl">охоплення</span>
-          </div>
-        </div>`;
+        bodyHtml += '<div class="ci-stats-bar">' +
+          '<div class="ci-stat"><span class="ci-stat-num">' + stationCount + '</span><span class="ci-stat-lbl">станцій</span></div>' +
+          '<div class="ci-stat-sep"></div>' +
+          '<div class="ci-stat"><span class="ci-stat-num">' + totalCheckins + '</span><span class="ci-stat-lbl">виходів</span></div>' +
+          '<div class="ci-stat-sep"></div>' +
+          '<div class="ci-stat"><span class="ci-stat-num">' + (totalExitsAll > 0 ? Math.round(totalCheckins / totalExitsAll * 100) : 0) + '%</span><span class="ci-stat-lbl">охоплення</span></div>' +
+          '</div>';
 
-        const byStation = groupBySlug(entries);
-        bodyHtml += Object.entries(byStation).map(([slug, items]) => {
-          const st = stationsData?.[slug];
-          const color = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
-          const name  = st?.name || slug;
-          const totalExits = st?.positions?.filter(p => !p.closed).length ?? 0;
-          const checkedCount = items.length;
-          const pct = totalExits > 0 ? Math.round(checkedCount / totalExits * 100) : 0;
-          const lastTs = Math.max(...items.map(e => e.ts || 0));
+        bodyHtml += Object.entries(byStation).map(function(entry) {
+          var slug = entry[0], items = entry[1];
+          var st = stationsData && stationsData[slug];
+          var color = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
+          var name = st ? st.name : slug;
+          var totalExits = st && st.positions ? st.positions.filter(function(p) { return !p.closed; }).length : 0;
+          var checkedCount = items.length;
+          var lastTs = Math.max.apply(null, items.map(function(e) { return e.ts || 0; }));
 
-          return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-color:${color}">
-            <div class="checkin-card-row">
-              <div class="checkin-card-left">
-                <span class="checkin-station-name-text">${name}</span>
-                <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
-              </div>
-              <div class="checkin-card-right">
-                <span class="checkin-fraction" style="color:${color}">${checkedCount}<span class="checkin-fraction-total">/${totalExits}</span></span>
-              </div>
-            </div>
-            <div class="checkin-progress-wrap">
-              <div class="checkin-progress-bar" style="width:${pct}%;background:${color}"></div>
-            </div>
-          </button>`;
+          // Кола: max 40 кіл, щоб не переповнювати
+          var maxDots = Math.min(totalExits, 40);
+          var dotsHtml = '';
+          for (var i = 0; i < maxDots; i++) {
+            if (i < checkedCount) {
+              dotsHtml += '<span class="checkin-dot is-visited" style="--ci-color:' + color + '"></span>';
+            } else {
+              dotsHtml += '<span class="checkin-dot is-empty"></span>';
+            }
+          }
+
+          return '<button class="checkin-station-card" data-slug="' + slug + '">' +
+            '<div class="checkin-card-row">' +
+              '<div class="checkin-card-left">' +
+                '<span class="checkin-station-name-text">' + name + '</span>' +
+                '<span class="checkin-time">' + formatCheckinTime(lastTs) + '</span>' +
+              '</div>' +
+              '<div class="checkin-card-right">' +
+                '<span class="checkin-fraction">' + checkedCount + '<span class="checkin-fraction-total">/' + totalExits + '</span></span>' +
+              '</div>' +
+            '</div>' +
+            (dotsHtml ? '<div class="checkin-dots">' + dotsHtml + '</div>' : '') +
+          '</button>';
         }).join('');
       }
 
-      s.innerHTML = `
-        <div class="sheet-handle-bar"><div class="sheet-handle"></div><span class="sheet-sheet-title">Check-in</span><button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button></div>
-        <div class="sheet-body">${bodyHtml}</div>`;
+      s.innerHTML =
+        '<div class="sheet-handle-bar"><div class="sheet-handle"></div><span class="sheet-sheet-title">Check-in</span><button class="sheet-close-btn" id="checkinClose" aria-label="\u0417\u0430\u043a\u0440\u0438\u0442\u0438">\u2715</button></div>' +
+        '<div class="sheet-body">' + bodyHtml + '</div>';
 
-      s.querySelector('#checkinClose')?.addEventListener('click', closeHandler);
+      s.querySelector('#checkinClose').addEventListener('click', closeHandler);
 
-      // Кліки по картках — відкрити станцію
-      s.querySelectorAll('.checkin-station-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const slug = card.dataset.slug;
-          if (slug) {
-            closeHandler();
-            setTimeout(() => openStation(slug), 380);
-          }
+      s.querySelectorAll('.checkin-station-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+          var sl = card.dataset.slug;
+          if (sl) { closeHandler(); setTimeout(function() { openStation(sl); }, 380); }
         });
       });
 
-      let swY2 = 0, isSwipeCI = false;
-      s.addEventListener('touchstart', e => { swY2 = e.touches[0].clientY; isSwipeCI = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
-      s.addEventListener('touchend',   e => { if (isSwipeCI && e.changedTouches[0].clientY - swY2 > 60) closeHandler(); });
-    }
-
-    function groupBySlug(entries) {
-      const map = {};
-      entries.forEach(e => { if (!map[e.slug]) map[e.slug] = []; map[e.slug].push(e); });
-      return map;
+      var swY2 = 0, isSwipeCI = false;
+      s.addEventListener('touchstart', function(e) { swY2 = e.touches[0].clientY; isSwipeCI = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
+      s.addEventListener('touchend',   function(e) { if (isSwipeCI && e.changedTouches[0].clientY - swY2 > 60) closeHandler(); });
     }
 
     if (!checkinSheet) {
@@ -896,20 +911,21 @@ function openFavSheet() {
     if (positions.length === 1) {
       const p = positions[0];
       const isMulti = String(p.wagon).includes(',');
-const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${MetroApp.Icons.pencil}</span>` : '';
-      // Спейсер більше не потрібен, бо олівець має position: absolute
-      return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}${generatePills(p.wagon, p.doors)}</div>`;
-          }
+      const editedMark = p._edited ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${MetroApp.Icons.pencil}</span>` : '';
+      return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">${editedMark}<div class="fav-tap-target" style="display:flex; gap:6px; align-items:center;">${generatePills(p.wagon, p.doors)}</div></div>`;
+    }
 
     if (multiRow) {
       const editedPos = positions.find(p => p._edited);
       const editedMark = editedPos ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${MetroApp.Icons.pencil}</span>` : '';
       const spacer = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
-      return `<div class="position-row position-row-multi">${editedMark}${positions.map((p, i) => `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${generatePills(p.wagon, p.doors)}`).join('')}${spacer}</div>`;
+      return `<div class="position-row position-row-multi">${editedMark}` +
+             positions.map((p, i) => `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}<div class="fav-tap-target" style="display:flex; gap:6px; align-items:center;">${generatePills(p.wagon, p.doors)}</div>`).join('') +
+             `${spacer}</div>`;
     }
 
     return positions.map(p => {
-      return `<div class="position-row ${String(p.wagon).includes(',') ? 'position-row-multi' : ''}">${generatePills(p.wagon, p.doors)}</div>`;
+      return `<div class="position-row ${String(p.wagon).includes(',') ? 'position-row-multi' : ''}"><div class="fav-tap-target" style="display:flex; gap:6px; align-items:center;">${generatePills(p.wagon, p.doors)}</div></div>`;
     }).join('');
   }
 
@@ -1042,8 +1058,9 @@ function triggerExitFav() {
         }
       }
 
-      let longPressTimer = null;
+let longPressTimer = null;
       row.addEventListener('touchstart', e => {
+        if (!e.target.closest('.fav-tap-target')) return; // Ігноруємо все, крім пілюль
         longPressTimer = setTimeout(() => { longPressTimer = null; triggerExitFav(); }, 600);
       }, { passive: true });
       row.addEventListener('touchend', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
@@ -1051,6 +1068,7 @@ function triggerExitFav() {
 
       let tapCount = 0; let tapTimer = null;
       row.addEventListener('click', e => {
+        if (!e.target.closest('.fav-tap-target')) return; // Ігноруємо все, крім пілюль
         if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
         tapCount++;
         clearTimeout(tapTimer);
@@ -1129,7 +1147,9 @@ document.getElementById('stationTitleMain').textContent = s.name;
         sheetOverlay.classList.add('overlay-visible'); 
       }
       attachExitFavListeners(sheetBody, slug, color);
-      MetroApp.attachCheckinButtons(sheetBody, slug, color);
+      // Прибираємо стару шпильку (якщо станція змінилась)
+      sheet.querySelector('.row-checkin-btn')?.remove();
+      MetroApp.attachCheckinButtons(sheet, slug, color);
     }
   }
 function closeAllSheets(force = false) {
@@ -1170,7 +1190,8 @@ const prevScrollTop = sheetBody.scrollTop;
         if (target && target !== currentStationSlug) el.classList.add('nav-link');
       });
       attachExitFavListeners(sheetBody, currentStationSlug, color);
-      MetroApp.attachCheckinButtons(sheetBody, currentStationSlug, color);
+      sheet.querySelector('.row-checkin-btn')?.remove();
+      MetroApp.attachCheckinButtons(sheet, currentStationSlug, color);
       sheetBody.scrollTop = prevScrollTop;
     }
   };
@@ -1450,18 +1471,13 @@ function openSearchSheet() {
       searchSheet.addEventListener('touchend', e => { if (isHandleSearch && (e.changedTouches[0].clientY - swY > 60)) document.getElementById('searchClose').click(); });
     }
 // Адаптація під клавіатуру (visualViewport)
-    // iOS: відступ знизу для системних елементів управління (home indicator, тулбар Safari)
-    const IOS_BOTTOM_OFFSET = 56; // px — місце для жесту «додому» / адресного рядка
     if (window.visualViewport) {
       const onVPResize = () => {
-        const safeH = window.visualViewport.height - IOS_BOTTOM_OFFSET;
-        searchSheet.style.maxHeight = Math.max(200, safeH) + 'px';
+        searchSheet.style.maxHeight = window.visualViewport.height + 'px';
       };
       onVPResize();
       window.visualViewport.addEventListener('resize', onVPResize);
       searchSheet._cleanupVP = () => window.visualViewport.removeEventListener('resize', onVPResize);
-    } else {
-      searchSheet.style.maxHeight = (window.innerHeight - IOS_BOTTOM_OFFSET) + 'px';
     }
     const input = document.getElementById('searchInput');
     const resultsContainer = document.getElementById('searchResults');
@@ -1551,50 +1567,92 @@ document.getElementById('sheetOverlay').classList.add('overlay-visible');
 
   function isCheckinMode() { return localStorage.getItem('metro_checkin_mode') === 'true'; }
 
-function updateCheckinDock() {
+const DOCK_PIN_EMPTY = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="var(--icon-color)" stroke="var(--icon-color)" stroke-width="0.5"/></svg>`;
+  
+const DOCK_PIN_FILLED = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);"><path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`;
+
+const DOCK_HEART_EMPTY = `<svg width="24" height="24" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M18,32.43a1,1,0,0,1-.61-.21C11.83,27.9,8,24.18,5.32,20.51,1.9,15.82,1.12,11.49,3,7.64c1.34-2.75,5.19-5,9.69-3.69A9.87,9.87,0,0,1,18,7.72a9.87,9.87,0,0,1,5.31-3.77c4.49-1.29,8.35.94,9.69,3.69,1.88,3.85,1.1,8.18-2.32,12.87C28,24.18,24.17,27.9,18.61,32.22A1,1,0,0,1,18,32.43ZM10.13,5.58A5.9,5.9,0,0,0,4.8,8.51c-1.55,3.18-.85,6.72,2.14,10.81A57.13,57.13,0,0,0,18,30.16,57.13,57.13,0,0,0,29.06,19.33c3-4.1,3.69-7.64,2.14-10.81-1-2-4-3.59-7.34-2.65a8,8,0,0,0-4.94,4.2,1,1,0,0,1-1.85,0,7.93,7.93,0,0,0-4.94-4.2A7.31,7.31,0,0,0,10.13,5.58Z"/></svg>`;
+  
+  const DOCK_HEART_FILLED = `<svg width="24" height="24" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M18,32.43a1,1,0,0,1-.61-.21C11.83,27.9,8,24.18,5.32,20.51,1.9,15.82,1.12,11.49,3,7.64c1.34-2.75,5.19-5,9.69-3.69A9.87,9.87,0,0,1,18,7.72a9.87,9.87,0,0,1,5.31-3.77c4.49-1.29,8.35.94,9.69,3.69,1.88,3.85,1.1,8.18-2.32,12.87C28,24.18,24.17,27.9,18.61,32.22A1,1,0,0,1,18,32.43Z"/></svg>`;
+  function updateCheckinDock() {
     const btn = document.getElementById('checkinBtn');
     if (!btn) return;
-    btn.hidden = !isCheckinMode();
-    // Лічильник повністю видалено
+    btn.hidden = !isCheckinMode(); // Показуємо тільки якщо режим увімкнено
+    const hasCheckins = Object.keys(getCheckins()).length > 0;
+    btn.innerHTML = hasCheckins ? DOCK_PIN_FILLED : DOCK_PIN_EMPTY;
   }
 
-  const CHECKIN_PIN_SVG_OFF = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor"/></svg>`;
+  function updateFavDock() {
+    const btn = document.getElementById('favListBtn');
+    if (!btn) return;
+    const hasFavs = getFavs().length > 0;
+    btn.innerHTML = hasFavs ? DOCK_HEART_FILLED : DOCK_HEART_EMPTY;
+  }
 
-  function checkinPinSvg(checked, lineColor) {
+const CHECKIN_PIN_SVG_OFF = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`;
+
+function checkinPinSvg(checked, lineColor) {
     if (!checked) return CHECKIN_PIN_SVG_OFF;
-    return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16,29.343C17.786,27.79,26.5,19.809,26.5,12c0-5.79-4.71-10.5-10.5-10.5S5.5,6.21,5.5,12 C5.5,19.809,14.214,27.79,16,29.343z" fill="${lineColor}"/>
-      <circle cx="16" cy="12" r="5.5" fill="var(--bg)"/>
-      <path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z" fill="${lineColor}"/>
+    return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="transform: translateY(-2px);">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="${lineColor}" stroke="${lineColor}" stroke-width="0.5"/>
     </svg>`;
   }
 
-  MetroApp.attachCheckinButtons = function(container, slug, lineColor) {
+
+
+
+MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {
     if (!isCheckinMode()) return;
-    container.querySelectorAll('.position-row').forEach(row => {
-      if (row.querySelector('.pos-checkin-btn')) return;
+    
+    // Шукаємо всі ряди виходів у шторці
+    const sheetBody = sheetEl.id === 'sheetBody' ? sheetEl : sheetEl.querySelector('#sheetBody') || document.getElementById('sheetBody');
+    
+    sheetBody.querySelectorAll('.position-row').forEach(function(row) {
+      // Запобіжник від дублювання шпильок
+      if (row.querySelector('.row-checkin-btn')) return;
+
       const nums = row.querySelectorAll('.pos-pill-num');
       if (nums.length < 2) return;
       const wagon = nums[0].textContent.trim();
-      const doors  = nums[1].textContent.trim();
+      const doors = nums[1].textContent.trim();
       const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
-      const labelEl  = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
+      const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
       const dir = labelEl ? labelEl.textContent.trim() : '';
-      const checked = isCheckedIn(slug, dir, wagon, doors);
 
+      // Створюємо шпильку для КОЖНОГО виходу
       const btn = document.createElement('button');
-      btn.className = 'pos-checkin-btn' + (checked ? ' is-checked-in' : '');
-      btn.setAttribute('aria-label', 'Позначити вихід');
-      btn.innerHTML = checkinPinSvg(checked, lineColor);
+      btn.className = 'row-checkin-btn';
+      btn.setAttribute('aria-label', 'Check-in для цього виходу');
+
+      function refreshBtn() {
+        const checked = isCheckedIn(slug, dir, wagon, doors);
+        btn.classList.toggle('is-checked-in', checked);
+        btn.innerHTML = checkinPinSvg(checked, checked ? lineColor : null);
+      }
+      
+      refreshBtn();
       row.appendChild(btn);
 
-      btn.addEventListener('click', e => {
+      // Клік по шпильці відмічає ТІЛЬКИ цей конкретний вихід
+      btn.addEventListener('click', function(e) {
         e.stopPropagation();
-        const nowChecked = toggleCheckin(slug, dir, wagon, doors, lineColor);
-        btn.classList.toggle('is-checked-in', nowChecked);
-        btn.innerHTML = checkinPinSvg(nowChecked, lineColor);
+        toggleCheckin(slug, dir, wagon, doors, lineColor);
+        refreshBtn();
+        updateCheckinDock();
       });
     });
+  };
+
+  MetroApp.removeCheckinButton = function(sheetEl) {
+    const sheetBody = sheetEl.id === 'sheetBody' ? sheetEl : sheetEl.querySelector('#sheetBody') || document.getElementById('sheetBody');
+    sheetBody.querySelectorAll('.row-checkin-btn').forEach(b => b.remove());
+  };
+
+  MetroApp.removeCheckinButton = function(sheetEl) {
+    const handleBar = sheetEl.closest && sheetEl.closest('.station-sheet')
+      ? sheetEl.closest('.station-sheet').querySelector('.sheet-handle-bar')
+      : document.querySelector('#stationSheet .sheet-handle-bar');
+    handleBar?.querySelectorAll('.row-checkin-btn').forEach(b => b.remove());
   };
 
   // ══ SETTINGS SHEET ══
@@ -1634,35 +1692,51 @@ function updateCheckinDock() {
           updateCheckinDock();
           if (currentStationSlug && sheet.classList.contains('sheet-open')) {
             const color = MetroApp.LINE_COLOR[stationsData[currentStationSlug]?.line] || 'var(--text-muted)';
-            if (e.target.checked) MetroApp.attachCheckinButtons(sheetBody, currentStationSlug, color);
-            else sheetBody.querySelectorAll('.pos-checkin-btn').forEach(b => b.remove());
+            if (e.target.checked) {
+              sheet.querySelector('.row-checkin-btn')?.remove();
+              MetroApp.attachCheckinButtons(sheet, currentStationSlug, color);
+            } else {
+              sheet.querySelector('.row-checkin-btn')?.remove();
+            }
           }
         });
       }
 
-      const checkinInfoBtn = document.getElementById('settingsCheckinInfo');
-      const checkinHint    = document.getElementById('settingsCheckinHint');
-      if (checkinInfoBtn && checkinHint) {
-        checkinInfoBtn.addEventListener('click', () => {
-          const open = !checkinHint.hidden;
-          checkinHint.hidden = open;
-          checkinInfoBtn.classList.toggle('settings-info-btn-active', !open);
-        });
-      }
+      // Кнопка `i` (Довідка Чекіну)
+      document.getElementById('settingsCheckinInfo')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const hint = document.getElementById('settingsCheckinHint');
+        const btn = document.getElementById('settingsCheckinInfo');
+        if (!hint) return;
+        hint.hidden = !hint.hidden;
+        btn.classList.toggle('settings-info-btn-active', !hint.hidden);
+      });
 
-      const clearCheckinBtn = document.getElementById('settingsClearCheckin');
-      if (clearCheckinBtn) {
-        clearCheckinBtn.addEventListener('click', () => {
-          MetroApp.showCustomConfirm('Очистити весь журнал check‑in?', () => {
-            localStorage.removeItem(CHECKIN_KEY);
-            updateCheckinDock();
-            document.querySelectorAll('.pos-checkin-btn.is-checked-in').forEach(b => {
-              b.classList.remove('is-checked-in');
-              b.innerHTML = CHECKIN_PIN_SVG_OFF;
-            });
-          }, null, null);
+      // Очищення "Вибраного"
+      document.getElementById('settingsClearFavs')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof MetroApp.showCustomConfirm === 'function') {
+          MetroApp.showCustomConfirm('Очистити «Вибране»?',
+            () => { 
+              saveFavs([]); 
+              exitFavCache = []; 
+              localStorage.removeItem(EXIT_FAV_KEY); 
+              updateFavDock(); 
+              document.getElementById('settingsClose').click(); 
+            },
+            null, null
+          );
+        }
+      });
+
+      // Клік у будь-якому місці картки налаштувань перемикає тумблер
+      settingsSheet.querySelectorAll('.settings-card').forEach(card => {
+        card.addEventListener('click', e => {
+          if (e.target.closest('label, input, button, a')) return;
+          const input = card.querySelector('input[type="checkbox"]');
+          if (input) input.click();
         });
-      }
+      });
 
       let swY = 0, isSwipeSettings = false;
       settingsSheet.addEventListener('touchstart', e => { swY = e.touches[0].clientY; isSwipeSettings = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
@@ -1672,33 +1746,41 @@ function updateCheckinDock() {
       const s = document.getElementById('settingsStartFavToggle'); if (s) s.checked = localStorage.getItem('metro_start_on_fav') === 'true';
       const c = document.getElementById('settingsCheckinToggle');  if (c) c.checked = isCheckinMode();
     }
-    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
     settingsSheet.classList.add('sheet-open');
     document.getElementById('sheetOverlay').classList.add('overlay-visible');
   }
 
   updateCheckinDock();
+  updateFavDock();
 
 MetroApp.animateSheetClose = function(sheetEl, callback) {
     if (!sheetEl || !sheetEl.classList.contains('sheet-open')) { callback?.(); return; }
     const rect = sheetEl.getBoundingClientRect();
     if (rect.height < 10) { callback?.(); return; }
 
+    // Вимикаємо рідну transition ДО клонування —
+    // щоб знімання sheet-open відпрацювало миттєво (translateY 100%), без ковзання
+    sheetEl.style.transition = 'none';
+    sheetEl.style.visibility = 'hidden';
+
     const baseStyle = [
-      `position:fixed`, `top:${rect.top}px`, `left:${rect.left}px`,
-      `width:${rect.width}px`, `height:${rect.height}px`,
-      `margin:0`, `transform:none`, `pointer-events:none`, `z-index:9999`,
-      `transition:transform 0.35s cubic-bezier(0.32,0.72,0,1),opacity 0.3s ease`
+      'position:fixed',
+      'top:'    + rect.top    + 'px',
+      'left:'   + rect.left   + 'px',
+      'width:'  + rect.width  + 'px',
+      'height:' + rect.height + 'px',
+      'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
+      'transition:transform 0.35s cubic-bezier(0.32,0.72,0,1),opacity 0.3s ease'
     ].join(';');
 
     const leftDoor  = sheetEl.cloneNode(true);
     const rightDoor = sheetEl.cloneNode(true);
-    leftDoor.setAttribute('style',  baseStyle + ';clip-path:inset(0 50% 0 0)');
-    rightDoor.setAttribute('style', baseStyle + ';clip-path:inset(0 0 0 50%)');
+    leftDoor.style.cssText  = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
+    rightDoor.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
 
     document.body.appendChild(leftDoor);
     document.body.appendChild(rightDoor);
-    sheetEl.style.visibility = 'hidden';
 
     void leftDoor.offsetWidth; // reflow
 
@@ -1707,14 +1789,20 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
     leftDoor.style.opacity    = '0';
     rightDoor.style.opacity   = '0';
 
-setTimeout(() => {
+    setTimeout(function() {
       leftDoor.remove();
       rightDoor.remove();
-      callback?.(); // Спочатку відпрацьовує закриття
-      // Чекаємо мить, поки CSS "вб'є" позицію, і тільки тоді повертаємо видимість
-      setTimeout(() => { sheetEl.style.visibility = ''; }, 50);
+      // callback знімає sheet-open — transition:none, тому translateY(100%) миттєво
+      callback && callback();
+      // Відновлюємо після двох кадрів, коли елемент вже offscreen
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          sheetEl.style.transition = '';
+          sheetEl.style.visibility = '';
+        });
+      });
     }, 360);
-}; // <--- ОСЬ ЦЯ ДУЖКА ВРЯТУЄ ДОДАТОК! Вона закриває animateSheetClose.
+}; // <--- ОСЬ ВОНА! Ця дужка поверне до життя ВСІ кнопки закриття і серця.
 
 MetroApp.showCustomConfirm = function(message, onYes, onNo, onCancel) {
     const overlay = document.createElement('div');

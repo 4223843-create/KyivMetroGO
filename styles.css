@@ -155,10 +155,31 @@ button { font-family: inherit; }
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-ui-buttons);
-  
   display: flex;
   align-items: center;
-  gap: 16px; /* Трохи збільшив відступ між іконками, бо фону більше немає */
+  gap: 16px;
+  /* Dock завжди симетричний: серце — центр — лупа */
+}
+/* Кнопка Check-in: фіксована строго вгорі по центру */
+.dock-btn-checkin {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top)); /* 12px від верху + врахування "чубчика" iPhone */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-ui-buttons);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+}
+
+.dock-btn-checkin:active {
+  transform: translateX(-50%) !important;
+  opacity: 0.6;
 }
 
 .dock-btn {
@@ -669,14 +690,24 @@ color: var(--text-muted);
   opacity: 0.2;
 }
 
-/* ══ СЕРЦЕ В HANDLE-BAR ══ */
 .fav-btn-bar {
-  background: none; border: none;
-  font-size: 22px; cursor: pointer;
+  background: none; 
+  border: none;
   color: var(--text-muted);
-  padding: 4px 8px;
+  cursor: pointer;
   transition: transform 0.15s;
   flex-shrink: 0;
+  
+  /* Робимо габарити ідентичними до кнопки хрестика */
+  padding: 0; 
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  /* Прибираємо старе зміщення вниз, флексбокс сам їх відцентрує на одній лінії */
+  transform: none; 
 }
 .fav-btn-bar.fav-active { color: #ffcc00; }
 
@@ -1168,16 +1199,6 @@ z-index: var(--z-global-modal);
 
 /* Дефолтні кольори для кнопок внизу */
 .ui-btn svg path { fill: var(--icon-color) !important; }
-
-
-#favListBtn svg path { fill: var(--text-muted) !important; }
-
-
-
-
-
-
-
 
 
 /* --- ВІДСТУПИ ДЛЯ ТЕКСТУ ВЕРСІЇ --- */
@@ -1852,49 +1873,46 @@ margin: 0 0 4px 0;
 .ios-toggle {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 26px;
+  width: 18px;
+  height: 32px;
   flex-shrink: 0;
 }
-.ios-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.ios-toggle input { opacity: 0; width: 0; height: 0; }
 .ios-toggle-slider {
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background-color: #adadb3;
-  border-radius: 26px;
-  transition: background-color 0.22s;
-}
-[data-theme="light"] .ios-toggle-slider {
-  background-color: #c4c4cb;
-  box-shadow: inset 0 0 0 1.5px rgba(0,0,0,0.18);
+  background-color: var(--bg-pill);
+  border-radius: 20px;
+  transition: background-color 0.2s;
+  border: 1px solid var(--border);
 }
 .ios-toggle-slider:before {
   position: absolute;
   content: "";
-  height: 22px;
-  width: 22px;
-  left: 2px;
-  top: 2px;
-  background-color: #fff;
+  height: 14px;
+  width: 14px;
+  left: 1px;
+  bottom: 1px;
+  background-color: var(--text-muted);
   border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.28);
-  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .ios-toggle input:checked + .ios-toggle-slider {
-  background-color: #636366;
-}
-[data-theme="light"] .ios-toggle input:checked + .ios-toggle-slider {
-  background-color: #8e8e93;
-  box-shadow: none;
+  background-color: var(--bg-card);
+  border-color: var(--text-muted);
 }
 .ios-toggle input:checked + .ios-toggle-slider:before {
-  transform: translateX(18px);
+  transform: translateY(-14px);
+  background-color: #fff;
 }
 
+#favListBtn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
 
-
-/* П.1: Трохи збільшуємо саму лупу (була 20, стала 22) */
 .search-btn-top svg {
     width: 22px;
     height: 22px;
@@ -2237,207 +2255,108 @@ svg [role="button"]:focus:not(:focus-visible) {
 }
 /* ══ SETTINGS SHEET ══ */
 .settings-list {
-  padding: 4px 0;
+  padding: 8px 0;
 }
 .settings-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 20px;
+  justify-content: space-between;
+  padding: 14px 20px;
   border-bottom: 0.5px solid var(--border);
 }
 .settings-row:last-child { border-bottom: none; }
 .settings-label {
-  font-size: 15px;
-  color: var(--text-muted);
+  font-size: 16px;
+  color: var(--text);
   flex: 1;
+  padding-right: 16px;
   line-height: 1.3;
 }
-.settings-row-action .settings-label {
+.settings-hint {
+  font-size: 13px;
   color: var(--text-muted);
-}
-.settings-action-btn {
-  background: none;
-  border: none;
-  font-size: 14px;
-  color: var(--line-red);
-  cursor: pointer;
-  padding: 2px 0;
-  -webkit-tap-highlight-color: transparent;
-  opacity: 0.85;
-}
-.settings-action-btn:active { opacity: 0.5; }
-.settings-checkin-hint {
-  font-size: 13.5px;
-  color: var(--text-muted);
-  padding: 10px 20px 14px;
+  padding: 12px 20px 4px;
   margin: 0;
-  line-height: 1.55;
-  background: var(--bg-card);
-  border-bottom: 0.5px solid var(--border);
+  opacity: 0.7;
+  line-height: 1.5;
 }
-.settings-checkin-hint p { margin: 0; }
-.settings-info-btn {
-  background: none;
-  border: none;
-  padding: 3px;
-  cursor: pointer;
-  color: var(--text-muted);
-  opacity: 0.6;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.settings-info-btn svg { width: 18px; height: 18px; display: block; }
-.settings-info-btn:active,
-.settings-info-btn.settings-info-btn-active { opacity: 1; }
 
-/* ══ CHECK-IN PIN BUTTON ══ */
-/* position-row має relative + paddingRight, щоб шпилька не перекривала пілюлі */
-.position-row {
-  position: relative;
-  padding-right: 36px; /* місце для шпильки */
-}
-/* Шпилька по центру між правим краєм дверей і правим краєм блоку */
-.pos-checkin-btn {
+/* ══ CHECK-IN PIN BUTTON (у шапці шторки, під кнопкою ✕) ══ */
+/* position-row: relative, БЕЗ padding — пілюлі завжди по центру */
+.position-row { position: relative; }
+
+/* ══ CHECK-IN PIN BUTTON (шпилька біля виходу) ══ */
+.row-checkin-btn {
   position: absolute;
+  right: 26px;
   top: 50%;
-  right: 0;
-  width: 36px;
-  height: 100%;
-  min-height: 44px;
   transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
   background: none;
   border: none;
-  padding: 0;
+  padding: 6px;
   cursor: pointer;
   color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.38;
+  opacity: 0.4;
   transition: opacity 0.2s, transform 0.15s;
   -webkit-tap-highlight-color: transparent;
   z-index: 2;
 }
-.pos-checkin-btn:active { opacity: 1; transform: translateY(-50%) scale(0.82); }
-.pos-checkin-btn.is-checked-in { opacity: 1; }
-.pos-checkin-btn svg {
-  width: 20px;
-  height: 24px;
-  display: block;
-}
+.row-checkin-btn:active { transform: translateY(-50%) scale(0.82); }
+.row-checkin-btn.is-checked-in { opacity: 1; }
+.row-checkin-btn svg { width: 18px; height: 22px; display: block; }
 
 /* ══ CHECK-IN JOURNAL SHEET ══ */
-/* ── Панель статистики ── */
-.ci-stats-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 16px 20px 12px;
-  border-bottom: 0.5px solid var(--border);
-  margin-bottom: 4px;
+.checkin-station-group {
+  margin-bottom: 8px;
 }
-.ci-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.ci-stat-num {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1;
-}
-.ci-stat-lbl {
-  font-size: 11px;
+.checkin-station-name {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: .05em;
+  padding: 10px 16px 6px;
+  border-left: 3px solid var(--text-muted);
+  margin: 0 0 2px;
 }
-.ci-stat-sep {
-  width: 0.5px;
-  height: 32px;
-  background: var(--border);
-  flex-shrink: 0;
-}
-/* ── Картка станції ── */
-.checkin-station-card {
+.checkin-entry {
   display: flex;
-  flex-direction: column;
-  width: 100%;
-  background: none;
-  border: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
   border-bottom: 0.5px solid var(--border);
-  padding: 12px 16px 0;
-  cursor: pointer;
-  text-align: left;
-  -webkit-tap-highlight-color: transparent;
 }
-.checkin-station-card > .checkin-card-row {
-  display: flex;
-  align-items: flex-start;
-}
-.checkin-station-card:active { background: var(--bg-card); }
-.checkin-station-card:last-of-type { border-bottom: none; }
-.checkin-station-name-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-  display: block;
-}
-/* Старий .checkin-station-group залишаємо пустим для зворотної сумісності */
-.checkin-station-group {
-  margin-bottom: 0;
-}
-/* старі стилі checkin-entry замінено checkin-station-card */
-.checkin-time {
-  font-size: 12px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-.checkin-card-left {
+.checkin-entry:last-child { border-bottom: none; }
+.checkin-pin-icon { width: 22px; height: 26px; flex-shrink: 0; }
+.checkin-pin-icon svg { width: 100%; height: 100%; }
+.checkin-entry-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  flex: 1;
-  padding-right: 12px;
 }
-.checkin-card-right {
-  flex-shrink: 0;
-  padding-bottom: 8px;
-}
-.checkin-fraction {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1;
-  display: block;
-  text-align: right;
-}
-.checkin-fraction-total {
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--text-muted);
-}
-.checkin-progress-wrap {
-  height: 3px;
-  background: var(--border);
-  border-radius: 2px;
-  margin: 8px -16px 0;
+.checkin-dir {
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
-.checkin-progress-bar {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.4s ease;
-  min-width: 3px;
+.checkin-pos {
+  font-size: 13px;
+  font-weight: 500;
+}
+.checkin-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 
@@ -2457,3 +2376,165 @@ svg [role="button"]:focus:not(:focus-visible) {
 .fb-station-item:active {
   background: var(--bg-card);
 }
+
+/* ══ CHECK-IN JOURNAL — нові стилі (кола + картки) ══ */
+.ci-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px 12px;
+  border-bottom: 0.5px solid var(--border);
+  margin-bottom: 4px;
+}
+.ci-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ci-stat-num { font-size: 24px; font-weight: 700; color: var(--text-muted); line-height: 1; }
+.ci-stat-lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; opacity: 0.7; }
+.ci-stat-sep { width: 0.5px; height: 32px; background: var(--border); flex-shrink: 0; }
+
+.checkin-station-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 0.5px solid var(--border);
+  padding: 12px 16px 0;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.checkin-station-card:active { background: var(--bg-card); }
+.checkin-station-card:last-of-type { border-bottom: none; }
+
+.checkin-card-row {
+  display: flex;
+  align-items: flex-start;
+}
+.checkin-card-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-right: 12px;
+}
+.checkin-station-name-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: block;
+}
+.checkin-card-right { flex-shrink: 0; padding-bottom: 6px; }
+.checkin-fraction {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  display: block;
+  text-align: right;
+  color: var(--text-muted);
+}
+.checkin-fraction-total {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-muted);
+  opacity: 0.55;
+}
+.checkin-time { font-size: 12px; color: var(--text-muted); opacity: 0.7; }
+
+/* ── Кола виходів ── */
+.checkin-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 0 12px;
+}
+.checkin-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.checkin-dot.is-visited { background: var(--ci-color, var(--text-muted)); }
+.checkin-dot.is-empty   { background: var(--border); }
+
+/* Колір іконок у доку */
+#checkinBtn, #favListBtn { color: var(--text-muted); }
+/* ══ SETTINGS CARDS (about-card style) ══ */
+.settings-content {
+  padding: 16px 16px 32px;
+}
+.settings-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.settings-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.settings-card-label {
+  font-size: 16px;
+  color: var(--text-muted);
+  line-height: 1.3;
+  display: block;
+}
+/* Check-in card: вертикальне розкладення */
+.settings-card-checkin {
+  flex-direction: column;
+  align-items: stretch;
+}
+.settings-card-checkin .settings-card-body {
+  width: 100%;
+}
+.settings-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-card-hint {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 10px 0 0;
+  line-height: 1.55;
+  opacity: 0.85;
+}
+.settings-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--border);
+}
+.settings-info-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 8px;
+  margin-left: -8px;
+  cursor: pointer;
+  color: var(--line-green);
+  font-size: 14px;
+  opacity: 0.7;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.settings-info-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+.settings-info-btn:active,
+.settings-info-btn.settings-info-btn-active { opacity: 1; color: var(--text); }
+.settings-action-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--line-red);
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.85;
+  margin-left: auto;
+}
+.settings-action-btn:active { opacity: 0.5; }
