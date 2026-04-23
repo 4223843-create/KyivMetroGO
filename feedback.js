@@ -6,10 +6,13 @@
   const LOCAL_EDITS_KEY = 'metro_local_edits';
   const EXIT_LABELS_KEY = 'metro_exit_labels';
   const PENCIL_SVG_LABEL = MetroApp.Icons.pencil;
+  const STATIONS_CAN_ADD_EXIT = new Set(['R.Zhytomyrska', 'G.Osokorky', 'G.Chervonyi_khutir']);
 
 function getExitLabels() {
-    try { return JSON.parse(localStorage.getItem(EXIT_LABELS_KEY) || '{}'); } 
-    catch (e) { console.warn('[KyivMetroGO] Помилка парсингу описів виходів:', e); return {}; }
+    if (exitLabelsCache) return exitLabelsCache;
+    try { exitLabelsCache = JSON.parse(localStorage.getItem(EXIT_LABELS_KEY) || '{}'); }
+    catch (e) { console.warn('[KyivMetroGO] Помилка парсингу описів виходів:', e); exitLabelsCache = {}; }
+    return exitLabelsCache;
   }
   function saveExitLabel(slug, posIdx, label) {
     const labels = getExitLabels();
@@ -17,6 +20,7 @@ function getExitLabels() {
     if (label.trim()) labels[slug][posIdx] = label.trim();
     else { delete labels[slug][posIdx]; if (!Object.keys(labels[slug]).length) delete labels[slug]; }
     localStorage.setItem(EXIT_LABELS_KEY, JSON.stringify(labels));
+    exitLabelsCache = null;
   }
   
   MetroApp.getExitLabel = function(slug, posIdx) {
@@ -41,8 +45,9 @@ function getExitLabels() {
   };
 
   let localEditsCache = null;
+  let exitLabelsCache = null;
   MetroApp.fbUnsaved = false;
-  MetroApp.invalidateLocalEditsCache = () => { localEditsCache = null; };
+  MetroApp.invalidateLocalEditsCache = () => { localEditsCache = null; exitLabelsCache = null; };
 
 function getLocalEdits() {
     if (localEditsCache) return localEditsCache;
@@ -812,7 +817,7 @@ posEl.innerHTML = groups.map(g => {
           }).join('');
           
 // Дозволяємо додавати лише для конкретних станцій
-          const canAddMore = ['R.Zhytomyrska', 'G.Osokorky', 'G.Chervonyi_khutir'].includes(slug);
+          const canAddMore = STATIONS_CAN_ADD_EXIT.has(slug);
           // Перевіряємо, чи юзер ВЖЕ додав новий вихід у цьому напрямку
           const hasNewAlready = Object.values(fbState.current).some(st => st.isNew && st.dir === g.dir);
           
@@ -1016,3 +1021,5 @@ function closeFeedbackSheet() {
   MetroApp.closeFeedbackSheet = closeFeedbackSheet;
 
 })();
+// Дозволяє динамічний import() з main.js
+export {};

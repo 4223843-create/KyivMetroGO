@@ -135,17 +135,6 @@ button { font-family: inherit; }
 
 
 
-.ui-btn {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  border: none;
-  background: var(--bg-card);
-  font-size: 20px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-  color: var(--text);
-}
 
 
 /* ══ НИЖНІЙ ЦЕНТРАЛЬНИЙ ДОК ══ */
@@ -313,6 +302,21 @@ z-index: var(--z-fullscreen-sheet);
   align-items: center;
 }
 
+.sheet-action-btn {
+  background: none; border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s;
+}
+.sheet-action-btn:active { opacity: .5; }
+.sheet-action-btn svg { width: 18px; height: 18px; }
+
+
 /* ══ SHEET BODY — скролиться ══ */
 .sheet-body {
   overflow-y: auto;
@@ -358,10 +362,9 @@ z-index: var(--z-fullscreen-sheet);
   color: var(--text-muted);
   text-align: left;
   padding: 20px 16px 16px;
-  margin: 0 0 0 calc(50% - 150px - 22px); /* Зміщення ліворуч як у заголовка */
+  margin: 0 0 0 calc(50% - 150px - 22px);
   font-size: 15px;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   opacity: 0.7;
 }
@@ -968,11 +971,6 @@ color: var(--text-muted);
 }
 
 
-/* ══ П.6: тло кнопок у світлій темі ══ */
-[data-theme="light"] .ui-btn {
-  background: #b8b8bf;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
 
 /* ══ П.10: скидання локальних змін ══ */
 .fb-reset-btn {
@@ -1196,9 +1194,6 @@ z-index: var(--z-global-modal);
   margin-bottom: 8px;
 }
 
-
-/* Дефолтні кольори для кнопок внизу */
-.ui-btn svg path { fill: var(--icon-color) !important; }
 
 
 /* --- ВІДСТУПИ ДЛЯ ТЕКСТУ ВЕРСІЇ --- */
@@ -2538,3 +2533,54 @@ svg [role="button"]:focus:not(:focus-visible) {
   margin-left: auto;
 }
 .settings-action-btn:active { opacity: 0.5; }
+
+/* ══ SW UPDATE TOAST ══ */
+.sw-update-toast {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 80px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-sheet);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  z-index: var(--z-global-modal);
+  white-space: nowrap;
+}
+.sw-update-toast.sw-toast-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.sw-update-text {
+  font-size: 14px;
+  color: var(--text);
+}
+.sw-update-btn {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--line-blue);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.sw-update-dismiss {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ══ MAP VIEWPORT OPTIMIZATION ══ */
+.map-viewport {
+  contain: layout paint;
+}
