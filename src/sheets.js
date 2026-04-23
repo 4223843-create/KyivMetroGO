@@ -3,6 +3,7 @@ import { pill, heartSvg }                                 from './ui.js';
 import { slugByName }                                     from './stations.js';
 import { getFavs, isFav, toggleFav, getExitFavs,
          isExitFav, toggleExitFav, updateFavDock }        from './favorites.js';
+import { isCheckinMode, openCheckinSheet }                 from './checkin.js';
 
 const sheet       = document.getElementById('stationSheet');
 const sheetBody   = document.getElementById('sheetBody');
@@ -379,24 +380,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeAllSheets();
 });
 
-// Share
-document.getElementById('sheetShareBtn')?.addEventListener('click', () => {
-  if (!state.currentStationSlug) return;
-  const url = `${location.origin}${location.pathname}?station=${state.currentStationSlug}`;
-  if (navigator.share) {
-    navigator.share({ title: document.getElementById('stationTitleMain')?.textContent || 'KyivMetroGO', url }).catch(() => {});
-  } else {
-    navigator.clipboard?.writeText(url).then(() => {
-      const btn = document.getElementById('sheetShareBtn');
-      if (!btn) return;
-      const orig = btn.innerHTML;
-      btn.innerHTML   = MetroApp.Icons.check;
-      btn.style.color = 'var(--line-green)';
-      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 1800);
-    });
-  }
-});
-
 // Кліки всередині sheetBody (nav-labels та олівець)
 sheetBody.addEventListener('click', e => {
   const navLabel = e.target.closest('.nav-label');
@@ -498,7 +481,3 @@ sheet.addEventListener('touchend', e => {
 MetroApp.openStation    = openStation;
 MetroApp.closeAllSheets = closeAllSheets;
 MetroApp.openAboutSheet = openAboutSheet;
-
-// Share-іконка
-const _shareBtn = document.getElementById('sheetShareBtn');
-if (_shareBtn) _shareBtn.innerHTML = MetroApp.Icons.share;

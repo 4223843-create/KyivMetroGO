@@ -1021,5 +1021,4 @@ function closeFeedbackSheet() {
   MetroApp.closeFeedbackSheet = closeFeedbackSheet;
 
 })();
-// Дозволяє динамічний import() з main.js
 export {};

@@ -155,7 +155,7 @@ button { font-family: inherit; }
   top: calc(12px + env(safe-area-inset-top)); /* 12px від верху + врахування "чубчика" iPhone */
   left: 50%;
   transform: translateX(-50%);
-  z-index: var(--z-ui-buttons);
+  z-index: var(--z-bottom-sheet); /* вище оверлея, щоб клік не поглинався */
   width: 44px;
   height: 44px;
   display: flex;
@@ -2533,54 +2533,3 @@ svg [role="button"]:focus:not(:focus-visible) {
   margin-left: auto;
 }
 .settings-action-btn:active { opacity: 0.5; }
-
-/* ══ SW UPDATE TOAST ══ */
-.sw-update-toast {
-  position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 80px);
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg-sheet);
-  border: 0.5px solid var(--border);
-  border-radius: 14px;
-  padding: 10px 14px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-  z-index: var(--z-global-modal);
-  white-space: nowrap;
-}
-.sw-update-toast.sw-toast-visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-.sw-update-text {
-  font-size: 14px;
-  color: var(--text);
-}
-.sw-update-btn {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--line-blue);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-}
-.sw-update-dismiss {
-  font-size: 12px;
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-/* ══ MAP VIEWPORT OPTIMIZATION ══ */
-.map-viewport {
-  contain: layout paint;
-}

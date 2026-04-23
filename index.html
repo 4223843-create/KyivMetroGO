@@ -87,7 +87,7 @@
       <button class="fav-btn-bar" aria-label="Вибране"></button>
       <div class="sheet-handle"></div>
       <span class="sheet-station-title" id="stationTitleMain"></span>
-      <button id="sheetShareBtn" class="sheet-action-btn" aria-label="Поділитись"></button>
+      <button id="sheetCheckinBtn" class="sheet-action-btn" aria-label="Журнал check-in" hidden></button>
       <button id="sheetClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
     </div>
     <div id="sheetBody" class="sheet-body"></div>
@@ -171,13 +171,6 @@
     <div class="sheet-body" id="feedbackBody">
       <p class="fb-main-intro-text">Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
 
-      <div id="fbLineFilter" class="search-line-filter fb-line-filter" role="group" aria-label="Фільтр по гілці">
-        <button class="search-line-btn is-active" data-line="">Всі</button>
-        <button class="search-line-btn" data-line="red">Червона</button>
-        <button class="search-line-btn" data-line="blue">Синя</button>
-        <button class="search-line-btn" data-line="green">Зелена</button>
-      </div>
-
       <div id="fbStationList" class="fb-station-list" hidden></div>
 
       <input type="hidden" id="fbLine" value="">
@@ -186,6 +179,15 @@
       <div id="fbPositions"></div>
 
       <div class="fb-footer-sticky">
+        <div id="fbLineFilterWrap">
+          <div id="fbLineFilter" class="search-line-filter fb-line-filter" role="group" aria-label="Фільтр по гілці">
+            <button class="search-line-btn is-active" data-line="">Всі</button>
+            <button class="search-line-btn" data-line="red">Червона</button>
+            <button class="search-line-btn" data-line="blue">Синя</button>
+            <button class="search-line-btn" data-line="green">Зелена</button>
+          </div>
+        </div>
+        <button id="fbChangeStation" class="fb-change-station-btn" hidden>← Обрати іншу станцію</button>
         <button id="fbSend" class="fb-send-btn" disabled>Застосувати</button>
         <div id="fbResult"></div><div id="fbResetWrap"></div>
       </div>
