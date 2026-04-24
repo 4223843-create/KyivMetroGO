@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA }    from 'vite-plugin-pwa';
 
 export default defineConfig({
+  base: './',
   root: '.',
   publicDir: 'public',
   build: {
@@ -40,6 +41,7 @@ export default defineConfig({
           // SVG і stations.json НЕ включаємо в precache глобом:
           // SVG — вже в JS-бандлі; stations.json — network-first
         ],
+        rollupFormat: 'iife'
       },
 
       devOptions: {

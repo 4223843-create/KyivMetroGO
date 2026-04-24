@@ -1,7 +1,9 @@
+window.MetroApp = window.MetroApp || {};
 // ══ ЯДРО ══ — порядок імпортів важливий
 import { STORAGE_KEYS, Storage } from './storage.js';
 import './icons.js';
-import './state.js';
+import { state } from './state.js';
+import { registerSW } from 'virtual:pwa-register';
 
 // UI до всього іншого (animateSheetClose потрібен всім)
 import './ui.js';
@@ -42,6 +44,13 @@ const checkinBtn   = document.getElementById('checkinBtn');
 favListBtn?.addEventListener('click', openFavSheet);
 searchBtnTop?.addEventListener('click', openSearchSheet);
 checkinBtn?.addEventListener('click', openCheckinSheet);
+
+// Автоматична реєстрація Service Worker від Vite PWA
+const updateSW = registerSW({
+  onOfflineReady() {
+    console.log('[PWA] Додаток готовий до роботи в офлайні');
+  },
+});
 
 // ══ МЕНЮ ══
 if (menuBtn && dropMenu) {
