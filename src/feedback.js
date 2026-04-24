@@ -1,3 +1,4 @@
+import { Storage } from './storage.js';
 (function() {
 
   const FORMSPREE_URL = 'https://formspree.io/f/mgopobnd';
@@ -10,7 +11,7 @@
 
 function getExitLabels() {
     if (exitLabelsCache) return exitLabelsCache;
-    try { exitLabelsCache = JSON.parse(localStorage.getItem(EXIT_LABELS_KEY) || '{}'); }
+    try { exitLabelsCache = JSON.parse(Storage.get(EXIT_LABELS_KEY) || '{}'); }
     catch (e) { console.warn('[KyivMetroGO] Помилка парсингу описів виходів:', e); exitLabelsCache = {}; }
     return exitLabelsCache;
   }
@@ -19,7 +20,7 @@ function getExitLabels() {
     if (!labels[slug]) labels[slug] = {};
     if (label.trim()) labels[slug][posIdx] = label.trim();
     else { delete labels[slug][posIdx]; if (!Object.keys(labels[slug]).length) delete labels[slug]; }
-    localStorage.setItem(EXIT_LABELS_KEY, JSON.stringify(labels));
+    Storage.set(EXIT_LABELS_KEY, JSON.stringify(labels));
     exitLabelsCache = null;
   }
   
@@ -51,7 +52,7 @@ function getExitLabels() {
 
 function getLocalEdits() {
     if (localEditsCache) return localEditsCache;
-    try { localEditsCache = JSON.parse(localStorage.getItem(LOCAL_EDITS_KEY) || '{}'); }
+    try { localEditsCache = JSON.parse(Storage.get(LOCAL_EDITS_KEY) || '{}'); }
     catch (e) { console.warn('[KyivMetroGO] Помилка парсингу локальних змін:', e); localEditsCache = {}; }
     return localEditsCache;
   }
@@ -60,12 +61,12 @@ function getLocalEdits() {
     const edits = getLocalEdits();
     if (!edits[slug]) edits[slug] = {};
     edits[slug][posIdx] = data;
-    localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+    Storage.set(LOCAL_EDITS_KEY, JSON.stringify(edits));
   }
 
   function clearAllLocalEdits() {
     localEditsCache = null;
-    localStorage.removeItem(LOCAL_EDITS_KEY);
+    Storage.remove(LOCAL_EDITS_KEY);
   }
 
   function hasLocalEdits() { return Object.keys(getLocalEdits()).length > 0; }
@@ -672,7 +673,7 @@ posEl.addEventListener('click', (e) => {
       delete edits[slug][idx];
       if (Object.keys(edits[slug]).length === 0) delete edits[slug];
       if (Object.keys(edits).length === 0) clearAllLocalEdits();
-      else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+      else Storage.set(LOCAL_EDITS_KEY, JSON.stringify(edits));
     }
     MetroApp.invalidateLocalEditsCache?.();
     if (fbState.current[idx]) fbState.current[idx].isClosed = false;
@@ -695,7 +696,7 @@ posEl.addEventListener('click', (e) => {
         delete edits[slug][idx];
         if (Object.keys(edits[slug]).length === 0) delete edits[slug];
         if (Object.keys(edits).length === 0) clearAllLocalEdits();
-        else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+        else Storage.set(LOCAL_EDITS_KEY, JSON.stringify(edits));
       }
       renderFeedbackPositions(slug);
       markFeedbackDirty();

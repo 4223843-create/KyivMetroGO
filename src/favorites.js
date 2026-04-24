@@ -1,6 +1,6 @@
 import Sortable       from 'sortablejs';
 import { state }       from './state.js';
-import { STORAGE_KEYS } from './storage.js';
+import { STORAGE_KEYS, Storage } from './storage.js';
 
 const favSheet   = document.getElementById('favSheet');
 const favBody    = document.getElementById('favBody');
@@ -13,14 +13,14 @@ let favCache = null;
 
 export function getFavs() {
   if (favCache) return [...favCache];
-  try { favCache = JSON.parse(localStorage.getItem(STORAGE_KEYS.FAVS) || '[]'); }
+  try { favCache = JSON.parse(Storage.get(STORAGE_KEYS.FAVS) || '[]'); }
   catch (e) { console.warn('[KyivMetroGO] Помилка парсингу Обраних:', e); favCache = []; }
   return [...favCache];
 }
 
 export function saveFavs(arr) {
   favCache = [...arr];
-  localStorage.setItem(STORAGE_KEYS.FAVS, JSON.stringify(favCache));
+  Storage.set(STORAGE_KEYS.FAVS, JSON.stringify(favCache));
 }
 
 export const isFav    = slug => getFavs().includes(slug);
@@ -37,7 +37,7 @@ let exitFavCache = null;
 
 export function getExitFavs() {
   if (exitFavCache) return [...exitFavCache];
-  try { exitFavCache = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXIT_FAVS) || '[]'); }
+  try { exitFavCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_FAVS) || '[]'); }
   catch (e) { console.warn('[KyivMetroGO] Помилка парсингу Обраних виходів:', e); exitFavCache = []; }
   return [...exitFavCache];
 }
@@ -55,7 +55,7 @@ export function toggleExitFav(slug, dir, wagon, doors) {
 
   if (idx >= 0) {
     favs.splice(idx, 1);
-    localStorage.setItem(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
+    Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
     exitFavCache = [...favs];
     return { status: 'removed' };
   }
@@ -68,7 +68,7 @@ export function toggleExitFav(slug, dir, wagon, doors) {
   let mainFavs = getFavs();
   if (!mainFavs.includes(slug)) { mainFavs.push(slug); saveFavs(mainFavs); }
 
-  localStorage.setItem(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
+  Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
   exitFavCache = [...favs];
   return { status: 'added' };
 }
@@ -128,7 +128,7 @@ export function renderFavList(favs) {
   items.forEach(item => { item.rowId = `${item.slug}::${item.dir}`; });
 
   let savedOrder = [];
-  try { savedOrder = JSON.parse(localStorage.getItem(STORAGE_KEYS.FAV_ROWS_ORDER) || '[]'); }
+  try { savedOrder = JSON.parse(Storage.get(STORAGE_KEYS.FAV_ROWS_ORDER) || '[]'); }
   catch { savedOrder = []; }
 
   const getEffectiveIdx = item => {
@@ -193,7 +193,7 @@ export function renderFavList(favs) {
 
   function saveOrder() {
     const rowIds      = [...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.rowId).filter(Boolean);
-    localStorage.setItem(STORAGE_KEYS.FAV_ROWS_ORDER, JSON.stringify(rowIds));
+    Storage.set(STORAGE_KEYS.FAV_ROWS_ORDER, JSON.stringify(rowIds));
     const uniqueSlugs = [...new Set([...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.slug).filter(Boolean))];
     saveFavs(uniqueSlugs);
   }
@@ -255,7 +255,7 @@ export function updateFavDock() {
 }
 
 // ══ EVENT LISTENERS ══
-favBtn.addEventListener('click', openFavSheet);
+// Клік на favListBtn реєструється в main.js — тут не дублюємо
 favClose.addEventListener('click', closeFavSheet);
 
 let isHandleSwipeFav = false, swipeStartYFav = 0;

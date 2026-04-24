@@ -1,4 +1,5 @@
 import { state }                                          from './state.js';
+import { STORAGE_KEYS, Storage } from './storage.js';
 import { pill, heartSvg }                                 from './ui.js';
 import { slugByName }                                     from './stations.js';
 import { getFavs, isFav, toggleFav, getExitFavs,
@@ -416,11 +417,11 @@ sheetBody.addEventListener('click', e => {
     panel.querySelector('.edit-info-cancel').addEventListener('click', ev => {
       ev.stopPropagation();
       try {
-        const edits = JSON.parse(localStorage.getItem('metro_local_edits') || '{}');
+        const edits = JSON.parse(Storage.get('metro_local_edits') || '{}');
         if (edits[slug]?.[idx]) {
           delete edits[slug][idx];
           if (!Object.keys(edits[slug]).length) delete edits[slug];
-          localStorage.setItem('metro_local_edits', JSON.stringify(edits));
+          Storage.set('metro_local_edits', JSON.stringify(edits));
           MetroApp.invalidateLocalEditsCache?.();
         }
         panel.classList.remove('panel-open');

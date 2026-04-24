@@ -22,14 +22,14 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
   sheetEl.style.transition  = 'none';
   sheetEl.style.visibility  = 'hidden';
 
-  const baseStyle = [
+const baseStyle = [
     'position:fixed',
     'top:'    + rect.top    + 'px',
     'left:'   + rect.left   + 'px',
     'width:'  + rect.width  + 'px',
     'height:' + rect.height + 'px',
     'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
-    'transition:transform 0.35s cubic-bezier(0.32,0.72,0,1),opacity 0.3s ease',
+    'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
   ].join(';');
 
   const leftDoor  = sheetEl.cloneNode(true);
@@ -57,7 +57,7 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
         sheetEl.style.visibility = '';
       });
     });
-  }, 360);
+  }, 620);
 };
 
 // ══ КАСТОМНИЙ CONFIRM-ДІАЛОГ ══
@@ -97,7 +97,7 @@ MetroApp.showCustomConfirm = function(
       door.style.height     = rect.height + 'px';
       door.style.margin     = '0';
       door.style.animation  = 'none';
-      door.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease';
+      door.style.transition = 'transform 0.6s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.45s ease';
       door.style.pointerEvents = 'none';
     });
     leftDoor.style.clipPath  = 'inset(0 50% 0 0)';
@@ -118,7 +118,7 @@ MetroApp.showCustomConfirm = function(
     leftDoor.style.opacity    = '0';
     rightDoor.style.opacity   = '0';
 
-    setTimeout(() => { overlay.remove(); callback?.(); }, 350);
+setTimeout(() => { overlay.remove(); callback?.(); }, 620);
   }
 
   overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));

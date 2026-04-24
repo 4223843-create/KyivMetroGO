@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { VitePWA }    from 'vite-plugin-pwa';
 
 export default defineConfig({
   root: '.',
@@ -9,8 +10,8 @@ export default defineConfig({
       input: 'index.html',
       output: {
         manualChunks: {
-          // feedback стає окремим chunk — завантажується лише при кліку
-          feedback: ['./feedback.js'],
+          // feedback — окремий lazy chunk, завантажується лише при кліку
+          feedback: ['./src/feedback.js'],
         },
         entryFileNames:  'assets/[name].[hash].js',
         chunkFileNames:  'assets/[name].[hash].js',
@@ -18,4 +19,32 @@ export default defineConfig({
       },
     },
   },
+
+  plugins: [
+    VitePWA({
+      // Використовуємо наш власний sw.js з public/
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'sw.js',
+
+      // Manifest вже є у public/manifest.json — не генеруємо новий
+      manifest: false,
+
+      injectManifest: {
+        // Vite автоматично вставить precache-маніфест з хешованими URL
+        // у місце де sw.js викликає self.__WB_MANIFEST
+        injectionPoint: 'self.__WB_MANIFEST',
+        globDirectory: 'dist',
+        globPatterns: [
+          '**/*.{js,css,html,woff2}',
+          // SVG і stations.json НЕ включаємо в precache глобом:
+          // SVG — вже в JS-бандлі; stations.json — network-first
+        ],
+      },
+
+      devOptions: {
+        enabled: false, // в dev SW не потрібен
+      },
+    }),
+  ],
 });

@@ -35,24 +35,8 @@ body#map-page .map-viewport {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  padding-top: 8dvh; /* Ті самі 8% відступу зверху */
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* ══ THEME VARIABLES & Z-INDEX ══ */
@@ -252,6 +236,7 @@ z-index: var(--z-fullscreen-sheet);
 /* ══ Пошук: вікно перекриває кнопку меню та іконку пошуку ══ */
 .search-station-sheet {
   z-index: var(--z-fullscreen-sheet);
+  max-height: 92dvh;
 }
 
 
@@ -293,12 +278,11 @@ z-index: var(--z-fullscreen-sheet);
   background: none; border: none;
   color: var(--text-muted);
   font-size: 18px; cursor: pointer;
-  /* Прибираємо старі padding і задаємо жорсткі розміри: */
   padding: 0; 
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: flex;
-  justify-content: center; /* Рівно по центру своїх 36px */
+  justify-content: center;
   align-items: center;
 }
 
@@ -701,17 +685,23 @@ color: var(--text-muted);
   transition: transform 0.15s;
   flex-shrink: 0;
   
-  /* Робимо габарити ідентичними до кнопки хрестика */
+  /* Зменшуємо габарити до 32px для кращого вигляду на мобільних */
   padding: 0; 
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: flex;
   justify-content: center;
   align-items: center;
-  
-  /* Прибираємо старе зміщення вниз, флексбокс сам їх відцентрує на одній лінії */
   transform: none; 
 }
+
+/* Явно задаємо розмір іконки всередині, щоб вона збігалася з хрестиком (18px) */
+.fav-btn-bar svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
 .fav-btn-bar.fav-active { color: #ffcc00; }
 
 /* ══ КЛІКАБЕЛЬНІ НАЗВИ СТАНЦІЙ ══ */
@@ -730,7 +720,6 @@ color: var(--text-muted);
   display: none;
   position: fixed;
   bottom: calc(68px + env(safe-area-inset-bottom));
-  /* Просто 50%, оскільки кнопка тепер у центрі */
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-dropdown);
@@ -740,6 +729,9 @@ color: var(--text-muted);
   min-width: auto;
   overflow: hidden;
   border: 0.5px solid var(--border);
+  
+  /* Робимо весь блок прозорим на 70% */
+  opacity: 0.7;
 }
 .drop-menu.show {
   display: block;
@@ -923,6 +915,26 @@ color: var(--text-muted);
 }
 .fb-input-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 2px; }
 
+/* ══ Кнопка "Обрати іншу станцію" (Стиль пілюлі) ══ */
+.fb-change-station-btn {
+  display: block;
+  margin: 0 auto 16px auto;
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.fb-change-station-btn:active {
+  background: var(--bg-card);
+  color: var(--text);
+}
+
 /* КНОПКА ТА ПОВІДОМЛЕННЯ (Без змін) */
 .fb-send-btn { width: 100%; margin: 16px 0 8px; padding: 13px; background: var(--bg-card); color: var(--text); border: 0.5px solid var(--border); border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
 .fb-send-btn:disabled { 
@@ -963,7 +975,6 @@ color: var(--text-muted);
   user-select: none;
 }
 
-/* ══ П.2: олівець на відредагованих рядках ══ */
 .fb-edited-mark {
   font-size: 11px;
   color: var(--text-muted);
@@ -972,7 +983,6 @@ color: var(--text-muted);
 
 
 
-/* ══ П.10: скидання локальних змін ══ */
 .fb-reset-btn {
   display: block;
   width: 100%;
@@ -990,13 +1000,6 @@ color: var(--text-muted);
 .fb-reset-btn:active { opacity: 1; }
 
 
-
-
-
-
-
-
-/* Глобальне вікно підтвердження */
 .global-confirm-overlay {
   position: fixed;
   inset: 0;
@@ -1016,10 +1019,8 @@ z-index: var(--z-global-modal);
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Змінюємо відступи: менше зверху/знизу, більше з боків для ефекту "пілюлі" */
   padding: 14px 24px; 
   background: var(--bg-card);
-  /* Радіус як у пілюлі (8px), але збільшений пропорційно розміру вікна */
   border-radius: 14px; 
   width: auto;
   min-width: 280px;
@@ -1033,23 +1034,22 @@ z-index: var(--z-global-modal);
   font-weight: 500; 
   text-align: center;
   margin-bottom: 14px;
-  color: var(--text);
+color: var(--text-muted);
 }
 
 .global-confirm-btns-main {
   display: flex;
-  flex-direction: row; /* Чітко в один ряд */
+  flex-direction: row;
   justify-content: center;
   gap: 8px;
   width: 100%;
   margin-top: 4px;
 }
 
-/* Кнопки підтвердження (Зберегти / Не зберігати) */
 .confirm-main-btn {
   flex: 1;
   height: 38px;
-  border-radius: 10px; /* Кути як у вікна підтвердження */
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
   background: var(--bg-pill);
@@ -1060,11 +1060,9 @@ z-index: var(--z-global-modal);
   justify-content: center;
   font-family: inherit;
   white-space: nowrap;
-  border: none; /* Скидаємо стандартний бордер */
+  border: none;
 }
 
-/* Додаємо обводку лише з боків. 
-   Браузер сам загне її по формі border-radius (як в Обраному) */
 .confirm-btn-save {
   border-left: 3px solid var(--line-green);
   border-right: 3px solid var(--line-green);
@@ -1074,7 +1072,6 @@ z-index: var(--z-global-modal);
   border-left: 3px solid var(--line-red);
   border-right: 3px solid var(--line-red);
 }
-/* Кнопка "Скасувати" */
 
 .confirm-text-btn {
   margin-top: 12px;
@@ -1089,7 +1086,6 @@ z-index: var(--z-global-modal);
   opacity: 0.6;
 }
 
-/* ══ 2. ДИЗАЙН ЗАКРИТОГО ВИХОДУ (Фігурна плашка з "хвостиком") ══ */
 .fb-closed-note-wrap {
   display: flex;
   flex-direction: column;
@@ -1101,7 +1097,6 @@ z-index: var(--z-global-modal);
   pointer-events: none;
 }
 
-/* Основна плашка: жорстка ширина, щоб бути паралельною до пілюль */
 .fb-closed-note {
   display: flex;
   align-items: center;
@@ -1122,7 +1117,6 @@ z-index: var(--z-global-modal);
   pointer-events: none;
 }
 
-/* Кнопка-хвостик (менший виступ вниз, жорстко по центру) */
 .fb-restore-exit {
   position: relative;
   background: var(--bg-sheet);
@@ -1142,7 +1136,6 @@ z-index: var(--z-global-modal);
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Анімуємо тільки саму стрілку */
 .fb-restore-exit svg {
   transition: transform 0.1s, opacity 0.15s;
   pointer-events: none;
@@ -1413,7 +1406,7 @@ z-index: var(--z-popup-confirm);
 
 /* ══ Хрещатик: scrollable sheet з нормальним swipe ══ */
 .station-sheet.sheet-open.sheet-scrollable {
-  max-height: 92dvh;
+max-height: 92dvh;
 }
 .station-sheet.sheet-scrollable .sheet-body {
   overflow-y: auto;
@@ -1427,14 +1420,13 @@ z-index: var(--z-popup-confirm);
   margin: 16px 0 0 0;
 }
 
-/* ══ Рукописна зелена "i" (довідка) ══ */
 .fb-add-doors-info {
   flex-shrink: 0;
   background: none;
   border: none;
-  color: var(--line-green); /* БЕЗ ЗАЙВИХ ДУЖОК */
-  width: 24px;
-  height: 24px;
+  color: var(--line-green);
+  width: 16px;
+  height: 16px;
   cursor: pointer;
   padding: 0;
   display: flex;
@@ -1443,23 +1435,29 @@ z-index: var(--z-popup-confirm);
   opacity: 0.85;
   -webkit-tap-highlight-color: transparent;
   pointer-events: auto;
+  transition: color 0.15s, opacity 0.15s;
 }
-/* Зменшуємо "i" ТІЛЬКИ у формі редагування станцій (під розмір хрестика) */
+
 .fb-add-doors-info svg {
-  height: 15px;
+  height: 16px;
   width: auto;
   display: block;
 }
-.fb-add-doors-info:active { opacity: 1; transform: scale(0.85); }
 
-/* Spacer справа — рівний ширині кнопки i, щоб текст залишався по центру */
+.fb-add-doors-info:active,
+.fb-add-doors-info.fb-hint-open { 
+  opacity: 1; 
+  color: var(--text); 
+}
+
+.fb-add-doors-info.is-active { color: var(--text); opacity: 1; }
+
 .fb-add-doors-spacer {
   display: inline-block;
   width: 16px;
   flex-shrink: 0;
 }
 
-/* Розкривний блок довідки — розсуває контент вниз */
 .fb-add-doors-hint {
   overflow: hidden;
   max-height: 0;
@@ -1493,12 +1491,10 @@ z-index: var(--z-popup-confirm);
   filter: invert(1);
 }
 
-/* Прибираємо велику порожнечу в самому низу вікна "Про додаток" */
 #aboutSheet .sheet-body {
   padding-bottom: 8px;
 }
 
-/* ══ SVG іконки в "Про додаток" ══ */
 .about-content p > svg {
   width: 32px;
   height: 32px;
@@ -1512,12 +1508,8 @@ z-index: var(--z-popup-confirm);
   font-size: 13px;
 }
 
-/* ══ КОЛЬОРИ ДЛЯ ІКОНКИ "ПлУГ" ══ */
-
-/* ══ КОЛЬОРИ ДЛЯ ІКОНКИ ПлУГ ══ */
 .pluh-bg { fill: var(--pluh-bg); }
 .pluh-text { fill: var(--pluh-text); }
-/* ══ ЛІВА КОЛОНКА ДЛЯ КНОПКИ "i" (Симетрія до хрестика) ══ */
 .fb-side-actions-left {
   grid-column: 1;
   justify-self: end;
@@ -1526,19 +1518,18 @@ z-index: var(--z-popup-confirm);
   justify-content: center;
   height: 100%;
   min-height: 52px;
-  padding-right: 8px; /* Зменшили з 12px до 8px, щоб відповідати відступу хрестика */
+  padding-right: 8px;
   width: auto;
 }
 
-/* ══ ВСТУПНИЙ ТЕКСТ У ФОРМІ ЗМІН ══ */
 .fb-main-intro-text {
   font-size: 13px;
   color: var(--text-muted);
   text-align: center;
   line-height: 1.4;
-margin: 14px 0 18px 0; /* Було 16px, тепер ближче до меню */  padding: 0 8px;
+margin: 14px 0 18px 0;
+padding: 0 8px;
 }
-/* ══ ІДЕАЛЬНА СИМЕТРІЯ КАРТКИ ЗМІН ══ */
 
 
 .fb-dir-label-wrap {
@@ -1572,46 +1563,35 @@ margin: 14px 0 18px 0; /* Було 16px, тепер ближче до меню *
   background-color: var(--border);
 }
 
-/* ══ ДИНАМІЧНІ ХРЕСТИКИ ТА ДОВІДКИ (1 або 2 двері) ══ */
-
-/* Колір обох хрестиків за замовчуванням (1 двері) - Червоний */
 .fb-item-inner .fb-close-exit,
 .fb-item-inner .fb-cancel-extra-btn {
   color: #c8523a !important;
   transition: color 0.2s ease !important;
 }
 
-/* Колір обох хрестиків, коли активні 2 двері - Синій */
-/* Колір обох хрестиків, коли активні 2 двері - Синій */
 .fb-item-inner.has-extra-doors .fb-close-exit,
 .fb-item-inner.has-extra-doors .fb-cancel-extra-btn {
-  color: var(--line-blue) !important; /* БЕЗ ЗАЙВИХ ДУЖОК */
+  color: var(--line-blue) !important;
 }
 
-/* Логіка відображення текстів підказок */
 .fb-item-inner .hint-1-door { display: block; }
 .fb-item-inner .hint-2-doors { display: none; }
 
 .fb-item-inner.has-extra-doors .hint-1-door { display: none; }
 .fb-item-inner.has-extra-doors .hint-2-doors { display: block; }
 
-/* ══ СИМЕТРІЯ ІКОНОК "i" ТА "✕" — padding-left задано в основному блоці .fb-side-actions вище ══ */
-/* ══ НЕНАВ'ЯЗЛИВИЙ РОЗДІЛЮВАЧ МІЖ ВИХОДАМИ (ПОКРАЩЕНА ВИДИМІСТЬ) ══ */
 .fb-item-divider {
   height: 1px;
   background: var(--text-muted);
   opacity: 0.15;
-  /* Значення: ЗГОРИ | СПРАВА | ЗНИЗУ | ЗЛІВА */
-margin: 17px 10% 8px 10%; /* <--- Відтягнули від кнопки і притисли до тексту */
+margin: 17px 10% 8px 10%;
 }
 
 
-/* ══ Task 11: drop-menu поверх fullscreen sheet ══ */
 .drop-menu.show {
 z-index: var(--z-dropdown-active);
 }
 
-/* ══ Pencil slide-in panel ══ */
 .edit-info-panel {
   overflow: hidden;
   max-height: 0;
@@ -1629,16 +1609,11 @@ z-index: var(--z-dropdown-active);
 }
 
 
-
-
-
-
-/* ══ Task 5: SVG pencil mark ══ */
 .pos-edited-mark {
-  position: absolute; /* Тепер він не займає місце у флекс-контейнері */
-  right: calc(50% + 76px); /* Ставимо його зліва від центральної групи пілюль */
+  position: absolute;
+  right: calc(50% + 76px);
   top: 50%;
-  transform: translateY(-50%); /* Центруємо вертикально */
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   padding: 4px;
@@ -1657,16 +1632,15 @@ z-index: var(--z-dropdown-active);
 
 
 
-/* ══ Task 9: Blue ✕ for third door in feedback ══ */
 .fb-item-inner.has-three-doors .fb-cancel-third-btn {
-  color: var(--line-blue); /* БЕЗ ЗАЙВИХ ДУЖОК */
+  color: var(--line-blue);
 }
 
 .fb-cancel-third-btn {
   position: static;
   background: none;
   border: none;
-  color: var(--line-blue); /* БЕЗ ЗАЙВИХ ДУЖОК */
+  color: var(--line-blue);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -1689,7 +1663,7 @@ z-index: var(--z-dropdown-active);
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  align-items: flex-end; /* <--- Тепер тулиться до правого краю контейнера */
+  align-items: flex-end;
   gap: 2px;
   opacity: 0;
   transition: opacity 0.25s ease;
@@ -1703,7 +1677,7 @@ z-index: var(--z-dropdown-active);
 .exit-fav-toast-text {
   font-size: 9px;
   color: var(--text-muted);
-  text-align: right; /* <--- Текст вирівняно по правому краю */
+  text-align: right;
   line-height: 1.3;
   white-space: nowrap;
 }
@@ -1724,11 +1698,6 @@ z-index: var(--z-dropdown-active);
 
 
 
-
-
-
-
-/* ══ Task 3: Exit label editor ══ */
 .fb-exit-label-row {
   display: flex;
   justify-content: center;
@@ -1749,7 +1718,6 @@ margin: 0 0 4px 0;
   text-align: center;
 }
 .fb-exit-label-edit-btn {
-  /* Абсолютне позиціонування праворуч зберігає ідеальний центр тексту! */
   position: absolute;
   left: 100%;
   margin-left: 4px;
@@ -1758,7 +1726,7 @@ margin: 0 0 4px 0;
   color: var(--text-muted);
   opacity: 0.55;
   cursor: pointer;
-  padding: 4px; /* Збільшили зону кліку */
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2249,32 +2217,6 @@ svg [role="button"]:focus:not(:focus-visible) {
   padding-top: 18px;
 }
 /* ══ SETTINGS SHEET ══ */
-.settings-list {
-  padding: 8px 0;
-}
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 0.5px solid var(--border);
-}
-.settings-row:last-child { border-bottom: none; }
-.settings-label {
-  font-size: 16px;
-  color: var(--text);
-  flex: 1;
-  padding-right: 16px;
-  line-height: 1.3;
-}
-.settings-hint {
-  font-size: 13px;
-  color: var(--text-muted);
-  padding: 12px 20px 4px;
-  margin: 0;
-  opacity: 0.7;
-  line-height: 1.5;
-}
 
 /* ══ CHECK-IN PIN BUTTON (у шапці шторки, під кнопкою ✕) ══ */
 /* position-row: relative, БЕЗ padding — пілюлі завжди по центру */
@@ -2454,82 +2396,106 @@ svg [role="button"]:focus:not(:focus-visible) {
 
 /* Колір іконок у доку */
 #checkinBtn, #favListBtn { color: var(--text-muted); }
-/* ══ SETTINGS CARDS (about-card style) ══ */
+/* ══ SETTINGS CARDS ══ */
 .settings-content {
-  padding: 16px 16px 32px;
-}
-.settings-card {
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-.settings-card-body {
-  flex: 1;
-  min-width: 0;
-}
-.settings-card-label {
-  font-size: 16px;
-  color: var(--text-muted);
-  line-height: 1.3;
-  display: block;
-}
-/* Check-in card: вертикальне розкладення */
-.settings-card-checkin {
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
+  gap: 10px;
+  padding: 4px 16px 24px;
 }
-.settings-card-checkin .settings-card-body {
-  width: 100%;
+
+.settings-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  overflow: hidden;
 }
-.settings-card-top {
+
+.settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-}
-.settings-card-hint {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin: 10px 0 0;
-  line-height: 1.55;
-  opacity: 0.85;
-}
-.settings-card-actions {
-  display: flex;
-  align-items: center;
   gap: 16px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 0.5px solid var(--border);
+  padding: 14px 16px;
 }
-.settings-info-btn {
+
+.settings-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: left;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.settings-rule {
+  height: 1px;
+  background: var(--border);
+  margin: 0 16px;
+}
+
+.settings-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  padding: 8px;
-  margin-left: -8px;
-  cursor: pointer;
-  color: var(--line-green);
-  font-size: 14px;
-  opacity: 0.7;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
 }
-.settings-info-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
-.settings-info-btn:active,
-.settings-info-btn.settings-info-btn-active { opacity: 1; color: var(--text); }
+
 .settings-action-btn {
   background: none;
   border: none;
-  font-size: 14px;
-  color: var(--line-red);
-  cursor: pointer;
   padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+color: var(--text-muted); /* Повернули фірмовий сірий */
+  cursor: pointer;
+  letter-spacing: .01em;
   -webkit-tap-highlight-color: transparent;
-  opacity: 0.85;
-  margin-left: auto;
+  transition: opacity .15s;
 }
-.settings-action-btn:active { opacity: 0.5; }
+.settings-action-btn:active { opacity: .6; }
+
+.settings-info-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  width: 15px;
+  height: 15px;
+  color: var(--line-green);
+  cursor: pointer;
+  margin-right: auto;
+  opacity: 0.85;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.settings-info-btn svg { 
+  width: 100%; 
+  height: 100%; 
+}
+
+/* Робимо білою при натисканні */
+.settings-info-btn:active,
+.settings-info-btn.settings-info-btn-active { 
+  opacity: 1; 
+  color: var(--text); 
+}
+.settings-hint {
+  margin: 0;
+  padding: 0 16px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+/* ══ PERFORMANCE: compositor layers ══ */
+.station-sheet {
+  will-change: transform;
+}
+.map-viewport {
+  contain: layout paint;
+}

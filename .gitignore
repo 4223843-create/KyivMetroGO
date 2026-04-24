@@ -1,2 +1,5 @@
 node_modules/
 dist/
+*.backup.js
+*.backup.ts
+svgo.config.mjs

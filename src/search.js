@@ -113,9 +113,12 @@ export function openSearchSheet() {
     });
   }
 
-  // Адаптація під клавіатуру (visualViewport)
+// Адаптація під клавіатуру (visualViewport)
   if (window.visualViewport) {
-    const onVPResize = () => { searchSheet.style.maxHeight = window.visualViewport.height + 'px'; };
+    const onVPResize = () => { 
+      // Віднімаємо ті самі 8dvh від видимої зони над клавіатурою
+      searchSheet.style.maxHeight = `calc(${window.visualViewport.height}px - 8dvh)`; 
+    };
     onVPResize();
     window.visualViewport.addEventListener('resize', onVPResize);
     searchSheet._cleanupVP = () => window.visualViewport.removeEventListener('resize', onVPResize);

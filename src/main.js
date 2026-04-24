@@ -1,7 +1,7 @@
 // ══ ЯДРО ══ — порядок імпортів важливий
+import { STORAGE_KEYS, Storage } from './storage.js';
 import './icons.js';
 import './state.js';
-import './storage.js';
 
 // UI до всього іншого (animateSheetClose потрібен всім)
 import './ui.js';
@@ -23,10 +23,6 @@ import { openSettingsSheet }                  from './settings.js';
 
 // Офлайн-банер + SW toast
 import './offline.js';
-
-// ══ Доступ для settings.js (currentStationSlug) ══
-import { state } from './state.js';
-window._metroState = { state };
 
 // ══ ІНІЦІАЛІЗАЦІЯ ══
 
@@ -62,7 +58,7 @@ if (menuBtn && dropMenu) {
     }
   });
 
-  document.getElementById('themeToggleItem')?.addEventListener('click', e => {
+document.getElementById('settingsItem')?.addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation();
     dropMenu.classList.remove('show'); dropMenu.hidden = true;
     openSettingsSheet();
@@ -75,7 +71,7 @@ if (menuBtn && dropMenu) {
 
     // ── LAZY LOAD feedback.js ──
     if (!MetroApp.openFeedbackSheet) {
-      await import('../feedback.js');
+      await import('./feedback.js');
     }
     MetroApp.openFeedbackSheet?.(state.stationsData);
   });
@@ -96,7 +92,7 @@ if (action === 'search') {
   setTimeout(openSearchSheet, 50);
 } else if (action === 'fav') {
   setTimeout(openFavSheet, 50);
-} else if (localStorage.getItem('metro_start_on_fav') === 'true') {
+} else if (Storage.get('metro_start_on_fav') === 'true') {
   setTimeout(openFavSheet, 50);
 }
 if (action) window.history.replaceState({}, document.title, window.location.pathname);

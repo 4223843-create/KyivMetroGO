@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node update-sw-date.js",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "sortablejs": "^1.15.3"
   },
   "devDependencies": {
-    "vite": "^5.4.0"
+    "svgo": "^3.3.2",
+    "vite": "^5.4.0",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }

@@ -1,7 +1,8 @@
-import { STORAGE_KEYS }        from './storage.js';
+import { STORAGE_KEYS, Storage }        from './storage.js';
 import { applyTheme }           from './theme.js';
 import { saveFavs, updateFavDock } from './favorites.js';
 import { isCheckinMode, updateCheckinDock } from './checkin.js';
+import { state }                from './state.js';
 
 // ⚠️ Логіка тумблерів (pointer-events + клік по всій картці) — збережено без змін!
 export function openSettingsSheet() {
@@ -28,16 +29,16 @@ export function openSettingsSheet() {
     // ── Тема ──
     const themeToggle = document.getElementById('settingsThemeToggle');
     if (themeToggle) {
-      themeToggle.checked = (localStorage.getItem(STORAGE_KEYS.THEME) || 'dark') === 'dark';
+      themeToggle.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
       themeToggle.addEventListener('change', e => applyTheme(e.target.checked ? 'dark' : 'light'));
     }
 
     // ── Стартувати з Обраного ──
     const startFavToggle = document.getElementById('settingsStartFavToggle');
     if (startFavToggle) {
-      startFavToggle.checked = localStorage.getItem(STORAGE_KEYS.START_ON_FAV) === 'true';
+      startFavToggle.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
       startFavToggle.addEventListener('change', e =>
-        localStorage.setItem(STORAGE_KEYS.START_ON_FAV, e.target.checked)
+        Storage.set(STORAGE_KEYS.START_ON_FAV, e.target.checked)
       );
     }
 
@@ -46,12 +47,11 @@ export function openSettingsSheet() {
     if (checkinToggle) {
       checkinToggle.checked = isCheckinMode();
       checkinToggle.addEventListener('change', e => {
-        localStorage.setItem(STORAGE_KEYS.CHECKIN_MODE, e.target.checked);
+        Storage.set(STORAGE_KEYS.CHECKIN_MODE, e.target.checked);
         updateCheckinDock();
 
-        const { state }       = window._metroState || {};
         const currentSlug = document.getElementById('stationSheet').classList.contains('sheet-open')
-          ? (state?.currentStationSlug ?? null)
+          ? (state.currentStationSlug ?? null)
           : null;
 
         if (currentSlug) {
@@ -74,36 +74,33 @@ export function openSettingsSheet() {
       btn.classList.toggle('settings-info-btn-active', !hint.hidden);
     });
 
-    // ── Очистити Вибране ──
+// ── Очистити Вибране ──
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {
       e.stopPropagation();
-      MetroApp.showCustomConfirm('Очистити „Вибране"?',
+      MetroApp.showCustomConfirm('Очистити Вибране?',
         () => {
           saveFavs([]);
-          localStorage.removeItem(STORAGE_KEYS.EXIT_FAVS);
+          Storage.remove(STORAGE_KEYS.EXIT_FAVS);
           updateFavDock();
           document.getElementById('settingsClose').click();
         },
-        null, null, 'Очистити', 'Скасувати', '', ''
+        null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
       );
     });
 
-    // ── Очистити Check-in ──
     document.getElementById('settingsClearCheckin')?.addEventListener('click', e => {
       e.stopPropagation();
       MetroApp.showCustomConfirm('Очистити історію check-in?',
         () => {
-          localStorage.removeItem(STORAGE_KEYS.CHECKINS);
+          Storage.remove(STORAGE_KEYS.CHECKINS);
           // скидаємо кеш через оновлення DOM
           updateCheckinDock();
           document.getElementById('settingsClose').click();
         },
-        null, null, 'Очистити', 'Скасувати', '', ''
+        null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
       );
     });
 
-    // ── Клік по картці перемикає тумблер ──
-    // ⚠️ Логіка pointer-events збережена!
     settingsSheet.querySelectorAll('.settings-card').forEach(card => {
       card.addEventListener('click', e => {
         if (e.target.closest('button, a')) return;
@@ -116,7 +113,6 @@ export function openSettingsSheet() {
       });
     });
 
-    // ── Свайп вниз ──
     let swY = 0, isSwipeSettings = false;
     settingsSheet.addEventListener('touchstart', e => {
       swY = e.touches[0].clientY;
@@ -128,12 +124,11 @@ export function openSettingsSheet() {
     });
 
   } else {
-    // Оновлюємо стан тумблерів при повторному відкритті
     const t = document.getElementById('settingsThemeToggle');
     const s = document.getElementById('settingsStartFavToggle');
     const c = document.getElementById('settingsCheckinToggle');
-    if (t) t.checked = (localStorage.getItem(STORAGE_KEYS.THEME) || 'dark') === 'dark';
-    if (s) s.checked = localStorage.getItem(STORAGE_KEYS.START_ON_FAV) === 'true';
+    if (t) t.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
+    if (s) s.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
     if (c) c.checked = isCheckinMode();
   }
 

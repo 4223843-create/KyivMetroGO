@@ -1,5 +1,5 @@
 import { state }       from './state.js';
-import { STORAGE_KEYS } from './storage.js';
+import { STORAGE_KEYS, Storage } from './storage.js';
 
 const CHECKIN_PIN_SVG_OFF = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`;
 
@@ -7,13 +7,13 @@ let checkinsCache = null;
 
 export function getCheckins() {
   if (checkinsCache) return checkinsCache;
-  try { checkinsCache = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHECKINS) || '{}'); }
+  try { checkinsCache = JSON.parse(Storage.get(STORAGE_KEYS.CHECKINS) || '{}'); }
   catch { checkinsCache = {}; }
   return checkinsCache;
 }
 
 export function isCheckinMode() {
-  return localStorage.getItem(STORAGE_KEYS.CHECKIN_MODE) === 'true';
+  return Storage.get(STORAGE_KEYS.CHECKIN_MODE) === 'true';
 }
 
 export function checkinId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
@@ -27,7 +27,7 @@ export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
   const all = getCheckins();
   if (all[id]) delete all[id];
   else all[id] = { slug, dir, wagon, doors, color: lineColor, ts: Date.now() };
-  localStorage.setItem(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
+  Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
   checkinsCache = null;
   updateCheckinDock();
   return !!all[id];

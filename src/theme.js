@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from './storage.js';
+import { STORAGE_KEYS, Storage } from './storage.js';
 
 const root = document.documentElement;
 
@@ -8,7 +8,7 @@ export function applyTheme(theme) {
   document.head.appendChild(css);
 
   root.setAttribute('data-theme', theme);
-  localStorage.setItem(STORAGE_KEYS.THEME, theme);
+  Storage.set(STORAGE_KEYS.THEME, theme);
 
   const t = document.getElementById('settingsThemeToggle');
   if (t) t.checked = theme === 'dark';
@@ -18,6 +18,6 @@ export function applyTheme(theme) {
 
 // Застосовуємо збережену тему відразу (ДО першого малювання)
 applyTheme(
-  localStorage.getItem(STORAGE_KEYS.THEME) ||
+  Storage.get(STORAGE_KEYS.THEME) ||
   (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
 );
