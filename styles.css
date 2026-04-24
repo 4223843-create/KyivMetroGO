@@ -92,7 +92,7 @@ body#map-page .map-viewport {
 /* ══ ЗАГАЛЬНІ СТИЛІ ══ */
 @font-face {
   font-family: 'ProbaNav2';
-  src: url('/ProbaNav2-Medium.woff2') format('woff2');
+  src: url('ProbaNav2-Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
