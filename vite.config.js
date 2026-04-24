@@ -6,6 +6,7 @@ export default defineConfig({
   root: '.',
   publicDir: 'public',
   build: {
+    target: 'es2018',
     outDir: 'dist',
     rollupOptions: {
       input: 'index.html',

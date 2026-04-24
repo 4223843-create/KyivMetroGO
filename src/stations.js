@@ -1,7 +1,6 @@
 import { state, startupSlug } from './state.js';
 
-// ══ ВЛАСТИВОСТІ РЯДКА ══
-MetroApp.properCase = function(name) {
+MetroApp.properCase = function (name) {
   let wordIndex = 0;
   return name.replace(/[а-яіїєґА-ЯІЇЄҐ]+/g, match => {
     const wl = match.toLowerCase();
@@ -12,9 +11,24 @@ MetroApp.properCase = function(name) {
 };
 
 const STATION_ALIASES = {
-  'театральну':                'театральна',
+  'театральну': 'театральна',
   'площу українських героїв': 'площа українських героїв',
 };
+
+function getAppBaseHref() {
+  const { origin, pathname } = window.location;
+  const normalizedPath = pathname.endsWith('/')
+    ? pathname
+    : pathname.split('/').pop()?.includes('.')
+      ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
+      : `${pathname}/`;
+
+  return new URL(normalizedPath, origin);
+}
+
+function getStationsUrl() {
+  return new URL('stations.json', getAppBaseHref());
+}
 
 export function slugByName(raw) {
   let normalized = raw.toLowerCase()
@@ -40,48 +54,57 @@ export function slugByName(raw) {
     const stem = name.length > 6 ? name.slice(0, -2) : name;
     if (normalized.includes(stem)) return MetroApp.NAME_TO_SLUG[name];
   }
+
   return null;
 }
 
 export function hydrateStations(data) {
   if (!state.stationsData) state.stationsData = {};
-  Object.keys(state.stationsData).forEach(k => delete state.stationsData[k]);
+  Object.keys(state.stationsData).forEach(key => delete state.stationsData[key]);
 
-  MetroApp.NAME_TO_SLUG  = {};
+  MetroApp.NAME_TO_SLUG = {};
   MetroApp.SLUG_BY_LOWER = {};
 
-  data.stations.forEach(s => {
-    s.positions = [];
-    s.directions?.forEach(dir => {
-      dir.exits?.forEach(exit => {
-        exit.positions?.forEach(pos => {
-          s.positions.push({ dir: dir.from, exit: exit.label || '', wagon: pos.wagon, doors: pos.doors });
+  data.stations.forEach(station => {
+    station.positions = [];
+    station.directions?.forEach(direction => {
+      direction.exits?.forEach(exit => {
+        exit.positions?.forEach(position => {
+          station.positions.push({
+            dir: direction.from,
+            exit: exit.label || '',
+            wagon: position.wagon,
+            doors: position.doors,
+          });
         });
       });
     });
 
-    const cleanName     = s.name.toLowerCase().replace(/["'„"«».,]/g, '');
-    MetroApp.NAME_TO_SLUG[cleanName]          = s.slug;
-    MetroApp.SLUG_BY_LOWER[s.slug.toLowerCase()] = s.slug;
+    const cleanName = station.name.toLowerCase().replace(/["'„"«».,]/g, '');
+    MetroApp.NAME_TO_SLUG[cleanName] = station.slug;
+    MetroApp.SLUG_BY_LOWER[station.slug.toLowerCase()] = station.slug;
 
-    const stationWords  = cleanName.split(/[\s\u00a0\u202f\-]+/);
-    const cleanEnName   = s.slug.split('.')[1].replace(/_/g, ' ').toLowerCase();
+    const stationWords = cleanName.split(/[\s\u00a0\u202f\-]+/);
+    const cleanEnName = station.slug.split('.')[1].replace(/_/g, ' ').toLowerCase();
     const stationEnWords = cleanEnName.split(/\s+/);
-    const acronym       = stationWords.map(w => w.charAt(0)).join('');
+    const acronym = stationWords.map(word => word.charAt(0)).join('');
 
     const aliases = [];
-    if (s.slug === 'R.Politekhnychnyi_instytut') aliases.push('кпі');
-    if (s.slug === 'B.Ploshcha_Ukrainskikh_heroiv') { aliases.push('плуг'); aliases.push('площа льва толстого'); }
-    if (s.slug === 'G.Zvirynetska') aliases.push('дружби народів');
+    if (station.slug === 'R.Politekhnychnyi_instytut') aliases.push('кпі');
+    if (station.slug === 'B.Ploshcha_Ukrainskikh_heroiv') {
+      aliases.push('плуг');
+      aliases.push('площа льва толстого');
+    }
+    if (station.slug === 'G.Zvirynetska') aliases.push('дружби народів');
 
-    s._searchIndex = [
+    station._searchIndex = [
       ...stationWords,
       ...stationEnWords,
       acronym,
-      ...aliases.flatMap(a => a.toLowerCase().split(/[\s\u00a0\u202f\-]+/)),
+      ...aliases.flatMap(alias => alias.toLowerCase().split(/[\s\u00a0\u202f\-]+/)),
     ];
 
-    state.stationsData[s.slug] = s;
+    state.stationsData[station.slug] = station;
   });
 
   if (MetroApp.applyLocalEdits) MetroApp.applyLocalEdits(state.stationsData);
@@ -92,23 +115,25 @@ export function hydrateStations(data) {
 
 export function renderMapZones() {
   if (state.isZonesReady) return;
+
   const inner = document.getElementById('mapInner');
   const svgEl = inner?.querySelector('svg');
   if (!svgEl || !state.stationsData) return;
 
   svgEl.querySelectorAll('[id]').forEach(el => {
     const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    const slug  = MetroApp.SLUG_BY_LOWER[rawId];
-    if (slug) {
-      el.style.fill   = 'transparent';
-      el.style.stroke = 'transparent';
-      el.style.pointerEvents = 'all';
-      el.style.cursor = 'pointer';
-      el.style.webkitTapHighlightColor = 'transparent';
-      el.setAttribute('role',       'button');
-      el.setAttribute('tabindex',   '0');
-      el.setAttribute('aria-label', `Станція ${state.stationsData[slug].name}`);
-    }
+    const slug = MetroApp.SLUG_BY_LOWER[rawId];
+
+    if (!slug) return;
+
+    el.style.fill = 'transparent';
+    el.style.stroke = 'transparent';
+    el.style.pointerEvents = 'all';
+    el.style.cursor = 'pointer';
+    el.style.webkitTapHighlightColor = 'transparent';
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('aria-label', `Станція ${state.stationsData[slug].name}`);
   });
 
   state.isZonesReady = true;
@@ -116,16 +141,34 @@ export function renderMapZones() {
 }
 
 function checkAppReady() {
-  if (state.isMapReady && state.isZonesReady) {
-    requestAnimationFrame(() => {
-      document.getElementById('mapViewport')?.classList.remove('is-loading');
-    });
-  }
+  if (!state.isMapReady || !state.isZonesReady) return;
+
+  requestAnimationFrame(() => {
+    document.getElementById('mapViewport')?.classList.remove('is-loading');
+  });
 }
 
 export async function reloadStationsData(forceFresh = false) {
-  const response = await fetch('stations.json', forceFresh ? { cache: 'no-store' } : undefined);
-  const data     = await response.json();
+  const stationsUrl = getStationsUrl();
+  const response = await fetch(
+    stationsUrl,
+    forceFresh ? { cache: 'no-store' } : undefined,
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
+    );
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('json')) {
+    throw new Error(
+      `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
+    );
+  }
+
+  const data = await response.json();
   const hydrated = hydrateStations(data);
 
   if (!forceFresh) {
@@ -133,9 +176,8 @@ export async function reloadStationsData(forceFresh = false) {
     handleStartupStation(hydrated);
   }
 
-  // Якщо Обране відкрилось до завантаження даних — перемалюємо
   const favSheet = document.getElementById('favSheet');
-  const favBody  = document.getElementById('favBody');
+  const favBody = document.getElementById('favBody');
   if (favSheet?.classList.contains('sheet-open') && favBody?.querySelector('.fav-empty-text')) {
     MetroApp.renderFavOnLoad?.();
   }
@@ -149,6 +191,5 @@ function handleStartupStation(data) {
   }
 }
 
-// Публікуємо для міжмодульного доступу
 MetroApp.reloadStationsData = reloadStationsData;
-MetroApp.slugByName         = slugByName;
+MetroApp.slugByName = slugByName;

@@ -1,61 +1,74 @@
 window.MetroApp = window.MetroApp || {};
-// ══ ЯДРО ══ — порядок імпортів важливий
+
 import { STORAGE_KEYS, Storage } from './storage.js';
 import './icons.js';
 import { state } from './state.js';
 import { registerSW } from 'virtual:pwa-register';
-
-// UI до всього іншого (animateSheetClose потрібен всім)
 import './ui.js';
-
-// Тема — до рендеру (уникаємо flash)
 import './theme.js';
-
-// Дані та карта
-import { reloadStationsData, renderMapZones } from './stations.js';
-import { initMap }                            from './map.js';
-
-// Функціональні модулі
-import { openFavSheet, updateFavDock }        from './favorites.js';
+import { reloadStationsData } from './stations.js';
+import { initMap } from './map.js';
+import { openFavSheet, updateFavDock } from './favorites.js';
 import { updateCheckinDock, openCheckinSheet } from './checkin.js';
-import { openSearchSheet }                    from './search.js';
-import { openStation, closeAllSheets,
-         openAboutSheet, withUnsavedCheck }   from './sheets.js';
-import { openSettingsSheet }                  from './settings.js';
-
-// Офлайн-банер + SW toast
+import { openSearchSheet } from './search.js';
+import {
+  openStation,
+  closeAllSheets,
+  openAboutSheet,
+  withUnsavedCheck,
+} from './sheets.js';
+import { openSettingsSheet } from './settings.js';
 import './offline.js';
 
-// ══ ІНІЦІАЛІЗАЦІЯ ══
+function releaseStartupLoader() {
+  document.getElementById('mapViewport')?.classList.remove('is-loading');
+}
 
-// 1. Карта (синхронно, SVG вже вбудований через ?raw)
-initMap();
+window.addEventListener('error', event => {
+  console.error('[startup] uncaught error', event.error || event.message);
+  releaseStartupLoader();
+});
 
-// 2. Дані станцій (асинхронно)
-reloadStationsData().catch(err => console.error('stations.json load failed', err));
+window.addEventListener('unhandledrejection', event => {
+  console.error('[startup] unhandled rejection', event.reason);
+  releaseStartupLoader();
+});
 
-// ══ DOCK-НАВІГАЦІЯ ══
-const favListBtn   = document.getElementById('favListBtn');
-const menuBtn      = document.getElementById('menuBtn');
-const dropMenu     = document.getElementById('dropMenu');
+async function bootstrap() {
+  try {
+    initMap();
+    await reloadStationsData();
+  } catch (err) {
+    console.error('[startup] bootstrap failed', err);
+    releaseStartupLoader();
+  }
+}
+
+bootstrap();
+
+const favListBtn = document.getElementById('favListBtn');
+const menuBtn = document.getElementById('menuBtn');
+const dropMenu = document.getElementById('dropMenu');
 const searchBtnTop = document.getElementById('searchBtnTop');
-const checkinBtn   = document.getElementById('checkinBtn');
+const checkinBtn = document.getElementById('checkinBtn');
 
 favListBtn?.addEventListener('click', openFavSheet);
 searchBtnTop?.addEventListener('click', openSearchSheet);
 checkinBtn?.addEventListener('click', openCheckinSheet);
 
-// Автоматична реєстрація Service Worker від Vite PWA
-const updateSW = registerSW({
+registerSW({
   onOfflineReady() {
     console.log('[PWA] Додаток готовий до роботи в офлайні');
   },
+  onRegisterError(error) {
+    console.error('[PWA] service worker registration failed', error);
+  },
 });
 
-// ══ МЕНЮ ══
 if (menuBtn && dropMenu) {
   menuBtn.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
     dropMenu.classList.toggle('show');
     dropMenu.hidden = !dropMenu.classList.contains('show');
   });
@@ -67,18 +80,21 @@ if (menuBtn && dropMenu) {
     }
   });
 
-document.getElementById('settingsItem')?.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    dropMenu.classList.remove('show'); dropMenu.hidden = true;
+  document.getElementById('settingsItem')?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropMenu.classList.remove('show');
+    dropMenu.hidden = true;
     openSettingsSheet();
   });
 
   document.getElementById('feedbackItem')?.addEventListener('click', async e => {
-    e.preventDefault(); e.stopPropagation();
-    dropMenu.classList.remove('show'); dropMenu.hidden = true;
+    e.preventDefault();
+    e.stopPropagation();
+    dropMenu.classList.remove('show');
+    dropMenu.hidden = true;
     document.getElementById('aboutSheet')?.classList.remove('sheet-open');
 
-    // ── LAZY LOAD feedback.js ──
     if (!MetroApp.openFeedbackSheet) {
       await import('./feedback.js');
     }
@@ -86,8 +102,10 @@ document.getElementById('settingsItem')?.addEventListener('click', e => {
   });
 
   document.getElementById('aboutItem')?.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    dropMenu.classList.remove('show'); dropMenu.hidden = true;
+    e.preventDefault();
+    e.stopPropagation();
+    dropMenu.classList.remove('show');
+    dropMenu.hidden = true;
     withUnsavedCheck(() => {
       document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
       openAboutSheet();
@@ -95,21 +113,21 @@ document.getElementById('settingsItem')?.addEventListener('click', e => {
   });
 }
 
-// ══ PWA SHORTCUTS (action=search | action=fav) ══
 const action = new URLSearchParams(window.location.search).get('action');
 if (action === 'search') {
   setTimeout(openSearchSheet, 50);
 } else if (action === 'fav') {
   setTimeout(openFavSheet, 50);
-} else if (Storage.get('metro_start_on_fav') === 'true') {
+} else if (Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true') {
   setTimeout(openFavSheet, 50);
 }
-if (action) window.history.replaceState({}, document.title, window.location.pathname);
 
-// ══ DOCK-ІКОНКИ (початковий стан) ══
+if (action) {
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
 updateCheckinDock();
 updateFavDock();
 
-// Публікуємо для міжмодульного доступу (наприклад, з settings.js)
-MetroApp.openStation    = openStation;
+MetroApp.openStation = openStation;
 MetroApp.closeAllSheets = closeAllSheets;
