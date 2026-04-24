@@ -3,7 +3,6 @@ window.MetroApp = window.MetroApp || {};
 import { STORAGE_KEYS, Storage } from './storage.js';
 import './icons.js';
 import { state } from './state.js';
-import { registerSW } from 'virtual:pwa-register';
 import './ui.js';
 import './theme.js';
 import { reloadStationsData } from './stations.js';
@@ -18,33 +17,70 @@ import {
   withUnsavedCheck,
 } from './sheets.js';
 import { openSettingsSheet } from './settings.js';
+import './feedback.js';
 import './offline.js';
 
 function releaseStartupLoader() {
   document.getElementById('mapViewport')?.classList.remove('is-loading');
 }
 
+function reportBootStage(stage, detail) {
+  window.__APP_BOOT_STAGE__ = stage;
+  if (typeof window.__showBootStatus === 'function') {
+    window.__showBootStatus(stage, detail);
+  }
+}
+
+function markBootSuccess() {
+  window.__APP_BOOT_OK__ = true;
+  document.getElementById('bootStatus')?.remove();
+}
+
 window.addEventListener('error', event => {
   console.error('[startup] uncaught error', event.error || event.message);
+  reportBootStage('window-error', event.error?.stack || event.message);
   releaseStartupLoader();
 });
 
 window.addEventListener('unhandledrejection', event => {
   console.error('[startup] unhandled rejection', event.reason);
+  reportBootStage('unhandled-rejection', event.reason?.stack || String(event.reason));
   releaseStartupLoader();
 });
 
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    reportBootStage('sw-unsupported');
+    return;
+  }
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).then(() => {
+      reportBootStage('sw-registered');
+    }).catch(error => {
+      console.error('[PWA] service worker registration failed', error);
+      reportBootStage('sw-register-error', error?.stack || String(error));
+    });
+  });
+}
+
 async function bootstrap() {
   try {
+    reportBootStage('bootstrap-start');
     initMap();
+    reportBootStage('map-init-done');
     await reloadStationsData();
+    reportBootStage('stations-loaded');
+    markBootSuccess();
   } catch (err) {
     console.error('[startup] bootstrap failed', err);
+    reportBootStage('bootstrap-failed', err?.stack || String(err));
     releaseStartupLoader();
   }
 }
 
 bootstrap();
+registerServiceWorker();
 
 const favListBtn = document.getElementById('favListBtn');
 const menuBtn = document.getElementById('menuBtn');
@@ -55,15 +91,6 @@ const checkinBtn = document.getElementById('checkinBtn');
 favListBtn?.addEventListener('click', openFavSheet);
 searchBtnTop?.addEventListener('click', openSearchSheet);
 checkinBtn?.addEventListener('click', openCheckinSheet);
-
-registerSW({
-  onOfflineReady() {
-    console.log('[PWA] Додаток готовий до роботи в офлайні');
-  },
-  onRegisterError(error) {
-    console.error('[PWA] service worker registration failed', error);
-  },
-});
 
 if (menuBtn && dropMenu) {
   menuBtn.addEventListener('click', e => {
@@ -88,16 +115,12 @@ if (menuBtn && dropMenu) {
     openSettingsSheet();
   });
 
-  document.getElementById('feedbackItem')?.addEventListener('click', async e => {
+  document.getElementById('feedbackItem')?.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
     dropMenu.classList.remove('show');
     dropMenu.hidden = true;
     document.getElementById('aboutSheet')?.classList.remove('sheet-open');
-
-    if (!MetroApp.openFeedbackSheet) {
-      await import('./feedback.js');
-    }
     MetroApp.openFeedbackSheet?.(state.stationsData);
   });
 

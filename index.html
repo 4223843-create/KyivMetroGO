@@ -14,6 +14,65 @@
     const t = localStorage.getItem('metro_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', t);
 </script>
+<style id="boot-status-style">
+    #bootStatus {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      z-index: 99999;
+      display: none;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(28, 28, 30, 0.94);
+      color: #f2f2f7;
+      font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+</style>
+<script>
+    (function () {
+      if (!Promise.allSettled) {
+        Promise.allSettled = function (iterable) {
+          return Promise.all(Array.prototype.map.call(iterable, function (promise) {
+            return Promise.resolve(promise).then(function (value) {
+              return { status: 'fulfilled', value: value };
+            }, function (reason) {
+              return { status: 'rejected', reason: reason };
+            });
+          }));
+        };
+      }
+
+      window.__showBootStatus = function (stage, detail) {
+        var panel = document.getElementById('bootStatus');
+        if (!panel) return;
+        panel.style.display = 'block';
+        panel.textContent =
+          'Boot stage: ' + (stage || 'unknown') + '\n' +
+          'Detail: ' + (detail || '-') + '\n' +
+          'UA: ' + navigator.userAgent + '\n' +
+          'module: ' + ('noModule' in HTMLScriptElement.prototype) + '\n' +
+          'Promise.allSettled: ' + (typeof Promise.allSettled === 'function');
+      };
+
+      window.addEventListener('error', function (event) {
+        window.__showBootStatus('pre-module-error', event.message || 'script error');
+      });
+
+      window.addEventListener('unhandledrejection', function (event) {
+        window.__showBootStatus('pre-module-rejection', String(event.reason || 'unknown rejection'));
+      });
+
+      setTimeout(function () {
+        if (!window.__APP_BOOT_OK__) {
+          window.__showBootStatus(window.__APP_BOOT_STAGE__ || 'module-not-booted', 'App module did not finish booting.');
+        }
+      }, 7000);
+    }());
+</script>
   <link rel="stylesheet" href="styles.css">
 
   <link rel="manifest" href="manifest.json">
@@ -25,6 +84,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body id="map-page">
+<pre id="bootStatus"></pre>
 
 <main class="container">
 <div id="mapViewport" class="map-viewport is-loading">
