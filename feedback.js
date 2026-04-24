@@ -569,6 +569,10 @@ container.addEventListener('click', (event) => {
     MetroApp.fbUnsaved = false;
   }
 
+
+
+
+
 function openFeedbackSheet(stationsData) {
     try {
       MetroApp.currentStationsData = stationsData;
@@ -725,13 +729,14 @@ posEl.addEventListener('click', (e) => {
     renderFeedbackPositions(slug);
     if (typeof renderResetBtn === 'function') renderResetBtn();
     MetroApp.refreshCurrentStation?.();
-    fetch(FORMSPREE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` })
-    }).catch(e => console.warn('[Feedback] Background report failed', e));
-  }
-});
+const isLocalOnly = localStorage.getItem('metro_local_only_feedback') === 'true';
+    if (!isLocalOnly) {
+      fetch(FORMSPREE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` })
+      }).catch(e => console.warn('[Feedback] Background report failed', e));
+    }
 
         sendBtn.addEventListener('click', () => { if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(false); });
         document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
@@ -948,12 +953,16 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
             ...labelChanges
           ];
 
-          const response = await fetch(FORMSPREE_URL, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeLines.join('\n') })
-          });
+          const isLocalOnly = localStorage.getItem('metro_local_only_feedback') === 'true';
+          
+          if (!isLocalOnly) {
+            const response = await fetch(FORMSPREE_URL, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeLines.join('\n') })
+            });
 
-          if (!response.ok) throw new Error('HTTP ' + response.status);
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+          }
 
           // Успіх
           if (!background) {
@@ -993,8 +1002,18 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
 
       renderResetBtn();
       
+      // --- ДИНАМІЧНИЙ ТЕКСТ ФІДБЕКУ ---
+      const introText = document.querySelector('#feedbackSheet .fb-main-intro-text');
+      if (introText) {
+        const isLocalOnly = localStorage.getItem('metro_local_only_feedback') === 'true';
+        introText.innerHTML = isLocalOnly 
+          ? 'Правки одразу застосуються&nbsp;локально' 
+          : 'Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику';
+      }
+      // --------------------------------
+
       document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-      sheet.classList.add('sheet-open'); 
+      sheet.classList.add('sheet-open');
       document.getElementById('sheetOverlay').classList.add('overlay-visible');      
     } catch(err) { console.error('[FeedbackSheet ERROR]', err); }
   }

@@ -24,57 +24,34 @@ function releaseStartupLoader() {
   document.getElementById('mapViewport')?.classList.remove('is-loading');
 }
 
-function reportBootStage(stage, detail) {
-  window.__APP_BOOT_STAGE__ = stage;
-  if (typeof window.__showBootStatus === 'function') {
-    window.__showBootStatus(stage, detail);
-  }
-}
-
-function markBootSuccess() {
-  window.__APP_BOOT_OK__ = true;
-  document.getElementById('bootStatus')?.remove();
-}
-
 window.addEventListener('error', event => {
   console.error('[startup] uncaught error', event.error || event.message);
-  reportBootStage('window-error', event.error?.stack || event.message);
   releaseStartupLoader();
 });
 
 window.addEventListener('unhandledrejection', event => {
   console.error('[startup] unhandled rejection', event.reason);
-  reportBootStage('unhandled-rejection', event.reason?.stack || String(event.reason));
   releaseStartupLoader();
 });
 
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
-    reportBootStage('sw-unsupported');
     return;
   }
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).then(() => {
-      reportBootStage('sw-registered');
-    }).catch(error => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(error => {
       console.error('[PWA] service worker registration failed', error);
-      reportBootStage('sw-register-error', error?.stack || String(error));
     });
   });
 }
 
 async function bootstrap() {
   try {
-    reportBootStage('bootstrap-start');
     initMap();
-    reportBootStage('map-init-done');
     await reloadStationsData();
-    reportBootStage('stations-loaded');
-    markBootSuccess();
   } catch (err) {
     console.error('[startup] bootstrap failed', err);
-    reportBootStage('bootstrap-failed', err?.stack || String(err));
     releaseStartupLoader();
   }
 }

@@ -42,6 +42,25 @@ export function openSettingsSheet() {
       );
     }
 
+    // ── Зміни працюють локально ──
+    const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
+    if (localFbToggle) {
+      localFbToggle.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+      localFbToggle.addEventListener('change', e =>
+        Storage.set(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK, e.target.checked)
+      );
+    }
+
+    // ── Кнопка «i» (Довідка Локальних змін) ──
+    document.getElementById('settingsLocalFeedbackInfo')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const hint = document.getElementById('settingsLocalFeedbackHint');
+      const btn  = document.getElementById('settingsLocalFeedbackInfo');
+      if (!hint) return;
+      hint.hidden = !hint.hidden;
+      btn.classList.toggle('settings-info-btn-active', !hint.hidden);
+    });
+
     // ── Check-in ──
     const checkinToggle = document.getElementById('settingsCheckinToggle');
     if (checkinToggle) {
@@ -123,13 +142,15 @@ export function openSettingsSheet() {
         document.getElementById('settingsClose').click();
     });
 
-  } else {
+} else {
     const t = document.getElementById('settingsThemeToggle');
     const s = document.getElementById('settingsStartFavToggle');
     const c = document.getElementById('settingsCheckinToggle');
+    const l = document.getElementById('settingsLocalFeedbackToggle'); // ДОДАНО
     if (t) t.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
     if (s) s.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
     if (c) c.checked = isCheckinMode();
+    if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true'; // ДОДАНО
   }
 
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));

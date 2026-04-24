@@ -205,7 +205,7 @@ export function openCheckinSheet() {
   if (!checkinSheet) {
     checkinSheet = document.createElement('div');
     checkinSheet.id        = 'checkinSheet';
-    checkinSheet.className = 'station-sheet about-station-sheet';
+    checkinSheet.className = 'station-sheet checkin-journal-sheet';
     document.body.appendChild(checkinSheet);
   }
 

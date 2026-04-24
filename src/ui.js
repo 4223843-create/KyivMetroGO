@@ -47,10 +47,14 @@ const baseStyle = [
   leftDoor.style.opacity    = '0';
   rightDoor.style.opacity   = '0';
 
+// Викликаємо callback раніше, щоб затемнення карти спадало під час руху "дверей"
+  if (callback) {
+    setTimeout(callback, 200); // 200ms - експериментальне значення, можна підкрутити
+  }
+
   setTimeout(function() {
     leftDoor.remove();
     rightDoor.remove();
-    callback && callback();
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
         sheetEl.style.transition = '';
@@ -118,7 +122,10 @@ MetroApp.showCustomConfirm = function(
     leftDoor.style.opacity    = '0';
     rightDoor.style.opacity   = '0';
 
-setTimeout(() => { overlay.remove(); callback?.(); }, 620);
+if (callback) {
+      setTimeout(callback, 200); 
+    }
+    setTimeout(() => { overlay.remove(); }, 620);
   }
 
   overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));

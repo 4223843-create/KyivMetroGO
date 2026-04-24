@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   CHECKINS:       'metro_checkins',
   CHECKIN_MODE:   'metro_checkin_mode',
   START_ON_FAV:   'metro_start_on_fav',
+  LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
 };
 
 // ══ STORAGE ADAPTER ══
