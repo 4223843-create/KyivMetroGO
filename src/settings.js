@@ -1,7 +1,7 @@
 import { STORAGE_KEYS, Storage }        from './storage.js';
 import { applyTheme }           from './theme.js';
 import { saveFavs, updateFavDock } from './favorites.js';
-import { isCheckinMode, updateCheckinDock } from './checkin.js';
+import { isCheckinMode, updateCheckinDock, invalidateCheckinsCache } from './checkin.js';
 import { state }                from './state.js';
 
 // ⚠️ Логіка тумблерів (pointer-events + клік по всій картці) — збережено без змін!
@@ -93,7 +93,7 @@ export function openSettingsSheet() {
       btn.classList.toggle('settings-info-btn-active', !hint.hidden);
     });
 
-// ── Очистити Вибране ──
+    // ── Очистити Вибране ──
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {
       e.stopPropagation();
       MetroApp.showCustomConfirm('Очистити Вибране?',
@@ -107,12 +107,13 @@ export function openSettingsSheet() {
       );
     });
 
+    // ── Очистити Check-in ──
     document.getElementById('settingsClearCheckin')?.addEventListener('click', e => {
       e.stopPropagation();
       MetroApp.showCustomConfirm('Очистити історію check-in?',
         () => {
           Storage.remove(STORAGE_KEYS.CHECKINS);
-          // скидаємо кеш через оновлення DOM
+          invalidateCheckinsCache(); // ← скидаємо кеш явно, щоб наступний getCheckins() зчитав свіжі дані
           updateCheckinDock();
           document.getElementById('settingsClose').click();
         },
@@ -140,6 +141,62 @@ export function openSettingsSheet() {
     settingsSheet.addEventListener('touchend', e => {
       if (isSwipeSettings && e.changedTouches[0].clientY - swY > 60)
         document.getElementById('settingsClose').click();
+    });
+
+    // ── Експорт (Збереження у файл) ──
+    document.getElementById('settingsExport')?.addEventListener('click', e => {
+      e.stopPropagation();
+      try {
+        const allData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          allData[key] = localStorage.getItem(key);
+        }
+        const dataStr = JSON.stringify(allData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `KyivMetroGO_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        MetroApp.showCustomConfirm?.('Не вдалося створити файл резервної копії.', () => {});
+      }
+    });
+
+    // ── Імпорт (Відновлення з файлу) ──
+    document.getElementById('settingsImport')?.addEventListener('click', e => {
+      e.stopPropagation();
+      document.getElementById('importFile')?.click();
+    });
+
+    // Один слухач на importFile — всередині if(!settingsSheet), не дублюється при повторних відкриттях
+    document.getElementById('importFile')?.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      MetroApp.showCustomConfirm('Відновити дані з цього файлу? Поточні налаштування та Обране будуть замінені.', () => {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          try {
+            const importedData = JSON.parse(ev.target.result);
+            if (!importedData[STORAGE_KEYS.FAVS] && !importedData['metro_favs']) {
+              throw new Error('Invalid backup file');
+            }
+            localStorage.clear();
+            for (const key in importedData) {
+              localStorage.setItem(key, importedData[key]);
+            }
+            window.location.reload();
+          } catch (err) {
+            MetroApp.showCustomConfirm?.('Помилка: файл пошкоджений або не є резервною копією KyivMetroGO.', () => {});
+          }
+        };
+        reader.readAsText(file);
+      });
+      e.target.value = '';
     });
   }
 

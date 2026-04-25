@@ -201,7 +201,7 @@ export function renderFavList(favs) {
     saveFavs([...domSlugs, ...missingSlugs]);
   }
 
-  if (window.Sortable) {
+  if (Sortable) {
     if (favBody._sortable) favBody._sortable.destroy();
     favBody._sortable = new Sortable(favBody, {
       draggable:     '.fav-item',

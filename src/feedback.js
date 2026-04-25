@@ -1,5 +1,5 @@
 import { STORAGE_KEYS, Storage } from './storage.js';
-(function() {
+import { state } from './state.js';
 
   const FORMSPREE_URL = 'https://formspree.io/f/mgopobnd';
   const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
@@ -308,8 +308,8 @@ function bindSteppersOptimized(container) {
               editBtn.innerHTML = 'додати опис';
             }
           }
-          if (typeof MetroApp.applyExitLabels === 'function' && MetroApp.currentStationsData) {
-            MetroApp.applyExitLabels(MetroApp.currentStationsData);
+          if (typeof MetroApp.applyExitLabels === 'function' && state.stationsData) {
+            MetroApp.applyExitLabels(state.stationsData);
           }
           if (typeof MetroApp.refreshCurrentStation === 'function') {
             MetroApp.refreshCurrentStation();
@@ -539,9 +539,9 @@ container.addEventListener('click', (event) => {
     fbState.labels = {};
     fbState.isDirty = false;
 
-    if (!slug || !MetroApp.currentStationsData[slug]) return;
+    if (!slug || !state.stationsData[slug]) return;
 
-    const s = MetroApp.currentStationsData[slug];
+    const s = state.stationsData[slug];
     const edits = getLocalEdits()[slug] || {};
 
     // Заповнюємо стан даними
@@ -569,8 +569,6 @@ container.addEventListener('click', (event) => {
 
 function openFeedbackSheet(stationsData) {
     try {
-      MetroApp.currentStationsData = stationsData;
-
       let sheet = document.getElementById('feedbackSheet');
       if (!sheet) {
         sheet = document.createElement('div');
@@ -611,7 +609,7 @@ function openFeedbackSheet(stationsData) {
           closeAllHints();
           
           // Завжди показуємо перелік станцій при кліку на фільтр
-          const allSt = Object.entries(MetroApp.currentStationsData)
+          const allSt = Object.entries(state.stationsData)
             .map(([sl, st]) => ({ slug: sl, ...st }))
             .filter(st => line === '' || st.line === line) // 'Всі' покаже всі
             .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
@@ -623,7 +621,7 @@ function openFeedbackSheet(stationsData) {
           ).join('');
           stationList.hidden = false;
           
-          if (typeof renderResetBtn === 'function') renderResetBtn();
+          renderResetBtn();
         });
 
 // ── Клік по станції зі списку ──
@@ -659,7 +657,7 @@ document.getElementById('fbChangeStation').addEventListener('click', () => {
 posEl.addEventListener('click', (e) => {
   const slug = stationHidden.value;
   if (!slug) return;
-  const s = MetroApp.currentStationsData[slug];
+  const s = state.stationsData[slug];
 
   const restoreBtn = e.target.closest('.fb-restore-exit');
   if (restoreBtn) {
@@ -674,10 +672,10 @@ posEl.addEventListener('click', (e) => {
     }
     MetroApp.invalidateLocalEditsCache?.();
     if (fbState.current[idx]) fbState.current[idx].isClosed = false;
-    if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
+    if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(state.stationsData);
     MetroApp.refreshCurrentStation?.();
     renderFeedbackPositions(slug);
-    if (typeof renderResetBtn === 'function') renderResetBtn();
+    renderResetBtn();
     return;
   }
 
@@ -697,10 +695,10 @@ posEl.addEventListener('click', (e) => {
       }
       renderFeedbackPositions(slug);
       markFeedbackDirty();
-      if (typeof renderResetBtn === 'function') renderResetBtn();
+      renderResetBtn();
       return;
     }
-    const p = MetroApp.currentStationsData[fbState.slug]?.positions[idx];
+    const p = state.stationsData[fbState.slug]?.positions[idx];
     if (!p) return;
     const exWrap = document.getElementById(`fbExtraWrap${idx}`);
     if (exWrap && !exWrap.classList.contains('is-hidden')) {
@@ -717,11 +715,11 @@ posEl.addEventListener('click', (e) => {
     }
     const loc = [p.dir, p.exit].filter(Boolean).join(' · ');
     saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
-    if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
+    if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(state.stationsData);
     MetroApp.invalidateLocalEditsCache?.();
     fbState.current[idx].isClosed = true;
     renderFeedbackPositions(slug);
-    if (typeof renderResetBtn === 'function') renderResetBtn();
+    renderResetBtn();
     MetroApp.refreshCurrentStation?.();
     fetch(FORMSPREE_URL, {
       method: 'POST',
@@ -731,7 +729,7 @@ posEl.addEventListener('click', (e) => {
   }
 });
 
-        sendBtn.addEventListener('click', () => { if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(false); });
+        sendBtn.addEventListener('click', () => { MetroApp.triggerFeedbackSubmit(false); });
         document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
         bindSteppersOptimized(posEl);
 
@@ -769,7 +767,7 @@ function renderFeedbackPositions(slug) {
         // щоб при додаванні виходу (перемальовуванні) дані не скидались
         if (fbState.slug !== slug) initFeedbackState(slug);
         
-        const s = MetroApp.currentStationsData[slug];
+        const s = state.stationsData[slug];
         const groupsMap = new Map();
 
         // 1. Спочатку додаємо існуючі позиції з бази
@@ -859,7 +857,7 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
         if (!slug) { MetroApp._isSubmitting = false; return; }
 
         try {
-          const s = MetroApp.currentStationsData[slug];
+          const s = state.stationsData[slug];
 
           // Збираємо змінені позиції, порівнюючи current з original
           const posChanges = [];
@@ -926,7 +924,7 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
           }));
 
           MetroApp.invalidateLocalEditsCache?.();
-          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
+          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(state.stationsData);
           MetroApp.refreshCurrentStation?.();
           MetroApp.fbUnsaved = false;
           fbState.slug = null; // примусова переініціалізація baseline після збереження
@@ -1016,12 +1014,12 @@ function closeFeedbackSheet() {
       if (MetroApp.hasUnsavedFeedback && MetroApp.hasUnsavedFeedback()) {
         if (typeof MetroApp.showCustomConfirm === 'function') {
           const stationSlug = document.getElementById('fbStation')?.value || '';
-          const stationData = stationSlug ? MetroApp.currentStationsData?.[stationSlug] : null;
+          const stationData = stationSlug ? state.stationsData?.[stationSlug] : null;
           const stationName = stationData?.name || '';
           const question = stationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>` : 'Зберегти зміни?';
           
           MetroApp.showCustomConfirm(question, () => {
-            if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
+            MetroApp.triggerFeedbackSubmit(true);
             forceCloseFeedbackSheet();
           }, () => { forceCloseFeedbackSheet(); }, () => { /* Скасувати */ });
           return;
@@ -1037,5 +1035,3 @@ function closeFeedbackSheet() {
   MetroApp.openFeedbackSheet  = openFeedbackSheet;
   MetroApp.closeFeedbackSheet = closeFeedbackSheet;
 
-})();
-export {};

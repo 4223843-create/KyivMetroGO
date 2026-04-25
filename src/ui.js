@@ -12,6 +12,52 @@ export function heartSvg(isFav, _slug, lineColor) {
   return `<svg ${base} fill="${lineColor}"><path d="${MetroApp.Icons.heartPath}"/></svg>`;
 }
 
+// ══ СПІЛЬНА ЛОГІКА АНІМАЦІЇ «ДВЕРІ ЛІФТА» ══
+// Використовується як animateSheetClose, так і showCustomConfirm.
+// el       — DOM-елемент, що розрізається (sheet або confirm-card)
+// rect     — його BoundingClientRect
+// callback — викликається через 200 мс (до завершення анімації, для плавного затемнення)
+// parent   — куди додати клони (document.body або overlay)
+function _runDoorAnimation(el, rect, callback, parent = document.body) {
+  const baseStyle = [
+    'position:fixed',
+    'top:'    + rect.top    + 'px',
+    'left:'   + rect.left   + 'px',
+    'width:'  + rect.width  + 'px',
+    'height:' + rect.height + 'px',
+    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
+    'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
+  ].join(';');
+
+  const leftDoor  = el.cloneNode(true);
+  const rightDoor = el.cloneNode(true);
+
+  leftDoor.classList.remove('sheet-open');
+  rightDoor.classList.remove('sheet-open');
+  leftDoor.removeAttribute('id');
+  rightDoor.removeAttribute('id');
+
+  leftDoor.style.cssText  = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
+  rightDoor.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
+  parent.appendChild(leftDoor);
+  parent.appendChild(rightDoor);
+
+  void leftDoor.offsetWidth; // reflow
+
+  leftDoor.style.transform  = 'translateX(-50%)';
+  rightDoor.style.transform = 'translateX(50%)';
+  leftDoor.style.opacity    = '0';
+  rightDoor.style.opacity   = '0';
+
+  // Викликаємо callback раніше, щоб затемнення карти спадало під час руху «дверей»
+  if (callback) setTimeout(callback, 200);
+
+  setTimeout(() => {
+    leftDoor.remove();
+    rightDoor.remove();
+  }, 620);
+}
+
 // ══ АНІМАЦІЯ ЗАКРИТТЯ ШТОРКИ («ДВЕРІ ЛІФТА») ══
 // Спеціально клонує DOM для ефекту clip-path — НЕ замінювати на CSS translateY.
 MetroApp.animateSheetClose = function(sheetEl, callback) {
@@ -22,48 +68,11 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
   sheetEl.style.transition  = 'none';
   sheetEl.style.visibility  = 'hidden';
 
-const baseStyle = [
-    'position:fixed',
-    'top:'    + rect.top    + 'px',
-    'left:'   + rect.left   + 'px',
-    'width:'  + rect.width  + 'px',
-    'height:' + rect.height + 'px',
-    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
-    'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
-  ].join(';');
+  _runDoorAnimation(sheetEl, rect, callback, document.body);
 
-const leftDoor  = sheetEl.cloneNode(true);
-  const rightDoor = sheetEl.cloneNode(true);
-
-  // --- ДОДАНО: очищуємо клони від статусу відкритого вікна та ID ---
-  leftDoor.classList.remove('sheet-open');
-  rightDoor.classList.remove('sheet-open');
-  leftDoor.removeAttribute('id');
-  rightDoor.removeAttribute('id');
-  // -----------------------------------------------------------------
-
-  leftDoor.style.cssText  = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
-  rightDoor.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
-  document.body.appendChild(leftDoor);
-  document.body.appendChild(rightDoor);
-
-  void leftDoor.offsetWidth; // reflow
-
-  leftDoor.style.transform  = 'translateX(-50%)';
-  rightDoor.style.transform = 'translateX(50%)';
-  leftDoor.style.opacity    = '0';
-  rightDoor.style.opacity   = '0';
-
-// Викликаємо callback раніше, щоб затемнення карти спадало під час руху "дверей"
-  if (callback) {
-    setTimeout(callback, 200); // 200ms - експериментальне значення, можна підкрутити
-  }
-
-  setTimeout(function() {
-    leftDoor.remove();
-    rightDoor.remove();
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
+  setTimeout(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
         sheetEl.style.transition = '';
         sheetEl.style.visibility = '';
       });
@@ -96,42 +105,15 @@ MetroApp.showCustomConfirm = function(
     const card = overlay.querySelector('.global-confirm-card');
     if (!card) { overlay.remove(); callback?.(); return; }
 
-    const rect     = card.getBoundingClientRect();
-    const leftDoor = card.cloneNode(true);
-    const rightDoor = card.cloneNode(true);
-
-    [leftDoor, rightDoor].forEach(door => {
-      door.style.position   = 'fixed';
-      door.style.top        = rect.top    + 'px';
-      door.style.left       = rect.left   + 'px';
-      door.style.width      = rect.width  + 'px';
-      door.style.height     = rect.height + 'px';
-      door.style.margin     = '0';
-      door.style.animation  = 'none';
-      door.style.transition = 'transform 0.6s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.45s ease';
-      door.style.pointerEvents = 'none';
-    });
-    leftDoor.style.clipPath  = 'inset(0 50% 0 0)';
-    rightDoor.style.clipPath = 'inset(0 0 0 50%)';
-
-    overlay.appendChild(leftDoor);
-    overlay.appendChild(rightDoor);
+    const rect = card.getBoundingClientRect();
     card.style.display = 'none';
-
-    void leftDoor.offsetWidth;
 
     overlay.style.transition      = 'background-color 0.35s, backdrop-filter 0.35s';
     overlay.style.backgroundColor = 'transparent';
     overlay.style.backdropFilter  = 'blur(0px)';
 
-    leftDoor.style.transform  = 'translateX(-50%)';
-    rightDoor.style.transform = 'translateX(50%)';
-    leftDoor.style.opacity    = '0';
-    rightDoor.style.opacity   = '0';
+    _runDoorAnimation(card, rect, callback, overlay);
 
-if (callback) {
-      setTimeout(callback, 200); 
-    }
     setTimeout(() => { overlay.remove(); }, 620);
   }
 

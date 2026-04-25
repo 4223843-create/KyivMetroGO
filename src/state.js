@@ -23,7 +23,6 @@ MetroApp.NAME_TO_SLUG  = {};
 MetroApp.SLUG_BY_LOWER = {};
 
 // Посилання на поточні дані станцій (використовується feedback.js)
-MetroApp.currentStationsData = null;
 
 // ══ МУТАБЕЛЬНИЙ СТАН ДОДАТКУ ══
 export const state = {

@@ -31,13 +31,15 @@ export default defineConfig({
       srcDir: 'public',
       filename: 'sw.js',
       manifest: false,
+registerType: 'autoUpdate',
+
       injectManifest: {
+        rollupFormat: 'iife',
         injectionPoint: 'self.__WB_MANIFEST',
         globDirectory: 'dist',
         globPatterns: [
-          '**/*.{js,css,html,woff2}',
+          '**/*.{js,css,html}',
         ],
-        rollupFormat: 'iife',
       },
       devOptions: {
         enabled: false,

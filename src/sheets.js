@@ -246,9 +246,16 @@ export function openStation(slug) {
 
     document.getElementById('stationTitleMain').textContent = s.name;
 
-    const dirsHtml = renderDirections(s, color);
-    if (!dirsHtml) {
-      sheetBody.innerHTML = `<p class="fav-empty-text" style="text-align: center; margin: 40px 0 0 0; width: 100%;">Дані про виходи відсутні або станція зачинена</p>`;
+    const hasDirections = s.directions?.length > 0;
+    const allExitsClosed = hasDirections && !s.directions.some(dir =>
+      dir.exits?.some(exit => exit.positions?.some(pos => !pos.closed))
+    );
+    const dirsHtml = hasDirections ? renderDirections(s, color) : '';
+
+    if (!hasDirections) {
+      sheetBody.innerHTML = `<p class="fav-empty-text" style="text-align: center; margin: 40px 0 0 0; width: 100%;">Дані про виходи відсутні</p>`;
+    } else if (allExitsClosed) {
+      sheetBody.innerHTML = `<p class="fav-empty-text" style="text-align: center; margin: 40px 0 0 0; width: 100%;">Усі виходи закриті</p>`;
     } else {
       sheetBody.innerHTML = `${onboardingHtml}${dirsHtml}`;
     }

@@ -5,8 +5,8 @@ import { renderMapZones, checkAppReady } from './stations.js';
 const vp    = document.getElementById('mapViewport');
 const inner = document.getElementById('mapInner');
 
-let baseMapWidth  = 1195.84;
-let baseMapHeight = 840;
+const baseMapWidth  = 1195.84;
+const baseMapHeight = 840;
 const centerX = 0.485, centerY = 0.5;
 
 // ══ ТАЙМАУТ-ЗАПОБІЖНИК (знімає лоадер після 10 с якщо щось пішло не так) ══

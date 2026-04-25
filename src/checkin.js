@@ -5,6 +5,8 @@ const CHECKIN_PIN_SVG_OFF = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2
 
 let checkinsCache = null;
 
+export function invalidateCheckinsCache() { checkinsCache = null; }
+
 export function getCheckins() {
   if (checkinsCache) return checkinsCache;
   try { checkinsCache = JSON.parse(Storage.get(STORAGE_KEYS.CHECKINS) || '{}'); }
@@ -107,6 +109,8 @@ export function formatCheckinTime(ts) {
 }
 
 // ══ ШТОРКА CHECK-IN ══
+let ciSortMode = 'date'; // 'date' | 'alpha'
+
 export function openCheckinSheet() {
   let checkinSheet = document.getElementById('checkinSheet');
   const sheetOverlay = document.getElementById('sheetOverlay');
@@ -121,8 +125,8 @@ export function openCheckinSheet() {
   };
 
   const renderCheckinContent = () => {
-    const s    = document.getElementById('checkinSheet');
-    const all  = getCheckins();
+    const s       = document.getElementById('checkinSheet');
+    const all     = getCheckins();
     const entries = Object.values(all);
     let bodyHtml  = '';
 
@@ -130,12 +134,16 @@ export function openCheckinSheet() {
       const colors = ['#5b9bd5', '#c8523a', '#5aaa6a'];
       const color  = colors[state.emptyFavColorIdx % colors.length];
       state.emptyFavColorIdx++;
+      // Іконка пін — зменшена та вирівняна в рядку тексту (розмір і відступ як у серці у «Вибраному»)
       const coloredPin = MetroApp.Icons.dockPinFilled
         .replace(/currentColor/g, color)
-        .replace('translateY(-3px)', 'translateY(3px)');
-      bodyHtml = `<p class="fav-empty-text">Натисніть ${coloredPin} на картці станції, щоб зберегти станцію та вихід.</p>`;
+        .replace('translateY(-3px)', 'translateY(3px)')
+        .replace('width="26" height="26"', 'width="20" height="20"')
+        .replace('opacity="0.5"', '');
+      const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-4px;">${coloredPin}</span>`;
+      bodyHtml = `<p class="fav-empty-text-lg">Натисніть ${pinInline} щоб позначити вихід зі станції як відвіданий</p>`;
     } else {
-      const byStation    = {};
+      const byStation = {};
       entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
 
       // Унікальні фізичні виходи: один вихід (вагон+двері) може мати check-in для кількох
@@ -153,31 +161,48 @@ export function openCheckinSheet() {
         <div class="ci-stat"><span class="ci-stat-num">${uniqueExits}</span><span class="ci-stat-lbl">виходів</span></div>
         <div class="ci-stat-sep"></div>
         <div class="ci-stat"><span class="ci-stat-num">${coverage}%</span><span class="ci-stat-lbl">охоплення</span></div>
+      </div>
+      <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverage}%"></div></div>`;
+
+      // ── Сортування ──
+      bodyHtml += `<div class="ci-sort-bar">
+        <button class="ci-sort-btn${ciSortMode === 'date'  ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
+        <button class="ci-sort-btn${ciSortMode === 'alpha' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
       </div>`;
 
-      bodyHtml += Object.entries(byStation).map(([slug, items]) => {
-        const st         = state.stationsData?.[slug];
-        const color      = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
-        const name       = st ? st.name : slug;
-        const totalExits = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
+      let stationEntries = Object.entries(byStation);
+      if (ciSortMode === 'date') {
+        // Нещодавні вгорі
+        stationEntries.sort(([, a], [, b]) =>
+          Math.max(...b.map(e => e.ts || 0)) - Math.max(...a.map(e => e.ts || 0))
+        );
+      } else {
+        // За алфавітом (uk locale)
+        stationEntries.sort(([slugA], [slugB]) => {
+          const nameA = state.stationsData?.[slugA]?.name || slugA;
+          const nameB = state.stationsData?.[slugB]?.name || slugB;
+          return nameA.localeCompare(nameB, 'uk');
+        });
+      }
+
+      bodyHtml += stationEntries.map(([slug, items]) => {
+        const st           = state.stationsData?.[slug];
+        const color        = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
+        const name         = st ? st.name : slug;
+        const totalExits   = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
         const checkedCount = items.length;
-        const lastTs     = Math.max(...items.map(e => e.ts || 0));
-        const maxDots    = Math.min(totalExits, 40);
-        const dotsHtml   = Array.from({ length: maxDots }, (_, i) =>
+        const lastTs       = Math.max(...items.map(e => e.ts || 0));
+        const maxDots      = Math.min(totalExits, 40);
+        const dotsHtml     = Array.from({ length: maxDots }, (_, i) =>
           i < checkedCount
             ? `<span class="checkin-dot is-visited" style="--ci-color:${color}"></span>`
             : `<span class="checkin-dot is-empty"></span>`
         ).join('');
 
-        return `<button class="checkin-station-card" data-slug="${slug}">
-          <div class="checkin-card-row">
-            <div class="checkin-card-left">
-              <span class="checkin-station-name-text">${name}</span>
-              <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
-            </div>
-            <div class="checkin-card-right">
-              <span class="checkin-fraction">${checkedCount}<span class="checkin-fraction-total">/${totalExits}</span></span>
-            </div>
+        return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-accent:${color}">
+          <div class="checkin-card-top">
+            <span class="checkin-station-name-text">${name}</span>
+            <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
           </div>
           ${dotsHtml ? `<div class="checkin-dots">${dotsHtml}</div>` : ''}
         </button>`;
@@ -193,6 +218,16 @@ export function openCheckinSheet() {
       <div class="sheet-body">${bodyHtml}</div>`;
 
     s.querySelector('#checkinClose').addEventListener('click', closeHandler);
+
+    // ── Перемикач сортування ──
+    s.querySelectorAll('.ci-sort-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        ciSortMode = btn.dataset.sort;
+        renderCheckinContent();
+      });
+    });
+
     s.querySelectorAll('.checkin-station-card').forEach(card => {
       card.addEventListener('click', () => {
         const sl = card.dataset.slug;
