@@ -32,11 +32,18 @@ const baseStyle = [
     'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
   ].join(';');
 
-  const leftDoor  = sheetEl.cloneNode(true);
+const leftDoor  = sheetEl.cloneNode(true);
   const rightDoor = sheetEl.cloneNode(true);
+
+  // --- ДОДАНО: очищуємо клони від статусу відкритого вікна та ID ---
+  leftDoor.classList.remove('sheet-open');
+  rightDoor.classList.remove('sheet-open');
+  leftDoor.removeAttribute('id');
+  rightDoor.removeAttribute('id');
+  // -----------------------------------------------------------------
+
   leftDoor.style.cssText  = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
   rightDoor.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
-
   document.body.appendChild(leftDoor);
   document.body.appendChild(rightDoor);
 
