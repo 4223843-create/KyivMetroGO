@@ -1,9 +1,8 @@
 import { state } from './state.js';
 
-export function renderSearchResults(query, container, lineFilter) {
-  if (lineFilter === undefined) lineFilter = new Set();
+export function renderSearchResults(query, container, lineFilter = new Set()) {
   if (!state.stationsData) {
-    container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються...</p>';
+    container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються…</p>';
     return;
   }
 
@@ -19,10 +18,8 @@ export function renderSearchResults(query, container, lineFilter) {
     );
   }
 
-  if (lineFilter instanceof Set && lineFilter.size > 0) {
+  if (lineFilter.size > 0) {
     filtered = filtered.filter(s => lineFilter.has(s.line));
-  } else if (typeof lineFilter === 'string' && lineFilter) {
-    filtered = filtered.filter(s => s.line === lineFilter);
   }
 
   filtered.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
@@ -115,6 +112,7 @@ export function openSearchSheet() {
 
 // Адаптація під клавіатуру (visualViewport)
   if (window.visualViewport) {
+    searchSheet._cleanupVP?.(); // Знімаємо попередній listener перед реєстрацією нового
     const onVPResize = () => { 
       // Віднімаємо ті самі 8dvh від видимої зони над клавіатурою
       searchSheet.style.maxHeight = `calc(${window.visualViewport.height}px - 8dvh)`; 
@@ -129,7 +127,7 @@ export function openSearchSheet() {
   state.activeLineFilter = new Set();
   document.querySelectorAll('.search-line-btn').forEach((b, i) => b.classList.toggle('is-active', i === 0));
   input.value = '';
-  renderSearchResults('', resultsContainer, '');
+  renderSearchResults('', resultsContainer, new Set());
 
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   searchSheet.classList.add('sheet-open');

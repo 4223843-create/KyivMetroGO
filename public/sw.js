@@ -1,4 +1,5 @@
-const BUILD_DATE = '20250422';
+/* eslint-disable no-undef */
+const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'dev';
 const CACHE_NAME = `kyivmetro-${BUILD_DATE}`;
 
 const PRECACHE_ASSETS = (self.__WB_MANIFEST || [])

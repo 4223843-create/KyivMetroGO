@@ -28,7 +28,7 @@ export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
   if (all[id]) delete all[id];
   else all[id] = { slug, dir, wagon, doors, color: lineColor, ts: Date.now() };
   Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
-  checkinsCache = null;
+  checkinsCache = all;
   updateCheckinDock();
   return !!all[id];
 }
@@ -137,17 +137,20 @@ export function openCheckinSheet() {
     } else {
       const byStation    = {};
       entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
-      const totalCheckins = entries.length;
+
+      // Унікальні фізичні виходи: один вихід (вагон+двері) може мати check-in для кількох
+      // напрямків — це все одна точка зупинки. Рахуємо її лише раз.
+      const uniqueExits   = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
       const totalExitsAll = state.stationsData
         ? Object.values(state.stationsData).reduce((sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0)
         : 0;
       const stationCount = Object.keys(byStation).length;
-      const coverage     = totalExitsAll > 0 ? Math.round(totalCheckins / totalExitsAll * 100) : 0;
+      const coverage     = totalExitsAll > 0 ? Math.min(100, Math.round(uniqueExits / totalExitsAll * 100)) : 0;
 
       bodyHtml += `<div class="ci-stats-bar">
         <div class="ci-stat"><span class="ci-stat-num">${stationCount}</span><span class="ci-stat-lbl">станцій</span></div>
         <div class="ci-stat-sep"></div>
-        <div class="ci-stat"><span class="ci-stat-num">${totalCheckins}</span><span class="ci-stat-lbl">виходів</span></div>
+        <div class="ci-stat"><span class="ci-stat-num">${uniqueExits}</span><span class="ci-stat-lbl">виходів</span></div>
         <div class="ci-stat-sep"></div>
         <div class="ci-stat"><span class="ci-stat-num">${coverage}%</span><span class="ci-stat-lbl">охоплення</span></div>
       </div>`;
@@ -196,10 +199,6 @@ export function openCheckinSheet() {
         if (sl) { closeHandler(); setTimeout(() => MetroApp.openStation?.(sl), 380); }
       });
     });
-
-    let swY2 = 0, isSwipeCI = false;
-    s.addEventListener('touchstart', e => { swY2 = e.touches[0].clientY; isSwipeCI = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
-    s.addEventListener('touchend',   e => { if (isSwipeCI && e.changedTouches[0].clientY - swY2 > 60) closeHandler(); });
   };
 
   if (!checkinSheet) {
@@ -207,6 +206,15 @@ export function openCheckinSheet() {
     checkinSheet.id        = 'checkinSheet';
     checkinSheet.className = 'station-sheet checkin-journal-sheet';
     document.body.appendChild(checkinSheet);
+  }
+
+  // Оновлюємо посилання на closeHandler для swipe-слухача (реєструється лише раз)
+  checkinSheet._closeHandler = closeHandler;
+  if (!checkinSheet._hasSwipeListener) {
+    let swY2 = 0, isSwipeCI = false;
+    checkinSheet.addEventListener('touchstart', e => { swY2 = e.touches[0].clientY; isSwipeCI = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
+    checkinSheet.addEventListener('touchend',   e => { if (isSwipeCI && e.changedTouches[0].clientY - swY2 > 60) checkinSheet._closeHandler?.(); });
+    checkinSheet._hasSwipeListener = true;
   }
 
   renderCheckinContent();

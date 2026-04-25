@@ -213,7 +213,7 @@ function attachExitFavListeners(container, slug, lineColor) {
 export function withUnsavedCheck(proceed) {
   if (MetroApp.hasUnsavedFeedback?.()) {
     const _fbSlug = document.getElementById('fbStation')?.value || '';
-    const _fbData = _fbSlug ? MetroApp.currentStationsData?.[_fbSlug] : null;
+    const _fbData = _fbSlug ? state.stationsData?.[_fbSlug] : null;
     const stationName = _fbData?.name || '';
     const question    = stationName
       ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>`
@@ -417,11 +417,11 @@ sheetBody.addEventListener('click', e => {
     panel.querySelector('.edit-info-cancel').addEventListener('click', ev => {
       ev.stopPropagation();
       try {
-        const edits = JSON.parse(Storage.get('metro_local_edits') || '{}');
+        const edits = JSON.parse(Storage.get(STORAGE_KEYS.LOCAL_EDITS) || '{}');
         if (edits[slug]?.[idx]) {
           delete edits[slug][idx];
           if (!Object.keys(edits[slug]).length) delete edits[slug];
-          Storage.set('metro_local_edits', JSON.stringify(edits));
+          Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
           MetroApp.invalidateLocalEditsCache?.();
         }
         panel.classList.remove('panel-open');

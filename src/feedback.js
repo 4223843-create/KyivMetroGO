@@ -1,17 +1,15 @@
-import { Storage } from './storage.js';
+import { STORAGE_KEYS, Storage } from './storage.js';
 (function() {
 
   const FORMSPREE_URL = 'https://formspree.io/f/mgopobnd';
   const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
   const LINE_ORDER = ['red', 'blue', 'green'];
-  const LOCAL_EDITS_KEY = 'metro_local_edits';
-  const EXIT_LABELS_KEY = 'metro_exit_labels';
   const PENCIL_SVG_LABEL = MetroApp.Icons.pencil;
   const STATIONS_CAN_ADD_EXIT = new Set(['R.Zhytomyrska', 'G.Osokorky', 'G.Chervonyi_khutir']);
 
 function getExitLabels() {
     if (exitLabelsCache) return exitLabelsCache;
-    try { exitLabelsCache = JSON.parse(Storage.get(EXIT_LABELS_KEY) || '{}'); }
+    try { exitLabelsCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_LABELS) || '{}'); }
     catch (e) { console.warn('[KyivMetroGO] Помилка парсингу описів виходів:', e); exitLabelsCache = {}; }
     return exitLabelsCache;
   }
@@ -20,7 +18,7 @@ function getExitLabels() {
     if (!labels[slug]) labels[slug] = {};
     if (label.trim()) labels[slug][posIdx] = label.trim();
     else { delete labels[slug][posIdx]; if (!Object.keys(labels[slug]).length) delete labels[slug]; }
-    Storage.set(EXIT_LABELS_KEY, JSON.stringify(labels));
+    Storage.set(STORAGE_KEYS.EXIT_LABELS, JSON.stringify(labels));
     exitLabelsCache = null;
   }
   
@@ -52,7 +50,7 @@ function getExitLabels() {
 
 function getLocalEdits() {
     if (localEditsCache) return localEditsCache;
-    try { localEditsCache = JSON.parse(Storage.get(LOCAL_EDITS_KEY) || '{}'); }
+    try { localEditsCache = JSON.parse(Storage.get(STORAGE_KEYS.LOCAL_EDITS) || '{}'); }
     catch (e) { console.warn('[KyivMetroGO] Помилка парсингу локальних змін:', e); localEditsCache = {}; }
     return localEditsCache;
   }
@@ -61,19 +59,18 @@ function getLocalEdits() {
     const edits = getLocalEdits();
     if (!edits[slug]) edits[slug] = {};
     edits[slug][posIdx] = data;
-    Storage.set(LOCAL_EDITS_KEY, JSON.stringify(edits));
+    Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
   }
 
   function clearAllLocalEdits() {
     localEditsCache = null;
-    Storage.remove(LOCAL_EDITS_KEY);
+    Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
   }
 
   function hasLocalEdits() { return Object.keys(getLocalEdits()).length > 0; }
 
   MetroApp.applyLocalEdits = function(stationsData) {
     const edits = getLocalEdits();
-    let editsChanged = false;
     
     for (const [slug, posEdits] of Object.entries(edits)) {
       if (!stationsData[slug]) continue;
@@ -673,7 +670,7 @@ posEl.addEventListener('click', (e) => {
       delete edits[slug][idx];
       if (Object.keys(edits[slug]).length === 0) delete edits[slug];
       if (Object.keys(edits).length === 0) clearAllLocalEdits();
-      else Storage.set(LOCAL_EDITS_KEY, JSON.stringify(edits));
+      else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
     }
     MetroApp.invalidateLocalEditsCache?.();
     if (fbState.current[idx]) fbState.current[idx].isClosed = false;
@@ -696,7 +693,7 @@ posEl.addEventListener('click', (e) => {
         delete edits[slug][idx];
         if (Object.keys(edits[slug]).length === 0) delete edits[slug];
         if (Object.keys(edits).length === 0) clearAllLocalEdits();
-        else Storage.set(LOCAL_EDITS_KEY, JSON.stringify(edits));
+        else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
       }
       renderFeedbackPositions(slug);
       markFeedbackDirty();
@@ -748,17 +745,16 @@ posEl.addEventListener('click', (e) => {
       const sendBtn = document.getElementById('fbSend');
       const resultEl = document.getElementById('fbResult');
       const resetWrap = document.getElementById('fbResetWrap');
-      const stationEl = { get value() { return document.getElementById('fbStation').value; }, set value(v) { document.getElementById('fbStation').value = v; } };
 
 function renderResetBtn() {
-        resetWrap.innerHTML = (hasLocalEdits() && !stationEl.value) ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
+        resetWrap.innerHTML = (hasLocalEdits() && !fbState.slug) ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
         document.getElementById('fbReset')?.addEventListener('click', () => {
           MetroApp.showCustomConfirm('Скинути всі локальні зміни та повернутись до стандартних даних?', () => {
             clearAllLocalEdits();
             if (typeof MetroApp.reloadStationsData === 'function') {
               MetroApp.reloadStationsData(true).then(() => {
                 resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
-                renderFeedbackPositions(stationEl.value);
+                renderFeedbackPositions(fbState.slug);
               });
             }
           });
@@ -859,7 +855,7 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
         if (MetroApp._isSubmitting) return;
         MetroApp._isSubmitting = true;
 
-        const slug = stationEl.value;
+        const slug = fbState.slug;
         if (!slug) { MetroApp._isSubmitting = false; return; }
 
         try {

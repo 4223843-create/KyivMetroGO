@@ -192,10 +192,13 @@ export function renderFavList(favs) {
   favBody.innerHTML = listHtml;
 
   function saveOrder() {
-    const rowIds      = [...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.rowId).filter(Boolean);
+    const rowIds   = [...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.rowId).filter(Boolean);
     Storage.set(STORAGE_KEYS.FAV_ROWS_ORDER, JSON.stringify(rowIds));
-    const uniqueSlugs = [...new Set([...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.slug).filter(Boolean))];
-    saveFavs(uniqueSlugs);
+    const domSlugs = [...new Set([...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.slug).filter(Boolean))];
+    // Захист від розсинхронізації DOM: якщо якась станція з favs не потрапила у DOM —
+    // додаємо її в кінець, щоб не втратити.
+    const missingSlugs = favs.filter(s => !domSlugs.includes(s));
+    saveFavs([...domSlugs, ...missingSlugs]);
   }
 
   if (window.Sortable) {

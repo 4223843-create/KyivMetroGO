@@ -1,10 +1,15 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
 export default defineConfig({
   base: './',
   root: '.',
   publicDir: 'public',
+  define: {
+    __BUILD_DATE__: JSON.stringify(buildDate),
+  },
   build: {
     target: 'es2018',
     modulePreload: {

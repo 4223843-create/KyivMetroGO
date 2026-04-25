@@ -74,7 +74,7 @@ export function openSettingsSheet() {
           : null;
 
         if (currentSlug) {
-          const stData  = MetroApp.currentStationsData;
+          const stData  = state.stationsData;
           const color   = MetroApp.LINE_COLOR[stData?.[currentSlug]?.line] || 'var(--text-muted)';
           const sheet   = document.getElementById('stationSheet');
           sheet.querySelector('.row-checkin-btn')?.remove();
@@ -141,17 +141,21 @@ export function openSettingsSheet() {
       if (isSwipeSettings && e.changedTouches[0].clientY - swY > 60)
         document.getElementById('settingsClose').click();
     });
+  }
 
-} else {
+  // Синхронізуємо стан тумблерів при кожному відкритті — незалежно від того,
+  // чи sheet тільки створено, чи відкривається повторно.
+  function syncToggles() {
     const t = document.getElementById('settingsThemeToggle');
     const s = document.getElementById('settingsStartFavToggle');
     const c = document.getElementById('settingsCheckinToggle');
-    const l = document.getElementById('settingsLocalFeedbackToggle'); // ДОДАНО
+    const l = document.getElementById('settingsLocalFeedbackToggle');
     if (t) t.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
     if (s) s.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
     if (c) c.checked = isCheckinMode();
-    if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true'; // ДОДАНО
+    if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
   }
+  syncToggles();
 
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   settingsSheet.classList.add('sheet-open');

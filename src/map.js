@@ -1,6 +1,6 @@
 import svgText from '../KyivMetroScheme.svg?raw';
 import { state }          from './state.js';
-import { renderMapZones } from './stations.js';
+import { renderMapZones, checkAppReady } from './stations.js';
 
 const vp    = document.getElementById('mapViewport');
 const inner = document.getElementById('mapInner');
@@ -31,9 +31,6 @@ export function applyZoomAndCenter() {
     svgEl.style.display = 'block';
   }
 
-  baseMapWidth  = 1195.84;
-  baseMapHeight = 840;
-
   const w  = Math.min(window.innerWidth, document.documentElement.clientWidth);
   const sf = w <= 500 ? 4.5 : 1.5;
   const minZoom = vp.clientWidth / baseMapWidth;
@@ -57,9 +54,7 @@ export function applyZoomAndCenter() {
     vp.scrollTop  = Math.max(0, targetY - vp.clientHeight / 2);
 
     state.isMapReady = true;
-    if (state.isMapReady && state.isZonesReady) {
-      requestAnimationFrame(() => vp?.classList.remove('is-loading'));
-    }
+    checkAppReady();
   });
 }
 
