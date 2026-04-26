@@ -64,11 +64,31 @@ body#map-page .map-viewport {
   --z-btn-top: 1010;
   --z-fullscreen-sheet: 1060;
   --z-dropdown-active: 1070;
-  --z-popup-confirm: 1100;
   --z-global-modal: 2000;
 
---pluh-bg:    #2c2c2e;
+  --pluh-bg:    #2c2c2e;
   --pluh-text:  #ababab;
+
+  /* ── Типографічна шкала ── */
+  --fs-micro: 9px;   /* pos-pill-label, fb-input-label */
+  --fs-xs:    11px;  /* мітки, підписи, час */
+  --fs-sm:    13px;  /* основний дрібний текст, кнопки дій */
+  --fs-md:    15px;  /* основний текст, порожні стани */
+  --fs-lg:    17px;  /* заголовок шторки станції */
+  --fs-xl:    24px;  /* числові акценти ci-stat */
+
+  /* ── Вагова шкала ── */
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semi:   600;
+  --fw-bold:   700;
+
+  /* ── Розміри пілюль ── */
+  --pos-pill-size:         26px;
+  --pos-pill-size-compact: 22px;
+
+  /* ── Акценти ── */
+  --accent-star: #ffcc00;
 }
 
 [data-theme="light"] {
@@ -93,7 +113,7 @@ body#map-page .map-viewport {
 @font-face {
   font-family: 'ProbaNav2';
   src: url('ProbaNav2-Medium.woff2') format('woff2');
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   font-style: normal;
   font-display: swap;
 }
@@ -184,9 +204,9 @@ button { font-family: inherit; }
   height: 16px;
   padding: 0 4px;
   background: var(--line-red);
-  color: #fff;
+  color: var(--bg);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   line-height: 16px;
   border-radius: 8px;
   text-align: center;
@@ -257,8 +277,8 @@ z-index: var(--z-fullscreen-sheet);
   top: 8px;
 }
 .sheet-sheet-title {
-  font-size: 13px; 
-  font-weight: 600;
+  font-size: var(--fs-sm); 
+  font-weight: var(--fw-semi);
   color: var(--text-muted);
   
   /* ІДЕАЛЬНЕ АБСОЛЮТНЕ ЦЕНТРУВАННЯ: незалежно від кнопок по краях */
@@ -310,7 +330,7 @@ z-index: var(--z-fullscreen-sheet);
 
 /* ══ ПІДКАЗКА (ONBOARDING) ══ */
 .onboarding-hint {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
   margin: 0 16px 12px;
@@ -327,7 +347,7 @@ z-index: var(--z-fullscreen-sheet);
 }
 
 .hint-icon-wrap {
-  color: var(--line-blue);
+  color: inherit; /* колір задається inline відповідно до гілки */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -345,9 +365,8 @@ z-index: var(--z-fullscreen-sheet);
   text-align: left;
   padding: 20px 16px 16px;
   margin: 0 0 0 calc(50% - 150px - 22px);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-normal);
   opacity: 1;
 }
 
@@ -368,7 +387,7 @@ z-index: var(--z-fullscreen-sheet);
   margin-bottom: 10px;
 }
 .direction-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -391,14 +410,14 @@ z-index: var(--z-fullscreen-sheet);
   margin: 10px 0 4px;
 }
 .exit-label-text {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 .transfer-label {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .transfer-line {
   display: inline-block;
@@ -406,7 +425,7 @@ z-index: var(--z-fullscreen-sheet);
   border-radius: 1px;
   flex-shrink: 0; opacity: 0.85;
 }
-.transfer-text { color: var(--text-muted); font-size: 13px; }
+.transfer-text { color: var(--text-muted); font-size: var(--fs-sm); }
 
 /* ══ POSITION ROWS ══ */
 .position-row {
@@ -459,15 +478,15 @@ z-index: var(--z-fullscreen-sheet);
   min-width: 64px;
 }
 .pos-pill-label {
-  font-size: 9px;
+  font-size: var(--fs-micro);
   letter-spacing: .06em;
 color: var(--text-muted);
   text-transform: uppercase;
   margin-bottom: 1px;
 }
 .pos-pill-num {
-  font-size: 26px; 
-  font-weight: 700; 
+  font-size: var(--pos-pill-size); 
+  font-weight: var(--fw-bold); 
   line-height: 1;
   color: var(--text-muted);
 }
@@ -486,13 +505,13 @@ color: var(--text-muted);
 .long-transfer-title .transfer-text {
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 .long-transfer-exit {
   margin-top: 8px;
 }
 .long-transfer-exit-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
   margin-bottom: 4px;
@@ -509,7 +528,7 @@ color: var(--text-muted);
   min-width: 56px;
 }
 .long-transfer-pos-row .pos-pill-num {
-  font-size: 22px;
+  font-size: var(--pos-pill-size-compact);
 }
 
 /* ══ FAV EMPTY STATE ══ */
@@ -518,7 +537,7 @@ color: var(--text-muted);
   padding: 40px 16px;
 }
 .fav-empty-text-lg {
-  font-size: 18px;
+  font-size: var(--fs-md);
   color: var(--text-muted);
   line-height: 1.4;
   margin: 0 0 16px;
@@ -595,7 +614,7 @@ color: var(--text-muted);
 .fav-station-name {
   display: block;
   font-size: 16px; /* Базовий розмір */
-  font-weight: 600;
+  font-weight: var(--fw-medium);
   color: var(--text-muted);
   line-height: 1.2;
   white-space: nowrap;
@@ -606,12 +625,12 @@ color: var(--text-muted);
 }
 
 .fav-station-name.fav-small {
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .fav-dir-name {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   opacity: 0.7;
   white-space: nowrap;
@@ -650,7 +669,7 @@ color: var(--text-muted);
   justify-content: center;
   border-radius: 8px; /* Більше заокруглення для великого розміру */
   font-size: 20px; /* Великий і соковитий шрифт */
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   line-height: 1;
   transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1); /* Плавна анімація зменшення */
 }
@@ -703,7 +722,7 @@ color: var(--text-muted);
   display: block;
 }
 
-.fav-btn-bar.fav-active { color: #ffcc00; }
+.fav-btn-bar.fav-active { color: var(--accent-star); }
 
 /* ══ КЛІКАБЕЛЬНІ НАЗВИ СТАНЦІЙ ══ */
 .nav-link {
@@ -755,12 +774,12 @@ color: var(--text-muted);
   padding: 0 0 8px; 
   margin-top: 0;
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1.6;
 }
 .about-content p { margin: 0 0 14px; }
 .about-content h3 {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--text-muted);
@@ -776,7 +795,8 @@ color: var(--text-muted);
   text-align: center;
   padding: 24px 8px;
   line-height: 1.7;
-  font-size: 15px;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-normal);
   margin: 0;
   opacity: 1;
 }
@@ -823,11 +843,6 @@ color: var(--text-muted);
 }
 
 /* ══ FEEDBACK FORM ══ */
-.fb-selectors { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-.fb-select-wrap { display: flex; flex-direction: column-reverse; gap: 0; }
-.fb-select-inner { display: flex; flex-direction: column; gap: 4px; }
-.fb-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); display: grid; grid-template-columns: 40px 1fr 40px; text-align: center; } .fb-label::before, .fb-label::after { content: ''; }
-
 
 
 /* ══ КАСТОМНИЙ DROPDOWN для Android ══ */
@@ -840,7 +855,7 @@ color: var(--text-muted);
   border: 0.5px solid var(--border);
   border-radius: 10px;
   padding: 10px 0;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-family: inherit;
   cursor: pointer;
   display: grid;
@@ -848,20 +863,9 @@ color: var(--text-muted);
   align-items: center;
   position: relative;
 }
-.fb-custom-select.fb-select-open {
-  border-color: var(--text-muted);
-}
 .fb-custom-select span:first-child {
   grid-column: 2;
   text-align: center;
-}
-.fb-select-arrow {
-  grid-column: 3;
-  font-size: 18px;
-  color: var(--text-muted);
-  line-height: 1;
-  text-align: center;
-  padding-right: 4px;
 }
 .fb-dropdown {
   background: var(--bg-card);
@@ -878,7 +882,7 @@ color: var(--text-muted);
   border: none;
   border-bottom: 0.5px solid var(--border);
   color: var(--text);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-family: inherit;
   padding: 11px 14px;
   text-align: center;
@@ -886,7 +890,7 @@ color: var(--text-muted);
 }
 .fb-dropdown-item:last-child { border-bottom: none; }
 .fb-dropdown-item:active { background: var(--bg-sheet); }
-.fb-dropdown-item.fb-dropdown-selected { font-weight: 600; }
+.fb-dropdown-item.fb-dropdown-selected { font-weight: var(--fw-semi); }
 .fb-pos-row {
   background: var(--bg-card);
   border-radius: 12px;
@@ -915,7 +919,7 @@ color: var(--text-muted);
   padding: 6px 8px;
   min-width: 80px;
 }
-.fb-input-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 2px; }
+.fb-input-label { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 2px; }
 
 /* ══ Кнопка "Обрати іншу станцію" (Стиль пілюлі) ══ */
 .fb-change-station-btn {
@@ -926,7 +930,7 @@ color: var(--text-muted);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--fs-md);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -938,15 +942,15 @@ color: var(--text-muted);
 }
 
 /* КНОПКА ТА ПОВІДОМЛЕННЯ (Без змін) */
-.fb-send-btn { width: 100%; margin: 16px 0 8px; padding: 13px; background: var(--bg-card); color: var(--text); border: 0.5px solid var(--border); border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.fb-send-btn { width: 100%; margin: 16px 0 8px; padding: 13px; background: var(--bg-card); color: var(--text); border: 0.5px solid var(--border); border-radius: 12px; font-size: var(--fs-md); font-weight: var(--fw-semi); cursor: pointer; }
 .fb-send-btn:disabled { 
   opacity: 0.4; 
   cursor: default; 
   pointer-events: none; /* Забороняє будь-які кліки на рівні браузера */
 }
 .fb-send-btn:not(:disabled):active { opacity: 0.7; }
-.fb-note { font-size: 14px; color: var(--text-muted); text-align: center; padding: 12px 0; margin: 0; }
-.fb-success { color: #5aaa6a; }
+.fb-note { font-size: var(--fs-md); color: var(--text-muted); text-align: center; padding: 12px 0; margin: 0; }
+.fb-success { color: var(--line-green); }
 
 /* ══ STEPPER (Оновлений для пілюль) ══ */
 .fb-stepper {
@@ -960,7 +964,7 @@ color: var(--text-muted);
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 24px;
+  font-size: var(--fs-xl);
   width: 32px; height: 32px;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -969,16 +973,16 @@ color: var(--text-muted);
 }
 .fb-step:active { opacity: 0.6; background: transparent; }
 .fb-step-val {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semi);
+  color: var(--text-muted);
   min-width: 28px;
   text-align: center;
   user-select: none;
 }
 
 .fb-edited-mark {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   opacity: 0.6;
 }
@@ -991,7 +995,7 @@ color: var(--text-muted);
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
@@ -1032,8 +1036,8 @@ z-index: var(--z-global-modal);
 }
 
 .global-confirm-text {
-  font-size: 15px;
-  font-weight: 500; 
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium); 
   text-align: center;
   margin-bottom: 14px;
 color: var(--text-muted);
@@ -1052,8 +1056,8 @@ color: var(--text-muted);
   flex: 1;
   height: 38px;
   border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
   background: var(--bg-pill);
   color: var(--text-muted);
   cursor: pointer;
@@ -1080,8 +1084,8 @@ color: var(--text-muted);
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 400; 
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal); 
   cursor: pointer;
   padding: 6px;
   font-family: inherit;
@@ -1108,12 +1112,12 @@ color: var(--text-muted);
   width: 226px;
   box-sizing: border-box;
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
   margin: 0;
   line-height: 1.2;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   position: relative;
   z-index: 2;
   pointer-events: none;
@@ -1170,10 +1174,8 @@ color: var(--text-muted);
   user-select: none;
 }
 
-/* .fb-select — нативний select не використовується (кастомний dropdown) */
-
 .fb-dir-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   letter-spacing: .04em;
   color: var(--text-muted);
   text-align: center;
@@ -1183,7 +1185,7 @@ color: var(--text-muted);
   display: block;
 }
 .fb-exit-label {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
   margin-bottom: 8px;
@@ -1266,23 +1268,7 @@ html {
   margin: 0 0 8px 0;
 }
 /* ══ ПЛАВАЮЧЕ ВІКНО ПІДТВЕРДЖЕННЯ ЗМІН ══ */
-.popup-confirm {
-  position: fixed;
-  bottom: calc(24px + env(safe-area-inset-bottom));
-  left: 16px;
-  right: 16px;
-z-index: var(--z-popup-confirm);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-  border-radius: 16px;
-  margin: 0;
-  animation: popUpBottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
 
-[data-theme="light"] .popup-confirm {
-  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
-}
 
 @keyframes popUpBottom {
   from { transform: translateY(150%); opacity: 0; }
@@ -1316,7 +1302,7 @@ z-index: var(--z-popup-confirm);
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-family: inherit;
   cursor: pointer;
   opacity: 0.6;
@@ -1367,7 +1353,7 @@ z-index: var(--z-popup-confirm);
   background: none;
   border: none;
   color: var(--line-red); /* БЕЗ ЗАЙВИХ ДУЖОК */
-  font-size: 14px;
+  font-size: var(--fs-md);
   line-height: 1;
   cursor: pointer;
   padding: 2px 4px;
@@ -1390,7 +1376,7 @@ z-index: var(--z-popup-confirm);
   padding: 0;
 }
 .fb-extra-note {
-  font-size: 13px; color: var(--text-muted);
+  font-size: var(--fs-sm); color: var(--text-muted);
   text-align: center; line-height: 1.3;
   padding: 10px 0 6px; margin: 0;
   opacity: 0.8;
@@ -1399,7 +1385,7 @@ z-index: var(--z-popup-confirm);
 /* 6. Кнопка та попап інфо */
 
 .fb-info-text {
-  font-size: 13px; color: var(--text-muted);
+  font-size: var(--fs-sm); color: var(--text-muted);
   text-align: center; line-height: 1.4;
   background: rgba(255,255,255,0.03);
   padding: 12px; border-radius: 8px; margin-top: 8px;
@@ -1474,7 +1460,7 @@ max-height: 92dvh;
   margin-top: 4px;
 }
 .fb-add-doors-hint-inner p {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   line-height: 1.4;
   margin: 0 0 6px;
@@ -1507,7 +1493,7 @@ max-height: 92dvh;
   margin-top: 4px;
   text-align: center;
   opacity: 0.4;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .pluh-bg { fill: var(--pluh-bg); }
@@ -1525,7 +1511,7 @@ max-height: 92dvh;
 }
 
 .fb-main-intro-text {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
   line-height: 1.4;
@@ -1547,8 +1533,8 @@ padding: 0 8px;
   background: var(--bg-pill);
   border: none;
   color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semi);
   text-decoration: none;
   border-radius: 8px;
   padding: 6px 24px;
@@ -1567,7 +1553,7 @@ padding: 0 8px;
 
 .fb-item-inner .fb-close-exit,
 .fb-item-inner .fb-cancel-extra-btn {
-  color: #c8523a !important;
+  color: var(--line-red) !important;
   transition: color 0.2s ease !important;
 }
 
@@ -1643,7 +1629,7 @@ z-index: var(--z-dropdown-active);
   background: none;
   border: none;
   color: var(--line-blue);
-  font-size: 14px;
+  font-size: var(--fs-md);
   line-height: 1;
   cursor: pointer;
   padding: 2px 4px;
@@ -1677,7 +1663,7 @@ z-index: var(--z-dropdown-active);
   pointer-events: auto;
 }
 .exit-fav-toast-text {
-  font-size: 9px;
+  font-size: var(--fs-micro);
   color: var(--text-muted);
   text-align: right;
   line-height: 1.3;
@@ -1714,7 +1700,7 @@ margin: 0 0 4px 0;
   justify-content: center;
 }
 .fb-exit-label-text {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   opacity: 0.8;
   text-align: center;
@@ -1738,7 +1724,7 @@ margin: 0 0 4px 0;
 .fb-add-desc-btn {
   background: none;
   border: none;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   opacity: 0.55;
   letter-spacing: .02em;
@@ -1764,8 +1750,8 @@ margin: 0 0 4px 0;
   background: transparent;
   border: none;
   padding: 5px 10px;
-  font-size: 13px; /* Зробимо шрифт трохи більшим для кращої читабельності */
-  color: var(--text);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
   font-family: inherit;
   text-align: center;
   box-sizing: border-box;
@@ -1775,8 +1761,8 @@ margin: 0 0 4px 0;
 }
 .fb-exit-label-input:focus { outline: none; }
 .fav-exit-info {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
   color: var(--text-muted);
   text-align: left;
   white-space: nowrap;
@@ -1818,8 +1804,8 @@ margin: 0 0 4px 0;
 }
 
 .fav-settings-label {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
   color: var(--text-muted);
   opacity: 0.8;
 }
@@ -1869,7 +1855,7 @@ margin: 0 0 4px 0;
 }
 .ios-toggle input:checked + .ios-toggle-slider:before {
   transform: translateY(-14px);
-  background-color: #fff;
+  background-color: var(--text-muted);
 }
 
 #favListBtn svg {
@@ -1914,9 +1900,9 @@ margin: 0 0 4px 0;
   padding: 14px 16px;
   border-bottom: 0.5px solid var(--border);
   cursor: pointer;
-  color: var(--text);
+  color: var(--text-muted);
   font-size: 16px;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   -webkit-tap-highlight-color: transparent;
 }
 .search-item:active { background: var(--bg-card); }
@@ -2101,9 +2087,9 @@ svg [role="button"]:focus:not(:focus-visible) {
   margin: 0 8px 8px;
 }
 .fb-inline-confirm-note {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 .fb-inline-confirm-btns {
   display: flex;
@@ -2159,8 +2145,8 @@ svg [role="button"]:focus:not(:focus-visible) {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
   line-height: 1;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -2170,11 +2156,11 @@ svg [role="button"]:focus:not(:focus-visible) {
   background: var(--bg-card);
   color: var(--text);
   border-color: transparent;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
-.search-line-btn[data-line="red"].is-active  { background: var(--line-red);   color: #fff; border-color: transparent; font-weight: 500; }
-.search-line-btn[data-line="blue"].is-active { background: var(--line-blue);  color: #fff; border-color: transparent; font-weight: 500; }
-.search-line-btn[data-line="green"].is-active{ background: var(--line-green); color: #fff; border-color: transparent; font-weight: 500; }
+.search-line-btn[data-line="red"].is-active  { background: var(--line-red);   color: var(--bg); border-color: transparent; font-weight: var(--fw-medium); }
+.search-line-btn[data-line="blue"].is-active { background: var(--line-blue);  color: var(--bg); border-color: transparent; font-weight: var(--fw-medium); }
+.search-line-btn[data-line="green"].is-active{ background: var(--line-green); color: var(--bg); border-color: transparent; font-weight: var(--fw-medium); }
 
 .offline-banner {
   position: fixed;
@@ -2182,21 +2168,21 @@ svg [role="button"]:focus:not(:focus-visible) {
   left: 0;
   right: 0;
   z-index: calc(var(--z-ui-buttons) + 10);
-  background: #3a3a3c;
+  background: var(--bg-card);
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   text-align: center;
   padding: 6px 16px calc(6px + env(safe-area-inset-top));
   padding-top: calc(6px + env(safe-area-inset-top));
 }
 [data-theme="light"] .offline-banner {
-  background: #d1d1d6;
-  color: #3a3a3c;
+  background: var(--bg-sheet);
+  color: var(--text);
 }
 
 .sheet-station-title {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semi);
   color: var(--text-muted);
   position: absolute;
   left: 50%;
@@ -2239,50 +2225,8 @@ svg [role="button"]:focus:not(:focus-visible) {
 .row-checkin-btn.is-checked-in { opacity: 1; }
 .row-checkin-btn svg { width: 18px; height: 22px; display: block; }
 
-/* ══ CHECK-IN JOURNAL SHEET ══ */
-.checkin-station-group {
-  margin-bottom: 8px;
-}
-.checkin-station-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  padding: 10px 16px 6px;
-  border-left: 3px solid var(--text-muted);
-  margin: 0 0 2px;
-}
-.checkin-entry {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-bottom: 0.5px solid var(--border);
-}
-.checkin-entry:last-child { border-bottom: none; }
-.checkin-pin-icon { width: 22px; height: 26px; flex-shrink: 0; }
-.checkin-pin-icon svg { width: 100%; height: 100%; }
-.checkin-entry-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.checkin-dir {
-  font-size: 14px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.checkin-pos {
-  font-size: 13px;
-  font-weight: 500;
-}
 .checkin-time {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
@@ -2317,7 +2261,7 @@ svg [role="button"]:focus:not(:focus-visible) {
   padding: 14px 20px 10px;
 }
 .ci-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.ci-stat-num { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; }
+.ci-stat-num { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--text); line-height: 1; }
 .ci-stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; opacity: 0.65; }
 .ci-stat-sep { width: 0.5px; height: 28px; background: var(--border); flex-shrink: 0; }
 
@@ -2350,8 +2294,8 @@ svg [role="button"]:focus:not(:focus-visible) {
   border: 0.5px solid var(--border);
   background: none;
   color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
@@ -2387,9 +2331,9 @@ svg [role="button"]:focus:not(:focus-visible) {
   gap: 8px;
 }
 .checkin-station-name-text {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-normal);
+  color: var(--text-muted);
   display: block;
   min-width: 0;
   overflow: hidden;
@@ -2397,7 +2341,7 @@ svg [role="button"]:focus:not(:focus-visible) {
   white-space: nowrap;
 }
 .checkin-time {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   opacity: 0.65;
   white-space: nowrap;
@@ -2445,8 +2389,8 @@ svg [role="button"]:focus:not(:focus-visible) {
 }
 
 .settings-label {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
   color: var(--text-muted);
   text-align: left;
   line-height: 1.3;
@@ -2471,8 +2415,8 @@ svg [role="button"]:focus:not(:focus-visible) {
   background: none;
   border: none;
   padding: 0;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
 color: var(--text-muted); /* Повернули фірмовий сірий */
   cursor: pointer;
   letter-spacing: .01em;
@@ -2480,6 +2424,11 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   transition: opacity .15s;
 }
 .settings-action-btn:active { opacity: .6; }
+.settings-action-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
 
 .settings-info-btn {
   display: flex;
@@ -2512,7 +2461,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .settings-hint {
   margin: 0;
   padding: 0 16px 12px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--text-muted);
   text-align: left;

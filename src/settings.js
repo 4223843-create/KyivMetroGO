@@ -1,7 +1,7 @@
 import { STORAGE_KEYS, Storage }        from './storage.js';
 import { applyTheme }           from './theme.js';
-import { saveFavs, updateFavDock } from './favorites.js';
-import { isCheckinMode, updateCheckinDock, invalidateCheckinsCache } from './checkin.js';
+import { getFavs, getExitFavs, saveFavs, updateFavDock } from './favorites.js';
+import { isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache } from './checkin.js';
 import { state }                from './state.js';
 
 // ⚠️ Логіка тумблерів (pointer-events + клік по всій картці) — збережено без змін!
@@ -52,13 +52,22 @@ export function openSettingsSheet() {
     }
 
     // ── Кнопка «i» (Довідка Локальних змін) ──
+    function closeAllSettingsHints() {
+      settingsSheet.querySelectorAll('.settings-hint').forEach(h => { h.hidden = true; });
+      settingsSheet.querySelectorAll('.settings-info-btn').forEach(b => { b.classList.remove('settings-info-btn-active'); });
+    }
+
     document.getElementById('settingsLocalFeedbackInfo')?.addEventListener('click', e => {
       e.stopPropagation();
       const hint = document.getElementById('settingsLocalFeedbackHint');
       const btn  = document.getElementById('settingsLocalFeedbackInfo');
       if (!hint) return;
-      hint.hidden = !hint.hidden;
-      btn.classList.toggle('settings-info-btn-active', !hint.hidden);
+      const wasOpen = !hint.hidden;
+      closeAllSettingsHints();
+      if (!wasOpen) {
+        hint.hidden = false;
+        btn.classList.add('settings-info-btn-active');
+      }
     });
 
     // ── Check-in ──
@@ -89,13 +98,21 @@ export function openSettingsSheet() {
       const hint = document.getElementById('settingsCheckinHint');
       const btn  = document.getElementById('settingsCheckinInfo');
       if (!hint) return;
-      hint.hidden = !hint.hidden;
-      btn.classList.toggle('settings-info-btn-active', !hint.hidden);
+      const wasOpen = !hint.hidden;
+      closeAllSettingsHints();
+      if (!wasOpen) {
+        hint.hidden = false;
+        btn.classList.add('settings-info-btn-active');
+      }
     });
 
     // ── Очистити Вибране ──
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {
       e.stopPropagation();
+      if (e.currentTarget.disabled) {
+        MetroApp.showCustomConfirm('Вибраного немає', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
+        return;
+      }
       MetroApp.showCustomConfirm('Очистити Вибране?',
         () => {
           saveFavs([]);
@@ -110,6 +127,10 @@ export function openSettingsSheet() {
     // ── Очистити Check-in ──
     document.getElementById('settingsClearCheckin')?.addEventListener('click', e => {
       e.stopPropagation();
+      if (e.currentTarget.disabled) {
+        MetroApp.showCustomConfirm('Список check-in порожній', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
+        return;
+      }
       MetroApp.showCustomConfirm('Очистити історію check-in?',
         () => {
           Storage.remove(STORAGE_KEYS.CHECKINS);
@@ -170,33 +191,46 @@ export function openSettingsSheet() {
     // ── Імпорт (Відновлення з файлу) ──
     document.getElementById('settingsImport')?.addEventListener('click', e => {
       e.stopPropagation();
-      document.getElementById('importFile')?.click();
-    });
+      // Створюємо input щоразу наново — єдиний надійний спосіб викликати
+      // системний файловий picker на iOS/Android без затримок та обмежень безпеки.
+      const input = document.createElement('input');
+      input.type   = 'file';
+      input.accept = '.json';
+      input.style.display = 'none';
+      document.body.appendChild(input);
 
-    // Один слухач на importFile — всередині if(!settingsSheet), не дублюється при повторних відкриттях
-    document.getElementById('importFile')?.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      MetroApp.showCustomConfirm('Відновити дані з цього файлу? Поточні налаштування та Обране будуть замінені.', () => {
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-          try {
-            const importedData = JSON.parse(ev.target.result);
-            if (!importedData[STORAGE_KEYS.FAVS] && !importedData['metro_favs']) {
-              throw new Error('Invalid backup file');
-            }
-            localStorage.clear();
-            for (const key in importedData) {
-              localStorage.setItem(key, importedData[key]);
-            }
-            window.location.reload();
-          } catch (err) {
-            MetroApp.showCustomConfirm?.('Помилка: файл пошкоджений або не є резервною копією KyivMetroGO.', () => {});
-          }
-        };
-        reader.readAsText(file);
+      input.addEventListener('change', () => {
+        const file = input.files[0];
+        document.body.removeChild(input);
+        if (!file) return;
+        MetroApp.showCustomConfirm(
+          'Відновити дані з цього файлу? Поточні налаштування, Вибране та Check-in будуть замінені.',
+          () => {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+              try {
+                const importedData = JSON.parse(ev.target.result);
+                if (!importedData[STORAGE_KEYS.FAVS] && !importedData['metro_favs']) {
+                  throw new Error('Invalid backup file');
+                }
+                localStorage.clear();
+                for (const key in importedData) {
+                  localStorage.setItem(key, importedData[key]);
+                }
+                window.location.reload();
+              } catch (err) {
+                MetroApp.showCustomConfirm?.('Помилка: файл пошкоджений або не є резервною копією KyivMetroGO.', () => {});
+              }
+            };
+            reader.readAsText(file);
+          },
+          null, null,
+          'Відновити', 'Скасувати',
+          'confirm-btn-save', 'confirm-btn-discard'
+        );
       });
-      e.target.value = '';
+
+      input.click();
     });
   }
 
@@ -211,6 +245,14 @@ export function openSettingsSheet() {
     if (s) s.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
     if (c) c.checked = isCheckinMode();
     if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+
+    // Стан кнопок «Очистити» — вимикаємо якщо нема чого чистити
+    const hasFavs     = getExitFavs().length > 0 || getFavs().length > 0;
+    const hasCheckins = getCheckins().length > 0;
+    const clearFavsBtn     = document.getElementById('settingsClearFavs');
+    const clearCheckinBtn  = document.getElementById('settingsClearCheckin');
+    if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
+    if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
   }
   syncToggles();
 

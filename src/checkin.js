@@ -15,7 +15,8 @@ export function getCheckins() {
 }
 
 export function isCheckinMode() {
-  return Storage.get(STORAGE_KEYS.CHECKIN_MODE) === 'true';
+  const val = Storage.get(STORAGE_KEYS.CHECKIN_MODE);
+  return val === null ? true : val === 'true'; // за замовч. увімкнено
 }
 
 export function checkinId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
@@ -86,6 +87,10 @@ MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {
       toggleCheckin(slug, dir, wagon, doors, lineColor);
       refreshBtn();
       updateCheckinDock();
+
+      // При першому натисканні шпильки — прибираємо підказку про check-in
+      const checkinHint = document.getElementById('checkinHint');
+      if (checkinHint) MetroApp.dismissHintWithDoors?.(checkinHint);
     });
   });
 };

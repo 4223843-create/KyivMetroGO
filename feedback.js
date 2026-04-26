@@ -1,16 +1,15 @@
-(function() {
+import { STORAGE_KEYS, Storage } from './storage.js';
+import { state } from './state.js';
 
   const FORMSPREE_URL = 'https://formspree.io/f/mgopobnd';
   const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
   const LINE_ORDER = ['red', 'blue', 'green'];
-  const LOCAL_EDITS_KEY = 'metro_local_edits';
-  const EXIT_LABELS_KEY = 'metro_exit_labels';
   const PENCIL_SVG_LABEL = MetroApp.Icons.pencil;
   const STATIONS_CAN_ADD_EXIT = new Set(['R.Zhytomyrska', 'G.Osokorky', 'G.Chervonyi_khutir']);
 
 function getExitLabels() {
     if (exitLabelsCache) return exitLabelsCache;
-    try { exitLabelsCache = JSON.parse(localStorage.getItem(EXIT_LABELS_KEY) || '{}'); }
+    try { exitLabelsCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_LABELS) || '{}'); }
     catch (e) { console.warn('[KyivMetroGO] Помилка парсингу описів виходів:', e); exitLabelsCache = {}; }
     return exitLabelsCache;
   }
@@ -19,7 +18,7 @@ function getExitLabels() {
     if (!labels[slug]) labels[slug] = {};
     if (label.trim()) labels[slug][posIdx] = label.trim();
     else { delete labels[slug][posIdx]; if (!Object.keys(labels[slug]).length) delete labels[slug]; }
-    localStorage.setItem(EXIT_LABELS_KEY, JSON.stringify(labels));
+    Storage.set(STORAGE_KEYS.EXIT_LABELS, JSON.stringify(labels));
     exitLabelsCache = null;
   }
   
@@ -51,7 +50,7 @@ function getExitLabels() {
 
 function getLocalEdits() {
     if (localEditsCache) return localEditsCache;
-    try { localEditsCache = JSON.parse(localStorage.getItem(LOCAL_EDITS_KEY) || '{}'); }
+    try { localEditsCache = JSON.parse(Storage.get(STORAGE_KEYS.LOCAL_EDITS) || '{}'); }
     catch (e) { console.warn('[KyivMetroGO] Помилка парсингу локальних змін:', e); localEditsCache = {}; }
     return localEditsCache;
   }
@@ -60,19 +59,18 @@ function getLocalEdits() {
     const edits = getLocalEdits();
     if (!edits[slug]) edits[slug] = {};
     edits[slug][posIdx] = data;
-    localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+    Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
   }
 
   function clearAllLocalEdits() {
     localEditsCache = null;
-    localStorage.removeItem(LOCAL_EDITS_KEY);
+    Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
   }
 
   function hasLocalEdits() { return Object.keys(getLocalEdits()).length > 0; }
 
   MetroApp.applyLocalEdits = function(stationsData) {
     const edits = getLocalEdits();
-    let editsChanged = false;
     
     for (const [slug, posEdits] of Object.entries(edits)) {
       if (!stationsData[slug]) continue;
@@ -310,8 +308,8 @@ function bindSteppersOptimized(container) {
               editBtn.innerHTML = 'додати опис';
             }
           }
-          if (typeof MetroApp.applyExitLabels === 'function' && MetroApp.currentStationsData) {
-            MetroApp.applyExitLabels(MetroApp.currentStationsData);
+          if (typeof MetroApp.applyExitLabels === 'function' && state.stationsData) {
+            MetroApp.applyExitLabels(state.stationsData);
           }
           if (typeof MetroApp.refreshCurrentStation === 'function') {
             MetroApp.refreshCurrentStation();
@@ -541,9 +539,9 @@ container.addEventListener('click', (event) => {
     fbState.labels = {};
     fbState.isDirty = false;
 
-    if (!slug || !MetroApp.currentStationsData[slug]) return;
+    if (!slug || !state.stationsData[slug]) return;
 
-    const s = MetroApp.currentStationsData[slug];
+    const s = state.stationsData[slug];
     const edits = getLocalEdits()[slug] || {};
 
     // Заповнюємо стан даними
@@ -569,14 +567,8 @@ container.addEventListener('click', (event) => {
     MetroApp.fbUnsaved = false;
   }
 
-
-
-
-
 function openFeedbackSheet(stationsData) {
     try {
-      MetroApp.currentStationsData = stationsData;
-
       let sheet = document.getElementById('feedbackSheet');
       if (!sheet) {
         sheet = document.createElement('div');
@@ -617,7 +609,7 @@ function openFeedbackSheet(stationsData) {
           closeAllHints();
           
           // Завжди показуємо перелік станцій при кліку на фільтр
-          const allSt = Object.entries(MetroApp.currentStationsData)
+          const allSt = Object.entries(state.stationsData)
             .map(([sl, st]) => ({ slug: sl, ...st }))
             .filter(st => line === '' || st.line === line) // 'Всі' покаже всі
             .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
@@ -629,20 +621,31 @@ function openFeedbackSheet(stationsData) {
           ).join('');
           stationList.hidden = false;
           
-          if (typeof renderResetBtn === 'function') renderResetBtn();
+          renderResetBtn();
         });
 
 // ── Клік по станції зі списку ──
 stationList.addEventListener('click', e => {
   const item = e.target.closest('.fb-station-item');
   if (!item) return;
-  stationHidden.value = item.dataset.slug;
-  
+  const selectedSlug = item.dataset.slug;
+  stationHidden.value = selectedSlug;
+
+  // Показуємо назву станції у шапці замість загального заголовка
+  const selSt = state.stationsData?.[selectedSlug];
+  const titleEl  = document.getElementById('fbStationTitle');
+  const sheetTitleEl = document.getElementById('fbSheetTitle');
+  if (titleEl && selSt) {
+    titleEl.textContent = selSt.name;
+    titleEl.hidden = false;
+    if (sheetTitleEl) sheetTitleEl.hidden = true;
+  }
+
   // Ховаємо список і фільтри, показуємо кнопку повернення
   stationList.hidden = true;
   document.getElementById('fbLineFilterWrap').hidden = true;
   document.getElementById('fbChangeStation').hidden = false;
-  
+
   MetroApp.fbUnsaved = false;
   closeAllHints();
   renderFeedbackPositions(stationHidden.value);
@@ -653,11 +656,17 @@ document.getElementById('fbChangeStation').addEventListener('click', () => {
   // Повертаємо фільтри, ховаємо кнопку
   document.getElementById('fbLineFilterWrap').hidden = false;
   document.getElementById('fbChangeStation').hidden = true;
-  
+
+  // Ховаємо назву станції, повертаємо загальний заголовок
+  const titleEl2 = document.getElementById('fbStationTitle');
+  const sheetTitleEl2 = document.getElementById('fbSheetTitle');
+  if (titleEl2) titleEl2.hidden = true;
+  if (sheetTitleEl2) sheetTitleEl2.hidden = false;
+
   // Скидаємо вибір
   stationHidden.value = '';
   document.getElementById('fbPositions').innerHTML = '';
-  stationList.hidden = false; // Знову показуємо список
+  stationList.hidden = false;
   document.getElementById('fbSend').disabled = true;
 });
 
@@ -665,7 +674,7 @@ document.getElementById('fbChangeStation').addEventListener('click', () => {
 posEl.addEventListener('click', (e) => {
   const slug = stationHidden.value;
   if (!slug) return;
-  const s = MetroApp.currentStationsData[slug];
+  const s = state.stationsData[slug];
 
   const restoreBtn = e.target.closest('.fb-restore-exit');
   if (restoreBtn) {
@@ -676,14 +685,14 @@ posEl.addEventListener('click', (e) => {
       delete edits[slug][idx];
       if (Object.keys(edits[slug]).length === 0) delete edits[slug];
       if (Object.keys(edits).length === 0) clearAllLocalEdits();
-      else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+      else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
     }
     MetroApp.invalidateLocalEditsCache?.();
     if (fbState.current[idx]) fbState.current[idx].isClosed = false;
-    if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
+    if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(state.stationsData);
     MetroApp.refreshCurrentStation?.();
     renderFeedbackPositions(slug);
-    if (typeof renderResetBtn === 'function') renderResetBtn();
+    renderResetBtn();
     return;
   }
 
@@ -699,14 +708,14 @@ posEl.addEventListener('click', (e) => {
         delete edits[slug][idx];
         if (Object.keys(edits[slug]).length === 0) delete edits[slug];
         if (Object.keys(edits).length === 0) clearAllLocalEdits();
-        else localStorage.setItem(LOCAL_EDITS_KEY, JSON.stringify(edits));
+        else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
       }
       renderFeedbackPositions(slug);
       markFeedbackDirty();
-      if (typeof renderResetBtn === 'function') renderResetBtn();
+      renderResetBtn();
       return;
     }
-    const p = MetroApp.currentStationsData[fbState.slug]?.positions[idx];
+    const p = state.stationsData[fbState.slug]?.positions[idx];
     if (!p) return;
     const exWrap = document.getElementById(`fbExtraWrap${idx}`);
     if (exWrap && !exWrap.classList.contains('is-hidden')) {
@@ -723,22 +732,21 @@ posEl.addEventListener('click', (e) => {
     }
     const loc = [p.dir, p.exit].filter(Boolean).join(' · ');
     saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
-    if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
+    if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(state.stationsData);
     MetroApp.invalidateLocalEditsCache?.();
     fbState.current[idx].isClosed = true;
     renderFeedbackPositions(slug);
-    if (typeof renderResetBtn === 'function') renderResetBtn();
+    renderResetBtn();
     MetroApp.refreshCurrentStation?.();
-const isLocalOnly = localStorage.getItem('metro_local_only_feedback') === 'true';
-    if (!isLocalOnly) {
-      fetch(FORMSPREE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` })
-      }).catch(e => console.warn('[Feedback] Background report failed', e));
-    }
+    fetch(FORMSPREE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: `${loc}: ВИХІД ЗАКРИТО` })
+    }).catch(e => console.warn('[Feedback] Background report failed', e));
+  }
+});
 
-        sendBtn.addEventListener('click', () => { if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(false); });
+        sendBtn.addEventListener('click', () => { MetroApp.triggerFeedbackSubmit(false); });
         document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
         bindSteppersOptimized(posEl);
 
@@ -752,17 +760,16 @@ const isLocalOnly = localStorage.getItem('metro_local_only_feedback') === 'true'
       const sendBtn = document.getElementById('fbSend');
       const resultEl = document.getElementById('fbResult');
       const resetWrap = document.getElementById('fbResetWrap');
-      const stationEl = { get value() { return document.getElementById('fbStation').value; }, set value(v) { document.getElementById('fbStation').value = v; } };
 
 function renderResetBtn() {
-        resetWrap.innerHTML = (hasLocalEdits() && !stationEl.value) ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
+        resetWrap.innerHTML = (hasLocalEdits() && !fbState.slug) ? `<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>` : '';
         document.getElementById('fbReset')?.addEventListener('click', () => {
           MetroApp.showCustomConfirm('Скинути всі локальні зміни та повернутись до стандартних даних?', () => {
             clearAllLocalEdits();
             if (typeof MetroApp.reloadStationsData === 'function') {
               MetroApp.reloadStationsData(true).then(() => {
                 resetWrap.innerHTML = '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
-                renderFeedbackPositions(stationEl.value);
+                renderFeedbackPositions(fbState.slug);
               });
             }
           });
@@ -777,7 +784,7 @@ function renderFeedbackPositions(slug) {
         // щоб при додаванні виходу (перемальовуванні) дані не скидались
         if (fbState.slug !== slug) initFeedbackState(slug);
         
-        const s = MetroApp.currentStationsData[slug];
+        const s = state.stationsData[slug];
         const groupsMap = new Map();
 
         // 1. Спочатку додаємо існуючі позиції з бази
@@ -836,7 +843,7 @@ posEl.innerHTML = groups.map(g => {
                    <div class="fb-extra-door-wrap ${state.hasExtra ? '' : 'is-hidden'}" id="fbExtraWrap${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, state.wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, state.dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
                    <div class="fb-extra-door-wrap ${state.hasThird ? '' : 'is-hidden'}" id="fbExtraWrap2_${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex2_${item.i}`, state.wEx2, 1, 5, 'вагон')}${stepperHtml(`fbD_ex2_${item.i}`, state.dEx2, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-third-btn" data-idx="${item.i}">✕</button></div></div></div>
                    <div class="fb-add-doors-row ${state.hasExtra ? 'is-hidden' : ''}" id="fbAddDoorsRow${item.i}" style="justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}" data-can-have-third="${state.hasThird ? '1' : '0'}">+1</button></div>
-                   <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері</p><p><span style="color:#c8523a">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:#5B9BD5">✕</span> скасовує додавання других дверей.</p></div></div></div>`
+                   <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері</p><p><span style="color:var(--line-red)">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:var(--line-blue)">✕</span> скасовує додавання других дверей.</p></div></div></div>`
               }
             </div>${dividerHtml}`;
           }).join('');
@@ -863,11 +870,11 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
         if (MetroApp._isSubmitting) return;
         MetroApp._isSubmitting = true;
 
-        const slug = stationEl.value;
+        const slug = fbState.slug;
         if (!slug) { MetroApp._isSubmitting = false; return; }
 
         try {
-          const s = MetroApp.currentStationsData[slug];
+          const s = state.stationsData[slug];
 
           // Збираємо змінені позиції, порівнюючи current з original
           const posChanges = [];
@@ -934,7 +941,7 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
           }));
 
           MetroApp.invalidateLocalEditsCache?.();
-          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(MetroApp.currentStationsData);
+          if (typeof MetroApp.applyLocalEdits === 'function') MetroApp.applyLocalEdits(state.stationsData);
           MetroApp.refreshCurrentStation?.();
           MetroApp.fbUnsaved = false;
           fbState.slug = null; // примусова переініціалізація baseline після збереження
@@ -953,16 +960,12 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
             ...labelChanges
           ];
 
-          const isLocalOnly = localStorage.getItem('metro_local_only_feedback') === 'true';
-          
-          if (!isLocalOnly) {
-            const response = await fetch(FORMSPREE_URL, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeLines.join('\n') })
-            });
+          const response = await fetch(FORMSPREE_URL, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeLines.join('\n') })
+          });
 
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-          }
+          if (!response.ok) throw new Error('HTTP ' + response.status);
 
           // Успіх
           if (!background) {
@@ -1002,18 +1005,8 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
 
       renderResetBtn();
       
-      // --- ДИНАМІЧНИЙ ТЕКСТ ФІДБЕКУ ---
-      const introText = document.querySelector('#feedbackSheet .fb-main-intro-text');
-      if (introText) {
-        const isLocalOnly = localStorage.getItem('metro_local_only_feedback') === 'true';
-        introText.innerHTML = isLocalOnly 
-          ? 'Правки одразу застосуються&nbsp;локально' 
-          : 'Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику';
-      }
-      // --------------------------------
-
       document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-      sheet.classList.add('sheet-open');
+      sheet.classList.add('sheet-open'); 
       document.getElementById('sheetOverlay').classList.add('overlay-visible');      
     } catch(err) { console.error('[FeedbackSheet ERROR]', err); }
   }
@@ -1038,12 +1031,12 @@ function closeFeedbackSheet() {
       if (MetroApp.hasUnsavedFeedback && MetroApp.hasUnsavedFeedback()) {
         if (typeof MetroApp.showCustomConfirm === 'function') {
           const stationSlug = document.getElementById('fbStation')?.value || '';
-          const stationData = stationSlug ? MetroApp.currentStationsData?.[stationSlug] : null;
+          const stationData = stationSlug ? state.stationsData?.[stationSlug] : null;
           const stationName = stationData?.name || '';
           const question = stationName ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>` : 'Зберегти зміни?';
           
           MetroApp.showCustomConfirm(question, () => {
-            if (typeof MetroApp.triggerFeedbackSubmit === 'function') MetroApp.triggerFeedbackSubmit(true);
+            MetroApp.triggerFeedbackSubmit(true);
             forceCloseFeedbackSheet();
           }, () => { forceCloseFeedbackSheet(); }, () => { /* Скасувати */ });
           return;
@@ -1059,5 +1052,3 @@ function closeFeedbackSheet() {
   MetroApp.openFeedbackSheet  = openFeedbackSheet;
   MetroApp.closeFeedbackSheet = closeFeedbackSheet;
 
-})();
-export {};

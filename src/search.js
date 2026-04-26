@@ -111,15 +111,32 @@ export function openSearchSheet() {
   }
 
 // Адаптація під клавіатуру (visualViewport)
+  // На iOS клавіатура зменшує visualViewport.height — зсуваємо шторку вгору,
+  // щоб вона не ховалась під клавіатуру. Позиціонуємо bottom відносно вершини VP.
   if (window.visualViewport) {
-    searchSheet._cleanupVP?.(); // Знімаємо попередній listener перед реєстрацією нового
-    const onVPResize = () => { 
-      // Віднімаємо ті самі 8dvh від видимої зони над клавіатурою
-      searchSheet.style.maxHeight = `calc(${window.visualViewport.height}px - 8dvh)`; 
+    searchSheet._cleanupVP?.();
+    const onVPResize = () => {
+      const vp = window.visualViewport;
+      // offsetTop = скільки зверху «з'їла» система (safe area тощо)
+      const vpTop    = vp.offsetTop ?? 0;
+      const vpHeight = vp.height;
+      // Висота шторки = весь видимий VP мінус невеликий відступ зверху
+      const maxH = vpHeight * 0.92;
+      searchSheet.style.maxHeight = `${maxH}px`;
+      // Піднімаємо шторку: вона fixed від bottom:0 браузера,
+      // тому додаємо bottom-offset = скільки клавіатура «з'їла» знизу
+      const keyboardH = window.innerHeight - vpTop - vpHeight;
+      searchSheet.style.bottom = `${Math.max(0, keyboardH)}px`;
     };
     onVPResize();
     window.visualViewport.addEventListener('resize', onVPResize);
-    searchSheet._cleanupVP = () => window.visualViewport.removeEventListener('resize', onVPResize);
+    window.visualViewport.addEventListener('scroll', onVPResize);
+    searchSheet._cleanupVP = () => {
+      window.visualViewport.removeEventListener('resize', onVPResize);
+      window.visualViewport.removeEventListener('scroll', onVPResize);
+      searchSheet.style.bottom = '';
+      searchSheet.style.maxHeight = '';
+    };
   }
 
   const input            = document.getElementById('searchInput');
