@@ -768,6 +768,7 @@ function renderFeedbackPositions(slug) {
         if (fbState.slug !== slug) initFeedbackState(slug);
         
         const s = state.stationsData[slug];
+        const fbLineColor = MetroApp.LINE_COLOR[s?.line] || 'var(--text-muted)';
         const groupsMap = new Map();
 
         // 1. Спочатку додаємо існуючі позиції з бази
@@ -820,11 +821,11 @@ posEl.innerHTML = groups.map(g => {
             <div class="fb-item-inner ${state.hasExtra ? 'fb-pos-multi has-extra-doors' : ''} ${state.hasThird ? 'has-three-doors' : ''} ${isClosed ? 'fb-pos-closed' : ''}" data-idx="${item.i}" id="fbItemInner${item.i}">
               ${isClosed
                 ? `<div class="fb-closed-note-wrap"><span class="fb-closed-note">Вихід позначено як недоступний</span><button type="button" class="fb-restore-exit" data-idx="${item.i}" aria-label="Відновити вихід">${MetroApp.Icons.undo}</button></div>`
-                : `<div class="fb-pos-wrap"><div class="fb-side-actions-left"><button type="button" class="fb-add-doors-info" data-idx="${item.i}">${MetroApp.Icons.info}</button></div>
+                : `<div class="fb-pos-wrap"><div class="fb-side-actions-left"><button type="button" class="fb-add-doors-info" style="color:${fbLineColor}" data-idx="${item.i}">${MetroApp.Icons.info}</button></div>
                    <div class="fb-pos-inputs">${stepperHtml(`fbW${item.i}`, state.wMain, 1, 5, 'вагон')}${stepperHtml(`fbD${item.i}`, state.dMain, 1, 4, 'двері')}</div>
-                   <div class="fb-side-actions"><button type="button" class="fb-close-exit" data-idx="${item.i}">✕</button></div></div>
-                   <div class="fb-extra-door-wrap ${state.hasExtra ? '' : 'is-hidden'}" id="fbExtraWrap${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, state.wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, state.dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" data-idx="${item.i}">✕</button></div></div></div>
-                   <div class="fb-extra-door-wrap ${state.hasThird ? '' : 'is-hidden'}" id="fbExtraWrap2_${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex2_${item.i}`, state.wEx2, 1, 5, 'вагон')}${stepperHtml(`fbD_ex2_${item.i}`, state.dEx2, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-third-btn" data-idx="${item.i}">✕</button></div></div></div>
+                   <div class="fb-side-actions"><button type="button" class="fb-close-exit" style="color:${fbLineColor}" data-idx="${item.i}">✕</button></div></div>
+                   <div class="fb-extra-door-wrap ${state.hasExtra ? '' : 'is-hidden'}" id="fbExtraWrap${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, state.wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, state.dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" style="color:${fbLineColor}" data-idx="${item.i}">✕</button></div></div></div>
+                   <div class="fb-extra-door-wrap ${state.hasThird ? '' : 'is-hidden'}" id="fbExtraWrap2_${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex2_${item.i}`, state.wEx2, 1, 5, 'вагон')}${stepperHtml(`fbD_ex2_${item.i}`, state.dEx2, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-third-btn" style="color:${fbLineColor}" data-idx="${item.i}">✕</button></div></div></div>
                    <div class="fb-add-doors-row ${state.hasExtra ? 'is-hidden' : ''}" id="fbAddDoorsRow${item.i}" style="justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}" data-can-have-third="${state.hasThird ? '1' : '0'}">+1</button></div>
                    <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері</p><p><span style="color:var(--line-red)">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:var(--line-blue)">✕</span> скасовує додавання других дверей.</p></div></div></div>`
               }

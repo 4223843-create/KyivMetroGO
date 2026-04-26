@@ -24,11 +24,17 @@
     .is-loading .loader-container {
       display: block;
     }
-.loader-container svg {
+    .loader-container svg {
       width: 100%;
       height: 100%;
-  
     }
+    /* Базовий колір пелюсток SVG — JS одразу перезаписує, але до старту анімації */
+    .loader-container .st4 { fill: #1a1a1a; }
+    @media (prefers-color-scheme: light) {
+      .loader-container .st4 { fill: #c8c8cc; }
+    }
+    [data-theme="light"] .loader-container .st4 { fill: #c8c8cc; }
+    [data-theme="dark"]  .loader-container .st4 { fill: #1a1a1a; }
 </style>
 <script>
     /* Миттєво застосовуємо збережену тему ДО малювання сторінки браузером */
@@ -311,7 +317,7 @@
         <div class="settings-rule"></div>
         <div class="settings-actions">
           <button type="button" class="settings-action-btn" id="settingsClearFavs">
-            Очистити Вибране
+            очистити вибране
           </button>
         </div>
       </div>
@@ -346,7 +352,7 @@
         </div>
         <p class="settings-hint" id="settingsCheckinHint" hidden>
           Чекіньтесь на станціях метро, відмічаючи виходи, якими скористались. 
-          Щоб позначити вихід натисніть на шпильку на картці станції.
+          Щоб позначити вихід натисніть на шпильку на картці станції
         </p>
         <div class="settings-rule"></div>
         <div class="settings-actions">
@@ -357,7 +363,7 @@
             </svg>
           </button>
           <button type="button" class="settings-action-btn" id="settingsClearCheckin">
-            Очистити check-in
+            очистити check-in
           </button>
         </div>
       </div>
@@ -408,11 +414,12 @@
     petals.forEach(p => p.style.transition = "fill 0.15s ease");
     center.style.transition = "none";
 
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     const COLORS = {
       red:   "#c8523a",
       blue:  "#5b9bd5",
       green: "#5aaa6a",
-      base:  "#1a1a1a"
+      base:  isLight ? "#c8c8cc" : "#1a1a1a"
     };
 
     const SESSION_SCHEMES = [

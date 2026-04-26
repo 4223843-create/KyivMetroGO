@@ -7,35 +7,36 @@ import { getFavs, isFav, toggleFav, getExitFavs,
 import { isCheckinMode, openCheckinSheet }                 from './checkin.js';
 
 // Анімація розсування для inline-елементів (підказки всередині шторки)
-MetroApp.dismissHintWithDoors = function dismissHintWithDoors(el, onDone) {
+MetroApp.dismissHintWithDoors = function(el, onDone) {
   if (!el || !document.body.contains(el)) { onDone?.(); return; }
   const rect = el.getBoundingClientRect();
   if (rect.height < 4) { el.remove(); onDone?.(); return; }
 
-  const base = [
-    'position:fixed', `top:${rect.top}px`, `left:${rect.left}px`,
+  const baseStyle = [
+    'position:fixed',
+    `top:${rect.top}px`, `left:${rect.left}px`,
     `width:${rect.width}px`, `height:${rect.height}px`,
     'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
-    'overflow:hidden',
     'transition:transform 0.55s cubic-bezier(0.32,0.72,0,1),opacity 0.4s ease',
   ].join(';');
 
   const L = el.cloneNode(true); L.removeAttribute('id');
   const R = el.cloneNode(true); R.removeAttribute('id');
-  L.style.cssText = base + ';clip-path:inset(0 50% 0 0)';
-  R.style.cssText = base + ';clip-path:inset(0 0 0 50%)';
+  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0)';
+  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%)';
   document.body.appendChild(L);
   document.body.appendChild(R);
 
+  // Ховаємо оригінал — клони вже на його місці
   el.style.visibility = 'hidden';
-  void L.offsetWidth; // reflow
+  void L.offsetWidth; // reflow — без нього transition не спрацює
+
   L.style.transform = 'translateX(-52%)'; L.style.opacity = '0';
   R.style.transform = 'translateX(52%)';  R.style.opacity = '0';
 
-  setTimeout(() => { el.remove(); onDone?.(); }, 180);
+  setTimeout(() => { el.remove(); onDone?.(); }, 200);
   setTimeout(() => { L.remove(); R.remove(); }, 600);
 };
-
 const sheet       = document.getElementById('stationSheet');
 const sheetBody   = document.getElementById('sheetBody');
 const sheetClose  = document.getElementById('sheetClose');
@@ -187,20 +188,24 @@ function attachExitFavListeners(container, slug, lineColor) {
       const result   = toggleExitFav(slug, dirLabel, pv.wagon, pv.doors);
 
       if (result.status === 'added') {
-        const hint = document.getElementById('onboardingHint');
-        if (hint) {
-          MetroApp.dismissHintWithDoors(hint, () => {
-            // Після зникнення першого хінту — показуємо підказку про шпильку
-            if (isCheckinMode()) {
-              const sheetBodyEl = document.getElementById('sheetBody');
-              if (!sheetBodyEl || document.getElementById('checkinHint')) return;
-              const checkinHint = document.createElement('div');
-              checkinHint.id = 'checkinHint';
-              checkinHint.className = 'onboarding-hint';
-              checkinHint.innerHTML = `<span class="hint-icon-wrap" style="color:${color}">${MetroApp.Icons.info}</span>Натисніть на шпильку, щоб позначити вихід зі станції як відвіданий`;
-              sheetBodyEl.insertBefore(checkinHint, sheetBodyEl.firstChild);
-            }
-          });
+        function insertCheckinHint() {
+          const sheetBodyEl = document.getElementById('sheetBody');
+          if (!sheetBodyEl || document.getElementById('checkinHint')) return;
+          const checkinHint = document.createElement('div');
+          checkinHint.id = 'checkinHint';
+          checkinHint.className = 'onboarding-hint';
+          // lineColor — параметр attachExitFavListeners (раніше помилково писали color)
+          checkinHint.innerHTML = `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>Натисніть на шпильку, щоб позначити вихід зі станції як відвіданий`;
+          sheetBodyEl.insertBefore(checkinHint, sheetBodyEl.firstChild);
+        }
+
+        const onboardingHint = document.getElementById('onboardingHint');
+        if (onboardingHint) {
+          // Є підказка «додай вихід» — анімуємо її зникнення, потім показуємо підказку про шпильку
+          MetroApp.dismissHintWithDoors(onboardingHint, insertCheckinHint);
+        } else {
+          // Підказки вже немає (повторне відкриття картки) — відразу показуємо підказку про шпильку
+          insertCheckinHint();
         }
       }
 

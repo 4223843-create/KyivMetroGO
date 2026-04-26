@@ -1,0 +1,26 @@
+I tried to implement the following UI sequence in my app, but it does not work correctly. Find the root cause and fix it in the code.
+
+Expected behavior:
+
+1. When the user adds an exit to favorites, the current tooltip/window should disappear with a sideways slide-out animation.
+2. After it disappears, another window should appear underneath it with this text:
+   "Tap the pin to mark
+   the station exit as visited"
+3. After the first pin tap, this second window should also disappear with the same sideways slide-out animation.
+4. Only then should the card shrink, as it does now.
+
+Right now, this sequence is broken in the app. Find where the logic for showing/hiding these two windows fails and fix it.
+
+What to check:
+- the state flow controlling the two tooltips/windows;
+- conditional rendering;
+- animation transitions and timing;
+- the order in which elements appear and disappear;
+- any related bug in state updates or delays.
+
+Please make the minimal necessary code changes, without unnecessary refactoring.
+
+After fixing it, briefly explain:
+- what the root cause was;
+- what you changed;
+- where in the code the fix was applied.

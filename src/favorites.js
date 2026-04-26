@@ -92,13 +92,13 @@ export function getEmptyFavHtml() {
   return `
     <div class="fav-empty-state">
       <p class="fav-empty-text-lg">
-        Для збереження до вибраного,<br>натисніть
+        Натисніть
         <svg viewBox="0 0 17 17" fill="${color}" class="fav-empty-heart">
           <path d="${MetroApp.Icons.heartOutlinePath}"></path>
-        </svg> на&nbsp;картці&nbsp;станції
+        </svg> на картці станції, щоб зберегти її до Вибраного
       </p>
       <p class="fav-empty-text-lg">
-        Знаєте, який вихід вам знадобиться?<br>Збережіть його подвійним тапом по вагону і&nbsp;дверям
+        Збережіть потрібний вихід подвійним тапом по вагону і дверям
       </p>
     </div>`;
 }

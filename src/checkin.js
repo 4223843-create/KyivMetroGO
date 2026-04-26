@@ -145,7 +145,7 @@ export function openCheckinSheet() {
         .replace('translateY(-3px)', 'translateY(3px)')
         .replace('width="26" height="26"', 'width="20" height="20"')
         .replace('opacity="0.5"', '');
-      const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-4px;">${coloredPin}</span>`;
+      const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-7px;">${coloredPin}</span>`;
       bodyHtml = `<p class="fav-empty-text-lg">Натисніть ${pinInline} щоб позначити вихід зі станції як відвіданий</p>`;
     } else {
       const byStation = {};
@@ -154,12 +154,26 @@ export function openCheckinSheet() {
       // Унікальні фізичні виходи: один вихід (вагон+двері) може мати check-in для кількох
       // напрямків — це все одна точка зупинки. Рахуємо її лише раз.
       const uniqueExits   = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
-      const totalExitsAll = state.stationsData
+const totalExitsAll = state.stationsData
         ? Object.values(state.stationsData).reduce((sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0)
         : 0;
       const stationCount = Object.keys(byStation).length;
-      const coverage     = totalExitsAll > 0 ? Math.min(100, Math.round(uniqueExits / totalExitsAll * 100)) : 0;
 
+      // ── НОВА РОЗУМНА ЛОГІКА ВІДСОТКІВ ──
+      const rawPercent = totalExitsAll > 0 ? (uniqueExits / totalExitsAll) * 100 : 0;
+      let coverage = "0";
+
+      if (totalExitsAll > 0 && uniqueExits > 0) {
+        if (uniqueExits === totalExitsAll) {
+          coverage = "100";
+        } else if (rawPercent < 1) {
+          coverage = "&lt;1"; // Використовуємо &lt; замість < для коректного HTML
+        } else if (rawPercent > 99) {
+          coverage = "&gt;99"; // Використовуємо &gt; замість >
+        } else {
+          coverage = Math.floor(rawPercent).toString();
+        }
+      }
       bodyHtml += `<div class="ci-stats-bar">
         <div class="ci-stat"><span class="ci-stat-num">${stationCount}</span><span class="ci-stat-lbl">станцій</span></div>
         <div class="ci-stat-sep"></div>
