@@ -195,7 +195,7 @@ function attachExitFavListeners(container, slug, lineColor) {
           checkinHint.id = 'checkinHint';
           checkinHint.className = 'onboarding-hint';
           // lineColor — параметр attachExitFavListeners (раніше помилково писали color)
-          checkinHint.innerHTML = `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>Натисніть на шпильку, щоб позначити вихід зі станції як відвіданий`;
+          checkinHint.innerHTML = `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`;
           sheetBodyEl.insertBefore(checkinHint, sheetBodyEl.firstChild);
         }
 

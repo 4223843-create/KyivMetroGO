@@ -110,10 +110,10 @@ export function openSettingsSheet() {
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {
       e.stopPropagation();
       if (e.currentTarget.disabled) {
-        MetroApp.showCustomConfirm('Вибраного немає', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
+        MetroApp.showCustomConfirm('<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> немає', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
         return;
       }
-      MetroApp.showCustomConfirm('Очистити Вибране?',
+      MetroApp.showCustomConfirm('Очистити <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span>?',
         () => {
           saveFavs([]);
           Storage.remove(STORAGE_KEYS.EXIT_FAVS);
@@ -139,8 +139,64 @@ export function openSettingsSheet() {
           document.getElementById('settingsClose').click();
         },
         null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
+
       );
     });
+
+    // ── Очистити Check-in ──
+    document.getElementById('settingsClearCheckin')?.addEventListener('click', e => {
+      e.stopPropagation();
+      if (e.currentTarget.disabled) {
+        MetroApp.showCustomConfirm('Список check-in порожній', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
+        return;
+      }
+      MetroApp.showCustomConfirm('Очистити історію check-in?',
+        () => {
+          Storage.remove(STORAGE_KEYS.CHECKINS);
+          invalidateCheckinsCache(); // ← скидаємо кеш явно, щоб наступний getCheckins() зчитав свіжі дані
+          updateCheckinDock();
+          document.getElementById('settingsClose').click();
+        },
+        null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
+      );
+    });
+
+    // ── Очистити локальні зміни (ВСТАВЛЯЙ СЮДИ) ──
+    document.getElementById('settingsClearLocalEdits')?.addEventListener('click', e => {
+      e.stopPropagation();
+      if (e.currentTarget.disabled) return;
+      
+      MetroApp.showCustomConfirm('Видалити всі локальні зміни (назви виходів, закриті двері)?',
+        () => {
+          Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
+          Storage.remove(STORAGE_KEYS.EXIT_LABELS);
+          document.getElementById('settingsClose').click();
+          setTimeout(() => window.location.reload(), 300);
+        },
+        null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
+      );
+    });
+
+    // ==========================================
+    // ── Очистити локальні зміни (ВСТАВИТИ ЦЕ) ──
+    // ==========================================
+    document.getElementById('settingsClearLocalEdits')?.addEventListener('click', e => {
+      e.stopPropagation();
+      
+      MetroApp.showCustomConfirm('Видалити всі локальні зміни (назви виходів, закриті двері)?',
+        () => {
+          Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
+          Storage.remove(STORAGE_KEYS.EXIT_LABELS);
+          
+          // Закриваємо налаштування і перезавантажуємо сторінку, 
+          // щоб карта і всі станції перемалювалися з чистими даними
+          document.getElementById('settingsClose').click();
+          setTimeout(() => window.location.reload(), 300);
+        },
+        null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
+      );
+    });
+    // ==========================================
 
     settingsSheet.querySelectorAll('.settings-card').forEach(card => {
       card.addEventListener('click', e => {
@@ -234,7 +290,7 @@ export function openSettingsSheet() {
     });
   }
 
-  // Синхронізуємо стан тумблерів при кожному відкритті — незалежно від того,
+// Синхронізуємо стан тумблерів при кожному відкритті — незалежно від того,
   // чи sheet тільки створено, чи відкривається повторно.
   function syncToggles() {
     const t = document.getElementById('settingsThemeToggle');
@@ -248,11 +304,18 @@ export function openSettingsSheet() {
 
     // Стан кнопок «Очистити» — вимикаємо якщо нема чого чистити
     const hasFavs     = getExitFavs().length > 0 || getFavs().length > 0;
-    const hasCheckins = getCheckins().length > 0;
+    const hasCheckins = Object.keys(getCheckins()).length > 0;
+    const editsData   = Storage.get(STORAGE_KEYS.LOCAL_EDITS);
+    const labelsData  = Storage.get(STORAGE_KEYS.EXIT_LABELS);
+    const hasEdits    = (editsData && editsData !== '{}') || (labelsData && labelsData !== '{}');
+
     const clearFavsBtn     = document.getElementById('settingsClearFavs');
     const clearCheckinBtn  = document.getElementById('settingsClearCheckin');
+    const clearLocalBtn    = document.getElementById('settingsClearLocalEdits');
+
     if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
     if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
+    if (clearLocalBtn)   clearLocalBtn.disabled   = !hasEdits;
   }
   syncToggles();
 

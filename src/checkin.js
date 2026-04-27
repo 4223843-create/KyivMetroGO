@@ -115,6 +115,7 @@ export function formatCheckinTime(ts) {
 
 // ══ ШТОРКА CHECK-IN ══
 let ciSortMode = 'date'; // 'date' | 'alpha'
+let ciViewMode = 'visited'; // 'visited' | 'unvisited'
 
 export function openCheckinSheet() {
   let checkinSheet = document.getElementById('checkinSheet');
@@ -142,11 +143,12 @@ export function openCheckinSheet() {
       // Іконка пін — зменшена та вирівняна в рядку тексту (розмір і відступ як у серці у «Вибраному»)
       const coloredPin = MetroApp.Icons.dockPinFilled
         .replace(/currentColor/g, color)
-        .replace('translateY(-3px)', 'translateY(3px)')
+        .replace('translateY(-3px)', 'translateY(0)') // Прибрали зсув самої іконки
         .replace('width="26" height="26"', 'width="20" height="20"')
         .replace('opacity="0.5"', '');
-      const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-7px;">${coloredPin}</span>`;
-      bodyHtml = `<p class="fav-empty-text-lg">Натисніть ${pinInline} щоб позначити вихід зі станції як відвіданий</p>`;
+      // Змінили vertical-align з -7px на -3px
+      const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-3px;">${coloredPin}</span>`;
+      bodyHtml = `<p class="fav-empty-text-lg">Натисніть ${pinInline} щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий</p>`;
     } else {
       const byStation = {};
       entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
@@ -187,7 +189,58 @@ const totalExitsAll = state.stationsData
       bodyHtml += `<div class="ci-sort-bar">
         <button class="ci-sort-btn${ciSortMode === 'date'  ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
         <button class="ci-sort-btn${ciSortMode === 'alpha' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
+        <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
       </div>`;
+
+      // ── Режим «Не відвідані» ──
+      if (ciViewMode === 'unvisited') {
+        const checkins = getCheckins();
+        const visitedKeys = new Set(Object.values(checkins).map(e => `${e.slug}|${e.wagon}|${e.doors}`));
+        let unvisitedHtml = '';
+        if (state.stationsData) {
+          const stationList = Object.entries(state.stationsData)
+            .filter(([, st]) => st.positions && st.positions.some(p => !p.closed))
+            .sort(([, a], [, b]) => a.name.localeCompare(b.name, 'uk'));
+          stationList.forEach(([slug, st]) => {
+            const unvisited = st.positions.filter(p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`));
+            if (!unvisited.length) return;
+            const color = MetroApp.LINE_COLOR[st.line] || 'var(--text-muted)';
+            const exitLabels = unvisited.map(p => {
+              const label = p.label || p.exit || '';
+              return label ? `<span class="ci-unvisited-exit">${label}</span>` : `<span class="ci-unvisited-exit">вагон ${p.wagon} · дв. ${p.doors}</span>`;
+            }).join('');
+            unvisitedHtml += `<div class="checkin-station-card ci-unvisited-card" data-slug="${slug}" style="--ci-accent:${color}">
+              <div class="checkin-card-top">
+                <span class="checkin-station-name-text">${st.name}</span>
+                <span class="ci-unvisited-count">${unvisited.length}</span>
+              </div>
+              <div class="ci-unvisited-exits">${exitLabels}</div>
+            </div>`;
+          });
+        }
+        bodyHtml += unvisitedHtml || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
+        // skip normal visited rendering below
+        const s = document.getElementById('checkinSheet');
+        s.innerHTML = `
+          <div class="sheet-handle-bar">
+            <div class="sheet-handle"></div>
+            <span class="sheet-sheet-title">Check-in</span>
+            <button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button>
+          </div>
+          <div class="sheet-body">${bodyHtml}</div>`;
+        s.querySelector('#checkinClose').addEventListener('click', closeHandler);
+        s.querySelectorAll('.ci-sort-btn[data-sort]').forEach(btn => {
+          btn.addEventListener('click', e => { e.stopPropagation(); ciViewMode = 'visited'; ciSortMode = btn.dataset.sort; renderCheckinContent(); });
+        });
+        s.querySelector('.ci-unvisited-btn').addEventListener('click', e => { e.stopPropagation(); ciViewMode = 'unvisited'; renderCheckinContent(); });
+        s.querySelectorAll('.ci-unvisited-card').forEach(card => {
+          card.addEventListener('click', () => {
+            const sl = card.dataset.slug;
+            if (sl) { closeHandler(); setTimeout(() => MetroApp.openStation?.(sl), 380); }
+          });
+        });
+        return;
+      }
 
       let stationEntries = Object.entries(byStation);
       if (ciSortMode === 'date') {
@@ -238,14 +291,23 @@ const totalExitsAll = state.stationsData
 
     s.querySelector('#checkinClose').addEventListener('click', closeHandler);
 
-    // ── Перемикач сортування ──
-    s.querySelectorAll('.ci-sort-btn').forEach(btn => {
+    // ── Перемикач сортування / режиму ──
+    s.querySelectorAll('.ci-sort-btn[data-sort]').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
+        ciViewMode = 'visited';
         ciSortMode = btn.dataset.sort;
         renderCheckinContent();
       });
     });
+    const unvisitedBtn = s.querySelector('.ci-unvisited-btn');
+    if (unvisitedBtn) {
+      unvisitedBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        ciViewMode = 'unvisited';
+        renderCheckinContent();
+      });
+    }
 
     s.querySelectorAll('.checkin-station-card').forEach(card => {
       card.addEventListener('click', () => {

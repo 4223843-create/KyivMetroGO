@@ -277,17 +277,21 @@ z-index: var(--z-fullscreen-sheet);
   top: 8px;
 }
 .sheet-sheet-title {
-  font-size: var(--fs-sm); 
+  /* Міняємо розмір на md, бо капітель візуально здається меншою */
+  font-size: var(--fs-md); 
   font-weight: var(--fw-semi);
   color: var(--text-muted);
   
-  /* ІДЕАЛЬНЕ АБСОЛЮТНЕ ЦЕНТРУВАННЯ: незалежно від кнопок по краях */
+  /* АБСОЛЮТНЕ ЦЕНТРУВАННЯ */
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  /* ВМИКАЄМО КАПІТЕЛЬ */
+  font-variant: small-caps;
+  text-transform: none; /* ПРИБИРАЄМО ПОВНИЙ UPPERCASE */
+  
+  letter-spacing: 0.08em; /* Трохи розсунемо літери для преміального вигляду */
   white-space: nowrap;
   pointer-events: none;
 }
@@ -1972,18 +1976,6 @@ margin: 0 0 4px 0;
   background-position: top left !important;
 }
 
-/* ══ Адаптація демо-пігулок (ВАГОН/ДВЕРІ) під світлу та темну тему ══ */
-.about-content svg rect[fill="#2C2C2E"] {
-  fill: var(--bg-pill) !important; 
-}
-.about-content svg path[aria-label="ВАГОН"],
-.about-content svg path[aria-label="ДВЕРІ"] {
-  fill: var(--text-muted) !important; 
-}
-.about-content svg path[aria-label="3"],
-.about-content svg path[aria-label="2"] {
-  fill: var(--text-muted) !important; 
-}
 
 /* ══ УТИЛІТИ ДЛЯ ПРИХОВУВАННЯ ЕЛЕМЕНТІВ ══ */
 .is-hidden {
@@ -2305,6 +2297,31 @@ svg [role="button"]:focus:not(:focus-visible) {
   color: var(--bg);
   border-color: transparent;
 }
+.ci-unvisited-btn {
+  margin-left: auto;
+}
+
+/* ── Режим «Не відвідані» ── */
+.ci-unvisited-exits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0 10px;
+}
+.ci-unvisited-exit {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.ci-unvisited-count {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
 
 /* ── Картка станції ── */
 .checkin-station-card {
@@ -2465,6 +2482,28 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   line-height: 1.5;
   color: var(--text-muted);
   text-align: left;
+}
+
+/* Жорстке позиціонування піна в тексті */
+.hint-pin-wrap {
+  display: inline-block;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin: 0 4px;
+}
+
+.hint-pin-wrap svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* ТУТ МИ РЕГУЛЮЄМО ВЕРТИКАЛЬ: 
+     Якщо треба опустити - робимо translateY(-40%) 
+     Якщо треба підняти - робимо translateY(-60%) 
+  */
+  width: 100%;
+  height: 100%;
 }
 
 /* ══ PERFORMANCE: compositor layers ══ */
