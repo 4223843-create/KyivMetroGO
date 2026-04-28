@@ -450,12 +450,17 @@ export function openAboutSheet() {
   } 
 
 
-  const BETA_COLORS = ['var(--line-red)', 'var(--line-blue)', 'var(--line-green)'];
+  const BETA_COLORS = ['var(--line-green)', 'var(--line-blue)', 'var(--line-red)'];
   try {
     const idx = parseInt(localStorage.getItem('betaBtnColorIdx') || '0') % 3;
     localStorage.setItem('betaBtnColorIdx', (idx + 1) % 3);
     const betaBtn = document.querySelector('#aboutSheet .about-beta-btn');
-    if (betaBtn && !betaBtn.disabled) betaBtn.style.background = BETA_COLORS[idx];
+    if (betaBtn && !betaBtn.disabled) betaBtn.style.background = '';
+        const betaInput = document.querySelector('#aboutSheet .about-beta-input');
+    if (betaInput) betaInput.style.border = `1px solid ${BETA_COLORS[idx]}`;
+
+
+
   } catch (e) {}
 
   MetroApp.pushSheetHistory(); // <--- ДОДАНО  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));

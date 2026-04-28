@@ -2568,6 +2568,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 .about-beta-input {
   flex: 1;
+  height: 34px;
   background: var(--bg-main);
   border: 0.5px solid var(--border);
   border-radius: 10px;
@@ -2583,12 +2584,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   opacity: 0.5;
 }
 .about-beta-input:focus {
-  border-color: var(--line-green);
+  outline: none;
 }
 
 
 .about-beta-btn {
-  background: var(--line-green);
+  background: var(--text-muted);
   color: #1c1c1e;
   border: none;
   border-radius: 10px;
