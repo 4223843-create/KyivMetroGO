@@ -2007,7 +2007,13 @@ margin: 0 0 4px 0;
   background: var(--bg-card);
   border: 0.5px solid var(--border);
   border-radius: 14px;
+  box-sizing: border-box;
 }
+.about-card > *:last-child,
+.about-card-text > *:last-child {
+  margin-bottom: 0;
+}
+
 .about-card-icon {
   margin: 0;
   flex-shrink: 0;

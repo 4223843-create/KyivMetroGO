@@ -1,4 +1,5 @@
 // ══ UI УТИЛІТИ ══
+import { TIMING } from './timing.js';
 
 export function pill(label, value, color) {
   return `<div class="pos-pill"><div class="pos-pill-label">${label}</div><div class="pos-pill-num" style="color:${color}">${value}</div></div>`;
@@ -50,12 +51,12 @@ function _runDoorAnimation(el, rect, callback, parent = document.body) {
   rightDoor.style.opacity   = '0';
 
   // Викликаємо callback раніше, щоб затемнення карти спадало під час руху «дверей»
-  if (callback) setTimeout(callback, 200);
+  if (callback) setTimeout(callback, TIMING.DOOR_CALLBACK);
 
   setTimeout(() => {
     leftDoor.remove();
     rightDoor.remove();
-  }, 620);
+  }, TIMING.DOOR_CLEANUP);
 }
 
 // ══ АНІМАЦІЯ ЗАКРИТТЯ ШТОРКИ («ДВЕРІ ЛІФТА») ══
@@ -77,7 +78,7 @@ MetroApp.animateSheetClose = function(sheetEl, callback) {
         sheetEl.style.visibility = '';
       });
     });
-  }, 620);
+  }, TIMING.DOOR_CLEANUP);
 };
 
 // ══ КАСТОМНИЙ CONFIRM-ДІАЛОГ ══
@@ -114,7 +115,7 @@ MetroApp.showCustomConfirm = function(
 
     _runDoorAnimation(card, rect, callback, overlay);
 
-    setTimeout(() => { overlay.remove(); }, 620);
+    setTimeout(() => { overlay.remove(); }, TIMING.DOOR_CLEANUP);
   }
 
   overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));

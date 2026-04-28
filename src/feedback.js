@@ -387,10 +387,50 @@ container.addEventListener('click', (event) => {
             if (validAdj3.length) { ex2WNode2.textContent = validAdj3[0].w; ex2DNode2.textContent = validAdj3[0].d; }
           }
         } else {
+          // Запам'ятовуємо OLD main до зміни — потрібно для синхронізації extra
+          const oldMainW = parseInt(document.getElementById(`fbW${idx}`)?.textContent) || 0;
+          const oldMainD = parseInt(document.getElementById(`fbD${idx}`)?.textContent) || 0;
+
           const min = parseInt(btn.dataset.min);
           const max = parseInt(btn.dataset.max);
           let val = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
           el.textContent = Math.max(min, Math.min(max, val));
+
+          // ── Синхронізуємо extra-пару зі збереженням відносного офсету ──
+          const exWrap = document.getElementById(`fbExtraWrap${idx}`);
+          if (exWrap && !exWrap.classList.contains('is-hidden')) {
+            const exWNode = document.getElementById(`fbW_ex${idx}`);
+            const exDNode = document.getElementById(`fbD_ex${idx}`);
+            if (exWNode && exDNode && exWNode.textContent !== '-') {
+              const exW = parseInt(exWNode.textContent);
+              const exD = parseInt(exDNode.textContent);
+              // Знаходимо, яким adj-індексом (0 або 1) була extra відносно OLD main
+              const oldAdj  = getAdjacentDoors(oldMainW, oldMainD);
+              const oldExIdx = oldAdj.findIndex(a => a.w === exW && a.d === exD);
+              // Нові adj вже від нового main
+              const newMainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+              const newMainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+              const newAdj  = getAdjacentDoors(newMainW, newMainD);
+              const useIdx  = (oldExIdx !== -1) ? Math.min(oldExIdx, newAdj.length - 1) : 0;
+              exWNode.textContent = newAdj[useIdx].w;
+              exDNode.textContent = newAdj[useIdx].d;
+
+              // Синхронізуємо третю пару (якщо є)
+              const ex2Wrap = document.getElementById(`fbExtraWrap2_${idx}`);
+              if (ex2Wrap && !ex2Wrap.classList.contains('is-hidden')) {
+                const ex2WNode = document.getElementById(`fbW_ex2_${idx}`);
+                const ex2DNode = document.getElementById(`fbD_ex2_${idx}`);
+                if (ex2WNode && ex2DNode) {
+                  const newExAdj = getAdjacentDoors(newAdj[useIdx].w, newAdj[useIdx].d);
+                  const validNewExAdj = newExAdj.filter(a => !(a.w === newMainW && a.d === newMainD));
+                  if (validNewExAdj.length) {
+                    ex2WNode.textContent = validNewExAdj[0].w;
+                    ex2DNode.textContent = validNewExAdj[0].d;
+                  }
+                }
+              }
+            }
+          }
         }
 
         syncCurrentStateFromDOM(parseInt(idx));
@@ -769,6 +809,14 @@ function renderFeedbackPositions(slug) {
         
         const s = state.stationsData[slug];
         const fbLineColor = MetroApp.LINE_COLOR[s?.line] || 'var(--text-muted)';
+        // ── Показуємо назву станції в заголовку шторки ──
+        const fbSheetTitleEl  = document.getElementById('fbSheetTitle');
+        const fbStationTitleEl = document.getElementById('fbStationTitle');
+        if (fbStationTitleEl && s?.name) {
+          fbStationTitleEl.textContent = s.name;
+          fbStationTitleEl.hidden = false;
+          if (fbSheetTitleEl) fbSheetTitleEl.hidden = true;
+        }
         const groupsMap = new Map();
 
         // 1. Спочатку додаємо існуючі позиції з бази
@@ -827,7 +875,7 @@ posEl.innerHTML = groups.map(g => {
                    <div class="fb-extra-door-wrap ${state.hasExtra ? '' : 'is-hidden'}" id="fbExtraWrap${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex${item.i}`, state.wEx, 1, 5, 'вагон')}${stepperHtml(`fbD_ex${item.i}`, state.dEx, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-extra-btn" style="color:${fbLineColor}" data-idx="${item.i}">✕</button></div></div></div>
                    <div class="fb-extra-door-wrap ${state.hasThird ? '' : 'is-hidden'}" id="fbExtraWrap2_${item.i}"><div class="fb-pos-wrap" style="margin-top: 4px;"><div class="fb-side-actions-left"></div><div class="fb-pos-inputs">${stepperHtml(`fbW_ex2_${item.i}`, state.wEx2, 1, 5, 'вагон')}${stepperHtml(`fbD_ex2_${item.i}`, state.dEx2, 1, 4, 'двері')}</div><div class="fb-side-actions"><button type="button" class="fb-cancel-third-btn" style="color:${fbLineColor}" data-idx="${item.i}">✕</button></div></div></div>
                    <div class="fb-add-doors-row ${state.hasExtra ? 'is-hidden' : ''}" id="fbAddDoorsRow${item.i}" style="justify-content:center;"><button type="button" class="fb-add-doors-link" id="fbAddBtn${item.i}" data-idx="${item.i}" data-can-have-third="${state.hasThird ? '1' : '0'}">+1</button></div>
-                   <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері</p><p><span style="color:var(--line-red)">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:var(--line-blue)">✕</span> скасовує додавання других дверей.</p></div></div></div>`
+                   <div class="fb-add-doors-hint" id="fbHint${item.i}"><div class="fb-add-doors-hint-inner"><div class="hint-1-door"><p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері</p><p><span style="color:${fbLineColor}">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p></div><div class="hint-2-doors"><p><span style="color:${fbLineColor}">✕</span> скасовує додавання других дверей.</p></div></div></div>`
               }
             </div>${dividerHtml}`;
           }).join('');
@@ -982,6 +1030,16 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
       if (lineHidden2)    lineHidden2.value = '';
       if (lineFilterEl)   lineFilterEl.querySelectorAll('.search-line-btn').forEach(b => b.classList.remove('is-active'));
       if (stationListEl)  { stationListEl.hidden = true; stationListEl.innerHTML = ''; }
+      // Завжди повертаємось до вибору гілки при повторному відкритті
+      const filterWrapEl = document.getElementById('fbLineFilterWrap');
+      const changeStEl   = document.getElementById('fbChangeStation');
+      if (filterWrapEl) filterWrapEl.hidden = false;
+      if (changeStEl)   changeStEl.hidden = true;
+      // Скидаємо заголовок шторки
+      const fbSheetTitleReset   = document.getElementById('fbSheetTitle');
+      const fbStationTitleReset = document.getElementById('fbStationTitle');
+      if (fbSheetTitleReset)   fbSheetTitleReset.hidden = false;
+      if (fbStationTitleReset) { fbStationTitleReset.hidden = true; fbStationTitleReset.textContent = ''; }
       if (posEl) posEl.innerHTML = '';
       if (resultEl) resultEl.innerHTML = '';
       if (sendBtn) { sendBtn.textContent = 'Застосувати'; sendBtn.disabled = true; sendBtn.style.color = ''; }

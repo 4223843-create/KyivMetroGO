@@ -11,11 +11,18 @@ const sheetOverlay = document.getElementById('sheetOverlay');
 // ══ ОБРАНІ СТАНЦІЇ ══
 let favCache = null;
 
+// Читає кеш без копіювання — для внутрішніх перевірок
+function readFavCache() {
+  if (!favCache) {
+    try { favCache = JSON.parse(Storage.get(STORAGE_KEYS.FAVS) || '[]'); }
+    catch (e) { console.warn('[KyivMetroGO] Помилка парсингу Обраних:', e); favCache = []; }
+  }
+  return favCache;
+}
+
+// Публічний API — завжди повертає копію, щоб зовнішній код не міг мутувати кеш
 export function getFavs() {
-  if (favCache) return [...favCache];
-  try { favCache = JSON.parse(Storage.get(STORAGE_KEYS.FAVS) || '[]'); }
-  catch (e) { console.warn('[KyivMetroGO] Помилка парсингу Обраних:', e); favCache = []; }
-  return [...favCache];
+  return [...readFavCache()];
 }
 
 export function saveFavs(arr) {
@@ -23,7 +30,7 @@ export function saveFavs(arr) {
   Storage.set(STORAGE_KEYS.FAVS, JSON.stringify(favCache));
 }
 
-export const isFav    = slug => getFavs().includes(slug);
+export const isFav = slug => readFavCache().includes(slug);
 export function toggleFav(slug) {
   let favs = getFavs();
   favs = favs.includes(slug) ? favs.filter(s => s !== slug) : [...favs, slug];

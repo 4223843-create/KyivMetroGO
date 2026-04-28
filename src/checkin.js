@@ -138,7 +138,7 @@ export function openCheckinSheet() {
     let bodyHtml  = '';
 
     if (!entries.length) {
-      const colors = ['#5b9bd5', '#c8523a', '#5aaa6a'];
+      const colors = Object.values(MetroApp.LINE_COLOR);
       const color  = colors[state.emptyFavColorIdx % colors.length];
       state.emptyFavColorIdx++;
       // Іконка пін — зменшена та вирівняна в рядку тексту (розмір і відступ як у серці у «Вибраному»)

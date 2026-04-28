@@ -99,15 +99,6 @@ window.addEventListener('popstate', (e) => {
 bootstrap();
 registerServiceWorker();
 
-// ══ ОБРОБКА СИСТЕМНОЇ КНОПКИ "НАЗАД" (ANDROID SWIPE BACK) ══
-window.addEventListener('popstate', (e) => {
-  const openSheets = document.querySelectorAll('.station-sheet.sheet-open');
-  if (openSheets.length > 0) {
-    // Закриваємо шторку, ігноруючи перевірку незбережених змін (бо користувач явно виходить)
-    MetroApp.closeAllSheets(true); 
-  }
-});
-
 const favListBtn = document.getElementById('favListBtn');
 const menuBtn = document.getElementById('menuBtn');
 const dropMenu = document.getElementById('dropMenu');
@@ -161,22 +152,6 @@ if (menuBtn && dropMenu) {
     });
   });
 }
-
-const action = new URLSearchParams(window.location.search).get('action');
-if (action === 'search') {
-  setTimeout(openSearchSheet, 50);
-} else if (action === 'fav') {
-  setTimeout(openFavSheet, 50);
-} else if (Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true') {
-  setTimeout(openFavSheet, 50);
-}
-
-if (action) {
-  window.history.replaceState({}, document.title, window.location.pathname);
-}
-
-updateCheckinDock();
-updateFavDock();
 
 MetroApp.openStation = openStation;
 MetroApp.closeAllSheets = closeAllSheets;

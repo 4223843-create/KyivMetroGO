@@ -1,5 +1,6 @@
 import { state }                                          from './state.js';
 import { STORAGE_KEYS, Storage } from './storage.js';
+import { TIMING }                                         from './timing.js';
 import { pill, heartSvg }                                 from './ui.js';
 import { slugByName }                                     from './stations.js';
 import { getFavs, isFav, toggleFav, getExitFavs,
@@ -34,13 +35,15 @@ MetroApp.dismissHintWithDoors = function(el, onDone) {
   L.style.transform = 'translateX(-52%)'; L.style.opacity = '0';
   R.style.transform = 'translateX(52%)';  R.style.opacity = '0';
 
-  setTimeout(() => { el.remove(); onDone?.(); }, 200);
-  setTimeout(() => { L.remove(); R.remove(); }, 600);
+  setTimeout(() => { el.remove(); onDone?.(); }, TIMING.HINT_CALLBACK);
+  setTimeout(() => { L.remove(); R.remove(); }, TIMING.HINT_CLEANUP);
 };
-const sheet       = document.getElementById('stationSheet');
-const sheetBody   = document.getElementById('sheetBody');
-const sheetClose  = document.getElementById('sheetClose');
-const sheetOverlay = document.getElementById('sheetOverlay');
+const sheet            = document.getElementById('stationSheet');
+const sheetBody        = document.getElementById('sheetBody');
+const sheetClose       = document.getElementById('sheetClose');
+const sheetOverlay     = document.getElementById('sheetOverlay');
+const stationTitleMain = document.getElementById('stationTitleMain');
+const dropMenuEl       = document.getElementById('dropMenu');
 
 // ══ ФОРМАТУВАННЯ НАПИСУ ВИХОДУ ══
 function formatLabel(raw) {
@@ -167,7 +170,7 @@ function attachExitFavListeners(container, slug, lineColor) {
 
     function showExitFavToast(row, added) {
       let existing = row.querySelector('.exit-fav-toast');
-      if (existing) { existing.classList.remove('fav-note-open'); setTimeout(() => existing?.remove(), 300); }
+      if (existing) { existing.classList.remove('fav-note-open'); setTimeout(() => existing?.remove(), TIMING.TOAST_FADE); }
       if (!added) return;
       const pv = getPillValues(); if (!pv) return;
       const toast = document.createElement('div');
@@ -177,7 +180,7 @@ function attachExitFavListeners(container, slug, lineColor) {
       toast.innerHTML = '<span class="exit-fav-toast-text">Вихід&nbsp;додано<br>до&nbsp;вибраного</span>';
       row.prepend(toast);
       requestAnimationFrame(() => toast.classList.add('fav-note-open'));
-      setTimeout(() => { toast.classList.remove('fav-note-open'); setTimeout(() => toast.remove(), 300); }, 2500);
+      setTimeout(() => { toast.classList.remove('fav-note-open'); setTimeout(() => toast.remove(), TIMING.TOAST_FADE); }, TIMING.TOAST_SHOW);
     }
 
     function triggerExitFav() {
@@ -239,7 +242,7 @@ function attachExitFavListeners(container, slug, lineColor) {
     let longPressTimer = null;
     row.addEventListener('touchstart', e => {
       if (!e.target.closest('.fav-tap-target')) return;
-      longPressTimer = setTimeout(() => { longPressTimer = null; triggerExitFav(); }, 600);
+      longPressTimer = setTimeout(() => { longPressTimer = null; triggerExitFav(); }, TIMING.LONG_PRESS);
     }, { passive: true });
     row.addEventListener('touchend',  () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
     row.addEventListener('touchmove', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
@@ -251,7 +254,7 @@ function attachExitFavListeners(container, slug, lineColor) {
       if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
       tapCount++;
       clearTimeout(tapTimer);
-      tapTimer = setTimeout(() => { tapCount = 0; }, 500);
+      tapTimer = setTimeout(() => { tapCount = 0; }, TIMING.DOUBLE_TAP);
       if (tapCount >= 2) { tapCount = 0; clearTimeout(tapTimer); triggerExitFav(); }
     });
   });
@@ -293,7 +296,7 @@ export function openStation(slug) {
       ? `<div class="onboarding-hint" id="onboardingHint"><span class="hint-icon-wrap" style="color:${color}">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div>`
       : '';
 
-    document.getElementById('stationTitleMain').textContent = s.name;
+    stationTitleMain.textContent = s.name;
 
     const hasDirections = s.directions?.length > 0;
     const allExitsClosed = hasDirections && !s.directions.some(dir =>
@@ -360,8 +363,7 @@ export function closeAllSheets(force = false) {
   }
 
   const openSheets = [...document.querySelectorAll('.station-sheet.sheet-open')];
-  const dropMenu   = document.getElementById('dropMenu');
-  if (dropMenu) { dropMenu.classList.remove('show'); dropMenu.hidden = true; }
+  if (dropMenuEl) { dropMenuEl.classList.remove('show'); dropMenuEl.hidden = true; }
 
   if (!openSheets.length) { sheetOverlay?.classList.remove('overlay-visible'); return; }
 
@@ -382,7 +384,7 @@ MetroApp.refreshCurrentStation = function() {
   const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
   const prevScrollTop = sheetBody.scrollTop;
 
-  document.getElementById('stationTitleMain').textContent = s.name;
+  stationTitleMain.textContent = s.name;
   sheetBody.innerHTML = `${renderDirections(s, color)}`;
 
   sheetBody.querySelectorAll('.nav-label').forEach(el => {
@@ -402,7 +404,6 @@ MetroApp.refreshCurrentStation = function() {
 
 // ══ ШТОРКА «ПРО ДОДАТОК» ══
 export function openAboutSheet() {
-  const sheetOverlayEl = document.getElementById('sheetOverlay');
   let aboutSheet = document.getElementById('aboutSheet');
 
   if (!aboutSheet) {
@@ -417,7 +418,7 @@ export function openAboutSheet() {
       MetroApp.animateSheetClose(aboutSheet, () => {
         aboutSheet.classList.remove('sheet-open');
         if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-          sheetOverlayEl.classList.remove('overlay-visible');
+          sheetOverlay.classList.remove('overlay-visible');
       });
     });
 
@@ -465,7 +466,7 @@ export function openAboutSheet() {
 
   MetroApp.pushSheetHistory(); // <--- ДОДАНО  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-  sheetOverlayEl.classList.add('overlay-visible');
+  sheetOverlay.classList.add('overlay-visible');
 }
 
 // ══ EVENT LISTENERS ══
@@ -496,13 +497,13 @@ sheetBody.addEventListener('click', e => {
     let panel = row.nextElementSibling;
     if (panel?.classList.contains('edit-info-panel')) {
       panel.classList.remove('panel-open');
-      setTimeout(() => { if (!panel.classList.contains('panel-open')) panel.remove(); }, 300);
+      setTimeout(() => { if (!panel.classList.contains('panel-open')) panel.remove(); }, TIMING.PANEL_CLOSE);
       return;
     }
 
     document.querySelectorAll('.edit-info-panel').forEach(p => {
       p.classList.remove('panel-open');
-      setTimeout(() => p.remove(), 300);
+      setTimeout(() => p.remove(), TIMING.PANEL_CLOSE);
     });
 
     panel = document.createElement('div');
@@ -522,7 +523,7 @@ sheetBody.addEventListener('click', e => {
           MetroApp.invalidateLocalEditsCache?.();
         }
         panel.classList.remove('panel-open');
-        setTimeout(() => panel.remove(), 300);
+        setTimeout(() => panel.remove(), TIMING.PANEL_CLOSE);
         MetroApp.reloadStationsData(true)
           .then(() => openStation(slug))
           .catch(() => MetroApp.showCustomConfirm?.('Помилка з\'єднання. Спробуйте ще раз.', () => {}, null, null));
@@ -545,8 +546,7 @@ sheet.querySelector('.fav-btn-bar')?.addEventListener('click', e => {
 // Оверлей
 sheetOverlay.addEventListener('click', e => {
   if (e.target !== sheetOverlay) return;
-  const dropMenu = document.getElementById('dropMenu');
-  if (dropMenu?.classList.contains('show')) return;
+  if (dropMenuEl?.classList.contains('show')) return;
 
   sheetOverlay.style.pointerEvents = 'none';
   const elUnder = document.elementFromPoint(e.clientX, e.clientY);

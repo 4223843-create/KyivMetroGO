@@ -31,8 +31,6 @@ export default defineConfig({
       srcDir: 'public',
       filename: 'sw.js',
       manifest: false,
-registerType: 'autoUpdate',
-
       injectManifest: {
         rollupFormat: 'iife',
         injectionPoint: 'self.__WB_MANIFEST',
