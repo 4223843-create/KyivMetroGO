@@ -226,6 +226,7 @@ favBody.addEventListener('click', e => {
 
 // ══ ВІДКРИТТЯ / ЗАКРИТТЯ ══
 export function openFavSheet() {
+  MetroApp.pushSheetHistory(); // <--- ДОДАНО
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   const favs = getFavs();
   if (!state.stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
@@ -261,11 +262,5 @@ export function updateFavDock() {
 // Клік на favListBtn реєструється в main.js — тут не дублюємо
 favClose.addEventListener('click', closeFavSheet);
 
-let isHandleSwipeFav = false, swipeStartYFav = 0;
-favSheet.addEventListener('touchstart', e => {
-  swipeStartYFav   = e.touches[0].clientY;
-  isHandleSwipeFav = !!e.target.closest('.sheet-handle-bar');
-}, { passive: true });
-favSheet.addEventListener('touchend', e => {
-  if (isHandleSwipeFav && (e.changedTouches[0].clientY - swipeStartYFav > 60)) closeFavSheet();
-});
+// Кінематичний свайп
+MetroApp.initKinematicSwipe(favSheet, favBody, closeFavSheet);

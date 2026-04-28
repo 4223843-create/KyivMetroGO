@@ -1997,12 +1997,13 @@ margin: 0 0 4px 0;
 
 
 /* ══ КАРТКИ У ВІКНІ "ПРО ДОДАТОК" ══ */
+/* ЗАМІНИТИ: */
 .about-card {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 12px;
-  padding: 16px 16px 4px;
+  margin-bottom: 10px;
+  padding: 14px 16px;
   background: var(--bg-card);
   border: 0.5px solid var(--border);
   border-radius: 14px;
@@ -2010,9 +2011,10 @@ margin: 0 0 4px 0;
 .about-card-icon {
   margin: 0;
   flex-shrink: 0;
-  width: 96px;
+  width: 56px;
   display: flex;
   justify-content: center;
+  align-items: center;
 }
 .about-card-text {
   margin: 0;
@@ -2020,6 +2022,7 @@ margin: 0 0 4px 0;
   font-size: 18px;
   line-height: 1.4;
   flex: 1;
+  color: var(--text-muted);
 }
 
 /* Об’єднана картка */
@@ -2512,4 +2515,145 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 .map-viewport {
   contain: layout paint;
+}
+/* ══ ABOUT BETA CARD ══ */
+.about-beta-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+.about-beta-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.about-beta-title {
+  font-size: var(--fs-md);
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+/* ЗАМІНИТИ: */
+.about-beta-heading {
+  margin: 0 0 6px;
+  font-size: var(--fs-sm);
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.about-beta-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.about-beta-desc {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  opacity: 0.7;
+  line-height: 1.4;
+}
+.about-beta-form {
+  display: flex;
+  gap: 8px;
+}
+
+
+.about-beta-form {
+  display: flex;
+  gap: 8px;
+}
+.about-beta-input {
+  flex: 1;
+  background: var(--bg-main);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 15px;
+  color: var(--text-main);
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+.about-beta-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+.about-beta-input:focus {
+  border-color: var(--line-green);
+}
+
+
+.about-beta-btn {
+  background: var(--line-green);
+  color: #1c1c1e;
+  border: none;
+  border-radius: 10px;
+  width: 52px;
+  height: 34px;
+  font-size: 16px;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.about-beta-btn:active { opacity: 0.8; }
+
+.about-donate-label {
+  font-size: 14px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  flex: 1;
+  text-align: left;
+}
+.about-donate-btn-mono {
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  color: #1c1c1e;
+  background: var(--text-muted) !important;
+  border: none;
+  border-radius: 10px;
+  width: 52px;
+  height: 34px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.about-donate-btn-mono:active { opacity: 0.8; }
+
+.about-beta-success {
+  margin: 0;
+  font-size: 14px;
+  color: var(--line-green);
+  text-align: center;
+  padding: 2px 0;
+}
+/* Додати після .about-beta-success */
+/* ЗАМІНИТИ: */
+.about-donate-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 6px;
+}
+
+.about-donate-btn {
+  font-size: 14px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.about-donate-btn:active {
+  opacity: 1;
 }

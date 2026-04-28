@@ -118,6 +118,7 @@ let ciSortMode = 'date'; // 'date' | 'alpha'
 let ciViewMode = 'visited'; // 'visited' | 'unvisited'
 
 export function openCheckinSheet() {
+  MetroApp.pushSheetHistory(); // <--- ДОДАНО
   let checkinSheet = document.getElementById('checkinSheet');
   const sheetOverlay = document.getElementById('sheetOverlay');
 
@@ -327,9 +328,9 @@ const totalExitsAll = state.stationsData
   // Оновлюємо посилання на closeHandler для swipe-слухача (реєструється лише раз)
   checkinSheet._closeHandler = closeHandler;
   if (!checkinSheet._hasSwipeListener) {
-    let swY2 = 0, isSwipeCI = false;
-    checkinSheet.addEventListener('touchstart', e => { swY2 = e.touches[0].clientY; isSwipeCI = !!e.target.closest('.sheet-handle-bar'); }, { passive: true });
-    checkinSheet.addEventListener('touchend',   e => { if (isSwipeCI && e.changedTouches[0].clientY - swY2 > 60) checkinSheet._closeHandler?.(); });
+    MetroApp.initKinematicSwipe(checkinSheet, checkinSheet.querySelector('.sheet-body'), () => {
+      checkinSheet._closeHandler?.();
+    });
     checkinSheet._hasSwipeListener = true;
   }
 

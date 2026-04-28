@@ -6,6 +6,7 @@ import { state }                from './state.js';
 
 // ⚠️ Логіка тумблерів (pointer-events + клік по всій картці) — збережено без змін!
 export function openSettingsSheet() {
+  MetroApp.pushSheetHistory(); // <--- ДОДАНО
   const sheetOverlay = document.getElementById('sheetOverlay');
   let settingsSheet  = document.getElementById('settingsSheet');
 
@@ -210,14 +211,9 @@ export function openSettingsSheet() {
       });
     });
 
-    let swY = 0, isSwipeSettings = false;
-    settingsSheet.addEventListener('touchstart', e => {
-      swY = e.touches[0].clientY;
-      isSwipeSettings = !!e.target.closest('.sheet-handle-bar');
-    }, { passive: true });
-    settingsSheet.addEventListener('touchend', e => {
-      if (isSwipeSettings && e.changedTouches[0].clientY - swY > 60)
-        document.getElementById('settingsClose').click();
+    // Кінематичний свайп
+    MetroApp.initKinematicSwipe(settingsSheet, settingsSheet.querySelector('.sheet-body'), () => {
+      document.getElementById('settingsClose').click();
     });
 
     // ── Експорт (Збереження у файл) ──

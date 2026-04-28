@@ -15,9 +15,3 @@ export function applyTheme(theme) {
 
   requestAnimationFrame(() => requestAnimationFrame(() => css.remove()));
 }
-
-// Застосовуємо збережену тему відразу (ДО першого малювання)
-applyTheme(
-  Storage.get(STORAGE_KEYS.THEME) ||
-  (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-);

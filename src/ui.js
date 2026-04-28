@@ -123,3 +123,84 @@ MetroApp.showCustomConfirm = function(
   if (cancelBtn) cancelBtn.addEventListener('click', () => animateClose(onCancel));
   overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
 };
+// ══ ТАКТИЛЬНИЙ ВІДГУК (HAPTICS) ══
+MetroApp.hapticImpact = async function(style = 'light') {
+  // 1. Спроба використати Capacitor Haptics (для AAB)
+  if (window.Capacitor?.Plugins?.Haptics) {
+    try {
+      await window.Capacitor.Plugins.Haptics.impact({ style: style.toUpperCase() });
+      return;
+    } catch (e) { /* Плагін недоступний, йдемо далі */ }
+  } 
+  // 2. Фолбек для звичайного браузера / PWA
+  if (navigator.vibrate) {
+    // 10ms - легкий клік (light), 20ms - відчутний (heavy)
+    navigator.vibrate(style === 'heavy' ? 20 : 10);
+  }
+};
+
+// ══ НАЛАШТУВАННЯ СИСТЕМНИХ ПАНЕЛЕЙ (CAPACITOR) ══
+MetroApp.configureEdgeToEdge = async function() {
+  if (window.Capacitor?.Plugins?.StatusBar) {
+    const { StatusBar, Style } = window.Capacitor.Plugins;
+    try {
+      // Робимо статус-бар прозорим (карта заїжджатиме під нього)
+      await StatusBar.setOverlaysWebView({ overlay: true });
+      
+      // Автоматично визначаємо колір тексту статус-бару (білий або чорний)
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+    } catch (e) {
+      console.warn('[KyivMetroGO] StatusBar plugin error:', e);
+    }
+  }
+};
+
+// ══ КЕРУВАННЯ ІСТОРІЄЮ (ДЛЯ СИСТЕМНОЇ КНОПКИ "НАЗАД") ══
+MetroApp.pushSheetHistory = function() {
+  // Додаємо запис в історію тільки якщо його там ще немає
+  if (!history.state?.isSheetOpen) {
+    history.pushState({ isSheetOpen: true }, '');
+  }
+};
+
+// ══ КІНЕМАТИЧНИЙ СВАЙП ШТОРКИ (1:1 за пальцем) ══
+MetroApp.initKinematicSwipe = function(sheet, body, closeCallback) {
+  let startY = 0, currentY = 0, isDragging = false;
+
+  sheet.addEventListener('touchstart', e => {
+    const isHandle = !!e.target.closest('.sheet-handle-bar');
+    const isAtTop = body ? body.scrollTop <= 0 : true;
+    
+    // Дозволяємо тягнути за шапку, АБО за тіло, якщо воно проскролене на самий верх
+    if (isHandle || (isAtTop && sheet.classList.contains('sheet-scrollable'))) {
+      startY = e.touches[0].clientY;
+      isDragging = true;
+      sheet.style.transition = 'none'; // Вимикаємо CSS-анімацію для миттєвого руху
+    }
+  }, { passive: true });
+
+  sheet.addEventListener('touchmove', e => {
+    if (!isDragging) return;
+    const y = e.touches[0].clientY;
+    currentY = y - startY;
+
+    // Дозволяємо тягнути тільки вниз
+    if (currentY > 0) {
+      sheet.style.transform = `translateY(${currentY}px)`;
+    }
+  }, { passive: true });
+
+  sheet.addEventListener('touchend', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    sheet.style.transition = ''; // Повертаємо CSS-анімацію
+    sheet.style.transform = '';  // Очищаємо inline-стиль
+
+    if (currentY > 70) {
+      // Якщо потягнули достатньо сильно — закриваємо
+      closeCallback();
+    }
+    currentY = 0;
+  }, { passive: true });
+};

@@ -39,6 +39,7 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
 }
 
 export function openSearchSheet() {
+  MetroApp.pushSheetHistory(); // <--- ДОДАНО
   const sheetOverlay = document.getElementById('sheetOverlay');
   let searchSheet    = document.getElementById('searchSheet');
 
@@ -99,14 +100,9 @@ export function openSearchSheet() {
       setTimeout(() => MetroApp.openStation?.(item.dataset.slug), 200);
     });
 
-    let swY = 0, isHandleSearch = false;
-    searchSheet.addEventListener('touchstart', e => {
-      swY = e.touches[0].clientY;
-      isHandleSearch = !!e.target.closest('.sheet-handle-bar');
-    }, { passive: true });
-    searchSheet.addEventListener('touchend', e => {
-      if (isHandleSearch && (e.changedTouches[0].clientY - swY > 60))
-        document.getElementById('searchClose').click();
+    // Кінематичний свайп
+    MetroApp.initKinematicSwipe(searchSheet, searchSheet.querySelector('.sheet-body'), () => {
+      document.getElementById('searchClose').click();
     });
   }
 

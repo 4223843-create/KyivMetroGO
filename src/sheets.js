@@ -283,6 +283,7 @@ export function openStation(slug) {
 
   function actualOpenStation() {
     if (!state.stationsData?.[slug]) return;
+    MetroApp.pushSheetHistory(); // <--- ДОДАНО
     state.currentStationSlug = slug;
     const s     = state.stationsData[slug];
     const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
@@ -419,9 +420,45 @@ export function openAboutSheet() {
           sheetOverlayEl.classList.remove('overlay-visible');
       });
     });
-  }
 
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+    const betaForm = document.getElementById('aboutBetaForm');
+    if (betaForm) {
+      betaForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = betaForm.querySelector('.about-beta-btn');
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+          const res = await fetch('https://formspree.io/f/ТВІЙ_ID', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' },
+            body: new FormData(betaForm),
+          });
+          if (res.ok) {
+            betaForm.hidden = true;
+            document.getElementById('aboutBetaSuccess').hidden = false;
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Записатись';
+          }
+        } catch {
+          btn.disabled = false;
+          btn.textContent = 'Записатись';
+        }
+      });
+    }
+  } 
+
+
+  const BETA_COLORS = ['var(--line-red)', 'var(--line-blue)', 'var(--line-green)'];
+  try {
+    const idx = parseInt(localStorage.getItem('betaBtnColorIdx') || '0') % 3;
+    localStorage.setItem('betaBtnColorIdx', (idx + 1) % 3);
+    const betaBtn = document.querySelector('#aboutSheet .about-beta-btn');
+    if (betaBtn && !betaBtn.disabled) betaBtn.style.background = BETA_COLORS[idx];
+  } catch (e) {}
+
+  MetroApp.pushSheetHistory(); // <--- ДОДАНО  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
   sheetOverlayEl.classList.add('overlay-visible');
 }
@@ -519,19 +556,8 @@ sheetOverlay.addEventListener('click', e => {
   closeAllSheets();
 });
 
-// Свайп вниз
-let isHandleSwipeMain = false, swipeScrollTop = 0, swipeStartYMain = 0;
-sheet.addEventListener('touchstart', e => {
-  swipeStartYMain   = e.touches[0].clientY;
-  swipeScrollTop    = sheetBody.scrollTop;
-  isHandleSwipeMain = !!e.target.closest('.sheet-handle-bar') || sheet.classList.contains('sheet-scrollable');
-}, { passive: true });
-sheet.addEventListener('touchend', e => {
-  if (!isHandleSwipeMain) return;
-  const dy = e.changedTouches[0].clientY - swipeStartYMain;
-  if (sheet.classList.contains('sheet-scrollable')) { if (dy > 60 && swipeScrollTop <= 0) closeAllSheets(); }
-  else { if (dy > 60) closeAllSheets(); }
-});
+// Кінематичний свайп вниз
+MetroApp.initKinematicSwipe(sheet, sheetBody, () => closeAllSheets());
 
 // Публікуємо
 MetroApp.openStation    = openStation;
