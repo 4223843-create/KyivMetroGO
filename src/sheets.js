@@ -46,6 +46,30 @@ const stationTitleMain = document.getElementById('stationTitleMain');
 const dropMenuEl       = document.getElementById('dropMenu');
 
 // ══ ФОРМАТУВАННЯ НАПИСУ ВИХОДУ ══
+// Форматує напис типу "попередня либідська" → "попередня Либідська"
+// Перше слово (службове: попередня/наступна/кінцева тощо) — завжди малими.
+// Кожне наступне слово: з великої, якщо є в ALWAYS_CAP або перше слово назви.
+function formatDirLabel(raw) {
+  if (!raw) return raw;
+  const words = raw.trim().split(/\s+/);
+  if (words.length <= 1) return raw;
+
+  // Перше слово — службове, малими
+  const prefix = words[0].toLowerCase();
+
+  // Решта — назва станції: перша літера завжди велика,
+  // подальші — за ALWAYS_CAP, інакше малими
+  const nameWords = words.slice(1).map((w, i) => {
+    const lo = w.toLowerCase();
+    if (i === 0) return lo.charAt(0).toUpperCase() + lo.slice(1);
+    return MetroApp.ALWAYS_CAP?.has(lo)
+      ? lo.charAt(0).toUpperCase() + lo.slice(1)
+      : lo;
+  });
+
+  return [prefix, ...nameWords].join(' ');
+}
+
 function formatLabel(raw) {
   let text = raw.replace(/\u00a0/g, ' ').trim();
   const isTransfer = text.toLowerCase().includes('пересадка') || text.toLowerCase().includes('перехід');
@@ -109,7 +133,7 @@ function renderDirections(s, color) {
 
     const mainHtml = mainDirs.map(dir => `
       <div class="direction-block">
-        <div class="direction-label nav-label" data-name="${dir.from}">${dir.from}</div>
+        <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
         ${dir.exits.map(exit =>
           `${exit.label ? `<div class="exit-label nav-label" data-name="${exit.label}">${formatLabel(exit.label)}</div>` : ''}${renderPositions(exit.positions, color, true)}`
         ).join('')}
@@ -131,8 +155,19 @@ function renderDirections(s, color) {
   return s.directions.map(dir => {
     if (dir.from === 'вихід праворуч')
       return `<div class="direction-block direction-exit-right"><div class="direction-label">вихід праворуч</div></div>`;
+
+    // "кінцева Академмістечко" → пілюля "кінцева" + назва як звичайний label
+    const isTerminal = dir.from.toLowerCase().startsWith('кінцева ');
+    const terminalStationName = isTerminal
+      ? formatDirLabel(dir.from)   // "кінцева Академмістечко" — форматовано
+      : null;
+
     return `<div class="direction-block">
-      <div class="direction-label nav-label" data-name="${dir.from}">${dir.from}</div>
+      ${isTerminal
+        ? `<div class="direction-terminal-badge">кінцева</div>
+      <div class="direction-label nav-label" data-name="${dir.from}">${terminalStationName.replace(/^кінцева\s+/i, '')}</div>`
+        : `<div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>`
+      }
       ${dir.exits.map(exit =>
         `${exit.label ? `<div class="exit-label nav-label" data-name="${exit.label}">${formatLabel(exit.label)}</div>` : ''}${renderPositions(exit.positions, color, false)}`
       ).join('')}
@@ -267,7 +302,7 @@ export function withUnsavedCheck(proceed) {
     const _fbData = _fbSlug ? state.stationsData?.[_fbSlug] : null;
     const stationName = _fbData?.name || '';
     const question    = stationName
-      ? `Зберегти зміни для станції <span style="white-space: nowrap;">${stationName}?</span>`
+      ? `Зберегти зміни для станції <span style="white-space: nowrap; font-variant: small-caps; letter-spacing: 0.04em;">${stationName}?</span>`
       : 'Зберегти зміни?';
     MetroApp.showCustomConfirm(question,
       () => { MetroApp.triggerFeedbackSubmit?.(true); MetroApp.fbUnsaved = false; proceed(); },

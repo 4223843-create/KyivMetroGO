@@ -109,15 +109,43 @@ body#map-page .map-viewport {
   --pluh-text:  #1c1c1e;
 }
 
-/* ══ ЗАГАЛЬНІ СТИЛІ ══ */
-@font-face {
-  font-family: 'ProbaNav2';
-  src: url('ProbaNav2-Medium.woff2') format('woff2');
-  font-weight: var(--fw-medium);
-  font-style: normal;
-  font-display: swap;
+/* ══ КОРЕКЦІЯ ДЛЯ СВІТЛОЇ ТЕМИ ══ */
+[data-theme="light"] .about-input-group {
+  background: var(--bg-pill) !important;
 }
 
+/* Текст пошти робимо ТЕМНИМ (--text у світлій темі — чорний) */
+[data-theme="light"] .about-input-group .about-beta-input,
+[data-theme="light"] .about-input-group .about-beta-btn {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .about-input-group .about-beta-input::placeholder {
+  color: var(--text);
+}
+
+/* Mono залишається ТЕМНИМ (--text-muted у світлій темі — це темно-сірий) */
+[data-theme="light"] .about-btn-mono-fixed {
+  background: var(--text-muted) !important;
+  color: var(--bg) !important; /* Текст стає світлим кольором фону */
+}
+
+/* Корекція іконок у світлій темі (робимо їх темними) */
+[data-theme="light"] .about-support-platform-icon {
+  color: var(--text-muted); 
+  opacity: 0.85;
+}
+
+[data-theme="light"] .about-support-divider {
+  background: var(--text-muted);
+  opacity: 0.15;
+}
+
+/* Корекція літери 'i' в налаштуваннях */
+[data-theme="light"] .settings-info-btn {
+  color: var(--text-muted) !important;
+  opacity: 0.7;
+}
 /* Жорстке застосування атрибута hidden */
 [hidden] { display: none !important; }
 
@@ -392,8 +420,8 @@ z-index: var(--z-fullscreen-sheet);
 }
 .direction-label {
   font-size: var(--fs-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  /* text-transform: uppercase — прибрано, рядок тепер форматується через formatDirLabel() */
+  letter-spacing: 0.04em;
   color: var(--text-muted);
   margin-bottom: 10px;
   text-align: center;
@@ -407,6 +435,20 @@ z-index: var(--z-fullscreen-sheet);
   min-height: 44px;
 }
 .direction-exit-right .direction-label { margin-bottom: 0; }
+
+/* Пілюля "кінцева" — над назвою станції */
+.direction-terminal-badge {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--bg-pill);
+  border-radius: 6px;
+  padding: 2px 7px;
+  margin: 0 auto 6px;
+  text-align: center;
+  opacity: 0.75;
+}
 
 /* ══ EXIT LABEL ══ */
 .exit-label {
@@ -1356,7 +1398,7 @@ html {
   position: static;
   background: none;
   border: none;
-  color: var(--line-red); /* БЕЗ ЗАЙВИХ ДУЖОК */
+  color: inherit; /* колір задається inline style="color:${fbLineColor}" */
   font-size: var(--fs-md);
   line-height: 1;
   cursor: pointer;
@@ -1416,7 +1458,7 @@ max-height: 92dvh;
   flex-shrink: 0;
   background: none;
   border: none;
-  color: var(--line-green);
+  color: inherit; /* колір задається inline style="color:${fbLineColor}" */
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -1555,16 +1597,7 @@ padding: 0 8px;
   background-color: var(--border);
 }
 
-.fb-item-inner .fb-close-exit,
-.fb-item-inner .fb-cancel-extra-btn {
-  color: var(--line-red) !important;
-  transition: color 0.2s ease !important;
-}
-
-.fb-item-inner.has-extra-doors .fb-close-exit,
-.fb-item-inner.has-extra-doors .fb-cancel-extra-btn {
-  color: var(--line-blue) !important;
-}
+/* кольори .fb-close-exit і .fb-cancel-extra-btn задаються через inline style */
 
 .fb-item-inner .hint-1-door { display: block; }
 .fb-item-inner .hint-2-doors { display: none; }
@@ -1624,15 +1657,11 @@ z-index: var(--z-dropdown-active);
 
 
 
-.fb-item-inner.has-three-doors .fb-cancel-third-btn {
-  color: var(--line-blue);
-}
-
 .fb-cancel-third-btn {
   position: static;
   background: none;
   border: none;
-  color: var(--line-blue);
+  color: inherit; /* колір задається inline style="color:${fbLineColor}" */
   font-size: var(--fs-md);
   line-height: 1;
   cursor: pointer;
@@ -2185,6 +2214,8 @@ svg [role="button"]:focus:not(:focus-visible) {
   font-size: var(--fs-lg);
   font-weight: var(--fw-semi);
   color: var(--text-muted);
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
   position: absolute;
   left: 50%;
   top: 40px;
@@ -2465,12 +2496,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   padding: 0;
   width: 15px;
   height: 15px;
-  color: var(--line-green);
+  /* Згорнуто: нейтральний сірий */
+  color: #ababab;
   cursor: pointer;
   margin-right: auto;
-  opacity: 0.85;
   -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s, color 0.15s;
+  transition: color 0.15s;
 }
 
 .settings-info-btn svg { 
@@ -2478,10 +2509,9 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   height: 100%; 
 }
 
-/* Робимо білою при натисканні */
+/* Розгорнута підказка: колір тексту (яскравіший) */
 .settings-info-btn:active,
 .settings-info-btn.settings-info-btn-active { 
-  opacity: 1; 
   color: var(--text); 
 }
 .settings-hint {
@@ -2638,6 +2668,115 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 .about-donate-btn-mono:active { opacity: 0.8; }
 
+
+/* ══ ДВОКОЛОНКОВИЙ БЛОК ПІДТРИМКИ ══ */
+.about-support-card {
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.about-support-cols {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.about-support-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.about-support-platform-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.about-support-divider {
+  width: 0.5px;
+  background: var(--border);
+  align-self: stretch;
+  opacity: 0.5;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+
+/* ══ ЛІВА КОЛОНКА: ПОШТА (Завжди світла) ══ */
+.about-input-group {
+  display: flex;
+  width: 100%;
+  /* У темній темі --text-muted — це найсвітліший колір (#ababab) */
+  background: var(--text-muted); 
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 34px;
+}
+
+.about-input-group .about-beta-input {
+  flex: 1;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 10px;
+  font-size: 14px;
+  width: 100%;
+  text-align: left !important;
+  outline: none;
+  /* У темній темі текст робимо темним кольором фону карток (#1c1c1e) */
+  color: var(--bg-pill) !important; 
+}
+
+.about-input-group .about-beta-input::placeholder {
+  color: var(--bg-pill);
+  opacity: 0.5;
+}
+
+.about-input-group .about-beta-btn {
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  color: var(--bg-pill) !important; 
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 18px;
+  padding: 0;
+}
+
+/* ══ ПРАВА КОЛОНКА: MONO (Завжди темна) ══ */
+.about-btn-mono-fixed {
+  width: 100%;
+  height: 34px;
+  font-size: var(--fs-sm);
+  /* У темній темі кнопка бере найтемніший колір карток */
+  background: var(--bg-pill) !important; 
+  color: var(--text-muted) !important; 
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: var(--fw-medium);
+}
+
+.about-btn-mono-fixed:active {
+  opacity: 0.7;
+}
+
 .about-beta-success {
   margin: 0;
   font-size: 14px;
@@ -2645,6 +2784,10 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   text-align: center;
   padding: 2px 0;
 }
+
+
+
+
 /* Додати після .about-beta-success */
 /* ЗАМІНИТИ: */
 .about-donate-row {
@@ -2663,4 +2806,32 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 .about-donate-btn:active {
   opacity: 1;
+}
+
+/* ══ ВЕРТИКАЛЬНЕ КОМПОНУВАННЯ ДЛЯ КОЛОНОК ПІДТРИМКИ ══ */
+.about-support-text {
+  font-size: var(--fs-xs); /* Дрібний акуратний шрифт */
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+  margin: 0; 
+  opacity: 0.8;
+  /* Фіксована висота, щоб колонки були симетричними, навіть якщо кількість рядків тексту різна */
+  min-height: 28px; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-form-stacked {
+  flex-direction: column !important; /* Перебиваємо старе горизонтальне вирівнювання */
+  gap: 8px !important; /* Відстань між полем і кнопкою */
+  width: 100%;
+}
+
+.about-btn-full {
+  width: 100% !important; /* Кнопка розтягується на всю ширину колонки */
+  font-size: var(--fs-sm) !important; /* Більший шрифт, бо тепер там слово, а не стрілочка */
+  letter-spacing: 0.02em;
+  padding: 0 !important;
 }

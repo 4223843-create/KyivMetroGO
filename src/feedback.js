@@ -332,6 +332,7 @@ function bindSteppersOptimized(container) {
 container.addEventListener('click', (event) => {
       const btn = event.target.closest('.fb-step');
       if (btn) {
+        MetroApp.hapticImpact?.('light');
         const id = btn.dataset.id;
         const el = document.getElementById(id);
         if (!el) return;
@@ -485,6 +486,7 @@ container.addEventListener('click', (event) => {
 // --- ЛОГІКА ДОДАВАННЯ НОВОГО ВИХОДУ ---
       const addExitBtn = event.target.closest('.fb-add-exit-btn');
       if (addExitBtn) {
+        MetroApp.hapticImpact?.('medium');
         const dir = addExitBtn.dataset.dir;
         const newIdx = Object.keys(fbState.current).length;
         
@@ -525,6 +527,7 @@ container.addEventListener('click', (event) => {
 
       // --- ЛОГІКА ДОДАВАННЯ ДРУГИХ ДВЕРЕЙ (+1) ---
       const addDoorsBtn = event.target.closest('.fb-add-doors-link');
+      if (addDoorsBtn) MetroApp.hapticImpact?.('light');
       if (addDoorsBtn) {
         const idx = addDoorsBtn.dataset.idx;
         document.getElementById(`fbExtraWrap${idx}`).classList.remove('is-hidden');
@@ -544,6 +547,7 @@ container.addEventListener('click', (event) => {
       }
 
       const cancelThirdBtn = event.target.closest('.fb-cancel-third-btn');
+      if (cancelThirdBtn) MetroApp.hapticImpact?.('light');
       if (cancelThirdBtn) {
         const idx = cancelThirdBtn.dataset.idx;
         document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
@@ -769,7 +773,7 @@ posEl.addEventListener('click', (e) => {
   }
 });
 
-        sendBtn.addEventListener('click', () => { MetroApp.triggerFeedbackSubmit(false); });
+        sendBtn.addEventListener('click', () => { MetroApp.hapticImpact?.('medium'); MetroApp.triggerFeedbackSubmit(false); });
         document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);
         bindSteppersOptimized(posEl);
 
@@ -1001,6 +1005,7 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
 
           // Успіх
           if (!background) {
+            MetroApp.hapticImpact?.('heavy');
             sendBtn.textContent = 'Зміни застосовано';
             sendBtn.style.color = 'var(--text-muted)';
             sendBtn.disabled = true;

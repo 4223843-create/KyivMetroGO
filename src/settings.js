@@ -201,6 +201,20 @@ export function openSettingsSheet() {
 
     settingsSheet.querySelectorAll('.settings-card').forEach(card => {
       card.addEventListener('click', e => {
+        // Нижня частина картки (нижче роздільника) — тумблер не тригеримо
+        const inBottomArea = !!e.target.closest('.settings-actions, .settings-rule, .settings-hint');
+        if (inBottomArea) {
+          // Ліва половина нижньої частини → відкриваємо довідку
+          // (якщо клік не на кнопці — симулюємо натискання i-кнопки)
+          if (!e.target.closest('button, a')) {
+            const cardRect  = card.getBoundingClientRect();
+            const isLeftHalf = e.clientX < cardRect.left + cardRect.width / 2;
+            if (isLeftHalf) {
+              card.querySelector('.settings-info-btn')?.click();
+            }
+          }
+          return; // тумблер не чіпаємо
+        }
         if (e.target.closest('button, a')) return;
         e.preventDefault();
         const input = card.querySelector('input[type="checkbox"]');
