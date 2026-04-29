@@ -51,7 +51,7 @@ const dropMenuEl       = document.getElementById('dropMenu');
 // Кожне наступне слово: з великої, якщо є в ALWAYS_CAP або перше слово назви.
 function formatDirLabel(raw) {
   if (!raw) return raw;
-  const words = raw.trim().split(/\s+/);
+    const words = raw.trim().split(/\s+|&nbsp;/);
   if (words.length <= 1) return raw;
 
   // Перше слово — службове, малими
@@ -61,10 +61,12 @@ function formatDirLabel(raw) {
   // подальші — за ALWAYS_CAP, інакше малими
   const nameWords = words.slice(1).map((w, i) => {
     const lo = w.toLowerCase();
-    if (i === 0) return lo.charAt(0).toUpperCase() + lo.slice(1);
-    return MetroApp.ALWAYS_CAP?.has(lo)
-      ? lo.charAt(0).toUpperCase() + lo.slice(1)
-      : lo;
+    // Знімаємо лапки для пошуку в ALWAYS_CAP («України» → україна)
+    const clean = lo.replace(/^[„“]+|[„“]+$/g, '');
+    // Перша літера може бути за лапкою — шукаємо саме літеру
+    const cap = s => s.replace(/\p{L}/u, c => c.toUpperCase());
+    if (i === 0) return cap(lo);
+    return MetroApp.ALWAYS_CAP?.has(clean) ? cap(lo) : lo;
   });
 
   return [prefix, ...nameWords].join(' ');

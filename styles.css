@@ -286,6 +286,11 @@ z-index: var(--z-fullscreen-sheet);
 }
 
 
+
+
+
+
+
 .sheet-handle-bar {
   display: flex;
   align-items: center;
@@ -817,7 +822,7 @@ color: var(--text-muted);
 .drop-item:active { background: var(--bg-card); }
 
 .about-content {
-  padding: 0 0 8px; 
+  padding: 0 0 0px; 
   margin-top: 0;
   color: var(--text-muted);
   font-size: var(--fs-md);
@@ -1248,8 +1253,11 @@ color: var(--text-muted);
   letter-spacing: normal; 
   font-weight: normal; 
   opacity: 0.5; 
-  top: 24px;
-  transform: translateX(-50%); /* Додати це */
+  
+  /* Змінюємо 24px на 22px або 21px, щоб підняти текст і зрівняти відстані */
+  top: 22px; 
+  
+  transform: translateX(-50%); 
 }
 
 /* 5. Двоколірний повзунок для вікна "Про додаток" */
@@ -1257,11 +1265,7 @@ color: var(--text-muted);
 background: linear-gradient(to right, var(--line-blue) 50%, var(--line-green) 50%);
 }
 
-/* 6. НАЛАШТУВАННЯ ВІДСТУПІВ ШАПКИ */
-/* Робимо однаковий компактний відступ для обох вікон */
-.about-station-sheet .sheet-handle-bar {
-  padding-bottom: 10px;
-}
+
 
 /* =========================================
    ІНДИВІДУАЛЬНІ ВІДСТУПИ ДЛЯ КОЖНОГО ВІКНА
@@ -1271,6 +1275,8 @@ background: linear-gradient(to right, var(--line-blue) 50%, var(--line-green) 50
 #feedbackSheet .sheet-handle-bar {
   padding-bottom: 1px;
 }
+
+
 
 
 /* ══ ЗАБОРОНА ВИДІЛЕННЯ ТЕКСТУ ══ */
@@ -1526,8 +1532,32 @@ max-height: 92dvh;
 }
 
 #aboutSheet .sheet-body {
+  padding-top: 0;
   padding-bottom: 8px;
 }
+
+#aboutSheet .about-content {
+  margin-top: 0;
+  padding-top: 0;
+  line-height: 0;
+}
+
+#aboutSheet .about-content > img:first-child {
+  --about-icon-size: 64px;
+  width: var(--about-icon-size);
+  height: var(--about-icon-size);
+  display: block !important;
+  /* Змінюємо -6px на -8px (компенсуємо всі 8px прозорості картинки) */
+  margin: -8px auto -10px !important; 
+  vertical-align: top;
+}
+
+#aboutSheet .about-content > :not(img:first-child) {
+  line-height: 1.6;
+}
+
+
+
 
 .about-content p > svg {
   width: 32px;
@@ -2227,9 +2257,15 @@ svg [role="button"]:focus:not(:focus-visible) {
   text-overflow: ellipsis;
   text-align: center;
 }
+/* Назва станції у шторці редагування — вище, щоб відступ від «Правки застосуються» був більшим */
+#fbStationTitle {
+  top: 14px;
+}
+
 #sheetBody {
   padding-top: 18px;
 }
+
 
 .position-row { position: relative; }
 
@@ -2509,10 +2545,10 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   height: 100%; 
 }
 
-/* Розгорнута підказка: колір тексту (яскравіший) */
+/* Розгорнута підказка: колір фону пілюлі (темно-сірий) */
 .settings-info-btn:active,
 .settings-info-btn.settings-info-btn-active { 
-  color: var(--text); 
+  color: var(--bg-pill); 
 }
 .settings-hint {
   margin: 0;
