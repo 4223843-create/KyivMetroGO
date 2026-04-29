@@ -1,15 +1,5 @@
 import { state, startupSlug } from './state.js';
 
-MetroApp.properCase = function (name) {
-  let wordIndex = 0;
-  return name.replace(/[а-яіїєґА-ЯІЇЄҐ]+/g, match => {
-    const wl = match.toLowerCase();
-    const shouldCap = wordIndex === 0 || MetroApp.ALWAYS_CAP.has(wl);
-    wordIndex++;
-    return shouldCap ? wl.charAt(0).toUpperCase() + wl.slice(1) : wl;
-  });
-};
-
 const STATION_ALIASES = {
   'театральну': 'театральна',
   'площу українських героїв': 'площа українських героїв',

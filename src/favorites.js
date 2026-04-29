@@ -152,25 +152,38 @@ export function renderFavList(favs) {
   });
 
   const listHtml = items.map(item => {
-    const displayName = MetroApp.FAV_DISPLAY_NAMES[item.slug] || item.name;
+    const displayName = MetroApp.FAV_DISPLAY_NAMES?.[item.slug] || item.name;
 
+    // НОВИЙ НАДІЙНИЙ КОД
     let formattedDir = '';
     if (item.dir && item.dir !== 'undefined') {
-      const lower = item.dir.toLowerCase().trim();
+      const cleanDir = item.dir.trim();
+      const lower = cleanDir.toLowerCase();
+      
       if (lower === 'кінцева' || lower === 'вихід праворуч') {
         formattedDir = lower;
       } else if (lower.includes('довгий перехід')) {
         formattedDir = 'довгий перехід на Майдан Незалежності';
       } else {
-        let stationName    = lower.replace(/^попередня\s+/, '');
-        let formattedStation = MetroApp.properCase(stationName);
-        if (item.exits.length > 1) {
-          const fsLower = formattedStation.toLowerCase();
-          formattedStation = MetroApp.DIR_SHORT_NAMES[fsLower] || formattedStation;
+        const isPrev = lower.startsWith('попередня');
+        // Беремо оригінальну назву станції (вже з правильними великими літерами)
+        let stationName = cleanDir.replace(/^попередня\s+/i, '').trim();
+        
+        // 1. Перевіряємо, чи є для цієї станції спеціальне скорочення (Пл. Українських Героїв)
+        // Шукаємо slug станції за її назвою, а потім перевіряємо словник скорочень
+        const targetSlug = MetroApp.slugByName?.(stationName);
+        if (targetSlug && MetroApp.FAV_DISPLAY_NAMES?.[targetSlug]) {
+          stationName = MetroApp.FAV_DISPLAY_NAMES[targetSlug];
+        } 
+        // 2. Якщо спеціального скорочення немає, і виходів багато — застосовуємо стандартні короткі імена
+        else if (item.exits.length > 1) {
+          const stLower = stationName.toLowerCase();
+          stationName = MetroApp.DIR_SHORT_NAMES?.[stLower] || stationName;
         }
-        formattedDir = lower.startsWith('попередня') ? `попередня ${formattedStation}` : formattedStation;
+        
+        formattedDir = isPrev ? `попередня ${stationName}` : stationName;
       }
-    }
+    } // <-- ВІДНОВЛЕНО ЗАКРИВАЮЧУ ДУЖКУ
 
     let squaresHtml = '';
     if (item.exits.length > 0) {

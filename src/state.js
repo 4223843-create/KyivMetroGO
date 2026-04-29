@@ -2,7 +2,7 @@
 MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
 
 MetroApp.FAV_DISPLAY_NAMES = {
-  'B.Ploshcha_Ukrainskikh_heroiv': 'Пл. Українських героїв',
+  'B.Ploshcha_Ukrainskikh_heroiv': 'Пл. Українських Героїв',
 };
 
 MetroApp.DIR_SHORT_NAMES = {
@@ -12,11 +12,6 @@ MetroApp.DIR_SHORT_NAMES = {
   'політехнічний інститут': 'Політехнічний',
   'золоті ворота':          'Золоті',
 };
-
-MetroApp.ALWAYS_CAP = new Set([
-  'україна','україни','українських','дніпра','незалежності','небесної',
-  'сотні','героїв','лівий','правий','хутір','хутора','тараса','шевченка',
-]);
 
 // Словники slug-lookup — заповнюються у hydrateStations
 MetroApp.NAME_TO_SLUG  = {};

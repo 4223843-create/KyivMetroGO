@@ -35,7 +35,8 @@ body#map-page .map-viewport {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding-top: 8dvh; /* Ті самі 8% відступу зверху */
+  padding-top: 8dvh; 
+  padding-bottom: 8dvh; /* ⬅️ ДОДАЄМО: відступ знизу (більший за верхній, щоб обійти кнопки) */
 }
 
 
@@ -140,14 +141,6 @@ body#map-page .map-viewport {
   background: var(--text-muted);
   opacity: 0.15;
 }
-
-/* Корекція літери 'i' в налаштуваннях */
-[data-theme="light"] .settings-info-btn {
-  color: var(--text-muted) !important;
-  opacity: 0.7;
-}
-/* Жорстке застосування атрибута hidden */
-[hidden] { display: none !important; }
 
 html, body {
   margin: 0; padding: 0;
@@ -441,19 +434,7 @@ z-index: var(--z-fullscreen-sheet);
 }
 .direction-exit-right .direction-label { margin-bottom: 0; }
 
-/* Пілюля "кінцева" — над назвою станції */
-.direction-terminal-badge {
-  display: inline-block;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  background: var(--bg-pill);
-  border-radius: 6px;
-  padding: 2px 7px;
-  margin: 0 auto 6px;
-  text-align: center;
-  opacity: 0.75;
-}
+
 
 /* ══ EXIT LABEL ══ */
 .exit-label {
@@ -1547,9 +1528,14 @@ max-height: 92dvh;
   width: var(--about-icon-size);
   height: var(--about-icon-size);
   display: block !important;
-  /* Змінюємо -6px на -8px (компенсуємо всі 8px прозорості картинки) */
-  margin: -8px auto -10px !important; 
+  /* -8px зверху (компенсація прозорості), auto з боків, 8px знизу */
+  margin: -8px auto 8px !important; 
   vertical-align: top;
+}
+
+/* Окремо вирівнюємо відступ під самим написом для ідеальної симетрії */
+#aboutSheet .about-content > p:first-of-type {
+  margin: 0 0 16px 0;
 }
 
 #aboutSheet .about-content > :not(img:first-child) {
@@ -2280,11 +2266,11 @@ svg [role="button"]:focus:not(:focus-visible) {
   border: none;
   padding: 6px;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--border); /* ⬅️ Беремо колір перетинки (8% для темної, 14% для світлої) */
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.4;
+  opacity: 1; /* Залишаємо 1, бо прозорість вже зашита в самому кольорі var(--border) */
   transition: opacity 0.2s, transform 0.15s;
   -webkit-tap-highlight-color: transparent;
   z-index: 2;
@@ -2532,12 +2518,14 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   padding: 0;
   width: 15px;
   height: 15px;
-  /* Згорнуто: нейтральний сірий */
-  color: #ababab;
+  
+  color: var(--text-muted); 
+  
   cursor: pointer;
   margin-right: auto;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s;
+  opacity: 1;
 }
 
 .settings-info-btn svg { 
@@ -2545,7 +2533,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   height: 100%; 
 }
 
-/* Розгорнута підказка: колір фону пілюлі (темно-сірий) */
 .settings-info-btn:active,
 .settings-info-btn.settings-info-btn-active { 
   color: var(--bg-pill); 
@@ -2870,4 +2857,19 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   font-size: var(--fs-sm) !important; /* Більший шрифт, бо тепер там слово, а не стрілочка */
   letter-spacing: 0.02em;
   padding: 0 !important;
+}
+/* Капітель для назв станцій у напрямках */
+.dir-name-caps {
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  /* За бажанням можна зробити трохи жирнішим, щоб капітель не губилася */
+  font-weight: var(--fw-medium); 
+}
+
+/* Вертикальна риска в налаштуваннях */
+.settings-divider-v {
+  width: 1px;
+  height: 18px; /* трохи більше за розмір тексту (13-15px) */
+  background: var(--border);
+  flex-shrink: 0;
 }

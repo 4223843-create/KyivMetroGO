@@ -38,8 +38,8 @@ export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
 
 function checkinPinSvg(checked, lineColor) {
   if (!checked) return CHECKIN_PIN_SVG_OFF;
-  return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="transform: translateY(-2px);">
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="${lineColor}" stroke="${lineColor}" stroke-width="0.5"/>
+  return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="${lineColor}" stroke="${lineColor}" stroke-width="0.5"/>
   </svg>`;
 }
 

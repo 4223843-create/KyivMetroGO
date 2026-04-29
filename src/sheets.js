@@ -51,28 +51,25 @@ const dropMenuEl       = document.getElementById('dropMenu');
 // Кожне наступне слово: з великої, якщо є в ALWAYS_CAP або перше слово назви.
 function formatDirLabel(raw) {
   if (!raw) return raw;
-    const words = raw.trim().split(/\s+|&nbsp;/);
-  if (words.length <= 1) return raw;
+  
+  // Відділяємо перше слово (до першого пробілу або &nbsp;) від решти
+  const match = raw.trim().match(/^([^\s&]+)(?:\s+|&nbsp;)(.*)$/i);
+  
+  // Якщо це лише одне слово (наприклад, просто "кінцева")
+  if (!match) return raw;
 
-  // Перше слово — службове, малими
-  const prefix = words[0].toLowerCase();
+  const prefix = match[1].toLowerCase(); // "попередня", "наступна" тощо
+  const stationName = match[2];          // Точна назва з вашого JSON
 
-  // Решта — назва станції: перша літера завжди велика,
-  // подальші — за ALWAYS_CAP, інакше малими
-  const nameWords = words.slice(1).map((w, i) => {
-    const lo = w.toLowerCase();
-    // Знімаємо лапки для пошуку в ALWAYS_CAP («України» → україна)
-    const clean = lo.replace(/^[„“]+|[„“]+$/g, '');
-    // Перша літера може бути за лапкою — шукаємо саме літеру
-    const cap = s => s.replace(/\p{L}/u, c => c.toUpperCase());
-    if (i === 0) return cap(lo);
-    return MetroApp.ALWAYS_CAP?.has(clean) ? cap(lo) : lo;
-  });
-
-  return [prefix, ...nameWords].join(' ');
+  // Повертаємо HTML: префікс звичайний, а точна назва з JSON — у капітелі
+  return `${prefix} <span class="dir-name-caps">${stationName}</span>`;
 }
 
 function formatLabel(raw) {
+
+
+
+
   let text = raw.replace(/\u00a0/g, ' ').trim();
   const isTransfer = text.toLowerCase().includes('пересадка') || text.toLowerCase().includes('перехід');
 
@@ -123,7 +120,6 @@ function renderPositions(positions, color, multiRow) {
     `<div class="position-row ${String(p.wagon).includes(',') ? 'position-row-multi' : ''}"><div class="fav-tap-target" style="display:flex; gap:6px; align-items:center;">${generatePills(p.wagon, p.doors)}</div></div>`
   ).join('');
 }
-
 // ══ РЕНДЕР НАПРЯМКІВ ══
 // ⚠️ Khreshchatyk-спецкейс збережено!
 function renderDirections(s, color) {
@@ -155,21 +151,28 @@ function renderDirections(s, color) {
   }
 
   return s.directions.map(dir => {
-    if (dir.from === 'вихід праворуч')
+    // 1. Спецкейс для "вихід праворуч"
+    if (dir.from === 'вихід праворуч') {
       return `<div class="direction-block direction-exit-right"><div class="direction-label">вихід праворуч</div></div>`;
+    }
 
-    // "кінцева Академмістечко" → пілюля "кінцева" + назва як звичайний label
-    const isTerminal = dir.from.toLowerCase().startsWith('кінцева ');
-    const terminalStationName = isTerminal
-      ? formatDirLabel(dir.from)   // "кінцева Академмістечко" — форматовано
-      : null;
+    // 2. Спецкейс для кінцевої станції (точно перевіряємо слово без зайвих пробілів)
+    if (dir.from.trim().toLowerCase() === 'кінцева') {
+      return `
+        <div class="direction-block direction-exit-right" style="margin-bottom: 10px;">
+          <div class="direction-label" style="margin: 0;">кінцева</div>
+        </div>
+        <div class="direction-block">
+          ${dir.exits.map(exit =>
+            `${exit.label ? `<div class="exit-label nav-label" data-name="${exit.label}">${formatLabel(exit.label)}</div>` : ''}${renderPositions(exit.positions, color, false)}`
+          ).join('')}
+        </div>
+      `;
+    }
 
+    // 3. Усі інші звичайні напрямки
     return `<div class="direction-block">
-      ${isTerminal
-        ? `<div class="direction-terminal-badge">кінцева</div>
-      <div class="direction-label nav-label" data-name="${dir.from}">${terminalStationName.replace(/^кінцева\s+/i, '')}</div>`
-        : `<div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>`
-      }
+      <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
       ${dir.exits.map(exit =>
         `${exit.label ? `<div class="exit-label nav-label" data-name="${exit.label}">${formatLabel(exit.label)}</div>` : ''}${renderPositions(exit.positions, color, false)}`
       ).join('')}
