@@ -10,8 +10,6 @@ export const STORAGE_KEYS = {
   CHECKIN_MODE:   'metro_checkin_mode',
   START_ON_FAV:   'metro_start_on_fav',
   LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
-  CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
-  HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
 };
 
 // Внутрішній кеш для синхронного доступу
@@ -23,7 +21,8 @@ export const Storage = {
   // 1. Асинхронна ініціалізація (викликатимемо один раз при старті)
   async init() {
     // ТУТ У МАЙБУТНЬОМУ БУДЕ: const keys = (await Preferences.keys()).keys;
-    const keys = Object.values(STORAGE_KEYS);    
+    const keys = Object.values(STORAGE_KEYS);
+    
     for (const key of keys) {
       // ТУТ У МАЙБУТНЬОМУ БУДЕ: const { value } = await Preferences.get({ key });
       const value = localStorage.getItem(key);

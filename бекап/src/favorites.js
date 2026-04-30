@@ -68,7 +68,7 @@ export function toggleExitFav(slug, dir, wagon, doors) {
   }
 
   const slugDirFavs = favs.filter(f => f.slug === slug && f.dir === dir);
-  if (slugDirFavs.length >= 1) return { status: 'replace', existing: slugDirFavs[0] };
+  if (slugDirFavs.length >= 3) return { status: 'limit' };
 
   favs.push({ id, slug, dir, wagon, doors });
 
@@ -78,20 +78,6 @@ export function toggleExitFav(slug, dir, wagon, doors) {
   Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
   exitFavCache = [...favs];
   return { status: 'added' };
-}
-
-export function replaceExitFav(slug, dir, oldWagon, oldDoors, newWagon, newDoors) {
-  let favs = getExitFavs();
-  const oldId = exitFavId(slug, dir, oldWagon, oldDoors);
-  favs = favs.filter(f => f.id !== oldId);
-  const newId = exitFavId(slug, dir, newWagon, newDoors);
-  favs.push({ id: newId, slug, dir, wagon: newWagon, doors: newDoors });
-  Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
-  exitFavCache = [...favs];
-  let mainFavs = getFavs();
-  if (!mainFavs.includes(slug)) { mainFavs.push(slug); saveFavs(mainFavs); }
-  updateFavDock();
-  return { status: 'replaced' };
 }
 
 // ══ СИНХРОНІЗАЦІЯ ВКЛАДОК ══

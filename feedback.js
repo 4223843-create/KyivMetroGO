@@ -340,9 +340,7 @@ function renderFeedbackPositions(slug) {
   const groups = [...groupsMap.values()];
 
   posEl.innerHTML = groups.map(g => {
-    let dirLabel = g.dir === '__long_transfer__' ? 'Довгий перехід на Майдан Незалежності'
-                   : (['кінцева', 'вихід праворуч'].includes(g.dir.toLowerCase())) ? g.dir
-                   : `Попередня ${MetroApp.properCase(g.dir.replace(/^[Пп]опередня[\s\u00a0]+/, ''))}`;
+let dirLabel = g.dir === '__long_transfer__' ? 'Довгий перехід на Майдан Незалежності' : g.dir;
 
     const itemsHtml = g.items.map((item, index) => {
       const st = fbState.current[item.i];
@@ -489,7 +487,6 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
     if (!response.ok) throw new Error('HTTP ' + response.status);
 
     if (!background && sendBtn) {
-      MetroApp.hapticImpact?.('heavy');
       sendBtn.textContent = 'Зміни застосовано';
       sendBtn.style.color = 'var(--text-muted)';
       sendBtn.disabled = true;
@@ -499,7 +496,6 @@ MetroApp.triggerFeedbackSubmit = async function(background = false) {
     clearTimeout(timeoutId);
     console.warn('[KyivMetroGO] Formspree недоступний, зміни збережено локально:', error);
     if (!background && sendBtn) {
-      MetroApp.hapticImpact?.('heavy');
       sendBtn.textContent = 'Збережено локально';
       sendBtn.style.color = '';
       sendBtn.disabled = true;
@@ -553,7 +549,6 @@ function bindSteppersOptimized(container) {
   container.addEventListener('click', (event) => {
     const btn = event.target.closest('.fb-step');
     if (btn) {
-      MetroApp.hapticImpact?.('light');
       const id = btn.dataset.id;
       const el = document.getElementById(id);
       if (!el) return;
@@ -605,7 +600,6 @@ function bindSteppersOptimized(container) {
 
     const cancelExtraBtn = event.target.closest('.fb-cancel-extra-btn');
     if (cancelExtraBtn) {
-      MetroApp.hapticImpact?.('light');
       const idx = cancelExtraBtn.dataset.idx;
       document.getElementById(`fbW_ex${idx}`).textContent = '-';
       document.getElementById(`fbD_ex${idx}`).textContent = '-';
@@ -649,7 +643,6 @@ function bindSteppersOptimized(container) {
 
     const addExitBtn = event.target.closest('.fb-add-exit-btn');
     if (addExitBtn) {
-      MetroApp.hapticImpact?.('medium');
       const dir = addExitBtn.dataset.dir;
       const newIdx = Object.keys(fbState.current).length;
       
@@ -673,8 +666,7 @@ function bindSteppersOptimized(container) {
     }
 
     const addDoorsBtn = event.target.closest('.fb-add-doors-link');
-    if (addDoorsBtn) {
-      MetroApp.hapticImpact?.('light');
+    if (addDoorsBtn) addDoorsBtn.click();
       const idx = addDoorsBtn.dataset.idx;
       document.getElementById(`fbExtraWrap${idx}`).classList.remove('is-hidden');
       addDoorsBtn.parentNode.classList.add('is-hidden');
@@ -694,7 +686,6 @@ function bindSteppersOptimized(container) {
 
     const cancelThirdBtn = event.target.closest('.fb-cancel-third-btn');
     if (cancelThirdBtn) {
-      MetroApp.hapticImpact?.('light');
       const idx = cancelThirdBtn.dataset.idx;
       document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
       document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
@@ -851,7 +842,6 @@ function openFeedbackSheet(stationsData) {
       });
 
       sendBtn.addEventListener('click', () => { 
-        MetroApp.hapticImpact?.('medium');
         MetroApp.triggerFeedbackSubmit(false); 
       });
       document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);

@@ -107,29 +107,6 @@ export function openSettingsSheet() {
       }
     });
 
-    // ── Приховати інформаційні блоки ──
-    const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
-    if (hideInfoToggle) {
-      hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
-      hideInfoToggle.addEventListener('change', e =>
-        Storage.set(STORAGE_KEYS.HIDE_INFO_BLOCKS, e.target.checked)
-      );
-    }
-
-    // ── Кнопка «i» (Довідка Приховати блоки) ──
-    document.getElementById('settingsHideInfoBtn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      const hint = document.getElementById('settingsHideInfoHint');
-      const btn  = document.getElementById('settingsHideInfoBtn');
-      if (!hint) return;
-      const wasOpen = !hint.hidden;
-      closeAllSettingsHints();
-      if (!wasOpen) {
-        hint.hidden = false;
-        btn.classList.add('settings-info-btn-active');
-      }
-    });
-
     // ── Очистити Вибране ──
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {
       e.stopPropagation();
@@ -330,12 +307,10 @@ export function openSettingsSheet() {
     const s = document.getElementById('settingsStartFavToggle');
     const c = document.getElementById('settingsCheckinToggle');
     const l = document.getElementById('settingsLocalFeedbackToggle');
-    const h = document.getElementById('settingsHideInfoToggle');
     if (t) t.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
     if (s) s.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
     if (c) c.checked = isCheckinMode();
     if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
-    if (h) h.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
 
     // Стан кнопок «Очистити» — вимикаємо якщо нема чого чистити
     const hasFavs     = getExitFavs().length > 0 || getFavs().length > 0;

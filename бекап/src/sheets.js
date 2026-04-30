@@ -4,7 +4,7 @@ import { TIMING }                                         from './timing.js';
 import { pill, heartSvg }                                 from './ui.js';
 import { slugByName }                                     from './stations.js';
 import { getFavs, isFav, toggleFav, getExitFavs,
-         isExitFav, toggleExitFav, replaceExitFav, updateFavDock } from './favorites.js';
+         isExitFav, toggleExitFav, updateFavDock }        from './favorites.js';
 import { isCheckinMode, openCheckinSheet }                 from './checkin.js';
 
 // Анімація розсування для inline-елементів (підказки всередині шторки)
@@ -69,22 +69,26 @@ function formatDirLabel(raw) {
 }
 
 function formatLabel(raw) {
-  if (!raw) return '';
+  // 1. Для відображення залишаємо як є (з &nbsp; для візуалу)
   const text = raw.trim();
   
-  const searchStr = text.replace(/&nbsp;/g, ' ');
-  
-  const isTransfer = searchStr.toLowerCase().includes('пересадка') || searchStr.toLowerCase().includes('перехід');
+  // 2. Для перевірок "очищаємо" текст від &nbsp; і переводимо в нижній регістр
+  const cleanText = text.replace(/&nbsp;/g, ' ').toLowerCase();
+
+  // 3. Перевіряємо чищенням
+  const isTransfer = cleanText.includes('пересадка') || cleanText.includes('перехід');
 
   if (isTransfer) {
-    const targetSlug = slugByName(searchStr);
-    
+    // 4. Шукаємо ціль пересадки, використовуючи "чистий" текст
+    const targetSlug = slugByName(cleanText);
     if (targetSlug && state.stationsData?.[targetSlug]) {
       const color = MetroApp.LINE_COLOR[state.stationsData[targetSlug].line];
+      // 5. Виводимо оригінальний текст (з &nbsp;)
       return `<span class="transfer-label"><span class="transfer-line" style="background:${color}"></span><span class="transfer-text">${text}</span><span class="transfer-line" style="background:${color}"></span></span>`;
     }
   }
   
+  // Якщо це не пересадка, виводимо оригінальний текст
   return `<span class="exit-label-text">${text}</span>`;
 }
 
@@ -126,6 +130,7 @@ function renderPositions(positions, color, multiRow) {
   ).join('');
 }
 // ══ РЕНДЕР НАПРЯМКІВ ══
+// ⚠️ Khreshchatyk-спецкейс збережено!
 function renderDirections(s, color) {
   const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
 
@@ -203,44 +208,6 @@ function applyFavPillStyles(container, lineColor, isFaved) {
   });
 }
 
-// ══ INLINE ПІДТВЕРДЖЕННЯ ЗАМІНИ ВИХОДУ ══
-function showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoors, lineColor) {
-  // Закриваємо будь-який відкритий confirm
-  document.querySelectorAll('.exit-replace-confirm').forEach(el => {
-    el.classList.remove('exit-replace-open');
-    setTimeout(() => el.remove(), 280);
-  });
-
-  const confirmEl = document.createElement('div');
-  confirmEl.className = 'exit-replace-confirm';
-  confirmEl.innerHTML =
-    `<p class="exit-replace-text">Ви вже додали до&nbsp;<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span> інший вихід з&nbsp;цієї станції</p>` +
-    `<div class="exit-replace-btns">` +
-      `<button class="exit-replace-btn confirm-btn-save">Замінити</button>` +
-      `<button class="exit-replace-btn confirm-btn-discard">Скасувати</button>` +
-    `</div>`;
-  row.after(confirmEl);
-  requestAnimationFrame(() => confirmEl.classList.add('exit-replace-open'));
-
-  function closeConfirm() {
-    confirmEl.classList.remove('exit-replace-open');
-    setTimeout(() => confirmEl.remove(), 280);
-  }
-
-  confirmEl.querySelector('.confirm-btn-save').addEventListener('click', e => {
-    e.stopPropagation();
-    replaceExitFav(slug, dirLabel, existing.wagon, existing.doors, newWagon, newDoors);
-    closeConfirm();
-    // Оновлюємо вигляд пігулок через повний refresh
-    MetroApp.refreshCurrentStation?.();
-  });
-
-  confirmEl.querySelector('.confirm-btn-discard').addEventListener('click', e => {
-    e.stopPropagation();
-    closeConfirm();
-  });
-}
-
 // ══ СЛУХАЧІ ОБРАНИХ ВИХОДІВ ══
 function attachExitFavListeners(container, slug, lineColor) {
   container.querySelectorAll('.position-row').forEach(row => {
@@ -274,8 +241,6 @@ function attachExitFavListeners(container, slug, lineColor) {
 
       if (result.status === 'added') {
         function insertCheckinHint() {
-          if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
-          if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
           const sheetBodyEl = document.getElementById('sheetBody');
           if (!sheetBodyEl || document.getElementById('checkinHint')) return;
           const checkinHint = document.createElement('div');
@@ -284,7 +249,6 @@ function attachExitFavListeners(container, slug, lineColor) {
           // lineColor — параметр attachExitFavListeners (раніше помилково писали color)
           checkinHint.innerHTML = `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`;
           sheetBodyEl.insertBefore(checkinHint, sheetBodyEl.firstChild);
-          Storage.set(STORAGE_KEYS.CHECKIN_HINT_SEEN, 'true');
         }
 
         const onboardingHint = document.getElementById('onboardingHint');
@@ -297,8 +261,8 @@ function attachExitFavListeners(container, slug, lineColor) {
         }
       }
 
-      if (result.status === 'replace') {
-        showExitReplaceConfirm(row, result.existing, slug, dirLabel, pv.wagon, pv.doors, lineColor);
+      if (result.status === 'limit') {
+        MetroApp.showCustomConfirm?.('Ліміт: можна зберегти не більше 3 виходів для одного напрямку.', () => {});
         return;
       }
 
@@ -377,8 +341,7 @@ export function openStation(slug) {
     const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
     const fav   = isFav(slug);
 
-    const hideInfoBlocks = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
-    const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
+    const onboardingHtml = getExitFavs().length === 0
       ? `<div class="onboarding-hint" id="onboardingHint"><span class="hint-icon-wrap" style="color:${color}">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div>`
       : '';
 
@@ -512,45 +475,25 @@ export function openAboutSheet() {
     if (betaForm) {
       betaForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const usernameInput = betaForm.querySelector('.about-beta-input');
-        const username = (usernameInput?.value || '').trim();
-        if (!username) { usernameInput?.focus(); return; }
-        const email = username + '@gmail.com';
-
         const btn = betaForm.querySelector('.about-beta-btn');
         btn.disabled = true;
         btn.textContent = '...';
-
-        const resultEl = document.getElementById('aboutBetaResult');
-
-        function showResult(text, isError) {
-          if (resultEl) {
-            resultEl.textContent = text;
-            resultEl.classList.toggle('about-beta-result-error', !!isError);
-            requestAnimationFrame(() => resultEl.classList.add('about-beta-result-open'));
-          }
-        }
-
         try {
-          const fd = new FormData();
-          fd.append('email', email);
-          const res = await fetch('https://formspree.io/f/xpwzgknd', {
+          const res = await fetch('https://formspree.io/f/ТВІЙ_ID', {
             method: 'POST',
             headers: { 'Accept': 'application/json' },
-            body: fd,
+            body: new FormData(betaForm),
           });
           if (res.ok) {
-            showResult('Дякую. Напишемо!', false);
-            btn.textContent = '✓';
+            betaForm.hidden = true;
+            document.getElementById('aboutBetaSuccess').hidden = false;
           } else {
             btn.disabled = false;
-            btn.textContent = '→';
-            showResult('Помилка. Спробуйте ще раз.', true);
+            btn.textContent = 'Записатись';
           }
         } catch {
           btn.disabled = false;
-          btn.textContent = '→';
-          showResult('Немає зʼєднання.', true);
+          btn.textContent = 'Записатись';
         }
       });
     }

@@ -124,6 +124,21 @@ MetroApp.showCustomConfirm = function(
   if (cancelBtn) cancelBtn.addEventListener('click', () => animateClose(onCancel));
   overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
 };
+// ══ ТАКТИЛЬНИЙ ВІДГУК (HAPTICS) ══
+MetroApp.hapticImpact = async function(style = 'light') {
+  // 1. Спроба використати Capacitor Haptics (для AAB)
+  if (window.Capacitor?.Plugins?.Haptics) {
+    try {
+      await window.Capacitor.Plugins.Haptics.impact({ style: style.toUpperCase() });
+      return;
+    } catch (e) { /* Плагін недоступний, йдемо далі */ }
+  } 
+  // 2. Фолбек для звичайного браузера / PWA
+  if (navigator.vibrate) {
+    // 10ms - легкий клік (light), 20ms - відчутний (heavy)
+    navigator.vibrate(style === 'heavy' ? 20 : 10);
+  }
+};
 
 // ══ НАЛАШТУВАННЯ СИСТЕМНИХ ПАНЕЛЕЙ (CAPACITOR) ══
 MetroApp.configureEdgeToEdge = async function() {

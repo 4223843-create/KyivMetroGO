@@ -99,6 +99,7 @@ export function hydrateStations(data) {
 
   if (MetroApp.applyLocalEdits) MetroApp.applyLocalEdits(state.stationsData);
   if (MetroApp.applyExitLabels) MetroApp.applyExitLabels(state.stationsData);
+  MetroApp.currentStationsData = state.stationsData;
   return state.stationsData;
 }
 
