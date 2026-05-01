@@ -116,18 +116,13 @@ body#map-page .map-viewport {
 }
 
 /* Текст пошти робимо ТЕМНИМ (--text у світлій темі — чорний) */
-[data-theme="light"] .about-input-group .about-beta-input,
-[data-theme="light"] .about-input-group .about-beta-btn {
+[data-theme="light"] .about-input-group .about-beta-input {
   color: var(--text) !important;
 }
 
 [data-theme="light"] .about-input-group .about-beta-input::placeholder {
   color: var(--text);
 }
-[data-theme="light"] .about-gmail-domain {
-  color: var(--text);
-}
-
 
 /* Mono залишається ТЕМНИМ (--text-muted у світлій темі — це темно-сірий) */
 [data-theme="light"] .about-btn-mono-fixed {
@@ -631,7 +626,7 @@ color: var(--text-muted);
   cursor: pointer;
   border-left: 3px solid;
   min-height: 54px;
-  min-width: 0; /* ДОДАНО: дозволяє кнопці бути меншою за свій вміст */
+  min-width: 0;
 }
 
 
@@ -1717,7 +1712,7 @@ z-index: var(--z-dropdown-active);
 .exit-fav-toast-text {
   font-size: var(--fs-micro);
   color: var(--text-muted);
-  text-align: right;
+  text-align: right !important;
   line-height: 1.3;
   white-space: nowrap;
 }
@@ -1763,27 +1758,21 @@ z-index: var(--z-dropdown-active);
 }
 .exit-replace-btn {
   flex: 1;
-  height: 36px;
-  border-radius: 10px;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  background: var(--bg-pill);
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: inherit;
-  white-space: nowrap;
+  height: 30px;
   border: none;
+  border-radius: 8px;
+  font-size: var(--fs-xs);
+  font-family: inherit;
+  cursor: pointer;
 }
 .exit-replace-btn.confirm-btn-save {
-  border-left: 3px solid var(--line-green);
-  border-right: 3px solid var(--line-green);
+  background: var(--line-green);
+  color: #fff;
 }
 .exit-replace-btn.confirm-btn-discard {
-  border-left: 3px solid var(--line-red);
-  border-right: 3px solid var(--line-red);
+  background: var(--bg-main);
+  color: var(--text-muted);
+  border: 0.5px solid var(--border);
 }
 .exit-replace-btn:active { opacity: 0.75; }
 
@@ -2298,9 +2287,9 @@ svg [role="button"]:focus:not(:focus-visible) {
   text-overflow: ellipsis;
   text-align: center;
 }
-
+/* Назва станції у шторці редагування — вище, щоб відступ від «Правки застосуються» був більшим */
 #fbStationTitle {
-  top: 20.5px;
+  top: 14px;
 }
 
 #sheetBody {
@@ -2671,8 +2660,9 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   line-height: 1.4;
 }
 .about-beta-form {
-  display: flex;
-  gap: 8px;
+  width: 100%;
+  max-width: 140px; /* ⬅️ Звужуємо форму */
+  margin: 0 auto;   /* ⬅️ Ставимо рівно по центру колонки */
 }
 
 
@@ -2682,40 +2672,27 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 .about-beta-input {
   flex: 1;
-  height: 34px;
-  background: var(--bg-main);
-  border: 0.5px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 12px;
-  font-size: 15px;
-  color: var(--text-main);
-  font-family: inherit;
-  outline: none;
-  min-width: 0;
-}
-.about-beta-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.5;
-}
-.about-beta-input:focus {
-  outline: none;
-}
-
-
-.about-beta-btn {
-  background: var(--text-muted);
-  color: #1c1c1e;
+  background: transparent;
   border: none;
-  border-radius: 10px;
-  width: 52px;
-  height: 34px;
-  font-size: 16px;
-  line-height: 1;
-  font-family: inherit;
-  cursor: pointer;
-  flex-shrink: 0;
+  padding: 0 2px 0 8px;
+  font-size: 11px;
+  min-width: 0;
+  text-align: right;
+  outline: none;
+  color: var(--bg-pill); 
 }
-.about-beta-btn:active { opacity: 0.8; }
+
+/* Знищуємо стандартне синє світіння браузера при кліку */
+.about-beta-input:focus,
+.about-input-group:focus-within {
+  outline: none;
+  box-shadow: none;
+  -webkit-box-shadow: none;
+}
+
+.about-input-group {
+  -webkit-tap-highlight-color: transparent; /* Прибирає сірий/синій клік на мобільних */
+}
 
 .about-donate-label {
   font-size: 14px;
@@ -2762,12 +2739,15 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 .about-support-col {
-  flex: 1;
+  flex: 1 1 0%;     /* ⬅️ КЛЮЧОВЕ: жорстко ділимо простір порівну */
+  max-width: 50%;   /* ⬅️ Гарантія, що ніхто не вилізе за свою половину */
+  min-width: 0;     /* ⬅️ Дозволяємо звужувати контент */
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 0 10px;
+  box-sizing: border-box;
 }
 
 .about-support-platform-icon {
@@ -2789,11 +2769,11 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 
-/* ══ ЛІВА КОЛОНКА: ПОШТА (Завжди світла) ══ */
+/* ══ ЛІВА КОЛОНКА: ПОШТА (В один рядок) ══ */
 .about-input-group {
   display: flex;
+  align-items: center;
   width: 100%;
-  /* У темній темі --text-muted — це найсвітліший колір (#ababab) */
   background: var(--text-muted); 
   border: none;
   border-radius: 10px;
@@ -2803,15 +2783,14 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 .about-input-group .about-beta-input {
   flex: 1;
-  background: transparent !important;
+  background: transparent;
   border: none !important;
-  padding: 0 10px;
-  font-size: 14px;
-  width: 100%;
-  text-align: left !important;
+  padding: 0 2px 0 8px; 
+  font-size: 11px; 
+  min-width: 0;
+  text-align: right; 
   outline: none;
-  /* У темній темі текст робимо темним кольором фону карток (#1c1c1e) */
-  color: var(--bg-pill) !important; 
+  color: var(--bg-pill); 
 }
 
 .about-input-group .about-beta-input::placeholder {
@@ -2819,67 +2798,24 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   opacity: 0.5;
 }
 
-.about-input-group .about-beta-btn {
-  width: 26px;
-  height: 34px;
-  background: transparent;
-  color: var(--bg-pill) !important; 
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  font-size: 16px;
-  padding: 0;
-}
-.about-input-group .about-beta-btn:active { opacity: 0.75; }
-
-/* ══ Gmail-поле з суфіксом ══ */
-.about-gmail-wrap {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-}
 .about-gmail-domain {
-  font-size: 12px;
+  font-size: 11px; /* Зменшений шрифт */
   color: var(--bg-pill);
   opacity: 0.65;
   white-space: nowrap;
-  padding-right: 2px;
+  padding-right: 8px;
   flex-shrink: 0;
   pointer-events: none;
   user-select: none;
 }
 
-
-/* ══ Результат форми (розкривний блок) ══ */
-.about-beta-result {
-  font-size: 13px;
-  color: var(--line-green);
-  text-align: center;
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease, padding 0.22s;
-  padding: 0 4px;
-}
-.about-beta-result.about-beta-result-open {
-  max-height: 48px;
-  opacity: 1;
-  padding: 6px 4px 0;
-}
-.about-beta-result.about-beta-result-error {
-  color: var(--line-red);
-}
-
-/* ══ ПРАВА КОЛОНКА: MONO (Завжди темна) ══ */
+/* 2. Кнопка Mono */
 .about-btn-mono-fixed {
-  width: 100%;
-  height: 34px;
+  width: 100% !important;
+  max-width: 140px !important; /* ⬅️ Такий самий розмір, як у пошти */
+  margin: 0 auto !important;   /* ⬅️ Ставимо рівно по центру колонки */
+  height: 36px;
   font-size: var(--fs-sm);
-  /* У темній темі кнопка бере найтемніший колір карток */
   background: var(--bg-pill) !important; 
   color: var(--text-muted) !important; 
   border: 1px solid var(--border);
@@ -2890,7 +2826,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   border-radius: 10px;
   font-weight: var(--fw-medium);
 }
-
 .about-btn-mono-fixed:active {
   opacity: 0.7;
 }
@@ -2939,6 +2874,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   display: flex;
   align-items: center;
   justify-content: center;
+  white-space: normal;
 }
 
 .about-form-stacked {
@@ -2967,4 +2903,203 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   height: 18px; /* трохи більше за розмір тексту (13-15px) */
   background: var(--border);
   flex-shrink: 0;
+}
+[hidden] {
+  display: none;
+}
+
+/* Робимо колонку відносною, щоб вікно "прив'язалось" до неї */
+.about-support-col {
+  position: relative; 
+}
+
+/* Дизайн спливаючого вікна (Toast) */
+.about-beta-result {
+  position: absolute;
+  bottom: 0px; 
+  left: 50%;
+  transform: translate(-50%, 0px); /* Сховано трохи вище */
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 100;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Анімація появи: вікно м'яко виїжджає вниз під поле вводу */
+.about-beta-result.about-beta-result-open {
+  opacity: 1;
+  transform: translate(-50%, 32px); 
+}
+
+/* Кольори тексту залежно від статусу */
+.about-beta-result-error {
+  color: var(--line-red);
+}
+
+.about-beta-result-success {
+  color: var(--line-green);
+}
+
+/* Червоне підсвічування контуру форми при помилці */
+.about-input-group.has-error {
+  box-shadow: 0 0 0 1px var(--line-red) inset, 0 0 6px rgba(200, 82, 58, 0.3) !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   РЕЖИМ РОЗРОБНИКА — DEV MODE
+   ══════════════════════════════════════════════════ */
+
+/* ── Кнопки в ряд (Dev Mode) ── */
+.dev-check-btn,
+.dev-note-btn,
+.dev-photo-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; /* Збільшили контейнери, щоб іконкам було не тісно */
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pin-bg, #8e8e93);
+  -webkit-tap-highlight-color: transparent;
+  z-index: 2;
+}
+
+/* Відступи кнопок одна від одної */
+.dev-check-btn { left: 4px; }
+.dev-note-btn  { left: 32px; }
+.dev-photo-btn { left: 60px; }
+
+/* Робимо SVG блочними і ЗАБОРОНЯЄМО браузеру їх стискати (flex-shrink: 0) */
+.dev-check-btn svg,
+.dev-note-btn svg,
+.dev-photo-btn svg {
+  display: block !important;
+  flex-shrink: 0 !important; 
+}
+
+/* ── Індивідуальне калібрування кожної іконки ── */
+
+/* 1. Галочка: робимо фізично більшою, бо в неї товсті контури */
+.dev-check-btn svg {
+  width: 26px !important;
+  height: 26px !important;
+  transform: translateY(1px) !important; /* Опускаємо на 1px */
+}
+
+/* 2. Нотатка: квадратна і масивна, робимо її найменшою */
+.dev-note-btn svg {
+  width: 17px !important;
+  height: 17px !important;
+  transform: translateY(0) !important;
+}
+
+/* 3. Фото: прямокутна, середньої ваги */
+.dev-photo-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+  transform: translateY(0) !important;
+}
+
+/* ── Повноекранне фото ── */
+.dev-photo-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  touch-action: pinch-zoom;
+}
+.dev-photo-overlay.open { display: flex; }
+.dev-photo-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* ── DEV MODE: Випадаюча панель (Нотатки / Фото) ── */
+.dev-note-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease;
+  background: var(--bg-sheet);
+  border-radius: 10px;
+  margin: 0;
+  padding: 0 12px;
+}
+.dev-note-panel.panel-open {
+  max-height: 350px;
+  opacity: 1;
+  margin: 6px 0 2px;
+  padding: 10px 12px;
+}
+
+.dev-note-textarea {
+  width: 100%;
+  height: 60px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  resize: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.dev-note-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dev-note-actions button {
+  flex: 1;
+  height: 34px; /* Зробив трохи вищими для ідеального вигляду */
+  border-radius: 8px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  background: var(--bg-pill); /* Додаємо фірмовий фон кнопок */
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+
+.dev-note-actions button:active {
+  opacity: 0.6;
+}
+
+/* Примусово повертаємо кольорові бортики */
+.dev-note-actions button.confirm-btn-save {
+  border-left: 3px solid var(--line-green);
+  border-right: 3px solid var(--line-green);
+}
+
+.dev-note-actions button.confirm-btn-discard {
+  border-left: 3px solid var(--line-red);
+  border-right: 3px solid var(--line-red);
 }

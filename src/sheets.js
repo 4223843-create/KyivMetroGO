@@ -6,6 +6,7 @@ import { slugByName }                                     from './stations.js';
 import { getFavs, isFav, toggleFav, getExitFavs,
          isExitFav, toggleExitFav, replaceExitFav, updateFavDock } from './favorites.js';
 import { isCheckinMode, openCheckinSheet }                 from './checkin.js';
+import { attachDevModeUI, setupDevModeTapCounter }         from './devmode.js';
 
 // Анімація розсування для inline-елементів (підказки всередині шторки)
 MetroApp.dismissHintWithDoors = function(el, onDone) {
@@ -69,22 +70,26 @@ function formatDirLabel(raw) {
 }
 
 function formatLabel(raw) {
-  if (!raw) return '';
+  // 1. Для відображення залишаємо як є (з &nbsp; для візуалу)
   const text = raw.trim();
   
-  const searchStr = text.replace(/&nbsp;/g, ' ');
-  
-  const isTransfer = searchStr.toLowerCase().includes('пересадка') || searchStr.toLowerCase().includes('перехід');
+  // 2. Для перевірок "очищаємо" текст від &nbsp; і переводимо в нижній регістр
+  const cleanText = text.replace(/&nbsp;/g, ' ').toLowerCase();
+
+  // 3. Перевіряємо чищенням
+  const isTransfer = cleanText.includes('пересадка') || cleanText.includes('перехід');
 
   if (isTransfer) {
-    const targetSlug = slugByName(searchStr);
-    
+    // 4. Шукаємо ціль пересадки, використовуючи "чистий" текст
+    const targetSlug = slugByName(cleanText);
     if (targetSlug && state.stationsData?.[targetSlug]) {
       const color = MetroApp.LINE_COLOR[state.stationsData[targetSlug].line];
+      // 5. Виводимо оригінальний текст (з &nbsp;)
       return `<span class="transfer-label"><span class="transfer-line" style="background:${color}"></span><span class="transfer-text">${text}</span><span class="transfer-line" style="background:${color}"></span></span>`;
     }
   }
   
+  // Якщо це не пересадка, виводимо оригінальний текст
   return `<span class="exit-label-text">${text}</span>`;
 }
 
@@ -126,6 +131,7 @@ function renderPositions(positions, color, multiRow) {
   ).join('');
 }
 // ══ РЕНДЕР НАПРЯМКІВ ══
+// ⚠️ Khreshchatyk-спецкейс збережено!
 function renderDirections(s, color) {
   const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
 
@@ -214,7 +220,7 @@ function showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoor
   const confirmEl = document.createElement('div');
   confirmEl.className = 'exit-replace-confirm';
   confirmEl.innerHTML =
-    `<p class="exit-replace-text">Ви вже додали до&nbsp;<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span> інший вихід з&nbsp;цієї станції</p>` +
+    `<p class="exit-replace-text">Ви вже додали до&nbsp;<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span> інший вихід з&nbsp;цієї станції. Замінити на цей?</p>` +
     `<div class="exit-replace-btns">` +
       `<button class="exit-replace-btn confirm-btn-save">Замінити</button>` +
       `<button class="exit-replace-btn confirm-btn-discard">Скасувати</button>` +
@@ -259,7 +265,7 @@ function attachExitFavListeners(container, slug, lineColor) {
       toast.className = 'exit-fav-toast';
       toast.setAttribute('role', 'status');
       toast.setAttribute('aria-live', 'polite');
-      toast.innerHTML = '<span class="exit-fav-toast-text">Вихід&nbsp;додано<br>до&nbsp;вибраного</span>';
+      toast.innerHTML = '<span class="exit-fav-toast-text">вихід&nbsp;додано<br>до&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span></span>';
       row.prepend(toast);
       requestAnimationFrame(() => toast.classList.add('fav-note-open'));
       setTimeout(() => { toast.classList.remove('fav-note-open'); setTimeout(() => toast.remove(), TIMING.TOAST_FADE); }, TIMING.TOAST_SHOW);
@@ -437,6 +443,7 @@ export function openStation(slug) {
     }
 
     attachExitFavListeners(sheetBody, slug, color);
+    attachDevModeUI(sheetBody, slug);
     sheet.querySelector('.row-checkin-btn')?.remove();
     MetroApp.attachCheckinButtons?.(sheet, slug, color);
   }
@@ -483,6 +490,7 @@ MetroApp.refreshCurrentStation = function() {
   });
 
   attachExitFavListeners(sheetBody, state.currentStationSlug, color);
+  attachDevModeUI(sheetBody, state.currentStationSlug);
   sheet.querySelector('.row-checkin-btn')?.remove();
   MetroApp.attachCheckinButtons?.(sheet, state.currentStationSlug, color);
   sheetBody.scrollTop = prevScrollTop;
@@ -508,52 +516,12 @@ export function openAboutSheet() {
       });
     });
 
-    const betaForm = document.getElementById('aboutBetaForm');
-    if (betaForm) {
-      betaForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const usernameInput = betaForm.querySelector('.about-beta-input');
-        const username = (usernameInput?.value || '').trim();
-        if (!username) { usernameInput?.focus(); return; }
-        const email = username + '@gmail.com';
+    // ── Лічильник 5 тапів для активації режиму розробника ──
+    setupDevModeTapCounter(aboutSheet);
 
-        const btn = betaForm.querySelector('.about-beta-btn');
-        btn.disabled = true;
-        btn.textContent = '...';
 
-        const resultEl = document.getElementById('aboutBetaResult');
 
-        function showResult(text, isError) {
-          if (resultEl) {
-            resultEl.textContent = text;
-            resultEl.classList.toggle('about-beta-result-error', !!isError);
-            requestAnimationFrame(() => resultEl.classList.add('about-beta-result-open'));
-          }
-        }
 
-        try {
-          const fd = new FormData();
-          fd.append('email', email);
-          const res = await fetch('https://formspree.io/f/xpwzgknd', {
-            method: 'POST',
-            headers: { 'Accept': 'application/json' },
-            body: fd,
-          });
-          if (res.ok) {
-            showResult('Дякую. Напишемо!', false);
-            btn.textContent = '✓';
-          } else {
-            btn.disabled = false;
-            btn.textContent = '→';
-            showResult('Помилка. Спробуйте ще раз.', true);
-          }
-        } catch {
-          btn.disabled = false;
-          btn.textContent = '→';
-          showResult('Немає зʼєднання.', true);
-        }
-      });
-    }
   } 
 
 
@@ -561,13 +529,8 @@ export function openAboutSheet() {
   try {
     const idx = parseInt(localStorage.getItem('betaBtnColorIdx') || '0') % 3;
     localStorage.setItem('betaBtnColorIdx', (idx + 1) % 3);
-    const betaBtn = document.querySelector('#aboutSheet .about-beta-btn');
-    if (betaBtn && !betaBtn.disabled) betaBtn.style.background = '';
-        const betaInput = document.querySelector('#aboutSheet .about-beta-input');
+    const betaInput = document.querySelector('#aboutSheet .about-beta-input');
     if (betaInput) betaInput.style.border = `1px solid ${BETA_COLORS[idx]}`;
-
-
-
   } catch (e) {}
 
   MetroApp.pushSheetHistory(); // <--- ДОДАНО  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));

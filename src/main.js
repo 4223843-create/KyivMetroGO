@@ -155,3 +155,97 @@ if (menuBtn && dropMenu) {
 
 MetroApp.openStation = openStation;
 MetroApp.closeAllSheets = closeAllSheets;
+
+// ══ ЛОГІКА ФОРМИ "ПРО ДОДАТОК" ══
+
+// Вкажіть тут ВАШ ПРАВИЛЬНИЙ URL Formspree
+const FORMSPREE_URL_BETA = 'https://formspree.io/f/mgopobnd'; // Взяв з feedback.js
+
+document.addEventListener('input', (e) => {
+  if (e.target.classList.contains('about-beta-input')) {
+    const group = e.target.closest('.about-input-group');
+    if (group) group.classList.remove('has-error');
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target;
+  
+  if (form.id === 'aboutBetaForm') {
+    e.preventDefault(); 
+    
+    const input = form.querySelector('.about-beta-input');
+    const group = form.querySelector('.about-input-group');
+    const resultMsg = form.parentElement.querySelector('.about-beta-result');
+    
+    if (!input) return;
+
+    let val = input.value.trim().toLowerCase();
+    
+    if (val.includes('@')) {
+      val = val.split('@')[0];
+    }
+    
+    // ВАША РЕГУЛЯРКА (я повернув її, вона правильна)
+    const isValid = /^[a-z0-9._\-]{6,30}$/.test(val);
+    
+    if (!isValid) {
+      if (group) group.classList.add('has-error');
+      if (resultMsg) {
+        resultMsg.textContent = 'Схоже, адреса містить помилку';
+        resultMsg.className = 'about-beta-result about-beta-result-error about-beta-result-open';
+        setTimeout(() => {
+          resultMsg.classList.remove('about-beta-result-open');
+        }, 4000);
+      }
+      return; 
+    }
+    
+    // --- УСПІХ ВАЛІДАЦІЇ, ПОЧИНАЄМО ВІДПРАВКУ ---
+    if (group) group.classList.remove('has-error');
+    const email = val + '@gmail.com';
+    
+    if (resultMsg) {
+        resultMsg.textContent = 'Відправляємо...';
+        resultMsg.className = 'about-beta-result about-beta-result-open'; // Без кольору поки що
+    }
+
+    try {
+        const response = await fetch(FORMSPREE_URL_BETA, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email: email, subject: 'Заявка на Android Beta' })
+        });
+
+        if (response.ok) {
+            console.log('Успішно відправлено на Formspree:', email);
+            if (resultMsg) {
+                resultMsg.textContent = 'Дякую. Напишемо!';
+                resultMsg.className = 'about-beta-result about-beta-result-success about-beta-result-open';
+                input.value = ''; 
+                input.blur();     
+                setTimeout(() => { 
+                    resultMsg.classList.remove('about-beta-result-open'); 
+                }, 3000);
+            }
+        } else {
+             console.error('Помилка сервера Formspree:', response.status);
+             throw new Error('Server error');
+        }
+
+    } catch (error) {
+         console.error('Помилка мережі при відправці:', error);
+         if (group) group.classList.add('has-error');
+         if (resultMsg) {
+            resultMsg.textContent = 'Помилка з\'єднання. Спробуйте пізніше.';
+            resultMsg.className = 'about-beta-result about-beta-result-error about-beta-result-open';
+            setTimeout(() => {
+                resultMsg.classList.remove('about-beta-result-open');
+            }, 3000);
+        }
+    }
+  }
+});

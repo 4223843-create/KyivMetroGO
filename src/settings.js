@@ -3,6 +3,7 @@ import { applyTheme }           from './theme.js';
 import { getFavs, getExitFavs, saveFavs, updateFavDock } from './favorites.js';
 import { isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache } from './checkin.js';
 import { state }                from './state.js';
+import { isDevMode, getDevLog } from './devmode.js';
 
 // ⚠️ Логіка тумблерів (pointer-events + клік по всій картці) — збережено без змін!
 export function openSettingsSheet() {
@@ -142,7 +143,7 @@ export function openSettingsSheet() {
           saveFavs([]);
           Storage.remove(STORAGE_KEYS.EXIT_FAVS);
           updateFavDock();
-          document.getElementById('settingsClose').click();
+          setTimeout(() => document.getElementById('settingsClose').click(), 180);
         },
         null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
       );
@@ -158,69 +159,30 @@ export function openSettingsSheet() {
       MetroApp.showCustomConfirm('Очистити історію check-in?',
         () => {
           Storage.remove(STORAGE_KEYS.CHECKINS);
-          invalidateCheckinsCache(); // ← скидаємо кеш явно, щоб наступний getCheckins() зчитав свіжі дані
+          invalidateCheckinsCache();
           updateCheckinDock();
-          document.getElementById('settingsClose').click();
-        },
-        null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
-
-      );
-    });
-
-    // ── Очистити Check-in ──
-    document.getElementById('settingsClearCheckin')?.addEventListener('click', e => {
-      e.stopPropagation();
-      if (e.currentTarget.disabled) {
-        MetroApp.showCustomConfirm('Список check-in порожній', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
-        return;
-      }
-      MetroApp.showCustomConfirm('Очистити історію check-in?',
-        () => {
-          Storage.remove(STORAGE_KEYS.CHECKINS);
-          invalidateCheckinsCache(); // ← скидаємо кеш явно, щоб наступний getCheckins() зчитав свіжі дані
-          updateCheckinDock();
-          document.getElementById('settingsClose').click();
+          setTimeout(() => document.getElementById('settingsClose').click(), 180);
         },
         null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
       );
     });
 
-    // ── Очистити локальні зміни (ВСТАВЛЯЙ СЮДИ) ──
+    // ── Очистити локальні зміни ──
     document.getElementById('settingsClearLocalEdits')?.addEventListener('click', e => {
       e.stopPropagation();
       if (e.currentTarget.disabled) return;
-      
       MetroApp.showCustomConfirm('Видалити всі локальні зміни (назви виходів, закриті двері)?',
         () => {
           Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
           Storage.remove(STORAGE_KEYS.EXIT_LABELS);
-          document.getElementById('settingsClose').click();
-          setTimeout(() => window.location.reload(), 300);
+          setTimeout(() => {
+            document.getElementById('settingsClose').click();
+            setTimeout(() => window.location.reload(), 300);
+          }, 180);
         },
         null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
       );
     });
-
-    // ==========================================
-    // ── Очистити локальні зміни (ВСТАВИТИ ЦЕ) ──
-    // ==========================================
-    document.getElementById('settingsClearLocalEdits')?.addEventListener('click', e => {
-      e.stopPropagation();
-      
-      MetroApp.showCustomConfirm('Видалити всі локальні зміни (назви виходів, закриті двері)?',
-        () => {
-          Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
-          Storage.remove(STORAGE_KEYS.EXIT_LABELS);
-          
-          // Закриваємо налаштування і перезавантажуємо сторінку, 
-          // щоб карта і всі станції перемалювалися з чистими даними
-          document.getElementById('settingsClose').click();
-          setTimeout(() => window.location.reload(), 300);
-        },
-        null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-save'
-      );
-    });
-    // ==========================================
 
     settingsSheet.querySelectorAll('.settings-card').forEach(card => {
       card.addEventListener('click', e => {
@@ -262,6 +224,26 @@ export function openSettingsSheet() {
           const key = localStorage.key(i);
           allData[key] = localStorage.getItem(key);
         }
+
+        // Якщо активний режим розробника — додаємо лог змін другим блоком
+        if (isDevMode()) {
+          const log = getDevLog();
+          if (log.length > 0) {
+            allData['═══════════════════════════════════════════════════════════'] =
+              '══ ЛОГ ЗМІН — РЕЖИМ РОЗРОБНИКА ══';
+            allData['_dev_change_log'] = log.map(e => ({
+              час:     new Date(e.ts).toLocaleString('uk-UA'),
+              станція: e.station,
+              slug:    e.slug,
+              напрям:  e.dir   || '—',
+              вихід:   e.exit  || '—',
+              поле:    e.field || '—',
+              було:    e.from  ?? '—',
+              стало:   e.to    ?? '—',
+            }));
+          }
+        }
+
         const dataStr = JSON.stringify(allData, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
