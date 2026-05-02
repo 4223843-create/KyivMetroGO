@@ -1,4 +1,5 @@
 // ══ КОНСТАНТИ МЕТРОАПП ══
+window.MetroApp = window.MetroApp || {};
 MetroApp.LINE_COLOR = { red: '#c8523a', blue: '#5b9bd5', green: '#5aaa6a' };
 
 MetroApp.FAV_DISPLAY_NAMES = {
@@ -32,3 +33,9 @@ export const state = {
 // Slug з URL ?station=… (зчитується одноразово при старті)
 export const startupSlug = new URLSearchParams(window.location.search).get('station');
 if (startupSlug) window.history.replaceState({}, document.title, window.location.pathname);
+// Станції, на яких конструктивно закладені виходи, що можуть бути відкриті в майбутньому
+MetroApp.STATIONS_WITH_POTENTIAL_EXITS = new Set([
+  'R.Zhytomyrska', 
+  'G.Osokorky', 
+  'G.Chervonyi_khutir'
+]);

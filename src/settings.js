@@ -171,10 +171,16 @@ export function openSettingsSheet() {
     document.getElementById('settingsClearLocalEdits')?.addEventListener('click', e => {
       e.stopPropagation();
       if (e.currentTarget.disabled) return;
-      MetroApp.showCustomConfirm('Видалити всі локальні зміни (назви виходів, закриті двері)?',
+      MetroApp.showCustomConfirm('Очистити всі дані користувача (Вибране, Check-in, назви виходів)? Логи та перевірки розробника залишаться.',
         () => {
+          // Чистимо лише користувацькі ключі
+          Storage.remove(STORAGE_KEYS.FAVS);
+          Storage.remove(STORAGE_KEYS.EXIT_FAVS);
+          Storage.remove(STORAGE_KEYS.CHECKINS);
           Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
           Storage.remove(STORAGE_KEYS.EXIT_LABELS);
+          Storage.remove(STORAGE_KEYS.FAV_ROWS_ORDER);
+          
           setTimeout(() => {
             document.getElementById('settingsClose').click();
             setTimeout(() => window.location.reload(), 300);
@@ -231,15 +237,15 @@ export function openSettingsSheet() {
           if (log.length > 0) {
             allData['═══════════════════════════════════════════════════════════'] =
               '══ ЛОГ ЗМІН — РЕЖИМ РОЗРОБНИКА ══';
-            allData['_dev_change_log'] = log.map(e => ({
-              час:     new Date(e.ts).toLocaleString('uk-UA'),
-              станція: e.station,
-              slug:    e.slug,
-              напрям:  e.dir   || '—',
-              вихід:   e.exit  || '—',
-              поле:    e.field || '—',
-              було:    e.from  ?? '—',
-              стало:   e.to    ?? '—',
+            allData['_dev_change_log'] = log.map(entry => ({
+              час:     new Date(entry.ts).toLocaleString('uk-UA'),
+              станція: entry.station,
+              slug:    entry.slug,
+              напрям:  entry.dir   || '—',
+              вихід:   entry.exit  || '—',
+              поле:    entry.field || '—',
+              було:    entry.from  ?? '—',
+              стало:   entry.to    ?? '—',
             }));
           }
         }

@@ -162,30 +162,36 @@ const totalExitsAll = state.stationsData
         : 0;
       const stationCount = Object.keys(byStation).length;
 
-      // ── НОВА РОЗУМНА ЛОГІКА ВІДСОТКІВ ──
+// ── НОВА РОЗУМНА ЛОГІКА ВІДСОТКІВ ──
       const rawPercent = totalExitsAll > 0 ? (uniqueExits / totalExitsAll) * 100 : 0;
-      let coverage = "0";
+      let coverageText = "0";
+      let coverageWidth = 0;
 
       if (totalExitsAll > 0 && uniqueExits > 0) {
         if (uniqueExits === totalExitsAll) {
-          coverage = "100";
+          coverageText = "100";
+          coverageWidth = 100;
         } else if (rawPercent < 1) {
-          coverage = "&lt;1"; // Використовуємо &lt; замість < для коректного HTML
+          coverageText = "&lt;1";
+          coverageWidth = 1; // 1% візуально гарантує наявність мінімальної смужки
         } else if (rawPercent > 99) {
-          coverage = "&gt;99"; // Використовуємо &gt; замість >
+          coverageText = "&gt;99";
+          coverageWidth = 99;
         } else {
-          coverage = Math.floor(rawPercent).toString();
+          coverageText = Math.floor(rawPercent).toString();
+          coverageWidth = Math.floor(rawPercent);
         }
       }
+      
       bodyHtml += `<div class="ci-stats-bar">
         <div class="ci-stat"><span class="ci-stat-num">${stationCount}</span><span class="ci-stat-lbl">станцій</span></div>
         <div class="ci-stat-sep"></div>
         <div class="ci-stat"><span class="ci-stat-num">${uniqueExits}</span><span class="ci-stat-lbl">виходів</span></div>
         <div class="ci-stat-sep"></div>
-        <div class="ci-stat"><span class="ci-stat-num">${coverage}%</span><span class="ci-stat-lbl">охоплення</span></div>
+        <div class="ci-stat"><span class="ci-stat-num">${coverageText}%</span><span class="ci-stat-lbl">охоплення</span></div>
       </div>
-      <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverage}%"></div></div>`;
-
+      <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverageWidth}%"></div></div>`;
+      
       // ── Сортування ──
       bodyHtml += `<div class="ci-sort-bar">
         <button class="ci-sort-btn${ciSortMode === 'date'  ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>

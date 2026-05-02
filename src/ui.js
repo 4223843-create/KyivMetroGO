@@ -142,9 +142,7 @@ MetroApp.configureEdgeToEdge = async function() {
   }
 };
 
-// ══ КЕРУВАННЯ ІСТОРІЄЮ (ДЛЯ СИСТЕМНОЇ КНОПКИ "НАЗАД") ══
 MetroApp.pushSheetHistory = function() {
-  // Додаємо запис в історію тільки якщо його там ще немає
   if (!history.state?.isSheetOpen) {
     history.pushState({ isSheetOpen: true }, '');
   }

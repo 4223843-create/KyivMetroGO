@@ -17,6 +17,7 @@ export const STORAGE_KEYS = {
   DEV_LOG:      'metro_dev_log',
   DEV_VERIFIED: 'metro_dev_verified',
   DEV_NOTES:    'metro_dev_notes',
+  LOGO_STATE:   'metro_logo_state',
 };
 
 // Внутрішній кеш для синхронного доступу

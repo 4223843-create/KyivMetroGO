@@ -17,27 +17,38 @@ const PhotoDB = {
   dbName: 'MetroPhotoDB',
   storeName: 'photos',
   async open() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, 1);
       request.onupgradeneeded = () => request.result.createObjectStore(this.storeName);
       request.onsuccess = () => resolve(request.result);
+      request.onerror   = () => reject(request.error);
     });
   },
   async get(id) {
     const db = await this.open();
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const req = db.transaction(this.storeName).objectStore(this.storeName).get(id);
       req.onsuccess = () => resolve(req.result);
+      req.onerror   = () => reject(req.error);
     });
   },
   async set(id, data) {
     const db = await this.open();
-    const tx = db.transaction(this.storeName, 'readwrite');
-    tx.objectStore(this.storeName).put(data, id);
+    return new Promise((resolve, reject) => {
+      const tx  = db.transaction(this.storeName, 'readwrite');
+      const req = tx.objectStore(this.storeName).put(data, id);
+      req.onsuccess = () => resolve();
+      req.onerror   = () => reject(req.error);
+    });
   },
   async delete(id) {
     const db = await this.open();
-    db.transaction(this.storeName, 'readwrite').objectStore(this.storeName).delete(id);
+    return new Promise((resolve, reject) => {
+      const tx  = db.transaction(this.storeName, 'readwrite');
+      const req = tx.objectStore(this.storeName).delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror   = () => reject(req.error);
+    });
   }
 };
 
@@ -117,7 +128,7 @@ export function attachDevModeUI(container, slug) {
   const defaultColor = 'var(--border)'; // Замість 'var(--text-muted)'
   const defaultOpacity = '1';           // Замість '0.55'
 
-  container.querySelectorAll('.position-row').forEach(async (row, posIdx) => {
+  container.querySelectorAll('.position-row').forEach((row, posIdx) => {
     if (row.querySelector('.dev-check-btn')) return;
 
     row.dataset.devPosIdx = posIdx;
@@ -129,7 +140,7 @@ export function attachDevModeUI(container, slug) {
     checkBtn.className = 'dev-check-btn';
     checkBtn.type = 'button';
     checkBtn.innerHTML = DEV_CHECK_SVG;
-    
+
     if (isVerified(slug, posIdx)) {
       checkBtn.style.color = lineColor;
       checkBtn.style.opacity = '1';
@@ -143,7 +154,7 @@ export function attachDevModeUI(container, slug) {
     noteBtn.className = 'dev-note-btn';
     noteBtn.type = 'button';
     noteBtn.innerHTML = DEV_NOTE_SVG;
-    
+
     if (getDevNote(slug, posIdx)) {
       noteBtn.style.color = lineColor;
       noteBtn.style.opacity = '1';
@@ -152,23 +163,24 @@ export function attachDevModeUI(container, slug) {
       noteBtn.style.opacity = defaultOpacity;
     }
 
-    // ── Кнопка «Фото» ──
+    // ── Кнопка «Фото» (стан завантажується асинхронно) ──
     const photoBtn = document.createElement('button');
     photoBtn.className = 'dev-photo-btn';
     photoBtn.type = 'button';
     photoBtn.innerHTML = DEV_PHOTO_SVG;
-    
-    const hasPhoto = await PhotoDB.get(photoId);
-    if (hasPhoto) {
-      photoBtn.style.color = lineColor;
-      photoBtn.style.opacity = '1';
-    } else {
-      photoBtn.style.color = defaultColor;
-      photoBtn.style.opacity = defaultOpacity;
-    }
+    photoBtn.style.color = defaultColor;
+    photoBtn.style.opacity = defaultOpacity;
 
-    // Вставляємо зліва направо
+    // Вставляємо синхронно — правильний порядок гарантований
     row.prepend(photoBtn, noteBtn, checkBtn);
+
+    // Асинхронно перевіряємо наявність фото і оновлюємо кнопку
+    PhotoDB.get(photoId).then(hasPhoto => {
+      if (hasPhoto) {
+        photoBtn.style.color = lineColor;
+        photoBtn.style.opacity = '1';
+      }
+    }).catch(() => {}); // ігноруємо (приватний режим / quota)
 
     checkBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -209,7 +221,7 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
   panel.className = 'dev-note-panel';
   panel.dataset.type = 'note';
   panel.innerHTML = `
-    <textarea class="dev-note-textarea" placeholder="Нотатка для розробника…">${existingNote}</textarea>
+    <textarea class="dev-note-textarea" placeholder="...">${existingNote}</textarea>
     <div class="dev-note-actions">
       <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button>
       <button type="button" class="dev-note-clear confirm-btn-discard">Видалити</button>
@@ -239,6 +251,13 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
     panel.classList.remove('panel-open');
     setTimeout(() => panel.remove(), 280);
   });
+
+
+
+
+
+
+
 }
 
 // ── UI: панель ФОТО ───────────────────────────────
@@ -263,23 +282,33 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
   panel.className = 'dev-note-panel';
   panel.dataset.type = 'photo';
 
+
+
+
   panel.innerHTML = `
     <div style="text-align: center; margin-top: 8px;">
       ${existingPhoto 
         ? `<img src="${existingPhoto}" style="max-width: 100%; max-height: 200px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border);" id="devPhotoThumb"/>` 
         : `<p style="font-size: 13px; color: var(--text-muted); margin: 10px 0;">Фото не прикріплено</p>`}
     </div>
-    <div class="dev-note-actions" style="justify-content: center;">
-      <button type="button" class="dev-photo-upload confirm-btn-save">
-        ${existingPhoto ? 'Змінити фото' : 'Вибрати фото'}
+    <div class="dev-note-actions">
+      <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button>
+      <button type="button" class="dev-photo-upload confirm-main-btn confirm-btn-save">
+        ${existingPhoto ? 'Змінити' : 'Вибрати'}
       </button>
-      ${existingPhoto ? `<button type="button" class="dev-photo-clear confirm-btn-discard">Видалити</button>` : ''}
+      ${existingPhoto ? `<button type="button" class="dev-photo-clear confirm-main-btn confirm-btn-discard">Видалити</button>` : ''}
     </div>
     <input type="file" accept="image/*" class="dev-photo-input" style="display: none;" />
   `;
   
   row.after(panel);
   requestAnimationFrame(() => panel.classList.add('panel-open'));
+
+  panel.querySelector('.dev-photo-back').addEventListener('click', (e) => {
+    e.stopPropagation();
+    panel.classList.remove('panel-open');
+    setTimeout(() => panel.remove(), 280);
+  });
 
   const thumb = panel.querySelector('#devPhotoThumb');
   if (thumb) {
@@ -359,6 +388,44 @@ export function showDevModeToast(active) {
   }, 2500);
 }
 
+// ── Очищення даних розробника ─────────────────────────
+function setupDevDataClear(badge) {
+  let clearTaps = 0;
+  let tapTimer = null;
+  let lastTapTime = 0; // Захист від подвійних спрацьовувань
+  
+  badge.addEventListener('click', (e) => {
+    const now = Date.now();
+    if (now - lastTapTime < 50) return; // Ігноруємо фантомні кліки
+    lastTapTime = now;
+
+    clearTaps++;
+    clearTimeout(tapTimer);
+    
+    if (clearTaps >= 5) {
+      clearTaps = 0;
+      if (window.MetroApp && typeof window.MetroApp.showCustomConfirm === 'function') {
+        window.MetroApp.showCustomConfirm(
+          'Очистити всі дані режиму розробника?',
+          async () => {
+            Storage.remove(STORAGE_KEYS.DEV_LOG);
+            Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
+            Storage.remove(STORAGE_KEYS.DEV_NOTES);
+            try {
+              const db = await PhotoDB.open();
+              db.transaction('photos', 'readwrite').objectStore('photos').clear();
+            } catch (e) { console.warn('[KyivMetroGO] Помилка очищення PhotoDB:', e); }
+            setTimeout(() => location.reload(), 180);
+          },
+          null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-neutral'
+        );
+      }
+    } else {
+      tapTimer = setTimeout(() => { clearTaps = 0; }, 2000);
+    }
+  });
+}
+
 // ── UI: бейдж у шторці «Про додаток» ────────────────
 export function updateDevModeIndicator(aboutSheet, active) {
   let badge = aboutSheet.querySelector('.dev-mode-badge');
@@ -366,38 +433,46 @@ export function updateDevModeIndicator(aboutSheet, active) {
     if (!badge) {
       badge = document.createElement('div');
       badge.className = 'dev-mode-badge';
-      badge.textContent = '🛠 Режим розробника';
-      const icon = aboutSheet.querySelector('img[src="icon-96x96.png"]');
+      badge.textContent = '🛠 режим розробника';
+      const icon = aboutSheet.querySelector('#aboutLogoImg') || aboutSheet.querySelector('img[src="icon-96x96.png"]');
       if (icon) icon.after(badge);
+      setupDevDataClear(badge);
     }
   } else {
     if (badge) badge.remove();
   }
 }
 
-// ── Ініціалізація лічильника тапів по іконці ─────────
+// ── Ініціалізація лічильника тапів (ТЕПЕР НА ФУТЕРІ) ──
 export function setupDevModeTapCounter(aboutSheet) {
   let tapCount = 0;
   let tapTimer = null;
-  const icon = aboutSheet.querySelector('img[src="icon-96x96.png"]');
-  if (!icon) return;
+  let lastTapTime = 0; // Захист від подвійних спрацьовувань
+  
+  const footer = aboutSheet.querySelector('.about-footer');
+  if (!footer) return;
 
+  footer.style.pointerEvents = 'auto'; // Щоб текст ловив кліки
   updateDevModeIndicator(aboutSheet, isDevMode());
 
-  icon.addEventListener('click', () => {
+  footer.addEventListener('click', (e) => {
+    const now = Date.now();
+    if (now - lastTapTime < 50) return; // Ігноруємо фантомні кліки
+    lastTapTime = now;
+
     tapCount++;
     clearTimeout(tapTimer);
-    tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
 
     if (tapCount >= 5) {
       tapCount = 0;
-      clearTimeout(tapTimer);
       const nowActive = toggleDevMode();
       showDevModeToast(nowActive);
       updateDevModeIndicator(aboutSheet, nowActive);
       if (window.MetroApp && typeof window.MetroApp.refreshCurrentStation === 'function') {
         window.MetroApp.refreshCurrentStation();
       }
+    } else {
+      tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
     }
   });
 }

@@ -4,7 +4,6 @@ import { isDevMode, appendDevLog } from './devmode.js';
 
 const FORMSPREE_URL = 'https://formspree.io/f/mgopobnd';
 const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
-const STATIONS_CAN_ADD_EXIT = new Set(['R.Zhytomyrska', 'G.Osokorky', 'G.Chervonyi_khutir']);
 
 // =========================================================
 // РОБОТА З ДАНИМИ ТА КЕШЕМ
@@ -14,11 +13,7 @@ let exitLabelsCache = null;
 MetroApp.fbUnsaved = false;
 MetroApp.invalidateLocalEditsCache = () => { localEditsCache = null; exitLabelsCache = null; };
 
-// Відновлюємо змінну для іконки олівця
 const PENCIL_SVG_LABEL = '<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
-
-// ЗАГЛУШКА ДЛЯ СТАРОГО КОДУ: щоб уникнути TypeError: MetroApp.properCase is not a function
-MetroApp.properCase = MetroApp.properCase || function(str) { return str; };
 
 function getExitLabels() {
   if (exitLabelsCache) return exitLabelsCache;
@@ -387,7 +382,7 @@ function renderFeedbackPositions(slug) {
         </div>${dividerHtml}`;
       }).join('');
       
-      const canAddMore = STATIONS_CAN_ADD_EXIT ? STATIONS_CAN_ADD_EXIT.has(slug) : false;
+      const canAddMore = MetroApp.STATIONS_WITH_POTENTIAL_EXITS ? MetroApp.STATIONS_WITH_POTENTIAL_EXITS.has(slug) : false;
       const hasNewAlready = Object.values(fbState.current).some(st => st.isNew && st.dir === g.dir);
       const addBtnHtml = (canAddMore && !hasNewAlready) ? `<div class="fb-add-exit-row"><button type="button" class="fb-add-exit-btn" data-dir="${g.dir}">+ Додати ще один вихід</button></div>` : '';
 
@@ -891,7 +886,7 @@ function openFeedbackSheet(stationsData) {
       MetroApp.initKinematicSwipe(sheet, document.getElementById('feedbackBody'), closeFeedbackSheet);
     }
 
-document.getElementById('fbStation').value = '';
+    document.getElementById('fbStation').value = '';
     document.getElementById('fbLine').value = '';
     document.getElementById('fbPositions').innerHTML = '';
     document.getElementById('fbResult').innerHTML = '';

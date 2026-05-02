@@ -6,7 +6,7 @@ import { slugByName }                                     from './stations.js';
 import { getFavs, isFav, toggleFav, getExitFavs,
          isExitFav, toggleExitFav, replaceExitFav, updateFavDock } from './favorites.js';
 import { isCheckinMode, openCheckinSheet }                 from './checkin.js';
-import { attachDevModeUI, setupDevModeTapCounter }         from './devmode.js';
+import { attachDevModeUI, setupDevModeTapCounter, updateDevModeIndicator, isDevMode } from './devmode.js';
 
 // Анімація розсування для inline-елементів (підказки всередині шторки)
 MetroApp.dismissHintWithDoors = function(el, onDone) {
@@ -39,6 +39,7 @@ MetroApp.dismissHintWithDoors = function(el, onDone) {
   setTimeout(() => { el.remove(); onDone?.(); }, TIMING.HINT_CALLBACK);
   setTimeout(() => { L.remove(); R.remove(); }, TIMING.HINT_CLEANUP);
 };
+
 const sheet            = document.getElementById('stationSheet');
 const sheetBody        = document.getElementById('sheetBody');
 const sheetClose       = document.getElementById('sheetClose');
@@ -47,49 +48,31 @@ const stationTitleMain = document.getElementById('stationTitleMain');
 const dropMenuEl       = document.getElementById('dropMenu');
 
 // ══ ФОРМАТУВАННЯ НАПИСУ ВИХОДУ ══
-// Форматує напис типу "попередня либідська" → "попередня Либідська"
-// Перше слово (службове: попередня/наступна/кінцева тощо) — завжди малими.
-// Кожне наступне слово: з великої, якщо є в ALWAYS_CAP або перше слово назви.
-
-
-
 function formatDirLabel(raw) {
   if (!raw) return raw;
   
-  // Відділяємо перше слово (до першого пробілу або &nbsp;) від решти
   const match = raw.trim().match(/^([^\s&]+)(?:\s+|&nbsp;)(.*)$/i);
-  
-  // Якщо це лише одне слово (наприклад, просто "кінцева")
   if (!match) return raw;
 
-  const prefix = match[1].toLowerCase(); // "попередня", "наступна" тощо
-  const stationName = match[2];          // Точна назва з вашого JSON
+  const prefix = match[1].toLowerCase(); 
+  const stationName = match[2];          
 
-  // Повертаємо HTML: префікс звичайний, а точна назва з JSON — у капітелі
   return `${prefix} <span class="dir-name-caps">${stationName}</span>`;
 }
 
 function formatLabel(raw) {
-  // 1. Для відображення залишаємо як є (з &nbsp; для візуалу)
   const text = raw.trim();
-  
-  // 2. Для перевірок "очищаємо" текст від &nbsp; і переводимо в нижній регістр
   const cleanText = text.replace(/&nbsp;/g, ' ').toLowerCase();
-
-  // 3. Перевіряємо чищенням
   const isTransfer = cleanText.includes('пересадка') || cleanText.includes('перехід');
 
   if (isTransfer) {
-    // 4. Шукаємо ціль пересадки, використовуючи "чистий" текст
     const targetSlug = slugByName(cleanText);
     if (targetSlug && state.stationsData?.[targetSlug]) {
       const color = MetroApp.LINE_COLOR[state.stationsData[targetSlug].line];
-      // 5. Виводимо оригінальний текст (з &nbsp;)
       return `<span class="transfer-label"><span class="transfer-line" style="background:${color}"></span><span class="transfer-text">${text}</span><span class="transfer-line" style="background:${color}"></span></span>`;
     }
   }
   
-  // Якщо це не пересадка, виводимо оригінальний текст
   return `<span class="exit-label-text">${text}</span>`;
 }
 
@@ -130,8 +113,8 @@ function renderPositions(positions, color, multiRow) {
     `<div class="position-row ${String(p.wagon).includes(',') ? 'position-row-multi' : ''}"><div class="fav-tap-target" style="display:flex; gap:6px; align-items:center;">${generatePills(p.wagon, p.doors)}</div></div>`
   ).join('');
 }
+
 // ══ РЕНДЕР НАПРЯМКІВ ══
-// ⚠️ Khreshchatyk-спецкейс збережено!
 function renderDirections(s, color) {
   const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
 
@@ -161,12 +144,10 @@ function renderDirections(s, color) {
   }
 
   return s.directions.map(dir => {
-    // 1. Спецкейс для "вихід праворуч"
     if (dir.from === 'вихід праворуч') {
       return `<div class="direction-block direction-exit-right"><div class="direction-label">вихід праворуч</div></div>`;
     }
 
-    // 2. Спецкейс для кінцевої станції (точно перевіряємо слово без зайвих пробілів)
     if (dir.from.trim().toLowerCase() === 'кінцева') {
       return `
         <div class="direction-block direction-exit-right" style="margin-bottom: 10px;">
@@ -180,7 +161,6 @@ function renderDirections(s, color) {
       `;
     }
 
-    // 3. Усі інші звичайні напрямки
     return `<div class="direction-block">
       <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
       ${dir.exits.map(exit =>
@@ -211,7 +191,6 @@ function applyFavPillStyles(container, lineColor, isFaved) {
 
 // ══ INLINE ПІДТВЕРДЖЕННЯ ЗАМІНИ ВИХОДУ ══
 function showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoors, lineColor) {
-  // Закриваємо будь-який відкритий confirm
   document.querySelectorAll('.exit-replace-confirm').forEach(el => {
     el.classList.remove('exit-replace-open');
     setTimeout(() => el.remove(), 280);
@@ -237,7 +216,6 @@ function showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoor
     e.stopPropagation();
     replaceExitFav(slug, dirLabel, existing.wagon, existing.doors, newWagon, newDoors);
     closeConfirm();
-    // Оновлюємо вигляд пігулок через повний refresh
     MetroApp.refreshCurrentStation?.();
   });
 
@@ -284,21 +262,19 @@ function attachExitFavListeners(container, slug, lineColor) {
           if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
           const sheetBodyEl = document.getElementById('sheetBody');
           if (!sheetBodyEl || document.getElementById('checkinHint')) return;
+          
           const checkinHint = document.createElement('div');
           checkinHint.id = 'checkinHint';
           checkinHint.className = 'onboarding-hint';
-          // lineColor — параметр attachExitFavListeners (раніше помилково писали color)
           checkinHint.innerHTML = `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`;
+          
           sheetBodyEl.insertBefore(checkinHint, sheetBodyEl.firstChild);
-          Storage.set(STORAGE_KEYS.CHECKIN_HINT_SEEN, 'true');
         }
 
         const onboardingHint = document.getElementById('onboardingHint');
         if (onboardingHint) {
-          // Є підказка «додай вихід» — анімуємо її зникнення, потім показуємо підказку про шпильку
           MetroApp.dismissHintWithDoors(onboardingHint, insertCheckinHint);
         } else {
-          // Підказки вже немає (повторне відкриття картки) — відразу показуємо підказку про шпильку
           insertCheckinHint();
         }
       }
@@ -320,7 +296,6 @@ function attachExitFavListeners(container, slug, lineColor) {
       }
     }
 
-    // Ініціалізація кольору якщо вихід вже в обраному
     const pv = getPillValues();
     if (pv) {
       const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
@@ -329,7 +304,6 @@ function attachExitFavListeners(container, slug, lineColor) {
       if (isExitFav(slug, dirLabel, pv.wagon, pv.doors)) applyFavPillStyles(row, lineColor, true);
     }
 
-    // Довгий тап (мобільний)
     let longPressTimer = null;
     row.addEventListener('touchstart', e => {
       if (!e.target.closest('.fav-tap-target')) return;
@@ -338,7 +312,6 @@ function attachExitFavListeners(container, slug, lineColor) {
     row.addEventListener('touchend',  () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
     row.addEventListener('touchmove', () => { clearTimeout(longPressTimer); longPressTimer = null; }, { passive: true });
 
-    // Подвійний клік (десктоп)
     let tapCount = 0, tapTimer = null;
     row.addEventListener('click', e => {
       if (!e.target.closest('.fav-tap-target')) return;
@@ -377,7 +350,7 @@ export function openStation(slug) {
 
   function actualOpenStation() {
     if (!state.stationsData?.[slug]) return;
-    MetroApp.pushSheetHistory(); // <--- ДОДАНО
+    MetroApp.pushSheetHistory();
     state.currentStationSlug = slug;
     const s     = state.stationsData[slug];
     const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
@@ -413,7 +386,6 @@ export function openStation(slug) {
       }
     });
 
-    // ⚠️ Спецкейс для Хрещатика — збережено!
     if (s.slug === 'R.Khreshchatyk') {
       sheet.classList.add('sheet-fullscreen', 'sheet-scrollable');
       sheet.style.maxHeight = '';
@@ -453,6 +425,11 @@ export function openStation(slug) {
 export function closeAllSheets(force = false) {
   if (!force) {
     if (withUnsavedCheck(() => closeAllSheets(true))) return false;
+  }
+
+  if (history.state?.isSheetOpen) {
+    history.back(); 
+    return; 
   }
 
   const openSheets = [...document.querySelectorAll('.station-sheet.sheet-open')];
@@ -496,7 +473,36 @@ MetroApp.refreshCurrentStation = function() {
   sheetBody.scrollTop = prevScrollTop;
 };
 
-// ══ ШТОРКА «ПРО ДОДАТОК» ══
+
+const LOGOS = [
+  // 1. ОРИГІНАЛЬНЕ ЛОГО
+  `<img src="icon-96x96.png" id="aboutLogoImg" style="border-radius: 16px;">`,
+  
+  // 2. ПЕРША ПАСХАЛКА (Червоно-зелена)
+  // Змінено viewBox для додавання внутрішнього відступу (щоб розмір збігався з PNG)
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.82 -0.82 6.93 6.93" id="aboutLogoImg">
+    <path d="M132.557 112.715h5.292v1.323h-5.292z" style="fill:#c8523a;fill-opacity:1;stroke-width:.0267705" transform="translate(-132.556 -110.067)"/>
+    <g style="fill:#c8523a;fill-opacity:1"><g style="fill:#5aaa6a;fill-opacity:1"><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill:#5aaa6a;fill-opacity:1;stroke-width:.0595478" transform="matrix(.08834 0 0 .57185 -16.834 -44.805)"/></g></g>
+    <g style="fill:#c8523a;fill-opacity:1"><g style="fill:#5aaa6a;fill-opacity:1"><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill:#5aaa6a;fill-opacity:1;stroke-width:.0595478" transform="matrix(.17669 0 0 .57185 -33.668 -47.453)"/></g></g>
+    <g style="stroke:none;paint-order:markers stroke fill"><path d="M49.904 120.033h10v10h-10z" style="fill:#5aaa6a;fill-opacity:1;stroke:none;paint-order:markers stroke fill" transform="matrix(.52917 0 0 .13256 -26.408 -14.586)"/></g>
+    <g style="fill:#c8523a;fill-opacity:1"><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill:#c8523a;fill-opacity:1;stroke-width:.0595893" transform="matrix(.08827 0 0 .57285 -2.24 -43.166)"/></g>
+    <g style="fill:#c8523a;fill-opacity:1"><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill:#c8523a;fill-opacity:1;stroke-width:.0595893" transform="matrix(.08827 0 0 1.14398 -.92 -86.203)"/></g>
+    <g style="fill:#c8523a;fill-opacity:1"><path d="M120.43 105.01h5v5.001h-5z" style="fill:#c8523a;fill-opacity:1;stroke-width:.0505848" transform="matrix(.52913 0 0 .26507 -63.723 -23.866)"/></g>
+    <g style="fill:#c8523a;fill-opacity:1"><g style="fill:#5aaa6a;fill-opacity:1"><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill:#5aaa6a;fill-opacity:1;stroke-width:.0595478" transform="matrix(.08834 0 0 1.14573 -15.514 -95.075)"/></g></g>
+  </svg>`,
+
+  // 3. ДРУГА ПАСХАЛКА (Синьо-червона)
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.82 -0.82 6.93 6.93" id="aboutLogoImg">
+    <path d="M0 2.646h5.292v1.323H0Z" style="fill:#c8523a;fill-opacity:1;stroke-width:.0267733"/>
+    <g style="fill:#c8523a;fill-opacity:1"><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill:#c8523a;fill-opacity:1;stroke-width:.0595893" transform="matrix(.17645 0 0 .57179 -1.832 -40.44)"/> </g>
+    <path d="M159.544 125.677h5.29V127h-5.29z" style="fill:#5b9bd5;fill-opacity:1;stroke-width:.0267672" transform="translate(-159.544 -124.354)"/>
+    <g style="fill:#c8523a;fill-opacity:1"><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill:#c8523a;fill-opacity:1;stroke-width:.0595893" transform="matrix(.08823 0 0 .57179 1.73 -43.087)"/></g>
+    <path d="M163.513 127h1.323v1.323h-1.323z" style="fill:#5b9bd5;fill-opacity:1;stroke-width:.013384" transform="translate(-159.544 -124.354)"/>
+    <path d="M162.189 124.354h2.646v1.323h-2.646z" style="fill:#5b9bd5;fill-opacity:1;stroke-width:.0189279" transform="translate(-159.544 -124.354)"/>
+    <g style="fill:#c8523a;fill-opacity:1"><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill:#c8523a;fill-opacity:1;stroke-width:.0595893" transform="matrix(.08823 0 0 1.14374 .413 -86.186)"/></g>
+  </svg>`
+];
+
 export function openAboutSheet() {
   let aboutSheet = document.getElementById('aboutSheet');
 
@@ -516,39 +522,62 @@ export function openAboutSheet() {
       });
     });
 
-    // ── Лічильник 5 тапів для активації режиму розробника ──
     setupDevModeTapCounter(aboutSheet);
+  }
+
+  // Пасхалка з логотипом
+  let logoIdx = parseInt(Storage.get(STORAGE_KEYS.LOGO_STATE) || '0');
+  
 
 
+  
+  function updateLogo() {
+    const oldLogo = aboutSheet.querySelector('#aboutLogoImg') || aboutSheet.querySelector('img[src="icon-96x96.png"]');
+    if (!oldLogo) return;
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = LOGOS[logoIdx];
+    const newLogo = tempDiv.firstChild;
+    oldLogo.replaceWith(newLogo);
+    
+    let taps = 0;
+    let tapTimer = null;
+    let lastTapTime = 0; // Захист від подвійних спрацьовувань
 
+    newLogo.addEventListener('click', (e) => {
+      const now = Date.now();
+      if (now - lastTapTime < 50) return; // Ігноруємо фантомні кліки
+      lastTapTime = now;
 
-  } 
+      taps++;
+      clearTimeout(tapTimer);
 
+      if (taps >= 3) {
+        taps = 0;
+        logoIdx = (logoIdx + 1) % LOGOS.length;
+        Storage.set(STORAGE_KEYS.LOGO_STATE, logoIdx);
+        updateLogo();
+      } else {
+        tapTimer = setTimeout(() => { taps = 0; }, 1000);
+      }
+    });
+  }
+  updateLogo();
+  updateDevModeIndicator(aboutSheet, isDevMode());
 
-  const BETA_COLORS = ['var(--line-green)', 'var(--line-blue)', 'var(--line-red)'];
-  try {
-    const idx = parseInt(localStorage.getItem('betaBtnColorIdx') || '0') % 3;
-    localStorage.setItem('betaBtnColorIdx', (idx + 1) % 3);
-    const betaInput = document.querySelector('#aboutSheet .about-beta-input');
-    if (betaInput) betaInput.style.border = `1px solid ${BETA_COLORS[idx]}`;
-  } catch (e) {}
-
-  MetroApp.pushSheetHistory(); // <--- ДОДАНО  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+  MetroApp.pushSheetHistory();
+  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
   sheetOverlay.classList.add('overlay-visible');
 }
 
 // ══ EVENT LISTENERS ══
-
-// Закрити кнопкою
 sheetClose.addEventListener('click', () => closeAllSheets());
 
-// Escape
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeAllSheets();
 });
 
-// Кліки всередині sheetBody (nav-labels та олівець)
 sheetBody.addEventListener('click', e => {
   const navLabel = e.target.closest('.nav-label');
   if (navLabel) {
@@ -601,7 +630,6 @@ sheetBody.addEventListener('click', e => {
   }
 });
 
-// Кнопка-серце у шапці
 sheet.querySelector('.fav-btn-bar')?.addEventListener('click', e => {
   const btn   = e.currentTarget;
   const slug  = btn.dataset.slug;
@@ -612,7 +640,6 @@ sheet.querySelector('.fav-btn-bar')?.addEventListener('click', e => {
   btn.classList.toggle('fav-active', nowFav);
 });
 
-// Оверлей
 sheetOverlay.addEventListener('click', e => {
   if (e.target !== sheetOverlay) return;
   if (dropMenuEl?.classList.contains('show')) return;
@@ -630,10 +657,8 @@ sheetOverlay.addEventListener('click', e => {
   closeAllSheets();
 });
 
-// Кінематичний свайп вниз
 MetroApp.initKinematicSwipe(sheet, sheetBody, () => closeAllSheets());
 
-// Публікуємо
 MetroApp.openStation    = openStation;
 MetroApp.closeAllSheets = closeAllSheets;
 MetroApp.openAboutSheet = openAboutSheet;

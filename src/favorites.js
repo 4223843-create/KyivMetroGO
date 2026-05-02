@@ -273,7 +273,7 @@ export function openFavSheet() {
 export function closeFavSheet() {
   MetroApp.animateSheetClose(favSheet, () => {
     favSheet.classList.remove('sheet-open');
-    if (!document.getElementById('stationSheet').classList.contains('sheet-open'))
+    if (!document.querySelectorAll('.station-sheet.sheet-open').length)
       sheetOverlay.classList.remove('overlay-visible');
   });
 }

@@ -75,7 +75,8 @@ export function hydrateStations(data) {
     MetroApp.SLUG_BY_LOWER[station.slug.toLowerCase()] = station.slug;
 
     const stationWords = cleanName.split(/[\s\u00a0\u202f\-]+/);
-    const cleanEnName = station.slug.split('.')[1].replace(/_/g, ' ').toLowerCase();
+    const slugParts = station.slug.split('.');
+    const cleanEnName = (slugParts.length > 1 ? slugParts[1] : station.slug).replace(/_/g, ' ').toLowerCase();
     const stationEnWords = cleanEnName.split(/\s+/);
     const acronym = stationWords.map(word => word.charAt(0)).join('');
 
