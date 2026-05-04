@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Дякуємо! - KyivMetroGO</title>
+  
+  <style>
+    /* Дефолтна тема — ТЕМНА (змінні безпосередньо у :root) */
+    :root {
+      --line-red: #c8523a;
+      --line-blue: #5b9bd5;
+      --line-green: #5aaa6a;
+      --text: #ffffff;
+      --text-muted: #ababab;
+      --bg: #000000;
+      --bg-card: #2c2c2e;
+      --btn-bg: #1c1c1e;
+    }
+
+    /* СВІТЛА ТЕМА вмикається, якщо стоїть атрибут data-theme="light" 
+       АБО якщо в системі світла тема (і атрибут не заданий) */
+    [data-theme="light"] {
+      --text: #000000;
+      --text-muted: #8e8e93;
+      --bg: #e5e5ea;
+      --bg-card: #ffffff;
+      --btn-bg: #ffffff;
+    }
+    
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --text: #000000;
+        --text-muted: #8e8e93;
+        --bg: #e5e5ea;
+        --bg-card: #ffffff;
+        --btn-bg: #ffffff;
+      }
+    }
+
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      text-align: center;
+    }
+    .salute-container {
+      width: 160px; height: 160px; margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 24px; font-weight: 600; margin: 0 0 10px 0; font-variant: small-caps; letter-spacing: 0.04em;
+    }
+    p {
+      font-size: 15px; color: var(--text-muted); max-width: 340px; margin: 0 0 40px 0; line-height: 1.45;
+    }
+    strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .back-btn {
+      text-decoration: none; font-size: 16px; font-weight: 600;
+      color: var(--text); background: var(--btn-bg);
+      padding: 14px 28px; border-radius: 12px; transition: opacity 0.2s;
+    }
+    .back-btn:active { opacity: 0.7; }
+  </style>
+
+  <script>
+    // 1. СИНХРОНІЗАЦІЯ ТЕМИ З ДОДАТКОМ (миттєва, до рендеру)
+    try {
+      const savedTheme = localStorage.getItem('metro_theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    } catch (e) { }
+  </script>
+</head>
+<body>
+
+  <div class="salute-container">
+    <svg id="saluteSvg" viewBox="-4 -4 44.3 45.1" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; overflow: visible;">
+      <g transform="translate(-162.85484,-126.18087)">
+        <g transform="translate(32.460036,2.9988233)">
+          <g class="eggPetals" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
+            <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
+            <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
+            <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
+            <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 -8,-2 -8,-4.9 z" />
+            <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z" />
+            <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z" />
+            <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z" />
+            <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 -3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
+            <path class="st4" d="m 227.95,217.46 c 2.1,-0.9 4.2,-1.3 4.8,1.4 0.5,2.5 -0.6,5.3 -1.7,6 -1.5,0.3 -4.1,-1 -5.5,-3 -1.4,-2.4 0.3,-3.6 2.4,-4.4 z" />
+            <path class="st4" d="m 212.05,255.66 c -0.9,-2.1 -1.3,-4.2 1.4,-4.7 2.5,-0.5 5.4,0.6 6,1.7 0.3,1.5 -1,4.1 -3.1,5.4 -2.2,1.4 -3.5,-0.3 -4.3,-2.4 z" />
+            <path class="st4" d="m 250.75,271.96 c 2.1,-0.9 3.9,-2.1 2.4,-4.4 -1.4,-2.1 -4.2,-3.3 -5.5,-3 -1.3,0.8 -2.2,3.6 -1.7,6 0.6,2.7 2.7,2.3 4.8,1.4 z" />
+            <path class="st4" d="m 212.05,233.26 c 0.9,-2.1 2.1,-3.9 4.4,-2.4 2.2,1.4 3.4,4.2 3.1,5.4 -0.8,1.3 -3.6,2.2 -6,1.7 -2.8,-0.6 -2.4,-2.6 -1.5,-4.7 z" />
+            <path class="st4" d="m 228.35,271.46 c -2.1,-0.9 -3.9,-2.1 -2.4,-4.4 1.4,-2.1 4.2,-3.3 5.5,-3 1.3,0.8 2.2,3.6 1.7,6 -0.6,2.7 -2.7,2.3 -4.8,1.4 z" />
+            <path class="st4" d="m 250.55,217.46 c 2.1,0.9 3.9,2.1 2.4,4.4 -1.4,2.1 -4.2,3.3 -5.5,3 -1.3,-0.8 -2.2,-3.6 -1.7,-6 0.6,-2.7 2.7,-2.3 4.8,-1.4 z" />
+            <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z" />
+            <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z" />
+          </g>
+          <path class="eggCenter" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" style="fill: var(--line-red)"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <h1 id="thanksTitle">Дякуємо за підтримку!</h1>
+  <p id="thanksText">Вже задонатили на Сили оборони, і хочете допомогти KyivMetroGO?<br><br>Щоб опублікувати додаток в App Store, треба сплатити ліцензію Apple Developer, яка коштує <strong>$99 на рік</strong>.</p>
+  
+  <a href="index.html" class="back-btn">Повернутись до карти</a>
+
+  <script>
+    // 2. ДИНАМІЧНИЙ ТЕКСТ В ЗАЛЕЖНОСТІ ВІД ПРИЧИНИ ПЕРЕХОДУ
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('type') === 'beta') {
+      document.getElementById('thanksTitle').innerText = 'Дякуємо! Напишемо.';
+      document.getElementById('thanksText').innerHTML = 'Електронну адресу збережено.<br><br>За правилами Google Play, перед публікацією ми маємо провести закрите тестування. Для нього потрібно <strong>20 тестувальників</strong>, які користуватимуться додатком <strong>14 днів поспіль</strong>. Ми надішлемо вам запрошення, щойно назбираємо доста охочих!';
+    }
+
+    // 3. АНІМАЦІЯ САЛЮТУ (Без хардкоду кольорів - читаємо прямо з CSS)
+    const rs = getComputedStyle(document.documentElement);
+    
+    // Функція-помічник для витягування кольорів
+    const getColor = (prop, fallback) => {
+      const val = rs.getPropertyValue(prop).trim();
+      return val ? val : fallback;
+    };
+
+    const THEME_COLORS = { 
+      red:   getColor('--line-red', '#c8523a'), 
+      blue:  getColor('--line-blue', '#5b9bd5'), 
+      green: getColor('--line-green', '#5aaa6a'), 
+      base:  getColor('--bg-card', '#2c2c2e')
+    };
+
+    const hexToRgb = hex => { const n = parseInt(hex.replace('#',''), 16); return [(n>>16)&255, (n>>8)&255, n&255]; };
+    const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+    const mixColors = (c, b, t) => { const [r1,g1,b1]=hexToRgb(c); const [r2,g2,b2]=hexToRgb(b); return `rgb(${lerp(r2,r1,t)},${lerp(g2,g1,t)},${lerp(b2,b1,t)})`; };
+
+    const svg = document.getElementById('saluteSvg');
+    const petalsUnsorted = Array.from(svg.querySelectorAll('.st4'));
+    const center = svg.querySelector('.eggCenter');
+    const cb = center.getBoundingClientRect();
+    const cx = cb.left + cb.width/2, cy = cb.top + cb.height/2;
+
+    const petals = petalsUnsorted.map(p => {
+      const b = p.getBoundingClientRect();
+      const a = Math.atan2(b.top+b.height/2 - cy, b.left+b.width/2 - cx) * 180 / Math.PI;
+      return { el: p, a: (a+90+360)%360 };
+    }).sort((a,b) => a.a - b.a).map(p => p.el);
+
+    petals.forEach(p => { p.style.fill = THEME_COLORS.base; p.style.transition = "fill 0.25s ease"; });
+
+    const schemes = [
+      { c: THEME_COLORS.red, p: [THEME_COLORS.blue, THEME_COLORS.green] },
+      { c: THEME_COLORS.blue, p: [THEME_COLORS.red, THEME_COLORS.green] },
+      { c: THEME_COLORS.green, p: [THEME_COLORS.red, THEME_COLORS.blue] }
+    ];
+    const s = schemes[Math.floor(Math.random() * schemes.length)];
+
+    const runPetals = () => {
+      const i = Math.floor(Math.random() * petals.length);
+      petals[i].style.fill = mixColors(s.p[i%2], THEME_COLORS.base, 0.85);
+      setTimeout(() => { petals[i].style.fill = THEME_COLORS.base; }, 400);
+      setTimeout(runPetals, 150 + Math.random() * 200);
+    };
+    const runCenter = () => {
+      const ph = (Date.now()/1000)%1.2;
+      center.style.fill = mixColors(s.c, THEME_COLORS.base, 0.35 + Math.abs(Math.sin(ph*Math.PI))*0.65);
+      requestAnimationFrame(runCenter);
+    };
+
+    runPetals(); runCenter();
+  </script>
+</body>
+</html>

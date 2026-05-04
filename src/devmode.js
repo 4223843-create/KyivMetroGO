@@ -221,10 +221,11 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
   panel.className = 'dev-note-panel';
   panel.dataset.type = 'note';
   panel.innerHTML = `
-    <textarea class="dev-note-textarea" placeholder="...">${existingNote}</textarea>
+    <textarea class="dev-note-textarea">${existingNote}</textarea>
     <div class="dev-note-actions">
       <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button>
-      <button type="button" class="dev-note-clear confirm-btn-discard">Видалити</button>
+      <button type="button" class="dev-note-clear 
+      confirm-btn-neutral">Скасувати</button>
     </div>
   `;
   row.after(panel);
@@ -292,9 +293,10 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
         : `<p style="font-size: 13px; color: var(--text-muted); margin: 10px 0;">Фото не прикріплено</p>`}
     </div>
     <div class="dev-note-actions">
-      <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button>
       <button type="button" class="dev-photo-upload confirm-main-btn confirm-btn-save">
-        ${existingPhoto ? 'Змінити' : 'Вибрати'}
+                ${existingPhoto ? 'Змінити' : 'Вибрати'}
+
+      <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button>
       </button>
       ${existingPhoto ? `<button type="button" class="dev-photo-clear confirm-main-btn confirm-btn-discard">Видалити</button>` : ''}
     </div>
@@ -379,7 +381,7 @@ export function showDevModeToast(active) {
   document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
   const toast = document.createElement('div');
   toast.className = 'dev-mode-toast';
-  toast.textContent = active ? '🛠 Режим розробника увімкнено' : 'Режим розробника вимкнено';
+  toast.textContent = active ? 'Режим розробника увімкнено' : 'Режим розробника вимкнено';
   document.body.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('dev-mode-toast-open'));
   setTimeout(() => {
@@ -389,57 +391,20 @@ export function showDevModeToast(active) {
 }
 
 // ── Очищення даних розробника ─────────────────────────
-function setupDevDataClear(badge) {
-  let clearTaps = 0;
-  let tapTimer = null;
-  let lastTapTime = 0; // Захист від подвійних спрацьовувань
-  
-  badge.addEventListener('click', (e) => {
-    const now = Date.now();
-    if (now - lastTapTime < 50) return; // Ігноруємо фантомні кліки
-    lastTapTime = now;
 
-    clearTaps++;
-    clearTimeout(tapTimer);
-    
-    if (clearTaps >= 5) {
-      clearTaps = 0;
-      if (window.MetroApp && typeof window.MetroApp.showCustomConfirm === 'function') {
-        window.MetroApp.showCustomConfirm(
-          'Очистити всі дані режиму розробника?',
-          async () => {
-            Storage.remove(STORAGE_KEYS.DEV_LOG);
-            Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
-            Storage.remove(STORAGE_KEYS.DEV_NOTES);
-            try {
-              const db = await PhotoDB.open();
-              db.transaction('photos', 'readwrite').objectStore('photos').clear();
-            } catch (e) { console.warn('[KyivMetroGO] Помилка очищення PhotoDB:', e); }
-            setTimeout(() => location.reload(), 180);
-          },
-          null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-neutral'
-        );
-      }
-    } else {
-      tapTimer = setTimeout(() => { clearTaps = 0; }, 2000);
-    }
-  });
-}
+const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
 
-// ── UI: бейдж у шторці «Про додаток» ────────────────
 export function updateDevModeIndicator(aboutSheet, active) {
-  let badge = aboutSheet.querySelector('.dev-mode-badge');
+  const container = aboutSheet.querySelector('#aboutDevBtnContainer');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
   if (active) {
-    if (!badge) {
-      badge = document.createElement('div');
-      badge.className = 'dev-mode-badge';
-      badge.textContent = '🛠 режим розробника';
-      const icon = aboutSheet.querySelector('#aboutLogoImg') || aboutSheet.querySelector('img[src="icon-96x96.png"]');
-      if (icon) icon.after(badge);
-      setupDevDataClear(badge);
-    }
-  } else {
-    if (badge) badge.remove();
+    container.innerHTML = DEV_MINI_SVG;
+    
+    // Вся логіка кліків обробляється в одній функції
+    setupDevDataClear(container);
   }
 }
 
@@ -475,4 +440,52 @@ export function setupDevModeTapCounter(aboutSheet) {
       tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
     }
   });
+}
+
+// ── Очищення даних розробника та Тост ─────────────────────────
+function setupDevDataClear(container) {
+  let clearTaps = 0;
+  let tapTimer = null;
+  
+  container.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    clearTaps++;
+    clearTimeout(tapTimer);
+    
+    // Показуємо тост миттєво на перший тап
+    if (clearTaps === 1) {
+      showDevModeToast(true);
+    }
+    
+    // Чекаємо 400мс після ОСТАННЬОГО тапу. 
+    // Це захищає від того, що випадковий 6-й тап закриє вікно-оверлей.
+    tapTimer = setTimeout(() => {
+      if (clearTaps >= 5) {
+        
+        // Ховаємо тост
+        document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
+
+        // Відкриваємо вікно ТІЛЬКИ коли користувач закінчив клікати
+        if (window.MetroApp && typeof window.MetroApp.showCustomConfirm === 'function') {
+          window.MetroApp.showCustomConfirm(
+            'Очистити всі дані режиму розробника?',
+            async () => {
+              Storage.remove(STORAGE_KEYS.DEV_LOG);
+              Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
+              Storage.remove(STORAGE_KEYS.DEV_NOTES);
+              try {
+                const db = await PhotoDB.open();
+                db.transaction('photos', 'readwrite').objectStore('photos').clear();
+              } catch (err) { console.warn('[KyivMetroGO] Помилка очищення PhotoDB:', err); }
+              setTimeout(() => location.reload(), 180);
+            },
+            null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-neutral'
+          );
+        }
+      }
+      clearTaps = 0; // Скидаємо лічильник для наступного разу
+    }, 400); 
+  };
 }

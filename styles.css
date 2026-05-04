@@ -1221,18 +1221,7 @@ color: var(--text-muted);
 /* --- ВІДСТУПИ ДЛЯ ТЕКСТУ ВЕРСІЇ --- */
 /* ══ ФІНАЛЬНИЙ БЛОК: ШТРИХОВКА, ПОВЗУНОК ТА ВІДСТУПИ ══ */
 
-/* 1. Опускаємо текст версії ближче до основного тексту */
-.about-version-title {
-  text-transform: none; 
-  letter-spacing: normal; 
-  font-weight: normal; 
-  opacity: 0.5; 
-  
-  /* Змінюємо 24px на 22px або 21px, щоб підняти текст і зрівняти відстані */
-  top: 22px; 
-  
-  transform: translateX(-50%); 
-}
+
 
 /* 5. Двоколірний повзунок для вікна "Про додаток" */
 .about-station-sheet .sheet-handle {
@@ -3048,3 +3037,166 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 #aboutLogoImg:active {
   transform: scale(0.9);
 }
+
+/* ════════════════════════════════════════════════════════════
+   ══ КНОПКИ ДОВІДКИ "i" (РОЗДІЛЕНА БЕЗПЕЧНА ЛОГІКА) ══
+   ════════════════════════════════════════════════════════════ */
+
+/* 1. ТІЛЬКИ для вікна "Про додаток" (ранній доступ та mono) */
+#btnInfoAndroid, #btnInfoIOS {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    margin: 0 !important; /* Прибрали від'ємні марджини, позиціонуємо абсолютно */
+    background: transparent !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+#btnInfoAndroid {
+    right: 100% !important; /* Стає чітко зліва від форми */
+}
+
+#btnInfoIOS {
+    left: 100% !important; /* Стає чітко справа від кнопки mono */
+}
+
+#btnInfoAndroid svg, #btnInfoIOS svg {
+    height: 12px !important;
+    width: auto !important;
+}
+/* Колір активованої "i" у вікні "Про додаток" */
+[data-theme="dark"] .info-btn-active {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+/* 2. ТІЛЬКИ для вікна Налаштувань та Форми зворотного зв'язку (БЕЗПЕЧНО) */
+/* Ми НЕ чіпаємо margin/padding, спираємось на твій ідеальний бекап, 
+   лише додаємо невидиму "ауру" навколо кнопки для легкого тапу пальцем */
+.settings-info-btn, .fb-add-doors-info {
+    position: relative;
+}
+.settings-info-btn::after, .fb-add-doors-info::after {
+    content: '';
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    bottom: -12px;
+    left: -12px;
+    z-index: 10; /* Ловить тапи навіть якщо поруч інші елементи */
+}
+
+/* 1. Контейнер іконки розробника (зліва у шапці) */
+#aboutDevBtnContainer {
+    width: 36px;
+    height: 36px;
+    transform: scale(1.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    opacity: 0.5;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+#aboutDevBtnContainer svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+
+
+/* 3. Величезна зона тапу для іконок довідки */
+.settings-info-btn, .fb-add-doors-info, #btnInfoAndroid, #btnInfoIOS {
+    position: relative;
+}
+.settings-info-btn::after, .fb-add-doors-info::after, #btnInfoAndroid::after, #btnInfoIOS::after {
+    content: '';
+    position: absolute;
+    top: -12px; right: -12px; bottom: -12px; left: -12px;
+    z-index: 10;
+}
+
+/* ══ Іконка розробника (зліва у шапці) ══ */
+#aboutDevBtnContainer {
+    background: none;
+    border: none;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-muted); /* Ідентичний колір хрестика */
+    /* opacity: 0.5; - ВИДАЛЕНО, щоб колір був ідентичним, без прозорості */
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#aboutDevBtnContainer:active {
+    opacity: 0.5;
+}
+
+#aboutDevBtnContainer svg {
+    width: 18px !important;  /* Ідеальний розмір для симетрії з хрестиком */
+    height: 18px !important;
+    transform: none !important; /* - ВИДАЛЕНО (не потрібно для нової іконки) */
+    display: block;
+}
+
+/* ══ ІДЕАЛЬНЕ ЦЕНТРУВАННЯ ЗАГОЛОВКА (З БЕКАПУ) ══ */
+.about-version-title {
+    position: absolute !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: 24px !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    font-weight: normal !important;
+    opacity: 0.5 !important;
+    margin: 0 !important;
+    display: block !important;
+    pointer-events: none;
+}
+
+/* ══ ТОСТ РЕЖИМУ РОЗРОБНИКА ══ */
+.dev-mode-toast {
+  position: fixed;
+  top: 56px;  /* ⬅️ Відступ зверху (одразу під шапкою) */
+  left: 16px; /* ⬅️ Відступ зліва (чітко під іконкою) */
+  bottom: auto; /* Скидаємо стару прив'язку до низу */
+  transform: translateY(-10px); /* ⬅️ Анімація тепер буде випадати зверху вниз */
+  
+  opacity: 0;
+  pointer-events: none;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  z-index: var(--z-global-modal);
+  white-space: nowrap;
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+}
+
+[data-theme="light"] .dev-mode-toast {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.dev-mode-toast.dev-mode-toast-open {
+  opacity: 1;
+  transform: translateY(0); /* Стає на своє місце */
+}
+
