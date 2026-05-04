@@ -268,6 +268,17 @@ export function openFavSheet() {
   else                     renderFavList(favs);
   favSheet.classList.add('sheet-open');
   sheetOverlay.classList.add('overlay-visible');
+
+  // ── Лічильник серії «лише Вибране» ──
+  const hideInfo   = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+  const startOnFav = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
+  if (!hideInfo && !startOnFav) {
+    const streak = parseInt(Storage.get(STORAGE_KEYS.FAV_ONLY_STREAK) || '0', 10) + 1;
+    Storage.set(STORAGE_KEYS.FAV_ONLY_STREAK, String(streak));
+    if (streak >= 5 && !document.getElementById('favOnlyHint')) {
+      MetroApp.insertFavOnlyHint();
+    }
+  }
 }
 
 export function closeFavSheet() {
@@ -291,6 +302,22 @@ export function updateFavDock() {
   if (!btn) return;
   btn.innerHTML = getFavs().length > 0 ? MetroApp.Icons.dockHeartFilled : MetroApp.Icons.dockHeartEmpty;
 }
+
+// ══ ПІДКАЗКА «ВИБРАНЕ ПРИ ЗАПУСКУ» ══
+MetroApp.insertFavOnlyHint = function() {
+  if (document.getElementById('favOnlyHint')) return;
+  const hint = document.createElement('p');
+  hint.id = 'favOnlyHint';
+  hint.className = 'fav-empty-text-lg';
+  hint.innerHTML = `Внесли до <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> все, чого&nbsp;потребуєте для&nbsp;швидкої навігації в&nbsp;метро? <br>Активуйте в&nbsp;налаштуваннях режим „Показувати&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span> при&nbsp;запуску"`;
+  favBody.insertBefore(hint, favBody.firstChild);
+};
+
+MetroApp.dismissFavOnlyHint = function() {
+  Storage.set(STORAGE_KEYS.FAV_ONLY_STREAK, '0');
+  const el = document.getElementById('favOnlyHint');
+  if (el) el.remove();
+};
 
 // ══ EVENT LISTENERS ══
 // Клік на favListBtn реєструється в main.js — тут не дублюємо

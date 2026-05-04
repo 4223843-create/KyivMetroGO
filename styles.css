@@ -383,6 +383,7 @@ z-index: var(--z-fullscreen-sheet);
   width: auto; 
   display: block; 
 }
+
 /* Вирівнювання пустих Обраних ліворуч, як і заголовок */
 .fav-empty-text {
   color: var(--text-muted);
@@ -2541,7 +2542,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 .settings-info-btn:active,
 .settings-info-btn.settings-info-btn-active { 
-  color: var(--bg-pill); 
+  color: var(--text-secondary); 
 }
 .settings-hint {
   margin: 0;

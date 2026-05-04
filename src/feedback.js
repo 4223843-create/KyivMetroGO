@@ -2,7 +2,7 @@ import { STORAGE_KEYS, Storage } from './storage.js';
 import { state } from './state.js';
 import { isDevMode, appendDevLog } from './devmode.js';
 
-const FORMSPREE_URL = 'https://formspree.io/f/mgopobnd';
+const FORMSPREE_URL = 'https://formspree.io/f/xrejbjww';
 const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
 
 // =========================================================

@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
   CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
   HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
+  FAV_ONLY_STREAK:     'metro_fav_only_streak',
   // Режим розробника
   DEV_MODE:     'metro_dev_mode',
   DEV_LOG:      'metro_dev_log',

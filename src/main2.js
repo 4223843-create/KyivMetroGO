@@ -48,9 +48,6 @@ async function bootstrap() {
   try {
     await Storage.init();
 
-    // Міграція: видаляємо застарілий флаг — підказка тепер встановлюється лише після показу
-    Storage.remove(STORAGE_KEYS.CHECKIN_HINT_SEEN);
-
     const savedTheme = Storage.get(STORAGE_KEYS.THEME) || 
                        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     import('./theme.js').then(m => m.applyTheme(savedTheme));

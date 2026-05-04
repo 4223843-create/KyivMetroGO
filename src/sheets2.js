@@ -258,20 +258,23 @@ function attachExitFavListeners(container, slug, lineColor) {
 
       if (result.status === 'added') {
         function insertCheckinHint() {
-          if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
-          if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
+          if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') { console.log('[hint] blocked by HIDE_INFO_BLOCKS'); return; }
+          if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') { console.log('[hint] blocked by CHECKIN_HINT_SEEN'); return; }
           const sheetBodyEl = document.getElementById('sheetBody');
-          if (!sheetBodyEl || document.getElementById('checkinHint')) return;
-
-          Storage.set(STORAGE_KEYS.CHECKIN_HINT_SEEN, 'true');
+          if (!sheetBodyEl) { console.log('[hint] sheetBody not found'); return; }
+          if (document.getElementById('checkinHint')) { console.log('[hint] checkinHint already exists'); return; }
+          console.log('[hint] inserting checkinHint');
           const checkinHint = document.createElement('div');
           checkinHint.id = 'checkinHint';
           checkinHint.className = 'onboarding-hint';
           checkinHint.innerHTML = `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`;
+          
           sheetBodyEl.insertBefore(checkinHint, sheetBodyEl.firstChild);
+          console.log('[hint] checkinHint inserted, sheetBody firstChild:', sheetBodyEl.firstChild?.id);
         }
 
         const onboardingHint = document.getElementById('onboardingHint');
+        console.log('[hint] onboardingHint found:', !!onboardingHint);
         if (onboardingHint) {
           MetroApp.dismissHintWithDoors(onboardingHint, insertCheckinHint);
         } else {
@@ -352,9 +355,6 @@ export function openStation(slug) {
   function actualOpenStation() {
     if (!state.stationsData?.[slug]) return;
     state.currentStationSlug = slug;
-
-    // Скидаємо серію «лише Вибране» і прибираємо підказку
-    MetroApp.dismissFavOnlyHint?.();
     const s     = state.stationsData[slug];
     const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
     const fav   = isFav(slug);

@@ -39,9 +39,10 @@ export function openSettingsSheet() {
     const startFavToggle = document.getElementById('settingsStartFavToggle');
     if (startFavToggle) {
       startFavToggle.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
-      startFavToggle.addEventListener('change', e =>
-        Storage.set(STORAGE_KEYS.START_ON_FAV, e.target.checked)
-      );
+      startFavToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.START_ON_FAV, e.target.checked);
+        if (e.target.checked) MetroApp.dismissFavOnlyHint?.();
+      });
     }
 
     // ── Зміни працюють локально ──
@@ -170,7 +171,10 @@ export function openSettingsSheet() {
     // ── Очистити локальні зміни ──
     document.getElementById('settingsClearLocalEdits')?.addEventListener('click', e => {
       e.stopPropagation();
-      if (e.currentTarget.disabled) return;
+      if (e.currentTarget.disabled) {
+        MetroApp.showCustomConfirm('Дані користувача відсутні', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
+        return;
+      }
       MetroApp.showCustomConfirm('Очистити всі дані користувача (Вибране, Check-in, назви виходів)? Логи та перевірки розробника залишаться.',
         () => {
           // Чистимо лише користувацькі ключі
@@ -338,7 +342,7 @@ export function openSettingsSheet() {
 
     if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
     if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
-    if (clearLocalBtn)   clearLocalBtn.disabled   = !hasEdits;
+    if (clearLocalBtn)   clearLocalBtn.disabled   = !(hasFavs || hasCheckins || hasEdits);
   }
   syncToggles();
 

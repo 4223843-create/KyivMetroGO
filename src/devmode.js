@@ -294,10 +294,9 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
     </div>
     <div class="dev-note-actions">
       <button type="button" class="dev-photo-upload confirm-main-btn confirm-btn-save">
-                ${existingPhoto ? 'Змінити' : 'Вибрати'}
-
-      <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button>
+        ${existingPhoto ? 'Змінити' : 'Вибрати'}
       </button>
+      <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button>
       ${existingPhoto ? `<button type="button" class="dev-photo-clear confirm-main-btn confirm-btn-discard">Видалити</button>` : ''}
     </div>
     <input type="file" accept="image/*" class="dev-photo-input" style="display: none;" />
