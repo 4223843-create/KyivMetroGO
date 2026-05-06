@@ -1,4 +1,5 @@
 import { state, startupSlug } from './state.js';
+import { traversePositions }  from './positions.js';
 
 const STATION_ALIASES = {
   'театральну': 'театральна',
@@ -52,41 +53,39 @@ export function hydrateStations(data) {
   if (!state.stationsData) state.stationsData = {};
   Object.keys(state.stationsData).forEach(key => delete state.stationsData[key]);
 
-  MetroApp.NAME_TO_SLUG = {};
+  MetroApp.NAME_TO_SLUG  = {};
   MetroApp.SLUG_BY_LOWER = {};
 
   data.stations.forEach(station => {
+
+    // ── Плаский масив positions для зворотньої сумісності ──
     station.positions = [];
-    station.directions?.forEach(direction => {
-      direction.exits?.forEach(exit => {
-        exit.positions?.forEach(position => {
-          station.positions.push({
-            dir: direction.from,
-            exit: exit.label || '',
-            wagon: position.wagon,
-            doors: position.doors,
-          });
-        });
+    traversePositions(station, ({ dir, exit, position }) => {
+      station.positions.push({
+        dir:   dir.from,
+        exit:  exit.label || '',
+        wagon: position.wagon,
+        doors: position.doors,
       });
     });
 
     const cleanName = station.name.toLowerCase().replace(/["'„"«».,]/g, '');
-    MetroApp.NAME_TO_SLUG[cleanName] = station.slug;
+    MetroApp.NAME_TO_SLUG[cleanName]                   = station.slug;
     MetroApp.SLUG_BY_LOWER[station.slug.toLowerCase()] = station.slug;
 
-    const stationWords = cleanName.split(/[\s\u00a0\u202f\-]+/);
-    const slugParts = station.slug.split('.');
-    const cleanEnName = (slugParts.length > 1 ? slugParts[1] : station.slug).replace(/_/g, ' ').toLowerCase();
+    const stationWords   = cleanName.split(/[\s\u00a0\u202f\-]+/);
+    const slugParts      = station.slug.split('.');
+    const cleanEnName    = (slugParts.length > 1 ? slugParts[1] : station.slug).replace(/_/g, ' ').toLowerCase();
     const stationEnWords = cleanEnName.split(/\s+/);
-    const acronym = stationWords.map(word => word.charAt(0)).join('');
+    const acronym        = stationWords.map(word => word.charAt(0)).join('');
 
-    const aliases = [];
-    if (station.slug === 'R.Politekhnychnyi_instytut') aliases.push('кпі');
-    if (station.slug === 'B.Ploshcha_Ukrainskikh_heroiv') {
-      aliases.push('плуг');
-      aliases.push('площа льва толстого');
-    }
-    if (station.slug === 'G.Zvirynetska') aliases.push('дружби народів');
+    // Аліаси — з JSON-поля searchAliases, не hardcoded в JS.
+    // Щоб додати аліас — редагуй stations.json, а не цей файл.
+    // Приклад у stations.json:
+    //   { "slug": "R.Politekhnychnyi_instytut", "searchAliases": ["кпі"], ... }
+    //   { "slug": "B.Ploshcha_Ukrainskikh_heroiv", "searchAliases": ["плуг", "площа льва толстого"], ... }
+    //   { "slug": "G.Zvirynetska", "searchAliases": ["дружби народів"], ... }
+    const aliases = (station.searchAliases ?? []).map(a => a.toLowerCase());
 
     station._searchIndex = [
       ...stationWords,
@@ -113,14 +112,14 @@ export function renderMapZones() {
 
   svgEl.querySelectorAll('[id]').forEach(el => {
     const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    const slug = MetroApp.SLUG_BY_LOWER[rawId];
+    const slug  = MetroApp.SLUG_BY_LOWER[rawId];
 
     if (!slug) return;
 
-    el.style.fill = 'transparent';
-    el.style.stroke = 'transparent';
-    el.style.pointerEvents = 'all';
-    el.style.cursor = 'pointer';
+    el.style.fill                    = 'transparent';
+    el.style.stroke                  = 'transparent';
+    el.style.pointerEvents           = 'all';
+    el.style.cursor                  = 'pointer';
     el.style.webkitTapHighlightColor = 'transparent';
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
@@ -159,7 +158,7 @@ export async function reloadStationsData(forceFresh = false) {
     );
   }
 
-  const data = await response.json();
+  const data     = await response.json();
   const hydrated = hydrateStations(data);
 
   if (!forceFresh) {
@@ -168,7 +167,7 @@ export async function reloadStationsData(forceFresh = false) {
   }
 
   const favSheet = document.getElementById('favSheet');
-  const favBody = document.getElementById('favBody');
+  const favBody  = document.getElementById('favBody');
   if (favSheet?.classList.contains('sheet-open') && favBody?.querySelector('.fav-empty-text')) {
     MetroApp.renderFavOnLoad?.();
   }
@@ -183,4 +182,4 @@ function handleStartupStation(data) {
 }
 
 MetroApp.reloadStationsData = reloadStationsData;
-MetroApp.slugByName = slugByName;
+MetroApp.slugByName         = slugByName;

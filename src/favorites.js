@@ -1,17 +1,15 @@
-import Sortable       from 'sortablejs';
-import { state }       from './state.js';
+import Sortable        from 'sortablejs';
+import { state }        from './state.js';
 import { STORAGE_KEYS, Storage } from './storage.js';
 
-const favSheet   = document.getElementById('favSheet');
-const favBody    = document.getElementById('favBody');
-const favClose   = document.getElementById('favClose');
-const favBtn     = document.getElementById('favListBtn');
+const favSheet    = document.getElementById('favSheet');
+const favBody     = document.getElementById('favBody');
+const favClose    = document.getElementById('favClose');
 const sheetOverlay = document.getElementById('sheetOverlay');
 
-// ══ ОБРАНІ СТАНЦІЇ ══
+// ══ ОБРАНІ СТАНЦІЇ ══════════════════════════════════════════
 let favCache = null;
 
-// Читає кеш без копіювання — для внутрішніх перевірок
 function readFavCache() {
   if (!favCache) {
     try { favCache = JSON.parse(Storage.get(STORAGE_KEYS.FAVS) || '[]'); }
@@ -20,17 +18,10 @@ function readFavCache() {
   return favCache;
 }
 
-// Публічний API — завжди повертає копію, щоб зовнішній код не міг мутувати кеш
-export function getFavs() {
-  return [...readFavCache()];
-}
+export function getFavs()         { return [...readFavCache()]; }
+export function saveFavs(arr)     { favCache = [...arr]; Storage.set(STORAGE_KEYS.FAVS, JSON.stringify(favCache)); }
+export const    isFav = slug => readFavCache().includes(slug);
 
-export function saveFavs(arr) {
-  favCache = [...arr];
-  Storage.set(STORAGE_KEYS.FAVS, JSON.stringify(favCache));
-}
-
-export const isFav = slug => readFavCache().includes(slug);
 export function toggleFav(slug) {
   let favs = getFavs();
   favs = favs.includes(slug) ? favs.filter(s => s !== slug) : [...favs, slug];
@@ -39,31 +30,35 @@ export function toggleFav(slug) {
   return favs.includes(slug);
 }
 
-// ══ ОБРАНІ ВИХОДИ ══
+// ══ ОБРАНІ ВИХОДИ ═══════════════════════════════════════════
 let exitFavCache = null;
 
-export function getExitFavs() {
-  if (exitFavCache) return [...exitFavCache];
+// Повертає живий кеш — тільки для внутрішнього читання
+function readExitFavCache() {
+  if (exitFavCache) return exitFavCache;
   try { exitFavCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_FAVS) || '[]'); }
   catch (e) { console.warn('[KyivMetroGO] Помилка парсингу Обраних виходів:', e); exitFavCache = []; }
-  return [...exitFavCache];
+  return exitFavCache;
 }
 
+export function getExitFavs()    { return [...readExitFavCache()]; }
 export function exitFavId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
 
+// ── isExitFav: читаємо живий кеш без копіювання ──────────────
+// Оригінал: getExitFavs() → spread → .some() — зайва копія масиву.
 export function isExitFav(slug, dir, wagon, doors) {
-  return getExitFavs().some(f => f.id === exitFavId(slug, dir, wagon, doors));
+  const id = exitFavId(slug, dir, wagon, doors);
+  return readExitFavCache().some(f => f.id === id);
 }
 
 export function toggleExitFav(slug, dir, wagon, doors) {
-  let favs = getExitFavs();
-  const id  = exitFavId(slug, dir, wagon, doors);
-  const idx = favs.findIndex(f => f.id === id);
+  const favs = readExitFavCache(); // живий кеш, мутуємо напряму
+  const id   = exitFavId(slug, dir, wagon, doors);
+  const idx  = favs.findIndex(f => f.id === id);
 
   if (idx >= 0) {
     favs.splice(idx, 1);
     Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
-    exitFavCache = [...favs];
     return { status: 'removed' };
   }
 
@@ -71,41 +66,33 @@ export function toggleExitFav(slug, dir, wagon, doors) {
   if (slugDirFavs.length >= 1) return { status: 'replace', existing: slugDirFavs[0] };
 
   favs.push({ id, slug, dir, wagon, doors });
-
   let mainFavs = getFavs();
   if (!mainFavs.includes(slug)) { mainFavs.push(slug); saveFavs(mainFavs); }
-
   Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
-  exitFavCache = [...favs];
   return { status: 'added' };
 }
 
 export function replaceExitFav(slug, dir, oldWagon, oldDoors, newWagon, newDoors) {
-  let favs = getExitFavs();
+  const favs  = readExitFavCache();
   const oldId = exitFavId(slug, dir, oldWagon, oldDoors);
-  favs = favs.filter(f => f.id !== oldId);
+  const idx   = favs.findIndex(f => f.id === oldId);
+  if (idx >= 0) favs.splice(idx, 1);
   const newId = exitFavId(slug, dir, newWagon, newDoors);
   favs.push({ id: newId, slug, dir, wagon: newWagon, doors: newDoors });
   Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
-  exitFavCache = [...favs];
   let mainFavs = getFavs();
   if (!mainFavs.includes(slug)) { mainFavs.push(slug); saveFavs(mainFavs); }
   updateFavDock();
   return { status: 'replaced' };
 }
 
-// ══ СИНХРОНІЗАЦІЯ ВКЛАДОК ══
+// ══ СИНХРОНІЗАЦІЯ ВКЛАДОК ════════════════════════════════════
 window.addEventListener('storage', e => {
-  if (e.key === STORAGE_KEYS.FAVS) {
-    try { favCache = JSON.parse(e.newValue || '[]'); }
-    catch { favCache = []; }
-  } else if (e.key === STORAGE_KEYS.EXIT_FAVS) {
-    try { exitFavCache = JSON.parse(e.newValue || '[]'); }
-    catch { exitFavCache = []; }
-  }
+  if      (e.key === STORAGE_KEYS.FAVS)      { try { favCache     = JSON.parse(e.newValue || '[]'); } catch { favCache     = []; } }
+  else if (e.key === STORAGE_KEYS.EXIT_FAVS) { try { exitFavCache = JSON.parse(e.newValue || '[]'); } catch { exitFavCache = []; } }
 });
 
-// ══ ПОРОЖНІЙ СТАН ══
+// ══ ПОРОЖНІЙ СТАН ════════════════════════════════════════════
 export function getEmptyFavHtml() {
   const colors = ['var(--line-blue)', 'var(--line-red)', 'var(--line-green)'];
   const color  = colors[state.emptyFavColorIdx % colors.length];
@@ -124,12 +111,12 @@ export function getEmptyFavHtml() {
     </div>`;
 }
 
-// ══ РЕНДЕР СПИСКУ ОБРАНОГО ══
+// ══ РЕНДЕР СПИСКУ ОБРАНОГО ═══════════════════════════════════
 export function renderFavList(favs) {
   if (!favs.length) { favBody.innerHTML = getEmptyFavHtml(); return; }
 
-  const exitFavs   = getExitFavs();
-  const items = [];
+  const exitFavs = readExitFavCache(); // живий кеш — без spread
+  const items    = [];
 
   favs.forEach(slug => {
     const s = state.stationsData?.[slug];
@@ -152,11 +139,20 @@ export function renderFavList(favs) {
   try { savedOrder = JSON.parse(Storage.get(STORAGE_KEYS.FAV_ROWS_ORDER) || '[]'); }
   catch { savedOrder = []; }
 
+  // ── Оптимізація: Map замість indexOf ─────────────────────────
+  // Оригінал: getEffectiveIdx() викликає savedOrder.indexOf() — O(m) —
+  // для кожного порівняння у sort. Загальна складність O(n × m × log n).
+  // Map: O(1) lookup → O(n × log n).
+  const orderMap = new Map(savedOrder.map((id, i) => [id, i]));
+
   const getEffectiveIdx = item => {
-    let idx = savedOrder.indexOf(item.rowId);
-    if (idx !== -1) return idx;
-    let siblingIdx = savedOrder.findIndex(id => id.startsWith(item.slug + '::'));
-    return siblingIdx !== -1 ? siblingIdx + 0.5 : 99999;
+    const direct = orderMap.get(item.rowId);
+    if (direct !== undefined) return direct;
+    // Сусідня запис того ж slug — беремо її позицію + 0.5
+    for (const [id, i] of orderMap) {
+      if (id.startsWith(item.slug + '::')) return i + 0.5;
+    }
+    return 99999;
   };
 
   items.sort((a, b) => {
@@ -168,46 +164,36 @@ export function renderFavList(favs) {
   const listHtml = items.map(item => {
     const displayName = MetroApp.FAV_DISPLAY_NAMES?.[item.slug] || item.name;
 
-    // НОВИЙ НАДІЙНИЙ КОД
     let formattedDir = '';
     if (item.dir && item.dir !== 'undefined') {
       const cleanDir = item.dir.trim();
-      const lower = cleanDir.toLowerCase();
-      
+      const lower    = cleanDir.toLowerCase();
+
       if (lower === 'кінцева' || lower === 'вихід праворуч') {
         formattedDir = lower;
       } else if (lower.includes('довгий перехід')) {
         formattedDir = 'довгий перехід на Майдан Незалежності';
       } else {
         const isPrev = lower.startsWith('попередня');
-        // Беремо оригінальну назву станції (вже з правильними великими літерами)
         let stationName = cleanDir.replace(/^попередня\s+/i, '').trim();
-        
-        // 1. Перевіряємо, чи є для цієї станції спеціальне скорочення (Пл. Українських Героїв)
-        // Шукаємо slug станції за її назвою, а потім перевіряємо словник скорочень
         const targetSlug = MetroApp.slugByName?.(stationName);
         if (targetSlug && MetroApp.FAV_DISPLAY_NAMES?.[targetSlug]) {
           stationName = MetroApp.FAV_DISPLAY_NAMES[targetSlug];
-        } 
-        // 2. Якщо спеціального скорочення немає, і виходів багато — застосовуємо стандартні короткі імена
-        else if (item.exits.length > 1) {
+        } else if (item.exits.length > 1) {
           const stLower = stationName.toLowerCase();
           stationName = MetroApp.DIR_SHORT_NAMES?.[stLower] || stationName;
         }
-        
         formattedDir = isPrev ? `попередня ${stationName}` : stationName;
       }
-    } // <-- ВІДНОВЛЕНО ЗАКРИВАЮЧУ ДУЖКУ
+    }
 
     let squaresHtml = '';
     if (item.exits.length > 0) {
       const isCompact    = item.exits.length > 2;
       const containerClass = isCompact ? 'fav-exits-container fav-exits-compact' : 'fav-exits-container';
-      const groupsHtml   = item.exits.map(f => `
-        <div class="fav-exit-group">
-          <div class="fav-pos-square" style="color:${item.color}">${f.wagon}</div>
-          <div class="fav-pos-square" style="color:${item.color}">${f.doors}</div>
-        </div>`).join('<div class="fav-exit-sep"></div>');
+      const groupsHtml   = item.exits.map(f =>
+        `<div class="fav-exit-group"><div class="fav-pos-square" style="color:${item.color}">${f.wagon}</div><div class="fav-pos-square" style="color:${item.color}">${f.doors}</div></div>`
+      ).join('<div class="fav-exit-sep"></div>');
       squaresHtml = `<div class="${containerClass}">${groupsHtml}</div>`;
     }
 
@@ -226,11 +212,9 @@ export function renderFavList(favs) {
   favBody.innerHTML = listHtml;
 
   function saveOrder() {
-    const rowIds   = [...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.rowId).filter(Boolean);
+    const rowIds    = [...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.rowId).filter(Boolean);
     Storage.set(STORAGE_KEYS.FAV_ROWS_ORDER, JSON.stringify(rowIds));
-    const domSlugs = [...new Set([...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.slug).filter(Boolean))];
-    // Захист від розсинхронізації DOM: якщо якась станція з favs не потрапила у DOM —
-    // додаємо її в кінець, щоб не втратити.
+    const domSlugs  = [...new Set([...favBody.querySelectorAll('.fav-item')].map(i => i.dataset.slug).filter(Boolean))];
     const missingSlugs = favs.filter(s => !domSlugs.includes(s));
     saveFavs([...domSlugs, ...missingSlugs]);
   }
@@ -238,17 +222,17 @@ export function renderFavList(favs) {
   if (Sortable) {
     if (favBody._sortable) favBody._sortable.destroy();
     favBody._sortable = new Sortable(favBody, {
-      draggable:     '.fav-item',
-      handle:        '.fav-drag-handle',
-      animation:     0,
-      ghostClass:    'fav-ghost',
-      dragClass:     'fav-dragging',
+      draggable:      '.fav-item',
+      handle:         '.fav-drag-handle',
+      animation:      0,
+      ghostClass:     'fav-ghost',
+      dragClass:      'fav-dragging',
       fallbackOnBody: true,
-      swapThreshold: 0.65,
-      swap:          true,
-      swapClass:     'fav-swap-highlight',
-      forceFallback: true,
-      onEnd:         saveOrder,
+      swapThreshold:  0.65,
+      swap:           true,
+      swapClass:      'fav-swap-highlight',
+      forceFallback:  true,
+      onEnd:          saveOrder,
     });
   }
 }
@@ -258,9 +242,9 @@ favBody.addEventListener('click', e => {
   if (btn?.dataset.slug) MetroApp.openStation?.(btn.dataset.slug);
 });
 
-// ══ ВІДКРИТТЯ / ЗАКРИТТЯ ══
+// ══ ВІДКРИТТЯ / ЗАКРИТТЯ ═════════════════════════════════════
 export function openFavSheet() {
-  MetroApp.pushSheetHistory(); // <--- ДОДАНО
+  MetroApp.pushSheetHistory();
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   const favs = getFavs();
   if (!state.stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
@@ -269,7 +253,6 @@ export function openFavSheet() {
   favSheet.classList.add('sheet-open');
   sheetOverlay.classList.add('overlay-visible');
 
-  // ── Лічильник серії «лише Вибране» ──
   const hideInfo   = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
   const startOnFav = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
   if (!hideInfo && !startOnFav) {
@@ -289,25 +272,24 @@ export function closeFavSheet() {
   });
 }
 
-// Перемалювати обране після завантаження даних (викликається з stations.js)
 MetroApp.renderFavOnLoad = () => {
   const favs = getFavs();
   if (!favs.length) favBody.innerHTML = getEmptyFavHtml();
   else renderFavList(favs);
 };
 
-// ══ DOCK-ІКОНКА ОБРАНОГО ══
+// ══ DOCK-ІКОНКА ══════════════════════════════════════════════
 export function updateFavDock() {
   const btn = document.getElementById('favListBtn');
   if (!btn) return;
   btn.innerHTML = getFavs().length > 0 ? MetroApp.Icons.dockHeartFilled : MetroApp.Icons.dockHeartEmpty;
 }
 
-// ══ ПІДКАЗКА «ВИБРАНЕ ПРИ ЗАПУСКУ» ══
+// ══ ПІДКАЗКА «ВИБРАНЕ ПРИ ЗАПУСКУ» ══════════════════════════
 MetroApp.insertFavOnlyHint = function() {
   if (document.getElementById('favOnlyHint')) return;
   const hint = document.createElement('p');
-  hint.id = 'favOnlyHint';
+  hint.id        = 'favOnlyHint';
   hint.className = 'fav-empty-text-lg';
   hint.innerHTML = `Внесли до <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> все, чого&nbsp;потребуєте для&nbsp;швидкої навігації в&nbsp;метро? <br>Активуйте в&nbsp;налаштуваннях режим „Показувати&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span> при&nbsp;запуску"`;
   favBody.insertBefore(hint, favBody.firstChild);
@@ -315,13 +297,8 @@ MetroApp.insertFavOnlyHint = function() {
 
 MetroApp.dismissFavOnlyHint = function() {
   Storage.set(STORAGE_KEYS.FAV_ONLY_STREAK, '0');
-  const el = document.getElementById('favOnlyHint');
-  if (el) el.remove();
+  document.getElementById('favOnlyHint')?.remove();
 };
 
-// ══ EVENT LISTENERS ══
-// Клік на favListBtn реєструється в main.js — тут не дублюємо
 favClose.addEventListener('click', closeFavSheet);
-
-// Кінематичний свайп
 MetroApp.initKinematicSwipe(favSheet, favBody, closeFavSheet);
