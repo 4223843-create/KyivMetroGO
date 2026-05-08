@@ -1,12 +1,12 @@
-import { STORAGE_KEYS, Storage } from './storage.js';
-import { state }                  from './state.js';
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { state }                  from '../core/state.js';
 import { isDevMode, appendDevLog } from './devmode.js';
-import { reloadStationsData }      from './stations.js';
+import { reloadStationsData }      from '../data/stations.js';
 import {
 applyLocalEdits, applyExitLabels, getExitLabel, saveExitLabel,
 getLocalEdits, saveLocalEdit, clearAllLocalEdits, hasLocalEdits,
 invalidateLocalEditsCache,
-} from './localEdits.js';
+} from '../data/localEdits.js';
 
 const FORMSPREE_URL = 'https://formspree.io/f/xrejbjww';
 const LINE_NAMES = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
@@ -232,6 +232,14 @@ if (fbState.slug !== slug) initFeedbackState(slug);
 
 try {
 const s = state.stationsData[slug];
+// Оновлюємо заголовок шторки на назву обраної станції
+      const titleEl = document.getElementById('fbStationTitle');
+      const mainTitleEl = document.getElementById('fbSheetTitle');
+      if (titleEl && mainTitleEl) {
+        titleEl.textContent = s.name;
+        titleEl.hidden = false;
+        mainTitleEl.hidden = true;
+      }
 const fbLineColor = (MetroApp.LINE_COLOR && s?.line) ? MetroApp.LINE_COLOR[s.line] : 'var(--text-muted)';
 const groupsMap = new Map();
 
@@ -687,12 +695,17 @@ if (!sheet) {
     MetroApp.fbUnsaved = false;
     closeAllHints();
     
-    const allSt = Object.entries(state.stationsData)
+    const allSt = Object.entries(state.stationsData || {})
       .map(([sl, st]) => ({ slug: sl, ...st }))
       .filter(st => line === '' || st.line === line)
       .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
       
     stationList.innerHTML = allSt.map(st =>
+
+
+
+
+      
       `<div class="search-item fb-station-item${st.slug === stationHidden.value ? ' fb-station-active' : ''}" data-slug="${st.slug}">` +
       `<div class="search-item-line" style="background-color:${MetroApp.LINE_COLOR[st.line]}"></div>` +
       `<div>${st.name}</div></div>`
@@ -715,9 +728,18 @@ if (!sheet) {
     renderFeedbackPositions(stationHidden.value);
   });
 
-  document.getElementById('fbChangeStation').addEventListener('click', () => {
+document.getElementById('fbChangeStation').addEventListener('click', () => {
     document.getElementById('fbLineFilterWrap').hidden = false;
     document.getElementById('fbChangeStation').hidden = true;
+    
+    document.getElementById('fbStationTitle').hidden = true;
+    document.getElementById('fbSheetTitle').hidden = false;
+
+    
+
+
+
+
     stationHidden.value = '';
     posEl.innerHTML = '';
     stationList.hidden = false;

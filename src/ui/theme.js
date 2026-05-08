@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, Storage } from './storage.js';
+import { STORAGE_KEYS, Storage } from '@core/storage.js';
 
 const root = document.documentElement;
 

@@ -1,8 +1,8 @@
-import { STORAGE_KEYS, Storage }        from './storage.js';
-import { applyTheme }           from './theme.js';
+import { STORAGE_KEYS, Storage }        from '../core/storage.js';
+import { applyTheme }           from '../ui/theme.js';
 import { getFavs, getExitFavs, saveFavs, updateFavDock } from './favorites.js';
 import { isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache } from './checkin.js';
-import { state }                from './state.js';
+import { state }                from '../core/state.js';
 import { isDevMode, getDevLog } from './devmode.js';
 
 // ⚠️ Логіка тумблерів (pointer-events + клік по всій картці) — збережено без змін!

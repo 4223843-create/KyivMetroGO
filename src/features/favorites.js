@@ -1,6 +1,6 @@
 import Sortable        from 'sortablejs';
-import { state }        from './state.js';
-import { STORAGE_KEYS, Storage } from './storage.js';
+import { state }        from '../core/state.js';
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
 
 const favSheet    = document.getElementById('favSheet');
 const favBody     = document.getElementById('favBody');
@@ -301,4 +301,6 @@ MetroApp.dismissFavOnlyHint = function() {
 };
 
 favClose.addEventListener('click', closeFavSheet);
-MetroApp.initKinematicSwipe(favSheet, favBody, closeFavSheet);
+setTimeout(() => {
+  MetroApp.initKinematicSwipe?.(favSheet, favBody, closeFavSheet);
+}, 0);

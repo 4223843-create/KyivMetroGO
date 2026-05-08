@@ -1,82 +1,93 @@
-window.MetroApp = window.MetroApp || {};
+// ══ ТОЧКА ВХОДУ — BOOTSTRAP ══
+// Відповідальність: ініціалізація даних і навігація при старті.
+// UI-прив'язки — в app.js. Реєстрація SW — в infra/serviceWorker.js.
+// Правило: тут лише async bootstrap() і реєстрація SW.
 
-import { STORAGE_KEYS, Storage } from './storage.js';
-import './icons.js';
-import { state } from './state.js';
-import './ui.js';
-import './theme.js';
-import { reloadStationsData } from './stations.js';
-import { initMap } from './map.js';
-import { openFavSheet, updateFavDock } from './favorites.js';
-import { updateCheckinDock, openCheckinSheet } from './checkin.js';
-import { openSearchSheet } from './search.js';
+
+// ── Ініціалізація MetroApp-namespace (константи) ──────────────
+// Робиться тут, один раз, щоб усі модулі могли використовувати MetroApp.*
 import {
-  openStation,
-  closeAllSheets,
-  openAboutSheet,
-  withUnsavedCheck,
-} from './sheets.js';
-import { openSettingsSheet } from './settings.js';
-import './feedback.js';
-import './offline.js';
-import './about.js';
+  LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES,
+  STATIONS_WITH_POTENTIAL_EXITS, NAME_TO_SLUG, SLUG_BY_LOWER,
+} from './core/constants.js';
 
+MetroApp.LINE_COLOR                    = LINE_COLOR;
+MetroApp.FAV_DISPLAY_NAMES             = FAV_DISPLAY_NAMES;
+MetroApp.DIR_SHORT_NAMES               = DIR_SHORT_NAMES;
+MetroApp.STATIONS_WITH_POTENTIAL_EXITS = STATIONS_WITH_POTENTIAL_EXITS;
+MetroApp.NAME_TO_SLUG                  = NAME_TO_SLUG;
+MetroApp.SLUG_BY_LOWER                 = SLUG_BY_LOWER;
+
+// ── Функції з ui/ реєструємо на MetroApp для cross-module доступу ──
+import { animateSheetClose, dismissHintWithDoors } from './ui/animations.js';
+import { showCustomConfirm }   from './ui/confirm.js';
+import { initKinematicSwipe }  from './ui/swipe.js';
+import { configureEdgeToEdge, pushSheetHistory } from './ui/system.js';
+
+MetroApp.animateSheetClose    = animateSheetClose;
+MetroApp.dismissHintWithDoors = dismissHintWithDoors;
+MetroApp.showCustomConfirm    = showCustomConfirm;
+MetroApp.initKinematicSwipe   = initKinematicSwipe;
+MetroApp.configureEdgeToEdge  = configureEdgeToEdge;
+MetroApp.pushSheetHistory     = pushSheetHistory;
+
+// ── Іконки ────────────────────────────────────────────────────
+import { Icons } from './ui/icons.js';
+MetroApp.Icons = Icons;
+
+// ── Імпорти bootstrap ────────────────────────────────────────
+import { STORAGE_KEYS, Storage } from './core/storage.js';
+import { applyTheme }            from './ui/theme.js';
+import { initMap }               from './map/mapInit.js';
+import './map/mapGestures.js';
+import './map/mapInteraction.js';
+import { reloadStationsData }    from './data/stations.js';
+import { updateFavDock }         from './features/favorites.js';
+import { updateCheckinDock }     from './features/checkin.js';
+import { openFavSheet }          from './features/favorites.js';
+import { openSearchSheet }       from './features/search.js';
+import { registerServiceWorker } from './infra/serviceWorker.js';
+import './infra/offline.js';
+import './infra/swUpdate.js';
+import './infra/about.js';
+import './features/feedback.js';
+import './app.js';
+
+// ── Глобальний error handler ──────────────────────────────────
 function releaseStartupLoader() {
   document.getElementById('mapViewport')?.classList.remove('is-loading');
 }
+window.addEventListener('error',              e => { console.error('[startup] uncaught error', e.error || e.message); releaseStartupLoader(); });
+window.addEventListener('unhandledrejection', e => { console.error('[startup] unhandled rejection', e.reason); releaseStartupLoader(); });
 
-window.addEventListener('error', event => {
-  console.error('[startup] uncaught error', event.error || event.message);
-  releaseStartupLoader();
-});
-
-window.addEventListener('unhandledrejection', event => {
-  console.error('[startup] unhandled rejection', event.reason);
-  releaseStartupLoader();
-});
-
-function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
-
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(error => {
-      console.error('[PWA] service worker registration failed', error);
-    });
-  });
-}
-
+// ── Bootstrap ─────────────────────────────────────────────────
 async function bootstrap() {
   try {
     await Storage.init();
 
-    // Міграція: видаляємо застарілий флаг — підказка тепер встановлюється лише після показу
+    // Міграція: видаляємо застарілий флаг
     Storage.remove(STORAGE_KEYS.CHECKIN_HINT_SEEN);
 
-    const savedTheme = Storage.get(STORAGE_KEYS.THEME) ||
-                       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    import('./theme.js').then(m => m.applyTheme(savedTheme));
+    const savedTheme = Storage.get(STORAGE_KEYS.THEME)
+      || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(savedTheme);
 
     initMap();
-    MetroApp.configureEdgeToEdge();
+    await configureEdgeToEdge();
     await reloadStationsData();
 
     updateCheckinDock();
     updateFavDock();
 
+    // Навігація при старті (deep link / action param)
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
 
-    if (action === 'search') {
-      openSearchSheet();
-    } else if (action === 'fav') {
-      openFavSheet();
-    } else if (Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true') {
-      openFavSheet();
-    }
+    if      (action === 'search') openSearchSheet();
+    else if (action === 'fav')    openFavSheet();
+    else if (Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true') openFavSheet();
 
-    if (action) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    if (action) window.history.replaceState({}, document.title, window.location.pathname);
 
   } catch (err) {
     console.error('[startup] bootstrap failed', err);
@@ -84,73 +95,5 @@ async function bootstrap() {
   }
 }
 
-// ══ ОБРОБКА СИСТЕМНОЇ КНОПКИ "НАЗАД" (ANDROID SWIPE BACK) ══
-window.addEventListener('popstate', () => {
-  const openSheets = document.querySelectorAll('.station-sheet.sheet-open');
-  if (openSheets.length > 0) {
-    MetroApp.closeAllSheets(true);
-  }
-});
-
 bootstrap();
 registerServiceWorker();
-
-const favListBtn   = document.getElementById('favListBtn');
-const menuBtn      = document.getElementById('menuBtn');
-const dropMenu     = document.getElementById('dropMenu');
-const searchBtnTop = document.getElementById('searchBtnTop');
-const checkinBtn   = document.getElementById('checkinBtn');
-
-favListBtn?.addEventListener('click', openFavSheet);
-searchBtnTop?.addEventListener('click', openSearchSheet);
-checkinBtn?.addEventListener('click', openCheckinSheet);
-
-// ── Хелпер: закрити dropdown ──
-function closeDropMenu() {
-  dropMenu.classList.remove('show');
-  dropMenu.hidden = true;
-}
-
-if (menuBtn && dropMenu) {
-  menuBtn.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const willShow = !dropMenu.classList.contains('show');
-    dropMenu.classList.toggle('show', willShow);
-    dropMenu.hidden = !willShow;
-  });
-
-  document.addEventListener('click', e => {
-    if (!dropMenu.contains(e.target) && !menuBtn.contains(e.target)) {
-      closeDropMenu();
-    }
-  });
-
-  document.getElementById('settingsItem')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    closeDropMenu();
-    openSettingsSheet();
-  });
-
-  document.getElementById('feedbackItem')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    closeDropMenu();
-    document.getElementById('aboutSheet')?.classList.remove('sheet-open');
-    MetroApp.openFeedbackSheet?.(state.stationsData);
-  });
-
-  document.getElementById('aboutItem')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    closeDropMenu();
-    withUnsavedCheck(() => {
-      document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
-      openAboutSheet();
-    });
-  });
-}
-
-MetroApp.openStation    = openStation;
-MetroApp.closeAllSheets = closeAllSheets;

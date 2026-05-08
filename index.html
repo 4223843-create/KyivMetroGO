@@ -424,6 +424,8 @@
         </div>
       </div>
 
+
+
       <div class="settings-card">
         <div class="settings-row">
           <span class="settings-label">Показувати <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span> при запуску</span>
@@ -509,24 +511,27 @@
         </div>
       </div>
 
-      <div class="settings-card">
+<div class="settings-card">
         <div class="settings-row">
           <span class="settings-label">Резервна копія даних</span>
         </div>
         <div class="settings-rule"></div>
         <div class="settings-actions">
-  <button type="button" class="settings-action-btn" id="settingsExport">
-    зберегти
-  </button>
-  
-  <div class="settings-divider-v"></div> <button type="button" class="settings-action-btn" id="settingsImport">
-    відновити
-  </button>
-  <input type="file" id="importFile" accept=".json" style="display: none;">
-</div>
-    </div>
+          <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
+          <div class="settings-divider-v"></div> 
+          <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
+          <input type="file" id="importFile" accept=".json" style="display: none;">
+        </div>
+      </div>
     </div>
   </div>
+</template> <template id="tpl-checkin-sheet">
+  <div class="sheet-handle-bar">
+    <div class="sheet-handle"></div>
+    <span class="sheet-sheet-title">Журнал Check-in</span>
+    <button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button>
+  </div>
+  <div class="sheet-body" id="checkinBody"></div>
 </template>
 <script>
   (function startLoader() {
@@ -664,6 +669,9 @@
     animateCenterHeartbeat();
     setTimeout(animateLoader, 200);
   })();
+</script>
+<script>
+  window.MetroApp = window.MetroApp || {};
 </script>
   <script type="module" src="/src/main.js"></script>
 </body>

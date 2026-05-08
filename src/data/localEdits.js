@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, Storage } from './storage.js';
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { traversePositions }     from './positions.js';
 
 // ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
@@ -38,13 +38,17 @@ return getExitLabels()[slug]?.[posIdx] ?? null;
 }
 
 export function applyExitLabels(stationsData) {
-const labels = getExitLabels();
-for (const [slug, posLabels] of Object.entries(labels)) {
-if (!stationsData[slug]) continue;
-traversePositions(stationsData[slug], ({ exit, posIdx }) => {
-if (posLabels[posIdx] !== undefined) exit.label = posLabels[posIdx];
-});
-}
+  const labels = getExitLabels();
+  for (const [slug, posLabels] of Object.entries(labels)) {
+    if (!stationsData[slug]) continue;
+    traversePositions(stationsData[slug], ({ exit, posIdx }) => {
+      if (posLabels[posIdx] !== undefined) {
+        exit.label = posLabels[posIdx];
+        exit._labelEdited = true;
+        exit._slug = slug;
+      }
+    });
+  }
 }
 
 // ── LocalEdits ───────────────────────────────────────────────

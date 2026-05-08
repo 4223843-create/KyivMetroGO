@@ -1,5 +1,5 @@
-import { STORAGE_KEYS, Storage } from './storage.js';
-import { state }                  from './state.js';
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { state }                  from '../core/state.js';
 
 // Навмисно НЕ імпортуємо з sheets.js та ui.js —
 // уникаємо кругової залежності (sheets → devmode → sheets).

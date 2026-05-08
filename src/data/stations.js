@@ -1,4 +1,4 @@
-import { state, startupSlug } from './state.js';
+import { state, startupSlug } from '../core/state.js';
 import { traversePositions }  from './positions.js';
 
 const STATION_ALIASES = {

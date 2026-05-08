@@ -11,12 +11,6 @@
   touch-action: none; /* none: pan обробляється JS-ом вручну через scrollLeft/scrollTop */
 }
 
-/* .zone* — видалено: зони тепер прямо на SVG-елементах */
-
-
-
-
-
 /* Налаштування ТІЛЬКИ для map page */
 body#map-page {
   min-height: 100vh;
@@ -25,8 +19,8 @@ body#map-page {
 body#map-page main.container {
   display: flex;
   flex-direction: column;
-  align-items: stretch;   /* важливо: щоб child розтягувався по ширині */
-  gap: 0;                 /* прибираємо додаткові проміжки, що зсувають висоту */
+  align-items: stretch;
+  gap: 0;
   min-height: 100vh;
   height: 100vh;
 }
@@ -36,11 +30,10 @@ body#map-page .map-viewport {
   min-height: 0;
   overflow: auto;
   padding-top: 8dvh; 
-  padding-bottom: 8dvh; /* ⬅️ ДОДАЄМО: відступ знизу (більший за верхній, щоб обійти кнопки) */
+  padding-bottom: 8dvh;
 }
 
 
-/* ══ THEME VARIABLES & Z-INDEX ══ */
 :root {
   --bg:         #000000;
   --bg-sheet:   #2c2c2e;
@@ -67,25 +60,21 @@ body#map-page .map-viewport {
   --z-dropdown-active: 1070;
   --z-global-modal: 2000;
 
-  /* ── Типографічна шкала ── */
-  --fs-micro: 9px;   /* pos-pill-label, fb-input-label */
-  --fs-xs:    11px;  /* мітки, підписи, час */
-  --fs-sm:    13px;  /* основний дрібний текст, кнопки дій */
-  --fs-md:    15px;  /* основний текст, порожні стани */
-  --fs-lg:    17px;  /* заголовок шторки станції */
-  --fs-xl:    24px;  /* числові акценти ci-stat */
+  --fs-micro: 9px;
+  --fs-xs:    11px;
+  --fs-sm:    13px;
+  --fs-md:    15px;
+  --fs-lg:    17px;
+  --fs-xl:    24px;
 
-  /* ── Вагова шкала ── */
   --fw-normal: 400;
   --fw-medium: 500;
   --fw-semi:   600;
   --fw-bold:   700;
 
-  /* ── Розміри пілюль ── */
   --pos-pill-size:         26px;
   --pos-pill-size-compact: 22px;
 
-  /* ── Акценти ── */
   --accent-star: #ffcc00;
 }
 
@@ -3014,7 +3003,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   opacity: 0.6;
 }
 
-/* Примусово повертаємо кольорові бортики */
 .dev-note-actions button.confirm-btn-save {
   border-left: 3px solid var(--line-green);
   border-right: 3px solid var(--line-green);
@@ -3043,7 +3031,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
    ══ КНОПКИ ДОВІДКИ "i" (РОЗДІЛЕНА БЕЗПЕЧНА ЛОГІКА) ══
    ════════════════════════════════════════════════════════════ */
 
-/* 1. ТІЛЬКИ для вікна "Про додаток" (ранній доступ та mono) */
 #btnInfoAndroid, #btnInfoIOS {
     position: absolute !important;
     top: 50% !important;
@@ -3051,7 +3038,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     width: 36px !important;
     height: 36px !important;
     padding: 0 !important;
-    margin: 0 !important; /* Прибрали від'ємні марджини, позиціонуємо абсолютно */
+    margin: 0 !important;
     background: transparent !important;
     display: flex !important;
     align-items: center;
@@ -3060,26 +3047,22 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 #btnInfoAndroid {
-    right: 100% !important; /* Стає чітко зліва від форми */
+    right: 100% !important;
 }
 
 #btnInfoIOS {
-    left: 100% !important; /* Стає чітко справа від кнопки mono */
+    left: 100% !important;
 }
 
 #btnInfoAndroid svg, #btnInfoIOS svg {
     height: 12px !important;
     width: auto !important;
 }
-/* Колір активованої "i" у вікні "Про додаток" */
 [data-theme="dark"] .info-btn-active {
     color: #ffffff !important;
     opacity: 1 !important;
 }
 
-/* 2. ТІЛЬКИ для вікна Налаштувань та Форми зворотного зв'язку (БЕЗПЕЧНО) */
-/* Ми НЕ чіпаємо margin/padding, спираємось на твій ідеальний бекап, 
-   лише додаємо невидиму "ауру" навколо кнопки для легкого тапу пальцем */
 .settings-info-btn, .fb-add-doors-info {
     position: relative;
 }
@@ -3090,10 +3073,9 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     right: -12px;
     bottom: -12px;
     left: -12px;
-    z-index: 10; /* Ловить тапи навіть якщо поруч інші елементи */
+    z-index: 10;
 }
 
-/* 1. Контейнер іконки розробника (зліва у шапці) */
 #aboutDevBtnContainer {
     width: 36px;
     height: 36px;
@@ -3113,9 +3095,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     display: block;
 }
 
-
-
-/* 3. Величезна зона тапу для іконок довідки */
 .settings-info-btn, .fb-add-doors-info, #btnInfoAndroid, #btnInfoIOS {
     position: relative;
 }
@@ -3126,7 +3105,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     z-index: 10;
 }
 
-/* ══ Іконка розробника (зліва у шапці) ══ */
 #aboutDevBtnContainer {
     background: none;
     border: none;
@@ -3136,8 +3114,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     display: flex;
     justify-content: center;
     align-items: center;
-    color: var(--text-muted); /* Ідентичний колір хрестика */
-    /* opacity: 0.5; - ВИДАЛЕНО, щоб колір був ідентичним, без прозорості */
+    color: var(--text-muted);
     cursor: pointer;
     flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
@@ -3148,13 +3125,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 #aboutDevBtnContainer svg {
-    width: 18px !important;  /* Ідеальний розмір для симетрії з хрестиком */
+    width: 18px !important;
     height: 18px !important;
-    transform: none !important; /* - ВИДАЛЕНО (не потрібно для нової іконки) */
+    transform: none !important;
     display: block;
 }
 
-/* ══ ІДЕАЛЬНЕ ЦЕНТРУВАННЯ ЗАГОЛОВКА (З БЕКАПУ) ══ */
 .about-version-title {
     position: absolute !important;
     left: 50% !important;
@@ -3169,13 +3145,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     pointer-events: none;
 }
 
-/* ══ ТОСТ РЕЖИМУ РОЗРОБНИКА ══ */
 .dev-mode-toast {
   position: fixed;
-  top: 56px;  /* ⬅️ Відступ зверху (одразу під шапкою) */
-  left: 16px; /* ⬅️ Відступ зліва (чітко під іконкою) */
-  bottom: auto; /* Скидаємо стару прив'язку до низу */
-  transform: translateY(-10px); /* ⬅️ Анімація тепер буде випадати зверху вниз */
+  top: 56px;
+  left: 16px;
+  bottom: auto;
+  transform: translateY(-10px);
   
   opacity: 0;
   pointer-events: none;
@@ -3198,6 +3173,15 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 .dev-mode-toast.dev-mode-toast-open {
   opacity: 1;
-  transform: translateY(0); /* Стає на своє місце */
+  transform: translateY(0);
 }
 
+.pos-edited-mark.label-pencil {
+  right: auto;
+  left: 100%;
+  margin-left: 0px;
+}
+.pos-edited-mark.label-pencil svg {
+  width: 11px;
+  height: 11px;
+}

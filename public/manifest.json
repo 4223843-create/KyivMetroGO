@@ -111,7 +111,7 @@
       "name": "Пошук станції",
       "short_name": "Пошук",
       "description": "Швидко знайти станцію",
-      "url": "./?action=search", 
+      "url": "./?action=search",
       "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
     },
     {
@@ -120,20 +120,6 @@
       "description": "Переглянути збережені виходи",
       "url": "./?action=fav",
       "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
-    }
-  ]
-    },
-    {
-      "name": "Обрані виходи",
-      "short_name": "Обране",
-      "description": "Переглянути збережені виходи",
-      "url": "/?action=fav",
-      "icons": [
-        {
-          "src": "icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
     }
   ]
 }
