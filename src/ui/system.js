@@ -1,6 +1,19 @@
 // ══ СИСТЕМНІ API (CAPACITOR / БРАУЗЕР) ══
-// Раніше в ui.js. Тепер: окремий файл для platform-специфічного коду.
-// Не залежить від бізнес-логіки, не залежить від анімацій.
+
+/**
+ * Тактильний відгук через Capacitor Haptics або navigator.vibrate.
+ * На веб без Capacitor — navigator.vibrate (якщо підтримується).
+ * @param {'light'|'medium'|'heavy'} style
+ */
+export async function hapticImpact(style = 'light') {
+  if (window.Capacitor?.Plugins?.Haptics) {
+    try {
+      await window.Capacitor.Plugins.Haptics.impact({ style: style.toUpperCase() });
+      return;
+    } catch (e) { /* fallback нижче */ }
+  }
+  navigator.vibrate?.(style === 'heavy' ? 20 : 10);
+}
 
 /**
  * Прозорий статус-бар під Capacitor.

@@ -1,9 +1,5 @@
-// ══ ІНІЦІАЛІЗАЦІЯ КАРТИ ══
-// Відповідальність: вставити SVG, налаштувати зум, відцентрувати, resize.
-// Раніше в map.js разом із жестами pan/pinch та обробкою кліків.
-
 import svgText from '../../KyivMetroScheme.svg?raw';
-import { state }                      from '../core/state.js';
+import { state }                        from '../core/state.js';
 import { renderMapZones, checkAppReady } from '../data/stations.js';
 
 const vp    = document.getElementById('mapViewport');
@@ -14,7 +10,7 @@ export const BASE_MAP_HEIGHT = 840;
 const CENTER_X = 0.485;
 const CENTER_Y = 0.5;
 
-// Запобіжник: знімає лоадер через 10 с якщо щось пішло не так
+// Знімає лоадер через 10 с якщо щось пішло не так
 setTimeout(() => vp?.classList.remove('is-loading'), 10_000);
 
 export function adjustViewportHeight() {
@@ -62,6 +58,9 @@ export function initMap() {
   adjustViewportHeight();
   applyZoomAndCenter();
 }
+
+// Реєструємо на MetroApp — devmode.js використовує для скидання зуму
+MetroApp.applyZoomAndCenter = applyZoomAndCenter;
 
 // ── Resize ────────────────────────────────────────────────────
 let resizeTimer;
