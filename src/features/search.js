@@ -66,18 +66,6 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
 /**
  * Знаходження slug за назвою станції (враховуючи аліаси)
  */
-export function slugByName(name) {
-  if (!name) return null;
-  const n = name.toLowerCase().trim().replace(/[''`]/g, '');
-
-  if (SEARCH_ALIASES[n]) return SEARCH_ALIASES[n];
-
-  for (const [slug, data] of Object.entries(state.stationsData)) {
-    if (data.name.toLowerCase() === n) return slug;
-  }
-  return null;
-}
-
 /**
  * Відкриття шторки пошуку
  */

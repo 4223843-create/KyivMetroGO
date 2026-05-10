@@ -1,6 +1,6 @@
 import { state }               from '../core/state.js';
 import { slugByName }          from '../data/stations.js';
-import { openStation, refreshCurrentStation } from './stationSheet.js';
+import { openStation } from './stationSheet.js';
 import { openAboutSheet }      from './aboutSheet.js';
 import { isFav, toggleFav }   from '../features/favorites.js';
 import { heartSvg }            from '../ui/components.js';

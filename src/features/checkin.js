@@ -109,26 +109,25 @@ export function formatCheckinTime(ts) {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// ЗАДАЧА 3 і 4: Правильні відмінки
-function declineStantsiya(n) {
-  const abs  = Math.abs(n);
-  const mod10  = abs % 10;
-  const mod100 = abs % 100;
-  if (mod100 >= 11 && mod100 <= 14) return `${n} станцій`;
-  if (mod10 === 1) return `${n} станція`;
-  if (mod10 >= 2 && mod10 <= 4) return `${n} станції`;
-  return `${n} станцій`;
+// ══ ВІДМІНКИ ══════════════════════════════════════════════════
+// Окремі функції для числа і слова — stat-bar показує їх в різних <span>.
+function stationWord(n) {
+  const mod10 = Math.abs(n) % 10, mod100 = Math.abs(n) % 100;
+  if (mod100 >= 11 && mod100 <= 14) return 'станцій';
+  if (mod10 === 1)                   return 'станція';
+  if (mod10 >= 2 && mod10 <= 4)     return 'станції';
+  return 'станцій';
 }
-
-function declineVykhid(n) {
-  const abs    = Math.abs(n);
-  const mod10  = abs % 10;
-  const mod100 = abs % 100;
-  if (mod100 >= 11 && mod100 <= 14) return `${n} виходів`;
-  if (mod10 === 1) return `${n} вихід`;
-  if (mod10 >= 2 && mod10 <= 4) return `${n} виходи`;
-  return `${n} виходів`;
+function exitWord(n) {
+  const mod10 = Math.abs(n) % 10, mod100 = Math.abs(n) % 100;
+  if (mod100 >= 11 && mod100 <= 14) return 'виходів';
+  if (mod10 === 1)                   return 'вихід';
+  if (mod10 >= 2 && mod10 <= 4)     return 'виходи';
+  return 'виходів';
 }
+// Повні рядки (для інших потреб)
+function declineStantsiya(n) { return `${n} ${stationWord(n)}`; }
+function declineVykhid(n)     { return `${n} ${exitWord(n)}`; }
 
 export function openCheckinSheet() {
   MetroApp.pushSheetHistory?.();
@@ -187,9 +186,9 @@ export function openCheckinSheet() {
 
       bodyHtml = `
         <div class="ci-stats-bar">
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${declineStantsiya(uniqueStations).replace(String(uniqueStations), '').trim()}</span></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${stationWord(uniqueStations)}</span></div>
           <div class="ci-stat-sep"></div>
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${declineVykhid(uniqueExitsVisited).replace(String(uniqueExitsVisited), '').trim()}</span></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${exitWord(uniqueExitsVisited)}</span></div>
           <div class="ci-stat-sep"></div>
           <div class="ci-stat"><span class="ci-stat-num">${coverage}%</span><span class="ci-stat-lbl">охоплення</span></div>
         </div>
