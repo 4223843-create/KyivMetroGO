@@ -299,6 +299,81 @@ export function openAboutSheet() {
     });
   }
 
+// ── Логіка форми "Повідомити про помилку" ──
+    const bugToggleBtn = aboutSheet.querySelector('#bugToggleBtn');
+    const bugFormWrap  = aboutSheet.querySelector('#bugFormWrap');
+    const bugTextarea  = aboutSheet.querySelector('#bugTextarea');
+    const bugSubmitBtn = aboutSheet.querySelector('#bugSubmitBtn');
+    const bugCancelBtn = aboutSheet.querySelector('#bugCancelBtn');
+    const bugResultMsg = aboutSheet.querySelector('#bugResultMsg');
+
+    if (bugToggleBtn && bugFormWrap) {
+      bugToggleBtn.addEventListener('click', () => {
+        bugToggleBtn.hidden = true;
+        bugFormWrap.hidden = false;
+        setTimeout(() => bugTextarea.focus(), 100);
+      });
+
+      bugCancelBtn.addEventListener('click', () => {
+        bugFormWrap.hidden = true;
+        bugToggleBtn.hidden = false;
+        bugTextarea.value = '';
+        bugTextarea.style.height = ''; 
+        bugResultMsg.textContent = '';
+      });
+
+      // Плавне авторозширення поля вводу
+      bugTextarea.addEventListener('input', function() {
+        this.style.height = 'auto'; // Скидаємо для перерахунку
+        this.style.height = this.scrollHeight + 'px'; // Встановлюємо точну висоту тексту
+      });
+
+      bugSubmitBtn.addEventListener('click', async () => {
+        const text = bugTextarea.value.trim();
+        if (!text) {
+          bugTextarea.focus();
+          return;
+        }
+
+        bugSubmitBtn.disabled = true;
+        bugSubmitBtn.textContent = 'Відправка...';
+        bugResultMsg.textContent = '';
+
+        try {
+          const res = await fetch('https://formspree.io/f/xpqbovbw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              message: text,
+              source: 'About Sheet Bug Report',
+              time: new Date().toLocaleString('uk-UA')
+            })
+          });
+
+          if (res.ok) {
+            MetroApp.hapticImpact?.('medium');
+            
+            // Ховаємо поле і кнопки, показуємо подяку
+            bugTextarea.hidden = true;
+            bugSubmitBtn.parentElement.hidden = true;
+            
+            bugResultMsg.textContent = '✓ Дякуємо! Помилку надіслано.';
+            bugResultMsg.style.color = 'var(--line-green)';
+            bugResultMsg.style.fontWeight = '600';
+            bugResultMsg.style.fontSize = 'var(--fs-md)';
+            bugResultMsg.style.marginTop = '8px';
+          } else {
+            throw new Error('Server error');
+          }
+        } catch (error) {
+          bugSubmitBtn.disabled = false;
+          bugSubmitBtn.textContent = 'Відправити';
+          bugResultMsg.textContent = 'Помилка відправки. Спробуйте пізніше.';
+          bugResultMsg.style.color = 'var(--line-red)';
+        }
+      });
+    }  
+
   MetroApp.pushSheetHistory?.();
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');

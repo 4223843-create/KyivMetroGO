@@ -175,7 +175,7 @@ export function openSettingsSheet() {
         MetroApp.showCustomConfirm('Дані користувача відсутні', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
         return;
       }
-      MetroApp.showCustomConfirm('Очистити всі дані користувача (Вибране, Check-in, назви виходів)? Логи та перевірки розробника залишаться.',
+      MetroApp.showCustomConfirm('Очистити всі дані користувача (<span style="font-variant:small-caps;letter-spacing:0.04em">Вибране</span>, <span style="font-variant:small-caps;letter-spacing:0.04em">Check-in</span>, назви виходів)?',
         () => {
           // Чистимо лише користувацькі ключі
           Storage.remove(STORAGE_KEYS.FAVS);

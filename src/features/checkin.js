@@ -1,6 +1,7 @@
 import { state } from '../core/state.js';
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 
+
 let ciSortMode = 'date';
 let ciViewMode = 'visited';
 
@@ -108,8 +109,7 @@ export function formatCheckinTime(ts) {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// ══ ВІДМІНКИ ══════════════════════════════════════════════════
-// ЗАДАЧА 3: 1 станція, 2-4 станції, 5-20 станцій, 21+ залежно від останньої цифри
+// ЗАДАЧА 3 і 4: Правильні відмінки
 function declineStantsiya(n) {
   const abs  = Math.abs(n);
   const mod10  = abs % 10;
@@ -120,7 +120,6 @@ function declineStantsiya(n) {
   return `${n} станцій`;
 }
 
-// ЗАДАЧА 4: 1 вихід, 2-4 виходи, 5-20 виходів, 21+ залежно від останньої цифри
 function declineVykhid(n) {
   const abs    = Math.abs(n);
   const mod10  = abs % 10;
@@ -132,7 +131,7 @@ function declineVykhid(n) {
 }
 
 export function openCheckinSheet() {
-  MetroApp.pushSheetHistory();
+  MetroApp.pushSheetHistory?.();
   let checkinSheet = document.getElementById('checkinSheet');
   const sheetOverlay = document.getElementById('sheetOverlay');
 
@@ -150,54 +149,76 @@ export function openCheckinSheet() {
     const all     = getCheckins();
     const entries = Object.values(all);
 
-    const uniqueStations     = new Set(entries.map(e => e.slug)).size;
-    const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
-    const totalExitsAll = state.stationsData
-      ? Object.values(state.stationsData).reduce((sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0)
-      : 0;
-    const coverage = totalExitsAll > 0 ? Math.floor((uniqueExitsVisited / totalExitsAll) * 100) : 0;
-
-    // ЗАДАЧА 3 і 4: правильні відмінки
-    const bodyHtml = `
-      <div class="ci-stats-bar">
-        <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${declineStantsiya(uniqueStations).replace(String(uniqueStations), '').trim()}</span></div>
-        <div class="ci-stat-sep"></div>
-        <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${declineVykhid(uniqueExitsVisited).replace(String(uniqueExitsVisited), '').trim()}</span></div>
-        <div class="ci-stat-sep"></div>
-        <div class="ci-stat"><span class="ci-stat-num">${coverage}%</span><span class="ci-stat-lbl">охоплення</span></div>
-      </div>
-      <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverage}%"></div></div>
-      <div class="ci-sort-bar">
-        <button class="ci-sort-btn${ciSortMode === 'date' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
-        <button class="ci-sort-btn${ciSortMode === 'alpha' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
-        <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
-      </div>`;
-
-    const badgeStyle = 'color: var(--text-muted) !important; opacity: 1 !important; font-size: var(--fs-md) !important; font-weight: var(--fw-normal) !important;';
+    let bodyHtml = '';
     let listHtml = '';
+    const badgeStyle = 'color: var(--text-muted) !important; opacity: 1 !important; font-size: var(--fs-md) !important; font-weight: var(--fw-normal) !important;';
 
-    if (ciViewMode === 'unvisited') {
-      const visitedKeys       = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
-      const unvisitedStations = Object.entries(state.stationsData || {})
-        .map(([slug, st]) => {
-          const unvisited = st.positions?.filter(p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)) || [];
-          return { slug, name: st.name, line: st.line, unvisitedCount: unvisited.length, total: st.positions?.filter(p => !p.closed).length || 0 };
-        })
-        .filter(s => s.unvisitedCount > 0)
-        .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-
-      listHtml = unvisitedStations.map(s => {
-        const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
-        return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
-          <div class="checkin-card-top">
-            <span class="checkin-station-name-text">${s.name}</span>
-            <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
-          </div>
-        </button>`;
-      }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
+    if (!entries.length) {
+      // 1. ПОРОЖНІЙ СТАН: Статистику і кнопки ховаємо, показуємо лише підказку
+      const colors = ['var(--line-blue)', 'var(--line-red)', 'var(--line-green)'];
+      if (typeof state.emptyFavColorIdx !== 'number') state.emptyFavColorIdx = 0;
+      const color  = colors[state.emptyFavColorIdx % colors.length];
+      state.emptyFavColorIdx++;
+      
+      const coloredPin = MetroApp.Icons.dockPinFilled
+        .replace(/currentColor/g, color)
+        .replace('translateY(-3px)', 'translateY(0)')
+        .replace('width="26" height="26"', 'width="20" height="20"')
+        .replace('opacity="0.5"', '');
+      const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-3px;">${coloredPin}</span>`;
+      
+      listHtml = `
+        <div class="fav-empty-state" style="margin-top: 40px;">
+          <p class="fav-empty-text-lg">
+            Натисніть ${pinInline} щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий
+          </p>
+        </div>`;
+        
+      ciViewMode = 'visited';
+      ciSortMode = 'date';
     } else {
-      if (!entries.length) {
-        listHtml = `<p class="fav-empty-text-lg" style="margin-top:40px;text-align:center;">Журнал порожній</p>`;
+      // 2. Є ДАНІ: Генеруємо статистику, бар сортування та списки
+      const uniqueStations     = new Set(entries.map(e => e.slug)).size;
+      const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
+      const totalExitsAll = state.stationsData
+        ? Object.values(state.stationsData).reduce((sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0)
+        : 0;
+      const coverage = totalExitsAll > 0 ? Math.floor((uniqueExitsVisited / totalExitsAll) * 100) : 0;
+
+      bodyHtml = `
+        <div class="ci-stats-bar">
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${declineStantsiya(uniqueStations).replace(String(uniqueStations), '').trim()}</span></div>
+          <div class="ci-stat-sep"></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${declineVykhid(uniqueExitsVisited).replace(String(uniqueExitsVisited), '').trim()}</span></div>
+          <div class="ci-stat-sep"></div>
+          <div class="ci-stat"><span class="ci-stat-num">${coverage}%</span><span class="ci-stat-lbl">охоплення</span></div>
+        </div>
+        <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverage}%"></div></div>
+        <div class="ci-sort-bar">
+          <button class="ci-sort-btn${ciSortMode === 'date' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
+          <button class="ci-sort-btn${ciSortMode === 'alpha' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
+          <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
+        </div>`;
+
+      if (ciViewMode === 'unvisited') {
+        const visitedKeys        = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
+        const unvisitedStations = Object.entries(state.stationsData || {})
+          .map(([slug, st]) => {
+            const unvisited = st.positions?.filter(p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)) || [];
+            return { slug, name: st.name, line: st.line, unvisitedCount: unvisited.length, total: st.positions?.filter(p => !p.closed).length || 0 };
+          })
+          .filter(s => s.unvisitedCount > 0)
+          .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+
+        listHtml = unvisitedStations.map(s => {
+          const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
+          return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
+            <div class="checkin-card-top">
+              <span class="checkin-station-name-text">${s.name}</span>
+              <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
+            </div>
+          </button>`;
+        }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
       } else {
         const byStation    = {};
         entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
@@ -241,7 +262,12 @@ export function openCheckinSheet() {
     s.querySelectorAll('.ci-sort-btn[data-sort]').forEach(btn => {
       btn.addEventListener('click', () => { ciViewMode = 'visited'; ciSortMode = btn.dataset.sort; renderCheckinContent(); });
     });
-    s.querySelector('.ci-unvisited-btn').addEventListener('click', () => { ciViewMode = 'unvisited'; renderCheckinContent(); });
+    
+    const unvisitedBtn = s.querySelector('.ci-unvisited-btn');
+    if (unvisitedBtn) {
+      unvisitedBtn.addEventListener('click', () => { ciViewMode = 'unvisited'; renderCheckinContent(); });
+    }
+
     s.querySelectorAll('.checkin-station-card').forEach(card => {
       card.addEventListener('click', () => {
         const sl = card.dataset.slug;
@@ -249,7 +275,6 @@ export function openCheckinSheet() {
       });
     });
 
-    // ЗАДАЧА 5: свайп для закриття шторки check-in
     const body = s.querySelector('#checkinBody');
     MetroApp.initKinematicSwipe?.(s, body, closeHandler);
   };

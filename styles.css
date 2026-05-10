@@ -1524,11 +1524,24 @@ max-height: 92dvh;
   display: block;
 }
 
+/* Фіксований підвал для екрану "Про додаток" */
+.about-footer-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 16px 16px;
+  /* Додаємо той самий фон і штрихування, що й у .sheet-body */
+  background-color: var(--bg-sheet);
+  border-top: none; /* Прибираємо лінію зверху */
+  margin-top: -1px; /* Трохи "наїжджаємо" на скрол, щоб уникнути щілин */
+}
+
 .about-footer {
-  margin-top: 4px;
+  margin: 0;
   text-align: center;
   opacity: 0.4;
   font-size: var(--fs-sm);
+  color: var(--text-muted);
 }
 
 
@@ -2000,7 +2013,13 @@ margin: 0 0 4px 0;
 [data-theme="light"] .fb-footer-sticky {
   background-color: #d0d0d5 !important;
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
-  background-position: top left !important;
+  background-position: bottom left !important;
+}
+
+[data-theme="light"] .about-footer-wrap {
+  background-color: #d0d0d5 !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: top left !important; /* Починаємо малювати рівно від стику */
 }
 
 /* --- ТЕМНА ТЕМА --- */
@@ -2025,6 +2044,13 @@ margin: 0 0 4px 0;
 [data-theme="dark"] .fb-footer-sticky {
   background-color: var(--bg-sheet) !important;
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: bottom left !important; 
+}
+
+/* 2. Футер: штрихи вгору (/), як у шапці */
+[data-theme="dark"] .about-footer-wrap {
+  background-color: var(--bg-sheet) !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E") !important;
   background-position: top left !important;
 }
 
@@ -3184,4 +3210,105 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .pos-edited-mark.label-pencil svg {
   width: 11px;
   height: 11px;
+}
+
+/* ══ ФОРМА ПОВІДОМЛЕННЯ ПРО ПОМИЛКУ ══ */
+.bug-report-container {
+  margin: 16px 16px 8px; 
+  text-align: center;
+}
+
+.bug-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 8px;
+  opacity: 0.7;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bug-form-wrap {
+  display: none; /* Форма повністю прихована за замовчуванням */
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-card);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  text-align: left;
+  margin-top: 8px;
+}
+
+/* Коли JS прибирає атрибут hidden, форма стає flex-контейнером */
+.bug-form-wrap:not([hidden]) 
+
+{
+  display: flex;
+}
+
+/* Наше поле з фірмовим сірим фоном */
+.bug-textarea {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  overflow-y: hidden;
+  transition: border-color 0.2s;
+}
+
+.bug-textarea:focus {
+  border-color: var(--text-muted);
+}
+
+.bug-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Робимо кнопки фірмовими */
+.bug-actions button {
+  flex: 1;
+  height: 38px;
+  border-radius: 10px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  background: var(--bg-pill);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bug-actions button:active {
+  opacity: 0.6;
+}
+
+.bug-actions .confirm-btn-save {
+  border-left: 3px solid var(--line-green);
+  border-right: 3px solid var(--line-green);
+}
+
+.bug-actions .confirm-btn-neutral {
+  border-left: 3px solid var(--text-muted);
+  border-right: 3px solid var(--text-muted);
+}
+
+.bug-result-msg {
+  font-size: var(--fs-sm);
+  text-align: center;
+  min-height: 0;
 }
