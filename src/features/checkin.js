@@ -1,7 +1,6 @@
 import { state } from '../core/state.js';
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 
-// Глобальні змінні стану (щоб не було помилок ReferenceError)
 let ciSortMode = 'date';
 let ciViewMode = 'visited';
 
@@ -73,7 +72,7 @@ MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {
   const body = sheetEl.id === 'sheetBody' ? sheetEl : sheetEl.querySelector('#sheetBody') || document.getElementById('sheetBody');
   if (!body) return;
 
-  body.querySelectorAll('.position-row').forEach((row) => {
+  body.querySelectorAll('.position-row').forEach(row => {
     const pills = row.querySelectorAll('.pos-pill');
     if (!pills.length) return;
     const wagon = pills[0]?.querySelector('.pos-pill-num')?.textContent?.trim();
@@ -81,12 +80,12 @@ MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {
     if (!wagon || !doors) return;
 
     const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
-    const labelEl = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
-    const dir = labelEl?.textContent?.trim() || '';
+    const labelEl  = dirBlock ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text')) : null;
+    const dir      = labelEl?.textContent?.trim() || '';
 
     const checked = isCheckedIn(slug, dir, wagon, doors);
-    const btn = document.createElement('button');
-    btn.type = 'button';
+    const btn     = document.createElement('button');
+    btn.type      = 'button';
     btn.className = `checkin-btn row-checkin-btn${checked ? ' is-checked' : ''}`;
     btn.innerHTML = checkinPinSvg(checked, checked ? lineColor : null);
     btn.style.color = checked ? lineColor : '';
@@ -96,9 +95,9 @@ MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {
       e.stopPropagation();
       const nowChecked = toggleCheckin(slug, dir, wagon, doors, lineColor);
       btn.classList.toggle('is-checked', nowChecked);
-      btn.innerHTML = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
+      btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
       btn.style.color = nowChecked ? lineColor : '';
-      _checkinCount = null;
+      _checkinCount   = null;
     });
   });
 };
@@ -107,6 +106,29 @@ export function formatCheckinTime(ts) {
   const d = new Date(ts);
   const pad = n => String(n).padStart(2, '0');
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ══ ВІДМІНКИ ══════════════════════════════════════════════════
+// ЗАДАЧА 3: 1 станція, 2-4 станції, 5-20 станцій, 21+ залежно від останньої цифри
+function declineStantsiya(n) {
+  const abs  = Math.abs(n);
+  const mod10  = abs % 10;
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 14) return `${n} станцій`;
+  if (mod10 === 1) return `${n} станція`;
+  if (mod10 >= 2 && mod10 <= 4) return `${n} станції`;
+  return `${n} станцій`;
+}
+
+// ЗАДАЧА 4: 1 вихід, 2-4 виходи, 5-20 виходів, 21+ залежно від останньої цифри
+function declineVykhid(n) {
+  const abs    = Math.abs(n);
+  const mod10  = abs % 10;
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 14) return `${n} виходів`;
+  if (mod10 === 1) return `${n} вихід`;
+  if (mod10 >= 2 && mod10 <= 4) return `${n} виходи`;
+  return `${n} виходів`;
 }
 
 export function openCheckinSheet() {
@@ -124,23 +146,23 @@ export function openCheckinSheet() {
   };
 
   const renderCheckinContent = () => {
-    const s = document.getElementById('checkinSheet');
-    const all = getCheckins();
+    const s       = document.getElementById('checkinSheet');
+    const all     = getCheckins();
     const entries = Object.values(all);
-    let bodyHtml = '';
 
+    const uniqueStations     = new Set(entries.map(e => e.slug)).size;
     const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
     const totalExitsAll = state.stationsData
       ? Object.values(state.stationsData).reduce((sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0)
       : 0;
-    
     const coverage = totalExitsAll > 0 ? Math.floor((uniqueExitsVisited / totalExitsAll) * 100) : 0;
 
-    bodyHtml = `
+    // ЗАДАЧА 3 і 4: правильні відмінки
+    const bodyHtml = `
       <div class="ci-stats-bar">
-        <div class="ci-stat"><span class="ci-stat-num">${new Set(entries.map(e => e.slug)).size}</span><span class="ci-stat-lbl">станцій</span></div>
+        <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${declineStantsiya(uniqueStations).replace(String(uniqueStations), '').trim()}</span></div>
         <div class="ci-stat-sep"></div>
-        <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">виходів</span></div>
+        <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${declineVykhid(uniqueExitsVisited).replace(String(uniqueExitsVisited), '').trim()}</span></div>
         <div class="ci-stat-sep"></div>
         <div class="ci-stat"><span class="ci-stat-num">${coverage}%</span><span class="ci-stat-lbl">охоплення</span></div>
       </div>
@@ -151,13 +173,11 @@ export function openCheckinSheet() {
         <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
       </div>`;
 
-    let listHtml = '';
-    
-    // ОСЬ ТУТ ВИПРАВЛЕНО: Використовуємо змінні, які реально є у styles.css, і такий самий розмір/вагу шрифту.
     const badgeStyle = 'color: var(--text-muted) !important; opacity: 1 !important; font-size: var(--fs-md) !important; font-weight: var(--fw-normal) !important;';
+    let listHtml = '';
 
     if (ciViewMode === 'unvisited') {
-      const visitedKeys = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
+      const visitedKeys       = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
       const unvisitedStations = Object.entries(state.stationsData || {})
         .map(([slug, st]) => {
           const unvisited = st.positions?.filter(p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)) || [];
@@ -179,22 +199,21 @@ export function openCheckinSheet() {
       if (!entries.length) {
         listHtml = `<p class="fav-empty-text-lg" style="margin-top:40px;text-align:center;">Журнал порожній</p>`;
       } else {
-        const byStation = {};
+        const byStation    = {};
         entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
-        
         let stationEntries = Object.entries(byStation);
         if (ciSortMode === 'date') {
           stationEntries.sort(([, a], [, b]) => Math.max(...b.map(e => e.ts)) - Math.max(...a.map(e => e.ts)));
         } else {
-          stationEntries.sort(([slugA], [slugB]) => (state.stationsData?.[slugA]?.name || "").localeCompare(state.stationsData?.[slugB]?.name || "", 'uk'));
+          stationEntries.sort(([sA], [sB]) => (state.stationsData?.[sA]?.name || '').localeCompare(state.stationsData?.[sB]?.name || '', 'uk'));
         }
 
         listHtml = stationEntries.map(([slug, items]) => {
-          const st = state.stationsData?.[slug];
-          const color = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
-          const totalExits = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
+          const st               = state.stationsData?.[slug];
+          const color            = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
+          const totalExits       = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
           const visitedExitsCount = new Set(items.map(e => `${e.wagon}|${e.doors}`)).size;
-          const lastTs = Math.max(...items.map(e => e.ts));
+          const lastTs           = Math.max(...items.map(e => e.ts));
 
           return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-accent:${color}">
             <div class="checkin-card-top">
@@ -215,7 +234,7 @@ export function openCheckinSheet() {
         <span class="sheet-sheet-title">Check-in</span>
         <button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button>
       </div>
-      <div class="sheet-body">${bodyHtml}${listHtml}</div>`;
+      <div class="sheet-body" id="checkinBody">${bodyHtml}${listHtml}</div>`;
 
     s.querySelector('#checkinClose').addEventListener('click', closeHandler);
 
@@ -223,18 +242,21 @@ export function openCheckinSheet() {
       btn.addEventListener('click', () => { ciViewMode = 'visited'; ciSortMode = btn.dataset.sort; renderCheckinContent(); });
     });
     s.querySelector('.ci-unvisited-btn').addEventListener('click', () => { ciViewMode = 'unvisited'; renderCheckinContent(); });
-
     s.querySelectorAll('.checkin-station-card').forEach(card => {
       card.addEventListener('click', () => {
         const sl = card.dataset.slug;
         if (sl) { closeHandler(); setTimeout(() => MetroApp.openStation?.(sl), 380); }
       });
     });
+
+    // ЗАДАЧА 5: свайп для закриття шторки check-in
+    const body = s.querySelector('#checkinBody');
+    MetroApp.initKinematicSwipe?.(s, body, closeHandler);
   };
 
   if (!checkinSheet) {
     checkinSheet = document.createElement('div');
-    checkinSheet.id = 'checkinSheet';
+    checkinSheet.id        = 'checkinSheet';
     checkinSheet.className = 'station-sheet checkin-journal-sheet';
     document.body.appendChild(checkinSheet);
   }

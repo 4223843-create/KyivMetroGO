@@ -14,9 +14,12 @@ const getThemeColors = () => {
     base:  rs.getPropertyValue('--bg-card').trim()    || (isLight ? '#ffffff' : '#2c2c2e'),
   };
 };
-const hexToRgb  = hex => { const n = parseInt(hex.replace('#',''),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
-const lerp      = (a,b,t) => Math.round(a+(b-a)*t);
-const mixColors = (cHex,bHex,t) => { const[r1,g1,b1]=hexToRgb(cHex),[r2,g2,b2]=hexToRgb(bHex); return `rgb(${lerp(r2,r1,t)},${lerp(g2,g1,t)},${lerp(b2,b1,t)})`; };
+const hexToRgb  = hex => { const n = parseInt(hex.replace('#', ''), 16); return [(n>>16)&255, (n>>8)&255, n&255]; };
+const lerp      = (a, b, t) => Math.round(a + (b - a) * t);
+const mixColors = (cHex, bHex, t) => {
+  const [r1,g1,b1] = hexToRgb(cHex), [r2,g2,b2] = hexToRgb(bHex);
+  return `rgb(${lerp(r2,r1,t)},${lerp(g2,g1,t)},${lerp(b2,b1,t)})`;
+};
 
 // ══ ЛОГОТИПИ ══
 const LOGOS = [
@@ -83,7 +86,7 @@ function bindBottomLoader(aboutSheet) {
             <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z"/>
             <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z"/>
             <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z"/>
-            <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 5.1,0.6 8,-2 8,-4.9 z"/>
+            <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 -8,-2 -8,-4.9 z"/>
             <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z"/>
             <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z"/>
             <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z"/>
@@ -132,38 +135,40 @@ function bindBottomLoader(aboutSheet) {
     const petals = Array.from(overlay.querySelectorAll('.st4'));
     const center = overlay.querySelector('.eggCenter');
     const cb     = center.getBoundingClientRect();
-    const cx     = cb.left + cb.width/2, cy = cb.top + cb.height/2;
+    const cx = cb.left + cb.width / 2, cy = cb.top + cb.height / 2;
 
     const sortedPetals = petals.map(p => {
       const b = p.getBoundingClientRect();
-      return { element: p, angle: (Math.atan2(b.top+b.height/2-cy, b.left+b.width/2-cx)*180/Math.PI+90+360)%360 };
-    }).sort((a,b) => a.angle-b.angle).map(p => p.element);
+      return { element: p, angle: (Math.atan2(b.top + b.height / 2 - cy, b.left + b.width / 2 - cx) * 180 / Math.PI + 90 + 360) % 360 };
+    }).sort((a, b) => a.angle - b.angle).map(p => p.element);
 
-    let cycle = parseInt(Storage.get(STORAGE_KEYS.LOGO_EGG_CYCLE)||0);
-    Storage.set(STORAGE_KEYS.LOGO_EGG_CYCLE, cycle+1);
+    let cycle = parseInt(Storage.get(STORAGE_KEYS.LOGO_EGG_CYCLE) || 0);
+    Storage.set(STORAGE_KEYS.LOGO_EGG_CYCLE, cycle + 1);
     const SCHEMES = [
-      {center:TC.red,   petals:[TC.blue,TC.green]},
-      {center:TC.blue,  petals:[TC.red,TC.green]},
-      {center:TC.green, petals:[TC.red,TC.blue]},
+      { center: TC.red,   petals: [TC.blue,  TC.green] },
+      { center: TC.blue,  petals: [TC.red,   TC.green] },
+      { center: TC.green, petals: [TC.red,   TC.blue]  },
     ];
-    const S = SCHEMES[cycle%3];
-    sortedPetals.forEach(p => { p.style.fill=TC.base; p.style.transition='fill 0.25s ease'; });
+    const S = SCHEMES[cycle % 3];
+    sortedPetals.forEach(p => { p.style.fill = TC.base; p.style.transition = 'fill 0.25s ease'; });
 
     const runPetal = () => {
-      if (overlay.style.display==='none') return;
-      const i=Math.floor(Math.random()*sortedPetals.length), p=sortedPetals[i];
-      p.style.fill = mixColors(S.petals[i%2],TC.base,0.85);
-      setTimeout(()=>{ p.style.fill=TC.base; },400);
-      animTimer = setTimeout(runPetal, 180+Math.random()*250);
+      if (overlay.style.display === 'none') return;
+      const i = Math.floor(Math.random() * sortedPetals.length), p = sortedPetals[i];
+      p.style.fill = mixColors(S.petals[i % 2], TC.base, 0.85);
+      setTimeout(() => { p.style.fill = TC.base; }, 400);
+      animTimer = setTimeout(runPetal, 180 + Math.random() * 250);
     };
     const runCenter = () => {
-      if (overlay.style.display==='none') return;
-      const ph=(Date.now()/1000)%1.2;
-      center.style.fill = mixColors(S.center,TC.base,0.35+Math.abs(Math.sin(ph*Math.PI))*0.65);
+      if (overlay.style.display === 'none') return;
+      const ph = (Date.now() / 1000) % 1.2;
+      center.style.fill = mixColors(S.center, TC.base, 0.35 + Math.abs(Math.sin(ph * Math.PI)) * 0.65);
       centerTimer = requestAnimationFrame(runCenter);
     };
     runPetal(); runCenter();
-    setTimeout(()=>{ if(overlay.style.display!=='none'){textLeft.style.opacity=textRight.style.opacity='0';} },2000);
+    setTimeout(() => {
+      if (overlay.style.display !== 'none') { textLeft.style.opacity = textRight.style.opacity = '0'; }
+    }, 2000);
     saluteTimer = setTimeout(stopSalute, 10000);
   }
 
@@ -171,16 +176,16 @@ function bindBottomLoader(aboutSheet) {
     form.onsubmit = e => {
       e.preventDefault();
       const val = input.value.trim();
-      if (val.length>=3 && /^[a-zA-Z0-9.]+$/.test(val)) {
-        input.blur(); window.location.href='thanks.html?type=beta';
+      if (val.length >= 3 && /^[a-zA-Z0-9.]+$/.test(val)) {
+        input.blur(); window.location.href = 'thanks.html?type=beta';
       } else {
         const c = input.style.color;
-        input.style.color='var(--line-red)';
-        setTimeout(()=>{ input.style.color=c; },1500);
+        input.style.color = 'var(--line-red)';
+        setTimeout(() => { input.style.color = c; }, 1500);
       }
     };
   }
-  if (monoBtn) monoBtn.addEventListener('click', ()=>startSalute('Дякуємо','за підтримку!'));
+  if (monoBtn) monoBtn.addEventListener('click', () => startSalute('Дякуємо', 'за підтримку!'));
 }
 
 // ══ ВІДКРИТТЯ ABOUT-ШТОРКИ ══
@@ -193,15 +198,42 @@ export function openAboutSheet() {
     const template = document.getElementById('tpl-about-sheet');
     aboutSheet.appendChild(template.content.cloneNode(true));
     document.body.appendChild(aboutSheet);
+    setupDevModeTapCounter(aboutSheet);
+  }
 
-    document.getElementById('aboutClose').addEventListener('click', () => {
+  // ЗАДАЧА 6: скидаємо стан довідок при кожному відкритті
+  const hintAndroid = aboutSheet.querySelector('#hintAndroid');
+  const hintIOS     = aboutSheet.querySelector('#hintIOS');
+  const btnAndroid  = aboutSheet.querySelector('#btnInfoAndroid');
+  const btnIOS      = aboutSheet.querySelector('#btnInfoIOS');
+  if (hintAndroid) hintAndroid.hidden = true;
+  if (hintIOS)     hintIOS.hidden     = true;
+  btnAndroid?.classList.remove('info-btn-active');
+  btnIOS?.classList.remove('info-btn-active');
+
+  // Прибираємо старі listener-и перед повторним додаванням
+  // (aboutClose — в #aboutClose, клонуємо кнопку щоб скинути listeners)
+  const oldClose = document.getElementById('aboutClose');
+  if (oldClose) {
+    const newClose = oldClose.cloneNode(true);
+    oldClose.replaceWith(newClose);
+    newClose.addEventListener('click', () => {
+      // ЗАДАЧА 6: скидаємо довідки при закритті
+      const h1 = aboutSheet.querySelector('#hintAndroid');
+      const h2 = aboutSheet.querySelector('#hintIOS');
+      const b1 = aboutSheet.querySelector('#btnInfoAndroid');
+      const b2 = aboutSheet.querySelector('#btnInfoIOS');
+      if (h1) h1.hidden = true;
+      if (h2) h2.hidden = true;
+      b1?.classList.remove('info-btn-active');
+      b2?.classList.remove('info-btn-active');
+
       MetroApp.animateSheetClose?.(aboutSheet, () => {
         aboutSheet.classList.remove('sheet-open');
         if (!document.querySelectorAll('.station-sheet.sheet-open').length)
           sheetOverlay.classList.remove('overlay-visible');
       });
     });
-    setupDevModeTapCounter(aboutSheet);
   }
 
   let logoState = Storage.get(STORAGE_KEYS.LOGO_STATE);
@@ -214,7 +246,7 @@ export function openAboutSheet() {
     let idx = 0;
     if (logoState !== null) {
       idx = parseInt(logoState);
-      if (isNaN(idx)||idx>=LOGOS.length||idx<0) { idx=0; Storage.set(STORAGE_KEYS.LOGO_STATE,0); }
+      if (isNaN(idx) || idx >= LOGOS.length || idx < 0) { idx = 0; Storage.set(STORAGE_KEYS.LOGO_STATE, 0); }
       const div = document.createElement('div');
       div.innerHTML = LOGOS[idx];
       logoEl.replaceWith(div.firstChild);
@@ -223,43 +255,52 @@ export function openAboutSheet() {
 
     const currentLogo = aboutSheet.querySelector('#aboutLogoImg');
     if (!currentLogo) return;
-    let taps=0, tapTimer=null, lastTap=0;
-    currentLogo.addEventListener('click', ()=>{
-      const now=Date.now(); if(now-lastTap<50) return; lastTap=now; taps++;
+    let taps = 0, tapTimer = null, lastTap = 0;
+    currentLogo.addEventListener('click', () => {
+      const now = Date.now(); if (now - lastTap < 50) return; lastTap = now; taps++;
       clearTimeout(tapTimer);
-      if(taps>=3){ taps=0; logoState=logoState===null?1:(parseInt(logoState)+1)%LOGOS.length; Storage.set(STORAGE_KEYS.LOGO_STATE,logoState); updateLogo(); }
-      else tapTimer=setTimeout(()=>{taps=0;},1000);
+      if (taps >= 3) {
+        taps = 0;
+        logoState = logoState === null ? 1 : (parseInt(logoState) + 1) % LOGOS.length;
+        Storage.set(STORAGE_KEYS.LOGO_STATE, logoState);
+        updateLogo();
+      } else tapTimer = setTimeout(() => { taps = 0; }, 1000);
     });
   }
 
   updateLogo();
   bindBottomLoader(aboutSheet);
 
-  const btnAndroid=aboutSheet.querySelector('#btnInfoAndroid'), hintAndroid=aboutSheet.querySelector('#hintAndroid');
-  const btnIOS=aboutSheet.querySelector('#btnInfoIOS'),         hintIOS=aboutSheet.querySelector('#hintIOS');
+  const setActive = (btn, v) => btn?.classList.toggle('info-btn-active', v);
+  const scrollTo  = el => setTimeout(() => {
+    if (el.hidden) return;
+    const r = el.getBoundingClientRect(), s = aboutSheet.getBoundingClientRect();
+    if (r.bottom > s.bottom - 20) el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, 100);
 
-  const setActive=(btn,v)=>btn?.classList.toggle('info-btn-active',v);
-  const scrollTo=el=>setTimeout(()=>{
-    if(el.hidden) return;
-    const r=el.getBoundingClientRect(), s=aboutSheet.getBoundingClientRect();
-    if(r.bottom>s.bottom-20) el.scrollIntoView({behavior:'smooth',block:'end'});
-  },100);
+  // Клонуємо кнопки щоб уникнути накопичення listeners при повторних відкриттях
+  const rawBtnAndroid = aboutSheet.querySelector('#btnInfoAndroid');
+  const rawBtnIOS     = aboutSheet.querySelector('#btnInfoIOS');
+  if (rawBtnAndroid && rawBtnIOS && hintAndroid && hintIOS) {
+    const freshAndroid = rawBtnAndroid.cloneNode(true);
+    rawBtnAndroid.replaceWith(freshAndroid);
+    const freshIOS = rawBtnIOS.cloneNode(true);
+    rawBtnIOS.replaceWith(freshIOS);
 
-  if(btnAndroid&&hintAndroid&&btnIOS&&hintIOS){
-    btnAndroid.addEventListener('click',e=>{
+    freshAndroid.addEventListener('click', e => {
       e.stopPropagation();
-      const o=hintAndroid.hidden; hintAndroid.hidden=!o; setActive(btnAndroid,o);
-      if(o){hintIOS.hidden=true;setActive(btnIOS,false);scrollTo(hintAndroid);}
+      const o = hintAndroid.hidden; hintAndroid.hidden = !o; setActive(freshAndroid, o);
+      if (o) { hintIOS.hidden = true; setActive(freshIOS, false); scrollTo(hintAndroid); }
     });
-    btnIOS.addEventListener('click',e=>{
+    freshIOS.addEventListener('click', e => {
       e.stopPropagation();
-      const o=hintIOS.hidden; hintIOS.hidden=!o; setActive(btnIOS,o);
-      if(o){hintAndroid.hidden=true;setActive(btnAndroid,false);scrollTo(hintIOS);}
+      const o = hintIOS.hidden; hintIOS.hidden = !o; setActive(freshIOS, o);
+      if (o) { hintAndroid.hidden = true; setActive(freshAndroid, false); scrollTo(hintIOS); }
     });
   }
 
   MetroApp.pushSheetHistory?.();
-  document.querySelectorAll('.station-sheet').forEach(el=>el.classList.remove('sheet-open'));
-  aboutSheet.classList.add('sheet-open','sheet-fullscreen','sheet-scrollable');
+  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+  aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
   sheetOverlay.classList.add('overlay-visible');
 }
