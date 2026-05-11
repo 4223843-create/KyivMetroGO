@@ -21,18 +21,14 @@ MetroApp.SLUG_BY_LOWER                 = SLUG_BY_LOWER;
 import { animateSheetClose, dismissHintWithDoors } from './ui/animations.js';
 import { showCustomConfirm }                       from './ui/confirm.js';
 import { initKinematicSwipe }                      from './ui/swipe.js';
-import {
-  hapticImpact, configureEdgeToEdge, pushSheetHistory,
-} from './ui/system.js';
+import { configureEdgeToEdge, pushSheetHistory } from './ui/system.js';
 
 MetroApp.animateSheetClose    = animateSheetClose;
 MetroApp.dismissHintWithDoors = dismissHintWithDoors;
 MetroApp.showCustomConfirm    = showCustomConfirm;
 MetroApp.initKinematicSwipe   = initKinematicSwipe;
-MetroApp.hapticImpact         = hapticImpact;
 MetroApp.configureEdgeToEdge  = configureEdgeToEdge;
 MetroApp.pushSheetHistory     = pushSheetHistory;
-
 // ── Іконки ────────────────────────────────────────────────────
 import { Icons } from './ui/icons.js';
 MetroApp.Icons = Icons;

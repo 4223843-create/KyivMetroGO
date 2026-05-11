@@ -176,23 +176,46 @@ export function openCheckinSheet() {
       ciViewMode = 'visited';
       ciSortMode = 'date';
     } else {
+
+
+      
       // 2. Є ДАНІ: Генеруємо статистику, бар сортування та списки
       const uniqueStations     = new Set(entries.map(e => e.slug)).size;
       const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
       const totalExitsAll = state.stationsData
         ? Object.values(state.stationsData).reduce((sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0)
         : 0;
-      const coverage = totalExitsAll > 0 ? Math.floor((uniqueExitsVisited / totalExitsAll) * 100) : 0;
+
+      // ── НОВА ЛОГІКА ОХОПЛЕННЯ ──
+      let coverageValue = 0;
+      let coverageText = '0%';
+      
+      if (totalExitsAll > 0) {
+        coverageValue = Math.floor((uniqueExitsVisited / totalExitsAll) * 100);
+        
+        if (uniqueExitsVisited === totalExitsAll) {
+          coverageText  = '100%';
+          coverageValue = 100;
+        } else if (uniqueExitsVisited > 0 && coverageValue === 0) {
+          coverageText  = '< 1%';
+          coverageValue = 1; // Щоб смужка мала хоч міліметр заповнення
+        } else if (uniqueExitsVisited < totalExitsAll && coverageValue === 100) {
+          coverageText  = '> 99%';
+          coverageValue = 99; // Щоб смужка візуально не доходила до самого кінця
+        } else {
+          coverageText  = `${coverageValue}%`;
+        }
+      }
 
       bodyHtml = `
         <div class="ci-stats-bar">
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${stationWord(uniqueStations)}</span></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${declineStantsiya(uniqueStations).replace(String(uniqueStations), '').trim()}</span></div>
           <div class="ci-stat-sep"></div>
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${exitWord(uniqueExitsVisited)}</span></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${declineVykhid(uniqueExitsVisited).replace(String(uniqueExitsVisited), '').trim()}</span></div>
           <div class="ci-stat-sep"></div>
-          <div class="ci-stat"><span class="ci-stat-num">${coverage}%</span><span class="ci-stat-lbl">охоплення</span></div>
+          <div class="ci-stat"><span class="ci-stat-num">${coverageText}</span><span class="ci-stat-lbl">охоплення</span></div>
         </div>
-        <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverage}%"></div></div>
+        <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverageValue}%"></div></div>
         <div class="ci-sort-bar">
           <button class="ci-sort-btn${ciSortMode === 'date' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
           <button class="ci-sort-btn${ciSortMode === 'alpha' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>

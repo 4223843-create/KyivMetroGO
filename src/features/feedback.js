@@ -438,7 +438,6 @@ clearTimeout(timeoutId);
 if (!response.ok) throw new Error('HTTP ' + response.status);
 
 if (!background && sendBtn) {
-  MetroApp.hapticImpact?.('heavy');
   sendBtn.textContent = 'Зміни застосовано';
   sendBtn.style.color = 'var(--text-muted)';
   sendBtn.disabled = true;
@@ -449,7 +448,6 @@ if (!background && sendBtn) {
 clearTimeout(timeoutId);
 console.warn('[KyivMetroGO] Formspree недоступний, зміни збережено локально:', error);
 if (!background && sendBtn) {
-MetroApp.hapticImpact?.('heavy');
 sendBtn.textContent = 'Збережено локально';
 sendBtn.style.color = '';
 sendBtn.disabled = true;
@@ -500,7 +498,6 @@ markFeedbackDirty();
 container.addEventListener('click', (event) => {
 const btn = event.target.closest('.fb-step');
 if (btn) {
-MetroApp.hapticImpact?.('light');
 const id = btn.dataset.id;
 const el = document.getElementById(id);
 if (!el) return;
@@ -552,7 +549,6 @@ const idx = id.replace(/[^0-9]/g, '');
 
 const cancelExtraBtn = event.target.closest('.fb-cancel-extra-btn');
 if (cancelExtraBtn) {
-  MetroApp.hapticImpact?.('light');
   const idx = cancelExtraBtn.dataset.idx;
   document.getElementById(`fbW_ex${idx}`).textContent = '-';
   document.getElementById(`fbD_ex${idx}`).textContent = '-';
@@ -596,7 +592,6 @@ if (labelEditBtn) {
 
 const addExitBtn = event.target.closest('.fb-add-exit-btn');
 if (addExitBtn) {
-  MetroApp.hapticImpact?.('medium');
   const dir = addExitBtn.dataset.dir;
   const newIdx = Object.keys(fbState.current).length;
   
@@ -621,7 +616,6 @@ if (addExitBtn) {
 
 const addDoorsBtn = event.target.closest('.fb-add-doors-link');
 if (addDoorsBtn) {
-  MetroApp.hapticImpact?.('light');
   const idx = addDoorsBtn.dataset.idx;
   document.getElementById(`fbExtraWrap${idx}`).classList.remove('is-hidden');
   addDoorsBtn.parentNode.classList.add('is-hidden');
@@ -641,7 +635,6 @@ if (addDoorsBtn) {
 
 const cancelThirdBtn = event.target.closest('.fb-cancel-third-btn');
 if (cancelThirdBtn) {
-  MetroApp.hapticImpact?.('light');
   const idx = cancelThirdBtn.dataset.idx;
   document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
   document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
@@ -813,7 +806,6 @@ document.getElementById('fbChangeStation').addEventListener('click', () => {
   });
 
   sendBtn.addEventListener('click', () => { 
-    MetroApp.hapticImpact?.('medium');
     triggerFeedbackSubmit(false); 
   });
   document.getElementById('feedbackClose').addEventListener('click', closeFeedbackSheet);

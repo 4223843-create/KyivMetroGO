@@ -351,9 +351,6 @@ export function openAboutSheet() {
           });
 
           if (res.ok) {
-            MetroApp.hapticImpact?.('medium');
-            
-            // Ховаємо поле і кнопки, показуємо подяку
             bugTextarea.hidden = true;
             bugSubmitBtn.parentElement.hidden = true;
             

@@ -232,7 +232,7 @@ function attachExitFavListeners(container, slug, lineColor) {
           const hint = document.createElement('div');
           hint.id = 'checkinHint';
           hint.className = 'onboarding-hint';
-          hint.innerHTML = `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`;
+          hint.innerHTML = `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід&nbsp;зі&nbsp;станції як&nbsp;відвіданий`;
           sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
         }
         const onboardingHint = document.getElementById('onboardingHint');
@@ -337,7 +337,7 @@ function actualOpenStation(slug) {
   try { hideInfoBlocks = localStorage.getItem('metro_hide_info_blocks') === 'true'; } catch(e) {}
 
   const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
-    ? `<div class="onboarding-hint" id="onboardingHint"><span class="hint-icon-wrap" style="color:${color}">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері, щоб зберегти вихід</div>`
+    ? `<div class="onboarding-hint" id="onboardingHint"><span class="hint-icon-wrap" style="color:${color}">${MetroApp.Icons.info}</span>Натисніть двічі на вагон та двері,<br>щоб зберегти вихід</div>`
     : '';
 
   document.getElementById('stationTitleMain').textContent = s.name;

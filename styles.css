@@ -343,11 +343,12 @@ z-index: var(--z-fullscreen-sheet);
 
 /* ══ ПІДКАЗКА (ONBOARDING) ══ */
 .onboarding-hint {
+  position: relative;
   font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
   margin: 0 16px 12px;
-  padding: 10px 14px;
+  padding: 10px 36px;
   background: var(--bg-card);
   border: 1px dashed var(--border);
   border-radius: 12px;
@@ -360,7 +361,9 @@ z-index: var(--z-fullscreen-sheet);
 }
 
 .hint-icon-wrap {
-  color: inherit; /* колір задається inline відповідно до гілки */
+  position: absolute;
+  left: 14px;
+  color: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1206,12 +1209,7 @@ color: var(--text-muted);
   margin-bottom: 8px;
 }
 
-
-
-/* --- ВІДСТУПИ ДЛЯ ТЕКСТУ ВЕРСІЇ --- */
 /* ══ ФІНАЛЬНИЙ БЛОК: ШТРИХОВКА, ПОВЗУНОК ТА ВІДСТУПИ ══ */
-
-
 
 /* 5. Двоколірний повзунок для вікна "Про додаток" */
 .about-station-sheet .sheet-handle {
@@ -1991,6 +1989,7 @@ margin: 0 0 4px 0;
 .fb-restore-exit svg { width: 18px; height: 18px; }
 /* search-btn-top svg: see .search-btn-top svg above */
 
+
 /* ══ ФІНАЛЬНИЙ БЛОК ШТРИХУВАННЯ (ДЛЯ ОБОХ ТЕМ) ══ */
 
 /* --- СВІТЛА ТЕМА --- */
@@ -2009,6 +2008,7 @@ margin: 0 0 4px 0;
   background-position: bottom left;
 }
 
+/* Основна частина шторки: штрихи вниз (\) */
 [data-theme="light"] .sheet-body,
 [data-theme="light"] .fb-footer-sticky {
   background-color: #d0d0d5 !important;
@@ -2016,16 +2016,16 @@ margin: 0 0 4px 0;
   background-position: bottom left !important;
 }
 
+/* Футер: штрихи вгору (/), ЯК У ШАПЦІ */
 [data-theme="light"] .about-footer-wrap {
   background-color: #d0d0d5 !important;
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
-  background-position: top left !important; /* Починаємо малювати рівно від стику */
+  background-position: top left !important;
 }
 
 /* --- ТЕМНА ТЕМА --- */
 [data-theme="dark"] .map-viewport {
   background-color: #000000;
-  /* Ледь помітна біла штриховка на чорному (5% непрозорості) */
   background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 8px);
 }
 
@@ -2035,19 +2035,19 @@ margin: 0 0 4px 0;
 [data-theme="dark"] #feedbackSheet .sheet-handle-bar,
 [data-theme="dark"] .drop-menu {
   background-color: var(--bg-sheet);
-  /* Штриховка кольору #3A3A3C, щоб вікна візуально відрізнялися від чорної карти */
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E");
   background-position: bottom left;
 }
 
+/* Основна частина шторки: штрихи вниз (\) */
 [data-theme="dark"] .sheet-body,
 [data-theme="dark"] .fb-footer-sticky {
   background-color: var(--bg-sheet) !important;
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E") !important;
-  background-position: bottom left !important; 
+  background-position: bottom left !important;
 }
 
-/* 2. Футер: штрихи вгору (/), як у шапці */
+/* Футер: штрихи вгору (/), ЯК У ШАПЦІ */
 [data-theme="dark"] .about-footer-wrap {
   background-color: var(--bg-sheet) !important;
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E") !important;
@@ -2765,6 +2765,11 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   user-select: none;
 }
 
+[data-theme="light"] .about-gmail-domain {
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+
 /* 2. Кнопка Mono */
 .about-btn-mono-fixed {
   width: 100% !important;
@@ -3089,6 +3094,11 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     opacity: 1 !important;
 }
 
+[data-theme="light"] .info-btn-active {
+    color: #000000 !important;
+    opacity: 1 !important;
+}
+
 .settings-info-btn, .fb-add-doors-info {
     position: relative;
 }
@@ -3252,7 +3262,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 /* Наше поле з фірмовим сірим фоном */
 .bug-textarea {
   width: 100%;
-  background: var(--bg);
+  background: var(--bg-card);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -3264,6 +3274,11 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   outline: none;
   overflow-y: hidden;
   transition: border-color 0.2s;
+}
+
+[data-theme="light"] .bug-textarea {
+  background: var(--bg-pill);
+  border-color: rgba(0,0,0,0.1);
 }
 
 .bug-textarea:focus {

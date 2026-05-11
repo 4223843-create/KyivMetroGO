@@ -1,24 +1,3 @@
-// ══ СИСТЕМНІ API (CAPACITOR / БРАУЗЕР) ══
-
-/**
- * Тактильний відгук через Capacitor Haptics або navigator.vibrate.
- * На веб без Capacitor — navigator.vibrate (якщо підтримується).
- * @param {'light'|'medium'|'heavy'} style
- */
-export async function hapticImpact(style = 'light') {
-  if (window.Capacitor?.Plugins?.Haptics) {
-    try {
-      await window.Capacitor.Plugins.Haptics.impact({ style: style.toUpperCase() });
-      return;
-    } catch (e) { /* fallback нижче */ }
-  }
-  navigator.vibrate?.(style === 'heavy' ? 20 : 10);
-}
-
-/**
- * Прозорий статус-бар під Capacitor.
- * На веб — no-op.
- */
 export async function configureEdgeToEdge() {
   if (!window.Capacitor?.Plugins?.StatusBar) return;
 
@@ -32,10 +11,6 @@ export async function configureEdgeToEdge() {
   }
 }
 
-/**
- * Додає запис в history для коректної обробки кнопки «назад» на Android.
- * Викликається перед відкриттям кожної шторки.
- */
 export function pushSheetHistory() {
   if (!history.state?.isSheetOpen) {
     history.pushState({ isSheetOpen: true }, '');
