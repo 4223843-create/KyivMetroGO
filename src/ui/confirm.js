@@ -1,5 +1,4 @@
 // ══ КАСТОМНИЙ CONFIRM-ДІАЛОГ ══
-// Раніше в ui.js. Тепер: окремий файл, залежить тільки від animations.js.
 
 import { runDoorAnimation } from './animations.js';
 import { TIMING }           from '../core/timing.js';

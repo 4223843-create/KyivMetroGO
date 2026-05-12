@@ -58,7 +58,6 @@ export function hydrateStations(data) {
 
   data.stations.forEach(station => {
 
-    // ── Плаский масив positions для зворотньої сумісності ──
     station.positions = [];
     traversePositions(station, ({ dir, exit, position }) => {
       station.positions.push({
@@ -79,12 +78,6 @@ export function hydrateStations(data) {
     const stationEnWords = cleanEnName.split(/\s+/);
     const acronym        = stationWords.map(word => word.charAt(0)).join('');
 
-    // Аліаси — з JSON-поля searchAliases, не hardcoded в JS.
-    // Щоб додати аліас — редагуй stations.json, а не цей файл.
-    // Приклад у stations.json:
-    //   { "slug": "R.Politekhnychnyi_instytut", "searchAliases": ["кпі"], ... }
-    //   { "slug": "B.Ploshcha_Ukrainskikh_heroiv", "searchAliases": ["плуг", "площа льва толстого"], ... }
-    //   { "slug": "G.Zvirynetska", "searchAliases": ["дружби народів"], ... }
     const aliases = (station.searchAliases ?? []).map(a => a.toLowerCase());
 
     station._searchIndex = [
@@ -93,6 +86,20 @@ export function hydrateStations(data) {
       acronym,
       ...aliases.flatMap(alias => alias.toLowerCase().split(/[\s\u00a0\u202f\-]+/)),
     ];
+
+    const exitTokens = new Set();
+    (station.directions || []).forEach(dir => {
+      (dir.exits || []).forEach(ex => {
+        if (!ex.label) return;
+        ex.label
+          .toLowerCase()
+          .replace(/[„"«»"'.,!?]/g, '')
+          .split(/[\s\u00a0\u202f\u2009]+/)
+          .filter(w => w.length > 1)
+          .forEach(w => exitTokens.add(w));
+      });
+    });
+    station._exitIndex = [...exitTokens];
 
     state.stationsData[station.slug] = station;
   });
@@ -135,6 +142,7 @@ export function checkAppReady() {
 
   requestAnimationFrame(() => {
     document.getElementById('mapViewport')?.classList.remove('is-loading');
+    MetroApp.syncMapWithCheckins?.();
   });
 }
 

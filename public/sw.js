@@ -54,6 +54,13 @@ async function networkFirst(request) {
           if (newData.version && newData.version === oldData.version) {
             return response;
           }
+
+          // Версія змінилась — повідомляємо всі вкладки.
+          self.clients.matchAll({ type: 'window', includeUncontrolled: false })
+            .then(clients => clients.forEach(client =>
+              client.postMessage({ type: 'STATIONS_UPDATED', version: newData.version ?? null })
+            ))
+            .catch(() => {});  // не критично
         } catch {
           // Ignore invalid JSON and refresh the cached copy below.
         }

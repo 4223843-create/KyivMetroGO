@@ -1,6 +1,5 @@
 // ══ UI-КОМПОНЕНТИ ══
 // Чисті функції: string in → HTML string out. Нуль побічних ефектів.
-// Раніше були в ui.js разом з анімаціями, confirm, swipe, system APIs.
 
 import { Icons } from './icons.js';
 

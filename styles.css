@@ -1982,6 +1982,25 @@ margin: 0 0 4px 0;
   margin-right: 12px;
   flex-shrink: 0;
 }
+/* Контейнер для назви + підказки (хінт виходу) */
+.search-item-text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+/* Підказка при збігу по виходах — блідіший текст поруч з назвою */
+.search-item-hint {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal);
+  color: var(--text-muted);
+  opacity: 0.50;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
+  flex-shrink: 1;
+}
 
 
 /* ══ ІКОНКИ ══ */
@@ -3326,4 +3345,90 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   font-size: var(--fs-sm);
   text-align: center;
   min-height: 0;
+}
+
+/* ══ HEATMAP: зони відвіданих станцій на карті ══ */
+/* Клас .is-visited виставляється через syncMapWithCheckins().           */
+/* Кожна гілка підсвічується власним кольором — вписується у візуальну  */
+/* мову схеми, а не накладає чужорідні білі/чорні рамки.                */
+#mapInner [id^="B."].is-visited {
+  fill:         rgba(91, 155, 213, 0.22) !important;
+  stroke:       rgba(91, 155, 213, 0.72) !important;
+  stroke-width: 1.1px !important;
+}
+#mapInner [id^="R."].is-visited {
+  fill:         rgba(200, 82, 58, 0.22) !important;
+  stroke:       rgba(200, 82, 58, 0.72) !important;
+  stroke-width: 1.1px !important;
+}
+#mapInner [id^="G."].is-visited {
+  fill:         rgba(90, 170, 106, 0.22) !important;
+  stroke:       rgba(90, 170, 106, 0.72) !important;
+  stroke-width: 1.1px !important;
+}
+
+/* ══ CHECK-IN JOURNAL: кільця гілок (Задача Г) ══ */
+
+/* ── Рядок з трьома кільцями ── */
+.ci-line-rings-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  padding: 12px 16px 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+/* ── Картка однієї гілки ── */
+.ci-line-ring-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 96px;
+  background: none;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.ci-line-ring-card:active,
+.ci-line-ring-card.ci-ring-active {
+  background: var(--bg-card);
+}
+.ci-ring-svg {
+  display: block;
+  overflow: visible;
+}
+.ci-ring-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+}
+.ci-ring-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.7;
+  line-height: 1;
+}
+
+/* ── Розгорнутий список станцій гілки ── */
+.ci-line-detail {
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 4px;
+}
+.ci-line-detail-empty {
+  padding: 12px 16px;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+/* Дати першого/останнього чекіна — компактніший шрифт */
+.ci-detail-dates {
+  font-size: 10px;
+  opacity: 0.65;
+  white-space: nowrap;
+  flex-shrink: 0;
 }

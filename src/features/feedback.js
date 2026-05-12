@@ -421,6 +421,19 @@ if (!background && sendBtn) {
   if (resultEl) resultEl.innerHTML = '';
 }
 
+if (Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true') {
+  if (!background && sendBtn) {
+    MetroApp.hapticImpact?.('heavy');
+    sendBtn.textContent = 'Зміни застосовано';
+    sendBtn.style.color = 'var(--text-muted)';
+    sendBtn.disabled = true;
+    if (resultEl) resultEl.innerHTML = '';
+  }
+  clearTimeout(timeoutId);
+  MetroApp._isSubmitting = false;
+  return;
+}
+
 const formspreeLines = [
   ...posChanges.map(c => changeText(c.p, c.nw ?? c.p.wagon, c.nd ?? c.p.doors, !!c.closed)),
   ...newExits.map(({ st, vals }) => `${st.dir}: НОВИЙ ВИХІД (вагон ${vals.finalW}, двері ${vals.finalD})`),

@@ -10,7 +10,6 @@ export const BASE_MAP_HEIGHT = 840;
 const CENTER_X = 0.485;
 const CENTER_Y = 0.5;
 
-// Знімає лоадер через 10 с якщо щось пішло не так
 setTimeout(() => vp?.classList.remove('is-loading'), 10_000);
 
 export function adjustViewportHeight() {
@@ -59,7 +58,6 @@ export function initMap() {
   applyZoomAndCenter();
 }
 
-// Реєструємо на MetroApp — devmode.js використовує для скидання зуму
 MetroApp.applyZoomAndCenter = applyZoomAndCenter;
 
 // ── Resize ────────────────────────────────────────────────────

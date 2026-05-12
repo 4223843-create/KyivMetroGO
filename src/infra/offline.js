@@ -1,6 +1,4 @@
 // ══ ОФЛАЙН-БАНЕР ══
-// Раніше в offline.js разом із SW update toast.
-// Тепер: один файл — одна відповідальність.
 
 const banner = document.createElement('div');
 banner.id        = 'offlineBanner';

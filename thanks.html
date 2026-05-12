@@ -6,7 +6,6 @@
   <title>Дякуємо! - KyivMetroGO</title>
   
   <style>
-    /* Дефолтна тема — ТЕМНА (змінні безпосередньо у :root) */
     :root {
       --line-red: #c8523a;
       --line-blue: #5b9bd5;
@@ -18,8 +17,6 @@
       --btn-bg: #1c1c1e;
     }
 
-    /* СВІТЛА ТЕМА вмикається, якщо стоїть атрибут data-theme="light" 
-       АБО якщо в системі світла тема (і атрибут не заданий) */
     [data-theme="light"] {
       --text: #000000;
       --text-muted: #8e8e93;
@@ -67,7 +64,6 @@
   </style>
 
   <script>
-    // 1. СИНХРОНІЗАЦІЯ ТЕМИ З ДОДАТКОМ (миттєва, до рендеру)
     try {
       const savedTheme = localStorage.getItem('metro_theme');
       if (savedTheme) {
@@ -112,17 +108,14 @@
   <a href="index.html" class="back-btn">Повернутись до карти</a>
 
   <script>
-    // 2. ДИНАМІЧНИЙ ТЕКСТ В ЗАЛЕЖНОСТІ ВІД ПРИЧИНИ ПЕРЕХОДУ
     const params = new URLSearchParams(window.location.search);
     if (params.get('type') === 'beta') {
       document.getElementById('thanksTitle').innerText = 'Дякуємо! Напишемо.';
       document.getElementById('thanksText').innerHTML = 'Електронну адресу збережено.<br><br>За правилами Google Play, перед публікацією ми маємо провести закрите тестування. Для нього потрібно <strong>20 тестувальників</strong>, які користуватимуться додатком <strong>14 днів поспіль</strong>. Ми надішлемо вам запрошення, щойно назбираємо доста охочих!';
     }
 
-    // 3. АНІМАЦІЯ САЛЮТУ (Без хардкоду кольорів - читаємо прямо з CSS)
     const rs = getComputedStyle(document.documentElement);
     
-    // Функція-помічник для витягування кольорів
     const getColor = (prop, fallback) => {
       const val = rs.getPropertyValue(prop).trim();
       return val ? val : fallback;

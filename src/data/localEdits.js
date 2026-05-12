@@ -2,7 +2,6 @@ import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { traversePositions }     from './positions.js';
 
 // ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
-// Витягнуто з feedback.js. Всі інші модулі мають імпортувати звідси.
 
 let localEditsCache = null;
 let exitLabelsCache = null;

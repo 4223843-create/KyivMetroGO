@@ -201,7 +201,6 @@ export function openAboutSheet() {
     setupDevModeTapCounter(aboutSheet);
   }
 
-  // ЗАДАЧА 6: скидаємо стан довідок при кожному відкритті
   const hintAndroid = aboutSheet.querySelector('#hintAndroid');
   const hintIOS     = aboutSheet.querySelector('#hintIOS');
   const btnAndroid  = aboutSheet.querySelector('#btnInfoAndroid');
@@ -218,7 +217,6 @@ export function openAboutSheet() {
     const newClose = oldClose.cloneNode(true);
     oldClose.replaceWith(newClose);
     newClose.addEventListener('click', () => {
-      // ЗАДАЧА 6: скидаємо довідки при закритті
       const h1 = aboutSheet.querySelector('#hintAndroid');
       const h2 = aboutSheet.querySelector('#hintIOS');
       const b1 = aboutSheet.querySelector('#btnInfoAndroid');

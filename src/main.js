@@ -4,7 +4,6 @@
 
 window.MetroApp = window.MetroApp || {};
 
-// ── Константи ──────────────────────────────────────────────────
 import {
   LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES,
   STATIONS_WITH_POTENTIAL_EXITS, NAME_TO_SLUG, SLUG_BY_LOWER,
@@ -17,7 +16,6 @@ MetroApp.STATIONS_WITH_POTENTIAL_EXITS = STATIONS_WITH_POTENTIAL_EXITS;
 MetroApp.NAME_TO_SLUG                  = NAME_TO_SLUG;
 MetroApp.SLUG_BY_LOWER                 = SLUG_BY_LOWER;
 
-// ── UI-функції на MetroApp ────────────────────────────────────
 import { animateSheetClose, dismissHintWithDoors } from './ui/animations.js';
 import { showCustomConfirm }                       from './ui/confirm.js';
 import { initKinematicSwipe }                      from './ui/swipe.js';
@@ -29,11 +27,9 @@ MetroApp.showCustomConfirm    = showCustomConfirm;
 MetroApp.initKinematicSwipe   = initKinematicSwipe;
 MetroApp.configureEdgeToEdge  = configureEdgeToEdge;
 MetroApp.pushSheetHistory     = pushSheetHistory;
-// ── Іконки ────────────────────────────────────────────────────
 import { Icons } from './ui/icons.js';
 MetroApp.Icons = Icons;
 
-// ── Bootstrap-імпорти ────────────────────────────────────────
 import { STORAGE_KEYS, Storage }          from './core/storage.js';
 import { applyTheme }                     from './ui/theme.js';
 import { initMap }                        from './map/mapInit.js';
@@ -46,13 +42,9 @@ import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
 import './infra/offline.js';
 import './infra/swUpdate.js';
-// УВАГА: './infra/about.js' ВИДАЛЕНО —
-// beta-форма обробляється всередині aboutSheet.js (bindBottomLoader).
-// Підключення обох спричиняло подвійну відправку форми.
 import './features/feedback.js';
 import './app.js';
 
-// ── Глобальний error handler ──────────────────────────────────
 function releaseStartupLoader() {
   document.getElementById('mapViewport')?.classList.remove('is-loading');
 }
@@ -61,7 +53,6 @@ window.addEventListener('error',
 window.addEventListener('unhandledrejection',
   e => { console.error('[startup] unhandled rejection', e.reason); releaseStartupLoader(); });
 
-// ── Bootstrap ─────────────────────────────────────────────────
 async function bootstrap() {
   try {
     await Storage.init();

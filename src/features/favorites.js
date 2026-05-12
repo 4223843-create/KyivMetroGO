@@ -15,7 +15,7 @@ function readFavCache() {
     try { favCache = JSON.parse(Storage.get(STORAGE_KEYS.FAVS) || '[]'); }
     catch (e) { console.warn('[KyivMetroGO] Помилка парсингу Обраних:', e); favCache = []; }
   }
-  return favCache;тап
+  return favCache;
 }
 
 export function getFavs()     { return [...readFavCache()]; }
@@ -255,7 +255,6 @@ export function openFavSheet() {
   const hideInfo   = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
   const startOnFav = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
 
-  // ЗАДАЧА 2: рахуємо стрік тільки якщо є хоча б одна станція у Вибраному
   const hasAnyFavs = getFavs().length > 0 || readExitFavCache().length > 0;
 
   if (!hideInfo && !startOnFav && hasAnyFavs) {

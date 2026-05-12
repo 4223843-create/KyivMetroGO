@@ -1,9 +1,9 @@
 import { state } from '../core/state.js';
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 
-
 let ciSortMode = 'date';
 let ciViewMode = 'visited';
+let selectedLines = new Set();
 
 const CHECKIN_PIN_SVG_OFF = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`;
 
@@ -37,6 +37,7 @@ export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
   Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
   checkinsCache = all;
   updateCheckinDock();
+  MetroApp.syncMapWithCheckins?.(); // Оновлюємо heatmap карти
   return !!all[id];
 }
 
@@ -125,9 +126,101 @@ function exitWord(n) {
   if (mod10 >= 2 && mod10 <= 4)     return 'виходи';
   return 'виходів';
 }
-// Повні рядки (для інших потреб)
-function declineStantsiya(n) { return `${n} ${stationWord(n)}`; }
-function declineVykhid(n)     { return `${n} ${exitWord(n)}`; }
+
+// ══ СТАТИСТИКА ПО ГІЛКАХ ══════════════════════════════════════
+
+const LINE_NAMES = { blue: 'Синя', red: 'Червона', green: 'Зелена' };
+const LINE_ORDER = ['blue', 'red', 'green'];
+
+// Обчислює статистику відвідуваності для кожної гілки.
+function buildLineStats(entries) {
+  const lineStats = {};
+
+  for (const line of LINE_ORDER) {
+    lineStats[line] = { totalStations: 0, visitedStations: 0, totalExits: 0, visitedExits: 0 };
+  }
+
+  if (!state.stationsData) return lineStats;
+
+  // Будуємо lookup: slug → Set<"wagon|doors"> відвіданих виходів
+  const visitedBySlug = {};
+  for (const e of entries) {
+    if (!visitedBySlug[e.slug]) visitedBySlug[e.slug] = new Set();
+    visitedBySlug[e.slug].add(`${e.wagon}|${e.doors}`);
+  }
+
+  for (const [slug, st] of Object.entries(state.stationsData)) {
+    const line = st.line;
+    if (!lineStats[line]) continue;
+
+    const openExits = st.positions?.filter(p => !p.closed) || [];
+    lineStats[line].totalStations++;
+    lineStats[line].totalExits += openExits.length;
+
+    const visited = visitedBySlug[slug];
+    if (visited) {
+      lineStats[line].visitedStations++;
+      // Рахуємо тільки ті виходи, що справді існують на станції
+      for (const p of openExits) {
+        if (visited.has(`${p.wagon}|${p.doors}`)) lineStats[line].visitedExits++;
+      }
+    }
+  }
+
+  return lineStats;
+}
+
+// Будує HTML-секцію з подвійними SVG-кільцями для кожної гілки.
+// Зовнішнє кільце = % відвіданих станцій, внутрішнє = % відвіданих виходів.
+function renderLineRings(lineStats) {
+  const rings = LINE_ORDER.map(line => {
+    const s     = lineStats[line];
+    const color = MetroApp.LINE_COLOR[line] || 'var(--text-muted)';
+    const name  = LINE_NAMES[line];
+
+    const stPct  = s.totalStations > 0 ? (s.visitedStations / s.totalStations) : 0;
+    const exPct  = s.totalExits    > 0 ? (s.visitedExits    / s.totalExits)    : 0;
+
+    // Параметри SVG-кілець (viewBox 64×64, cx=32, cy=32)
+    const RO  = 26; // outer radius (станції)
+    const RI  = 16; // inner radius (виходи)
+    const SW  = 5;  // stroke-width
+    const CO  = +(2 * Math.PI * RO).toFixed(3); // ≈ 163.363
+    const CI  = +(2 * Math.PI * RI).toFixed(3); // ≈ 100.531
+
+    const fillO = +(CO * stPct).toFixed(3);
+    const fillI = +(CI * exPct).toFixed(3);
+
+    const stLabel = `${s.visitedStations}/${s.totalStations}`;
+    const exLabel = `${s.visitedExits}/${s.totalExits}`;
+
+    const isActive = selectedLines.has(line);
+    return `<button class="ci-line-ring-card${isActive ? ' ci-ring-active' : ''}" data-line="${line}" aria-label="${name} гілка: ${stLabel} станцій, ${exLabel} виходів">
+      <svg class="ci-ring-svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+        <!-- Доріжки -->
+        <circle cx="32" cy="32" r="${RO}" fill="none" stroke="var(--border)" stroke-width="${SW}"/>
+        <circle cx="32" cy="32" r="${RI}" fill="none" stroke="var(--border)" stroke-width="${SW}"/>
+        <!-- Заповнення (rotate -90° щоб старт зверху) -->
+        <circle cx="32" cy="32" r="${RO}" fill="none"
+          stroke="${color}" stroke-width="${SW}"
+          stroke-linecap="round"
+          stroke-dasharray="${fillO} ${CO}"
+          transform="rotate(-90 32 32)"/>
+        <circle cx="32" cy="32" r="${RI}" fill="none"
+          stroke="${color}" stroke-width="${SW}"
+          stroke-linecap="round"
+          stroke-dasharray="${fillI} ${CI}"
+          transform="rotate(-90 32 32)"/>
+      </svg>
+      <span class="ci-ring-label" style="color:${color}">${name}</span>
+      <span class="ci-ring-sub">${stLabel} ст.</span>
+    </button>`;
+  }).join('');
+
+  return `<div class="ci-line-rings-row">${rings}</div>`;
+}
+
+// Рендерить розгорнутий список станцій обраної гілки.
 
 export function openCheckinSheet() {
   MetroApp.pushSheetHistory?.();
@@ -175,8 +268,8 @@ export function openCheckinSheet() {
         
       ciViewMode = 'visited';
       ciSortMode = 'date';
+      selectedLines = new Set();
     } else {
-
 
       
       // 2. Є ДАНІ: Генеруємо статистику, бар сортування та списки
@@ -198,10 +291,10 @@ export function openCheckinSheet() {
           coverageValue = 100;
         } else if (uniqueExitsVisited > 0 && coverageValue === 0) {
           coverageText  = '< 1%';
-          coverageValue = 1; // Щоб смужка мала хоч міліметр заповнення
+          coverageValue = 1;
         } else if (uniqueExitsVisited < totalExitsAll && coverageValue === 100) {
           coverageText  = '> 99%';
-          coverageValue = 99; // Щоб смужка візуально не доходила до самого кінця
+          coverageValue = 99;
         } else {
           coverageText  = `${coverageValue}%`;
         }
@@ -209,18 +302,28 @@ export function openCheckinSheet() {
 
       bodyHtml = `
         <div class="ci-stats-bar">
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${declineStantsiya(uniqueStations).replace(String(uniqueStations), '').trim()}</span></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${stationWord(uniqueStations)}</span></div>
           <div class="ci-stat-sep"></div>
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${declineVykhid(uniqueExitsVisited).replace(String(uniqueExitsVisited), '').trim()}</span></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${exitWord(uniqueExitsVisited)}</span></div>
           <div class="ci-stat-sep"></div>
           <div class="ci-stat"><span class="ci-stat-num">${coverageText}</span><span class="ci-stat-lbl">охоплення</span></div>
         </div>
         <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverageValue}%"></div></div>
+        ${renderLineRings(buildLineStats(entries))}
+        ${selectedLines.size > 0 ? `
         <div class="ci-sort-bar">
           <button class="ci-sort-btn${ciSortMode === 'date' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
           <button class="ci-sort-btn${ciSortMode === 'alpha' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
           <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
-        </div>`;
+        </div>` : ''}
+      `;
+
+      if (selectedLines.size > 0) {
+      // Фільтруємо entries до обраних гілок
+      const lineEntries = entries.filter(e => {
+        const st = state.stationsData?.[e.slug];
+        return st && selectedLines.has(st.line);
+      });
 
       if (ciViewMode === 'unvisited') {
         const visitedKeys        = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
@@ -229,7 +332,7 @@ export function openCheckinSheet() {
             const unvisited = st.positions?.filter(p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)) || [];
             return { slug, name: st.name, line: st.line, unvisitedCount: unvisited.length, total: st.positions?.filter(p => !p.closed).length || 0 };
           })
-          .filter(s => s.unvisitedCount > 0)
+          .filter(s => s.unvisitedCount > 0 && selectedLines.has(s.line))
           .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
         listHtml = unvisitedStations.map(s => {
@@ -243,7 +346,7 @@ export function openCheckinSheet() {
         }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
       } else {
         const byStation    = {};
-        entries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
+        lineEntries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
         let stationEntries = Object.entries(byStation);
         if (ciSortMode === 'date') {
           stationEntries.sort(([, a], [, b]) => Math.max(...b.map(e => e.ts)) - Math.max(...a.map(e => e.ts)));
@@ -270,6 +373,7 @@ export function openCheckinSheet() {
         }).join('');
       }
     }
+  }
 
     s.innerHTML = `
       <div class="sheet-handle-bar">
@@ -289,6 +393,21 @@ export function openCheckinSheet() {
     if (unvisitedBtn) {
       unvisitedBtn.addEventListener('click', () => { ciViewMode = 'unvisited'; renderCheckinContent(); });
     }
+
+    // ── Мультиселект гілок — як лінійні пілюлі в пошуку ────────
+    // Клік по кільцю: toggle гілки в selectedLines, потім re-render.
+    const ringsRow = s.querySelector('.ci-line-rings-row');
+    ringsRow?.addEventListener('click', e => {
+      const card = e.target.closest('.ci-line-ring-card');
+      if (!card) return;
+      const line = card.dataset.line;
+      if (selectedLines.has(line)) {
+        selectedLines.delete(line);
+      } else {
+        selectedLines.add(line);
+      }
+      renderCheckinContent();
+    });
 
     s.querySelectorAll('.checkin-station-card').forEach(card => {
       card.addEventListener('click', () => {

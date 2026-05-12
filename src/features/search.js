@@ -6,61 +6,134 @@ const SEARCH_ALIASES = {
   'дружби народів': 'G.Zvirynetska',
   };
 
+// ── Алгоритм відстані Левенштейна ────────────────────────────
+// Повертає мінімальну кількість правок (вставка/видалення/заміна).
+// Рання відмова: якщо різниця довжин > 3 — не витрачаємо час.
+function levenshtein(a, b) {
+  const la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > 3) return 99;
+  // Одновимірний DP-масив для економії пам'яті.
+  let prev = Array.from({ length: lb + 1 }, (_, j) => j);
+  for (let i = 1; i <= la; i++) {
+    const curr = [i];
+    for (let j = 1; j <= lb; j++) {
+      curr[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j], curr[j - 1], prev[j - 1]);
+    }
+    prev = curr;
+  }
+  return prev[lb];
+}
+
+// ── Нечіткий збіг одного токена ──────────────────────────────
+// Спочатку — дешевий prefix-check; Левенштейн лише якщо потрібно.
+// Поріг: 1 правка для ≤5 символів, 2 — для довших.
+function fuzzyMatchToken(query, token) {
+  if (token.startsWith(query)) return true;
+  if (query.length < 4) return false; // Короткі запити — тільки prefix
+  const prefix    = token.slice(0, query.length + 1); // Не порівнюємо весь токен
+  const threshold = query.length <= 5 ? 1 : 2;
+  return levenshtein(query, prefix) <= threshold;
+}
+
 export function renderSearchResults(query, container, lineFilter = new Set()) {
   if (!state.stationsData) {
     container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються…</p>';
     return;
   }
 
-  let filtered = Object.values(state.stationsData);
-
-  if (query) {
-    const rawQuery      = query.toLowerCase().trim().replace(/[''`]/g, '');
-    const queryWords    = rawQuery.split(/\s+/).filter(w => w.length > 0);
-    const queryNoSpaces = rawQuery.replace(/\s+/g, '');
-
-    filtered = filtered.filter(s => {
-      const isAliasMatch = Object.entries(SEARCH_ALIASES).some(([alias, slug]) => 
-        slug === s.slug && (alias.startsWith(rawQuery) || alias.includes(rawQuery))
-      );
-      if (isAliasMatch) return true;
-
-      const isWordMatch = queryWords.every(qWord =>
-        s._searchIndex.some(idxWord => idxWord.startsWith(qWord))
-      );
-      if (isWordMatch) return true;
-
-      const abbrev = s._searchIndex.map(w => w[0]).join('');
-      if (abbrev.startsWith(rawQuery)) return true;
-
-      if (s._searchIndex.length > 1) {
-        const abbrevLong = (s._searchIndex[0].substring(0, 2)) + s._searchIndex.slice(1).map(w => w[0]).join('');
-        if (abbrevLong.startsWith(rawQuery)) return true;
-      }
-
-      return s._searchIndex.join('').includes(queryNoSpaces);
-    });
-  }
+  let stations = Object.values(state.stationsData);
 
   // Фільтрація по лініях
   if (lineFilter.size > 0) {
-    filtered = filtered.filter(s => lineFilter.has(s.line));
+    stations = stations.filter(s => lineFilter.has(s.line));
   }
 
-  filtered.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-
-  if (!filtered.length) {
-    container.innerHTML = '<p class="fav-empty-text" style="padding-top:32px;">Станцію не знайдено</p>';
+  // ── Без запиту — просто алфавітний список ─────────────────
+  if (!query) {
+    stations.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+    container.innerHTML = stations.map(s => _renderItem(s, false, null)).join('');
     return;
   }
 
-  container.innerHTML = filtered.map(s => {
-    const color = MetroApp.LINE_COLOR[s.line];
-    return `<div class="search-item" data-slug="${s.slug}">
-      <div class="search-item-line" style="background-color:${color}"></div>
-      <div>${s.name}</div>
-    </div>`;
-  }).join('');
+  const rawQuery      = query.toLowerCase().trim().replace(/[''`]/g, '');
+  const queryWords    = rawQuery.split(/\s+/).filter(w => w.length > 0);
+  const queryNoSpaces = rawQuery.replace(/\s+/g, '');
+
+  // ── Матчимо кожну станцію і запам'ятовуємо тип збігу ──────
+  const matched = []; // { s, isExitOnly, exitHint }
+
+  for (const s of stations) {
+    // Збіги по назві/індексу
+    const isAlias = Object.entries(SEARCH_ALIASES).some(([alias, slug]) =>
+      slug === s.slug && (alias.startsWith(rawQuery) || alias.includes(rawQuery))
+    );
+    const isWord = queryWords.every(qWord =>
+      s._searchIndex.some(idx => idx.startsWith(qWord))
+    );
+    const abbrev = s._searchIndex.map(w => w[0]).join('');
+    const isAbbrev = abbrev.startsWith(rawQuery);
+    const abbrevLong = s._searchIndex.length > 1
+      ? s._searchIndex[0].substring(0, 2) + s._searchIndex.slice(1).map(w => w[0]).join('')
+      : '';
+    const isAbbrevLong = abbrevLong.startsWith(rawQuery);
+    const isSubstr = s._searchIndex.join('').includes(queryNoSpaces);
+    const isFuzzyName = rawQuery.length >= 4 && queryWords.every(qWord =>
+      s._searchIndex.some(tok => fuzzyMatchToken(qWord, tok))
+    );
+
+    const isNameMatch = isAlias || isWord || isAbbrev || isAbbrevLong || isSubstr || isFuzzyName;
+
+    if (isNameMatch) {
+      matched.push({ s, isExitOnly: false, exitHint: null });
+      continue;
+    }
+
+    if (s._exitIndex?.length) {
+      const hitTok = s._exitIndex.find(tok =>
+        tok.startsWith(rawQuery) || (rawQuery.length >= 4 && fuzzyMatchToken(rawQuery, tok))
+      );
+      if (hitTok) {
+        matched.push({ s, isExitOnly: true, exitHint: _findExitLabel(s, hitTok) });
+      }
+    }
+  }
+
+  if (!state.stationsData || Object.keys(state.stationsData).length === 0) {
+    container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються…</p>';
+    return;
+  }
+
+  matched.sort((a, b) => {
+    if (a.isExitOnly !== b.isExitOnly) return a.isExitOnly ? 1 : -1;
+    return a.s.name.localeCompare(b.s.name, 'uk');
+  });
+
+  container.innerHTML = matched.map(({ s, isExitOnly, exitHint }) =>
+    _renderItem(s, isExitOnly, exitHint)
+  ).join('');
+}
+
+function _findExitLabel(s, hitTok) {
+  for (const dir of (s.directions || [])) {
+    for (const ex of (dir.exits || [])) {
+      if (!ex.label) continue;
+      if (ex.label.toLowerCase().includes(hitTok)) return ex.label;
+    }
+  }
+  return null;
+}
+
+function _renderItem(s, isExitOnly, exitHint) {
+  const color    = MetroApp.LINE_COLOR[s.line];
+  const hintHtml = isExitOnly && exitHint
+    ? `<span class="search-item-hint">${exitHint}</span>`
+    : '';
+  return `<div class="search-item" data-slug="${s.slug}">
+    <div class="search-item-line" style="background-color:${color}"></div>
+    <div class="search-item-text"><span>${s.name}</span>${hintHtml}</div>
+  </div>`;
 }
 
 /**

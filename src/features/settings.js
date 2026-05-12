@@ -5,9 +5,8 @@ import { isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache 
 import { state }                from '../core/state.js';
 import { isDevMode, getDevLog } from './devmode.js';
 
-// ⚠️ Логіка тумблерів (pointer-events + клік по всій картці) — збережено без змін!
 export function openSettingsSheet() {
-  MetroApp.pushSheetHistory(); // <--- ДОДАНО
+  MetroApp.pushSheetHistory();
   const sheetOverlay = document.getElementById('sheetOverlay');
   let settingsSheet  = document.getElementById('settingsSheet');
 
@@ -19,7 +18,6 @@ export function openSettingsSheet() {
     settingsSheet.appendChild(tpl.content.cloneNode(true));
     document.body.appendChild(settingsSheet);
 
-    // ── Закрити ──
     document.getElementById('settingsClose').addEventListener('click', () => {
       MetroApp.animateSheetClose(settingsSheet, () => {
         settingsSheet.classList.remove('sheet-open');
@@ -28,14 +26,12 @@ export function openSettingsSheet() {
       });
     });
 
-    // ── Тема ──
     const themeToggle = document.getElementById('settingsThemeToggle');
     if (themeToggle) {
       themeToggle.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
       themeToggle.addEventListener('change', e => applyTheme(e.target.checked ? 'dark' : 'light'));
     }
 
-    // ── Стартувати з Обраного ──
     const startFavToggle = document.getElementById('settingsStartFavToggle');
     if (startFavToggle) {
       startFavToggle.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
@@ -45,7 +41,6 @@ export function openSettingsSheet() {
       });
     }
 
-    // ── Зміни працюють локально ──
     const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
     if (localFbToggle) {
       localFbToggle.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
@@ -54,7 +49,6 @@ export function openSettingsSheet() {
       );
     }
 
-    // ── Кнопка «i» (Довідка Локальних змін) ──
     function closeAllSettingsHints() {
       settingsSheet.querySelectorAll('.settings-hint').forEach(h => { h.hidden = true; });
       settingsSheet.querySelectorAll('.settings-info-btn').forEach(b => { b.classList.remove('settings-info-btn-active'); });
@@ -95,7 +89,6 @@ export function openSettingsSheet() {
       });
     }
 
-    // ── Кнопка «i» (Довідка Check-in) ──
     document.getElementById('settingsCheckinInfo')?.addEventListener('click', e => {
       e.stopPropagation();
       const hint = document.getElementById('settingsCheckinHint');
@@ -118,7 +111,6 @@ export function openSettingsSheet() {
       );
     }
 
-    // ── Кнопка «i» (Довідка Приховати блоки) ──
     document.getElementById('settingsHideInfoBtn')?.addEventListener('click', e => {
       e.stopPropagation();
       const hint = document.getElementById('settingsHideInfoHint');
