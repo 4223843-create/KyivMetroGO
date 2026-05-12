@@ -5,6 +5,33 @@ import { isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache 
 import { state }                from '../core/state.js';
 import { isDevMode, getDevLog } from './devmode.js';
 
+function showCheckinLockToast(rowEl) {
+  const existing = document.getElementById('checkinLockToast');
+  if (existing) return;
+
+  const rect = rowEl.getBoundingClientRect(); 
+  const toast = document.createElement('div');
+  toast.id = 'checkinLockToast';
+  toast.className = 'dev-mode-toast dev-mode-toast-open';
+  
+  toast.style.cssText = `
+    position: fixed;
+    top: ${rect.top - 45}px; 
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: auto;
+    z-index: 10000;
+  `;
+  
+  toast.innerHTML = 'Спершу активуйте режим <span style="font-variant: small-caps; letter-spacing: 0.04em;">Check-in</span>';
+  
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.remove('dev-mode-toast-open');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
 export function openSettingsSheet() {
   MetroApp.pushSheetHistory();
   const sheetOverlay = document.getElementById('sheetOverlay');
@@ -18,6 +45,7 @@ export function openSettingsSheet() {
     settingsSheet.appendChild(tpl.content.cloneNode(true));
     document.body.appendChild(settingsSheet);
 
+    // ── Закрити ──
     document.getElementById('settingsClose').addEventListener('click', () => {
       MetroApp.animateSheetClose(settingsSheet, () => {
         settingsSheet.classList.remove('sheet-open');
@@ -41,6 +69,7 @@ export function openSettingsSheet() {
       });
     }
 
+    // ── Зміни працюють локально ──
     const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
     if (localFbToggle) {
       localFbToggle.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
@@ -49,6 +78,7 @@ export function openSettingsSheet() {
       );
     }
 
+    // ── Кнопка «i» (Довідка Локальних змін) ──
     function closeAllSettingsHints() {
       settingsSheet.querySelectorAll('.settings-hint').forEach(h => { h.hidden = true; });
       settingsSheet.querySelectorAll('.settings-info-btn').forEach(b => { b.classList.remove('settings-info-btn-active'); });
@@ -67,13 +97,18 @@ export function openSettingsSheet() {
       }
     });
 
-    // ── Check-in ──
+    // ── Check-in Головний ──
     const checkinToggle = document.getElementById('settingsCheckinToggle');
     if (checkinToggle) {
       checkinToggle.checked = isCheckinMode();
       checkinToggle.addEventListener('change', e => {
         Storage.set(STORAGE_KEYS.CHECKIN_MODE, e.target.checked);
         updateCheckinDock();
+
+        const exitsRow = document.getElementById('checkinExitsRow');
+        if (exitsRow) {
+          exitsRow.classList.toggle('row-disabled', !e.target.checked);
+        }
 
         const currentSlug = document.getElementById('stationSheet').classList.contains('sheet-open')
           ? (state.currentStationSlug ?? null)
@@ -89,13 +124,25 @@ export function openSettingsSheet() {
       });
     }
 
-    document.getElementById('settingsCheckinInfo')?.addEventListener('click', e => {
+    // ── Check-in по виходам ──
+    const byStationToggle = document.getElementById('settingsCheckinByStationToggle');
+    if (byStationToggle) {
+      byStationToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';
+      byStationToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.CHECKIN_BY_STATION, String(e.target.checked));
+      });
+    }
+
+    // ── ОБ'ЄДНАНА Кнопка «i» (Довідка Check-in) ──
+    document.getElementById('settingsCheckinCombinedInfo')?.addEventListener('click', e => {
       e.stopPropagation();
-      const hint = document.getElementById('settingsCheckinHint');
-      const btn  = document.getElementById('settingsCheckinInfo');
-      if (!hint) return;
+      const hint = document.getElementById('settingsCheckinCombinedHint');
+      const btn  = document.getElementById('settingsCheckinCombinedInfo');
+      if (!hint || !btn) return;
+      
       const wasOpen = !hint.hidden;
-      closeAllSettingsHints();
+      closeAllSettingsHints(); 
+      
       if (!wasOpen) {
         hint.hidden = false;
         btn.classList.add('settings-info-btn-active');
@@ -111,6 +158,7 @@ export function openSettingsSheet() {
       );
     }
 
+    // ── Кнопка «i» (Довідка Приховати блоки) ──
     document.getElementById('settingsHideInfoBtn')?.addEventListener('click', e => {
       e.stopPropagation();
       const hint = document.getElementById('settingsHideInfoHint');
@@ -188,23 +236,33 @@ export function openSettingsSheet() {
 
     settingsSheet.querySelectorAll('.settings-card').forEach(card => {
       card.addEventListener('click', e => {
-        // Нижня частина картки (нижче роздільника) — тумблер не тригеримо
         const inBottomArea = !!e.target.closest('.settings-actions, .settings-rule, .settings-hint');
         if (inBottomArea) {
-          // Ліва половина нижньої частини → відкриваємо довідку
-          // (якщо клік не на кнопці — симулюємо натискання i-кнопки)
           if (!e.target.closest('button, a')) {
             const cardRect  = card.getBoundingClientRect();
-            const isLeftHalf = e.clientX < cardRect.left + cardRect.width / 2;
-            if (isLeftHalf) {
+            if (e.clientX < cardRect.left + cardRect.width / 2) {
               card.querySelector('.settings-info-btn')?.click();
             }
           }
-          return; // тумблер не чіпаємо
+          return;
         }
+
         if (e.target.closest('button, a')) return;
+
+        const row = e.target.closest('.settings-row');
+        if (!row) return;
+
+        const isExitsRow = row.id === 'checkinExitsRow';
+        const isMainOn = document.getElementById('settingsCheckinToggle')?.checked;
+
+        if (isExitsRow && !isMainOn) {
+          e.preventDefault();
+          showCheckinLockToast(row);
+          return;
+        }
+
         e.preventDefault();
-        const input = card.querySelector('input[type="checkbox"]');
+        const input = row.querySelector('input[type="checkbox"]');
         if (input) {
           input.checked = !input.checked;
           input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -227,7 +285,6 @@ export function openSettingsSheet() {
           allData[key] = localStorage.getItem(key);
         }
 
-        // Якщо активний режим розробника — додаємо лог змін другим блоком
         if (isDevMode()) {
           const log = getDevLog();
           if (log.length > 0) {
@@ -264,8 +321,6 @@ export function openSettingsSheet() {
     // ── Імпорт (Відновлення з файлу) ──
     document.getElementById('settingsImport')?.addEventListener('click', e => {
       e.stopPropagation();
-      // Створюємо input щоразу наново — єдиний надійний спосіб викликати
-      // системний файловий picker на iOS/Android без затримок та обмежень безпеки.
       const input = document.createElement('input');
       input.type   = 'file';
       input.accept = '.json';
@@ -307,21 +362,27 @@ export function openSettingsSheet() {
     });
   }
 
-// Синхронізуємо стан тумблерів при кожному відкритті — незалежно від того,
-  // чи sheet тільки створено, чи відкривається повторно.
   function syncToggles() {
+    const isMainOn = isCheckinMode();
+    const exitsRow = document.getElementById('checkinExitsRow');
+    if (exitsRow) {
+      exitsRow.classList.toggle('row-disabled', !isMainOn);
+    }
+
     const t = document.getElementById('settingsThemeToggle');
     const s = document.getElementById('settingsStartFavToggle');
+    const b = document.getElementById('settingsCheckinByStationToggle');
+    if (b) b.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';
     const c = document.getElementById('settingsCheckinToggle');
     const l = document.getElementById('settingsLocalFeedbackToggle');
     const h = document.getElementById('settingsHideInfoToggle');
+    
     if (t) t.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
     if (s) s.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
-    if (c) c.checked = isCheckinMode();
+    if (c) c.checked = isMainOn;
     if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
     if (h) h.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
 
-    // Стан кнопок «Очистити» — вимикаємо якщо нема чого чистити
     const hasFavs     = getExitFavs().length > 0 || getFavs().length > 0;
     const hasCheckins = Object.keys(getCheckins()).length > 0;
     const editsData   = Storage.get(STORAGE_KEYS.LOCAL_EDITS);

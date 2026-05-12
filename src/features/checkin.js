@@ -19,8 +19,8 @@ export function getCheckins() {
 }
 
 export function isCheckinMode() {
-  const val = Storage.get(STORAGE_KEYS.CHECKIN_MODE);
-  return val === null ? true : val === 'true';
+  // Вимкнено за замовчуванням (якщо null — повертає false)
+  return Storage.get(STORAGE_KEYS.CHECKIN_MODE) === 'true';
 }
 
 export function checkinId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
@@ -111,7 +111,6 @@ export function formatCheckinTime(ts) {
 }
 
 // ══ ВІДМІНКИ ══════════════════════════════════════════════════
-// Окремі функції для числа і слова — stat-bar показує їх в різних <span>.
 function stationWord(n) {
   const mod10 = Math.abs(n) % 10, mod100 = Math.abs(n) % 100;
   if (mod100 >= 11 && mod100 <= 14) return 'станцій';
@@ -126,13 +125,14 @@ function exitWord(n) {
   if (mod10 >= 2 && mod10 <= 4)     return 'виходи';
   return 'виходів';
 }
+function declineStantsiya(n) { return `${n} ${stationWord(n)}`; }
+function declineVykhid(n)     { return `${n} ${exitWord(n)}`; }
 
 // ══ СТАТИСТИКА ПО ГІЛКАХ ══════════════════════════════════════
 
 const LINE_NAMES = { blue: 'Синя', red: 'Червона', green: 'Зелена' };
 const LINE_ORDER = ['blue', 'red', 'green'];
 
-// Обчислює статистику відвідуваності для кожної гілки.
 function buildLineStats(entries) {
   const lineStats = {};
 
@@ -142,7 +142,6 @@ function buildLineStats(entries) {
 
   if (!state.stationsData) return lineStats;
 
-  // Будуємо lookup: slug → Set<"wagon|doors"> відвіданих виходів
   const visitedBySlug = {};
   for (const e of entries) {
     if (!visitedBySlug[e.slug]) visitedBySlug[e.slug] = new Set();
@@ -160,7 +159,6 @@ function buildLineStats(entries) {
     const visited = visitedBySlug[slug];
     if (visited) {
       lineStats[line].visitedStations++;
-      // Рахуємо тільки ті виходи, що справді існують на станції
       for (const p of openExits) {
         if (visited.has(`${p.wagon}|${p.doors}`)) lineStats[line].visitedExits++;
       }
@@ -170,46 +168,33 @@ function buildLineStats(entries) {
   return lineStats;
 }
 
-// Будує HTML-секцію з подвійними SVG-кільцями для кожної гілки.
-// Зовнішнє кільце = % відвіданих станцій, внутрішнє = % відвіданих виходів.
 function renderLineRings(lineStats) {
   const rings = LINE_ORDER.map(line => {
     const s     = lineStats[line];
     const color = MetroApp.LINE_COLOR[line] || 'var(--text-muted)';
     const name  = LINE_NAMES[line];
 
-    const stPct  = s.totalStations > 0 ? (s.visitedStations / s.totalStations) : 0;
-    const exPct  = s.totalExits    > 0 ? (s.visitedExits    / s.totalExits)    : 0;
+    // ЛОГІКА: Якщо true — рахуємо по виходах, якщо false — по станціях
+    const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';
+    const pct = byExits
+      ? (s.totalExits    > 0 ? s.visitedExits    / s.totalExits    : 0)
+      : (s.totalStations > 0 ? s.visitedStations / s.totalStations : 0);
 
-    // Параметри SVG-кілець (viewBox 64×64, cx=32, cy=32)
-    const RO  = 26; // outer radius (станції)
-    const RI  = 16; // inner radius (виходи)
-    const SW  = 5;  // stroke-width
-    const CO  = +(2 * Math.PI * RO).toFixed(3); // ≈ 163.363
-    const CI  = +(2 * Math.PI * RI).toFixed(3); // ≈ 100.531
-
-    const fillO = +(CO * stPct).toFixed(3);
-    const fillI = +(CI * exPct).toFixed(3);
+    const R  = 26;
+    const SW = 5;
+    const C  = +(2 * Math.PI * R).toFixed(3);
+    const fill = +(C * pct).toFixed(3);
 
     const stLabel = `${s.visitedStations}/${s.totalStations}`;
-    const exLabel = `${s.visitedExits}/${s.totalExits}`;
-
     const isActive = selectedLines.has(line);
-    return `<button class="ci-line-ring-card${isActive ? ' ci-ring-active' : ''}" data-line="${line}" aria-label="${name} гілка: ${stLabel} станцій, ${exLabel} виходів">
+
+    return `<button class="ci-line-ring-card${isActive ? ' ci-ring-active' : ''}" data-line="${line}" aria-label="${name} гілка: ${stLabel} станцій">
       <svg class="ci-ring-svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
-        <!-- Доріжки -->
-        <circle cx="32" cy="32" r="${RO}" fill="none" stroke="var(--border)" stroke-width="${SW}"/>
-        <circle cx="32" cy="32" r="${RI}" fill="none" stroke="var(--border)" stroke-width="${SW}"/>
-        <!-- Заповнення (rotate -90° щоб старт зверху) -->
-        <circle cx="32" cy="32" r="${RO}" fill="none"
+        <circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--border)" stroke-width="${SW}"/>
+        <circle cx="32" cy="32" r="${R}" fill="none"
           stroke="${color}" stroke-width="${SW}"
           stroke-linecap="round"
-          stroke-dasharray="${fillO} ${CO}"
-          transform="rotate(-90 32 32)"/>
-        <circle cx="32" cy="32" r="${RI}" fill="none"
-          stroke="${color}" stroke-width="${SW}"
-          stroke-linecap="round"
-          stroke-dasharray="${fillI} ${CI}"
+          stroke-dasharray="${fill} ${C}"
           transform="rotate(-90 32 32)"/>
       </svg>
       <span class="ci-ring-label" style="color:${color}">${name}</span>
@@ -219,8 +204,6 @@ function renderLineRings(lineStats) {
 
   return `<div class="ci-line-rings-row">${rings}</div>`;
 }
-
-// Рендерить розгорнутий список станцій обраної гілки.
 
 export function openCheckinSheet() {
   MetroApp.pushSheetHistory?.();
@@ -246,7 +229,6 @@ export function openCheckinSheet() {
     const badgeStyle = 'color: var(--text-muted) !important; opacity: 1 !important; font-size: var(--fs-md) !important; font-weight: var(--fw-normal) !important;';
 
     if (!entries.length) {
-      // 1. ПОРОЖНІЙ СТАН: Статистику і кнопки ховаємо, показуємо лише підказку
       const colors = ['var(--line-blue)', 'var(--line-red)', 'var(--line-green)'];
       if (typeof state.emptyFavColorIdx !== 'number') state.emptyFavColorIdx = 0;
       const color  = colors[state.emptyFavColorIdx % colors.length];
@@ -270,34 +252,30 @@ export function openCheckinSheet() {
       ciSortMode = 'date';
       selectedLines = new Set();
     } else {
-
       
-      // 2. Є ДАНІ: Генеруємо статистику, бар сортування та списки
       const uniqueStations     = new Set(entries.map(e => e.slug)).size;
       const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
       const totalExitsAll = state.stationsData
         ? Object.values(state.stationsData).reduce((sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0)
         : 0;
 
-      // ── НОВА ЛОГІКА ОХОПЛЕННЯ ──
-      let coverageValue = 0;
-      let coverageText = '0%';
+      const totalStationsAll = state.stationsData ? Object.keys(state.stationsData).length : 0;
       
-      if (totalExitsAll > 0) {
-        coverageValue = Math.floor((uniqueExitsVisited / totalExitsAll) * 100);
-        
-        if (uniqueExitsVisited === totalExitsAll) {
-          coverageText  = '100%';
-          coverageValue = 100;
-        } else if (uniqueExitsVisited > 0 && coverageValue === 0) {
-          coverageText  = '< 1%';
-          coverageValue = 1;
-        } else if (uniqueExitsVisited < totalExitsAll && coverageValue === 100) {
-          coverageText  = '> 99%';
-          coverageValue = 99;
-        } else {
-          coverageText  = `${coverageValue}%`;
-        }
+      // ЛОГІКА: Якщо true — рахуємо по виходах, якщо false — по станціях
+      const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';
+
+      let coverageValue = 0;
+      let coverageText  = '0%';
+
+      const covNum   = byExits ? uniqueExitsVisited : uniqueStations;
+      const covDenom = byExits ? totalExitsAll      : totalStationsAll;
+
+      if (covDenom > 0 && covNum > 0) {
+        const raw = Math.floor((covNum / covDenom) * 100);
+        if (covNum === covDenom)       { coverageText = '100%'; coverageValue = 100; }
+        else if (raw === 0)            { coverageText = '< 1%'; coverageValue = 1; }
+        else if (raw === 100)          { coverageText = '> 99%'; coverageValue = 99; }
+        else                           { coverageText = `${raw}%`; coverageValue = raw; }
       }
 
       bodyHtml = `
@@ -319,46 +297,44 @@ export function openCheckinSheet() {
       `;
 
       if (selectedLines.size > 0) {
-      // Фільтруємо entries до обраних гілок
-      const lineEntries = entries.filter(e => {
-        const st = state.stationsData?.[e.slug];
-        return st && selectedLines.has(st.line);
-      });
+        const lineEntries = entries.filter(e => {
+          const st = state.stationsData?.[e.slug];
+          return st && selectedLines.has(st.line);
+        });
 
-      if (ciViewMode === 'unvisited') {
-        const visitedKeys        = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
-        const unvisitedStations = Object.entries(state.stationsData || {})
-          .map(([slug, st]) => {
-            const unvisited = st.positions?.filter(p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)) || [];
-            return { slug, name: st.name, line: st.line, unvisitedCount: unvisited.length, total: st.positions?.filter(p => !p.closed).length || 0 };
-          })
-          .filter(s => s.unvisitedCount > 0 && selectedLines.has(s.line))
-          .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+        if (ciViewMode === 'unvisited') {
+          const visitedKeys        = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
+          const unvisitedStations = Object.entries(state.stationsData || {})
+            .map(([slug, st]) => {
+              const unvisited = st.positions?.filter(p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)) || [];
+              return { slug, name: st.name, line: st.line, unvisitedCount: unvisited.length, total: st.positions?.filter(p => !p.closed).length || 0 };
+            })
+            .filter(s => s.unvisitedCount > 0 && selectedLines.has(s.line))
+            .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
-        listHtml = unvisitedStations.map(s => {
-          const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
-          return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
-            <div class="checkin-card-top">
-              <span class="checkin-station-name-text">${s.name}</span>
-              <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
-            </div>
-          </button>`;
-        }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
-      } else {
-        const byStation    = {};
-        lineEntries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
-        let stationEntries = Object.entries(byStation);
-        if (ciSortMode === 'date') {
-          stationEntries.sort(([, a], [, b]) => Math.max(...b.map(e => e.ts)) - Math.max(...a.map(e => e.ts)));
+          listHtml = unvisitedStations.map(s => {
+            const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
+            return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
+              <div class="checkin-card-top">
+                <span class="checkin-station-name-text">${s.name}</span>
+                <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
+              </div>
+            </button>`;
+          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
         } else {
-          stationEntries.sort(([sA], [sB]) => (state.stationsData?.[sA]?.name || '').localeCompare(state.stationsData?.[sB]?.name || '', 'uk'));
-        }
+          const byStation    = {};
+          lineEntries.forEach(e => { if (!byStation[e.slug]) byStation[e.slug] = []; byStation[e.slug].push(e); });
+          let stationEntries = Object.entries(byStation);
+          if (ciSortMode === 'date') {
+            stationEntries.sort(([, a], [, b]) => Math.max(...b.map(e => e.ts)) - Math.max(...a.map(e => e.ts)));
+          } else {
+            stationEntries.sort(([sA], [sB]) => (state.stationsData?.[sA]?.name || '').localeCompare(state.stationsData?.[sB]?.name || '', 'uk'));
+          }
 
-        listHtml = stationEntries.map(([slug, items]) => {
-          const st               = state.stationsData?.[slug];
-          const color            = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
-          const totalExits       = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
-          const visitedExitsCount = new Set(items.map(e => `${e.wagon}|${e.doors}`)).size;
+          listHtml = stationEntries.map(([slug, items]) => {
+            const st               = state.stationsData?.[slug];
+            const color            = items[0].color || (st ? MetroApp.LINE_COLOR[st.line] : 'var(--text-muted)');
+            const totalExits       = st?.positions ? st.positions.filter(p => !p.closed).length : 0;          const visitedExitsCount = new Set(items.map(e => `${e.wagon}|${e.doors}`)).size;
           const lastTs           = Math.max(...items.map(e => e.ts));
 
           return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-accent:${color}">

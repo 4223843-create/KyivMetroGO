@@ -8,10 +8,9 @@
   width: 100%;
   height: 100%;
   -webkit-touch-callout: none;
-  touch-action: none; /* none: pan обробляється JS-ом вручну через scrollLeft/scrollTop */
+  touch-action: none;
 }
 
-/* Налаштування ТІЛЬКИ для map page */
 body#map-page {
   min-height: 100vh;
 }
@@ -3347,29 +3346,21 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   min-height: 0;
 }
 
-/* ══ HEATMAP: зони відвіданих станцій на карті ══ */
-/* Клас .is-visited виставляється через syncMapWithCheckins().           */
-/* Кожна гілка підсвічується власним кольором — вписується у візуальну  */
-/* мову схеми, а не накладає чужорідні білі/чорні рамки.                */
-#mapInner [id^="B."].is-visited {
-  fill:         rgba(91, 155, 213, 0.22) !important;
-  stroke:       rgba(91, 155, 213, 0.72) !important;
-  stroke-width: 1.1px !important;
-}
-#mapInner [id^="R."].is-visited {
-  fill:         rgba(200, 82, 58, 0.22) !important;
-  stroke:       rgba(200, 82, 58, 0.72) !important;
-  stroke-width: 1.1px !important;
-}
+#mapInner [id^="B."].is-visited,
+#mapInner [id^="R."].is-visited,
 #mapInner [id^="G."].is-visited {
-  fill:         rgba(90, 170, 106, 0.22) !important;
-  stroke:       rgba(90, 170, 106, 0.72) !important;
-  stroke-width: 1.1px !important;
+  stroke: #ffffff !important;
+  stroke-width: 2px !important;
+  stroke-linejoin: round !important;
+  
+  /* Подвійне біле світіння навколо всього кольорового блоку */
+  filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 0.9)) 
+          drop-shadow(0px 0px 12px rgba(255, 255, 255, 0.5)) !important;
+          
+  /* Ми навмисно не пишемо сюди 'fill', 
+     щоб блок зберігав свій яскравий рідний колір гілки */
 }
 
-/* ══ CHECK-IN JOURNAL: кільця гілок (Задача Г) ══ */
-
-/* ── Рядок з трьома кільцями ── */
 .ci-line-rings-row {
   display: flex;
   align-items: flex-start;
@@ -3378,7 +3369,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   border-bottom: 0.5px solid var(--border);
 }
 
-/* ── Картка однієї гілки ── */
 .ci-line-ring-card {
   display: flex;
   flex-direction: column;
@@ -3414,7 +3404,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   line-height: 1;
 }
 
-/* ── Розгорнутий список станцій гілки ── */
 .ci-line-detail {
   border-bottom: 0.5px solid var(--border);
   padding-bottom: 4px;
@@ -3425,10 +3414,32 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   color: var(--text-muted);
   text-align: center;
 }
-/* Дати першого/останнього чекіна — компактніший шрифт */
+
 .ci-detail-dates {
   font-size: 10px;
   opacity: 0.65;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.settings-row.row-disabled {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+  transition: opacity 0.3s ease;
+}
+
+.settings-row.row-disabled .ios-toggle {
+  pointer-events: none;
+}
+
+#checkinLockToast {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  pointer-events: none;
+}
+
+.station-checked-in {
+  filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 0.9)) 
+          drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.6)) !important;
+          
+    font-weight: 600; 
 }
