@@ -48,6 +48,7 @@ export function applyZoomAndCenter() {
     vp.scrollTop  = Math.max(0, padY + newH * CENTER_Y - vp.clientHeight / 2);
     state.isMapReady = true;
     checkAppReady();
+    MetroApp.applyVisitedHatchOverlays?.();
   });
 }
 

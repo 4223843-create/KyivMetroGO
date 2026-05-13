@@ -102,13 +102,26 @@ export function openSettingsSheet() {
     if (checkinToggle) {
       checkinToggle.checked = isCheckinMode();
       checkinToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.CHECKIN_MODE, e.target.checked);
+        const isMainOn = e.target.checked;
+        Storage.set(STORAGE_KEYS.CHECKIN_MODE, isMainOn);
         updateCheckinDock();
 
         const exitsRow = document.getElementById('checkinExitsRow');
         if (exitsRow) {
-          exitsRow.classList.toggle('row-disabled', !e.target.checked);
+          exitsRow.classList.toggle('row-disabled', !isMainOn);
         }
+
+        // --- НОВЕ: Логіка для рядка штриховки ---
+        const hatchRow = document.getElementById('checkinHatchRow');
+        const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
+        if (hatchRow) hatchRow.classList.toggle('row-disabled', !isMainOn);
+        
+        if (isMainOn && hatchToggle) {
+          // Автоматично вмикаємо штриховку при увімкненні чекіну
+          localStorage.setItem('metro_checkin_hatch', 'true');
+          hatchToggle.checked = true;
+        }
+        // ----------------------------------------
 
         const currentSlug = document.getElementById('stationSheet').classList.contains('sheet-open')
           ? (state.currentStationSlug ?? null)
@@ -119,8 +132,21 @@ export function openSettingsSheet() {
           const color   = MetroApp.LINE_COLOR[stData?.[currentSlug]?.line] || 'var(--text-muted)';
           const sheet   = document.getElementById('stationSheet');
           sheet.querySelector('.row-checkin-btn')?.remove();
-          if (e.target.checked) MetroApp.attachCheckinButtons?.(sheet, currentSlug, color);
+          if (isMainOn) MetroApp.attachCheckinButtons?.(sheet, currentSlug, color);
         }
+        
+        // Оновлюємо карту
+        MetroApp.syncMapWithCheckins?.();
+      });
+    }
+
+    // ── Check-in Штриховка (НОВИЙ БЛОК) ──
+    const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
+    if (hatchToggle) {
+      hatchToggle.checked = localStorage.getItem('metro_checkin_hatch') !== 'false';
+      hatchToggle.addEventListener('change', e => {
+        localStorage.setItem('metro_checkin_hatch', e.target.checked);
+        MetroApp.syncMapWithCheckins?.();
       });
     }
 
@@ -369,7 +395,15 @@ export function openSettingsSheet() {
       exitsRow.classList.toggle('row-disabled', !isMainOn);
     }
 
+    // --- НОВЕ: Синхронізація штриховки ---
+    const hatchRow = document.getElementById('checkinHatchRow');
+    if (hatchRow) hatchRow.classList.toggle('row-disabled', !isMainOn);
+    
+    const hatchTgl = document.getElementById('settingsCheckinHatchToggle');
+    if (hatchTgl) hatchTgl.checked = localStorage.getItem('metro_checkin_hatch') !== 'false';
+
     const t = document.getElementById('settingsThemeToggle');
+
     const s = document.getElementById('settingsStartFavToggle');
     const b = document.getElementById('settingsCheckinByStationToggle');
     if (b) b.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';

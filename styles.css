@@ -44,13 +44,15 @@ body#map-page .map-viewport {
   --line-red:   #c8523a;
   --line-blue:  #5b9bd5;
   --line-green: #5aaa6a;
+  --hatch-color: #0d0d0d;
+
   --border:     rgba(255,255,255,0.08);
   --overlay:    rgba(0,0,0,0.55);
 
   --z-fav-toast: 10;
   --z-fb-sticky: 100;
   --z-map-zones: 999;
---z-ui-buttons: 1010;
+  --z-ui-buttons: 1010;
   --z-overlay: 1020;
   --z-bottom-sheet: 1030;
   --z-dropdown: 1050;
@@ -77,12 +79,15 @@ body#map-page .map-viewport {
   --accent-star: #ffcc00;
 }
 
+
+
 [data-theme="light"] {
   --bg:         #e5e5ea;
   --bg-sheet:   #d0d0d5;
   --bg-card:    #e0e0e6;
   --bg-pill:    #cacace;
   --text:       #1c1c1e;
+  --hatch-color: #c1c1c6;
   
   /* Оригінальні кольори з твого файлу */
   --text-muted: #2c2c2e;
@@ -3346,19 +3351,29 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   min-height: 0;
 }
 
-#mapInner [id^="B."].is-visited,
-#mapInner [id^="R."].is-visited,
-#mapInner [id^="G."].is-visited {
-  stroke: #ffffff !important;
-  stroke-width: 2px !important;
-  stroke-linejoin: round !important;
-  
-  /* Подвійне біле світіння навколо всього кольорового блоку */
-  filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 0.9)) 
-          drop-shadow(0px 0px 12px rgba(255, 255, 255, 0.5)) !important;
-          
-  /* Ми навмисно не пишемо сюди 'fill', 
-     щоб блок зберігав свій яскравий рідний колір гілки */
+/* HEATMAP: visited station hatch overlays */
+#mapInner .ci-visited-hatch-overlay,
+#mapInner .ci-visited-hatch-overlay * {
+  pointer-events: none !important;
+}
+
+#mapInner .ci-visited-hatch-geometry {
+  fill: #000 !important;
+  stroke: none !important;
+  opacity: 0 !important;
+}
+
+.ci-visited-hatch-line {
+  fill: none;
+  stroke-linecap: butt;
+}
+
+.ci-hatch-full .ci-visited-hatch-line {
+  stroke: rgba(0, 0, 0, 0.28);
+}
+
+.ci-hatch-partial .ci-visited-hatch-line {
+  stroke: rgba(0, 0, 0, 0.12);
 }
 
 .ci-line-rings-row {

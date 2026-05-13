@@ -100,6 +100,7 @@ document.addEventListener('touchend', e => {
     pinchStartDist    = 0;
     pendingPinch      = null;
     pinchRAFScheduled = false;
+    MetroApp.applyVisitedHatchOverlays?.();
   }
   if (e.touches.length === 1 && !sheetOverlay.classList.contains('overlay-visible')) {
     isPanActive        = true;
