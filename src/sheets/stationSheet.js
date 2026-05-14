@@ -1,3 +1,6 @@
+import { bus } from '@core/eventBus.js';
+bus.on('station:refresh', refreshCurrentStation);
+
 import { state }               from '../core/state.js';
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { TIMING }              from '../core/timing.js';
@@ -263,27 +266,6 @@ function attachExitFavListeners(container, slug, lineColor) {
       if (isExitFav(slug, dirLabel, pv.wagon, pv.doors)) applyFavPillStyles(row, lineColor, true);
     }
 
-    // === ДОДАНИЙ КОД ДЛЯ ОЛІВЦЯ ===
-    const pencilBtn = row.querySelector('.pos-edited-mark');
-    if (pencilBtn) {
-      pencilBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const editSlug = pencilBtn.dataset.slug;
-        if (!editSlug) return;
-        
-        MetroApp.animateSheetClose?.(document.getElementById('stationSheet'), () => {
-          document.getElementById('stationSheet').classList.remove('sheet-open');
-          MetroApp.openFeedbackSheet?.();
-          
-          setTimeout(() => {
-            const stationItem = document.querySelector(`.fb-station-item[data-slug="${editSlug}"]`);
-            if (stationItem) stationItem.click();
-          }, 50);
-        });
-      });
-    }
-    // ==============================
-
     let longPressTimer = null;
     row.addEventListener('touchstart', e => {
       if (!e.target.closest('.fav-tap-target')) return;
@@ -429,5 +411,6 @@ export function refreshCurrentStation() {
   sheetBody.scrollTop = prevScrollTop;
 }
 
-// Реєструємо на MetroApp для devmode.js і feedback.js
 MetroApp.refreshCurrentStation = refreshCurrentStation;
+
+bus.on('station:refresh', refreshCurrentStation);

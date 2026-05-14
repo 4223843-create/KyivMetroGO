@@ -1,4 +1,7 @@
-// ══ КАСТОМНИЙ CONFIRM-ДІАЛОГ ══
+import { bus } from '@core/eventBus.js';
+bus.on('ui:confirm', ({ message, onYes, onNo, onCancel }) =>
+  showCustomConfirm(message, onYes, onNo, onCancel)
+);
 
 import { runDoorAnimation } from './animations.js';
 import { TIMING }           from '../core/timing.js';
@@ -54,3 +57,12 @@ export function showCustomConfirm(
   overlay.querySelector('#confirmCancel')?.addEventListener('click', () => animateClose(onCancel));
   overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
 }
+
+bus.on('ui:confirm', (payload) => {
+  MetroApp.showCustomConfirm(
+    payload.message, 
+    payload.onYes, 
+    payload.onNo, 
+    payload.onCancel
+  );
+});

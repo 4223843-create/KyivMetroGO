@@ -190,6 +190,10 @@ function bindBottomLoader(aboutSheet) {
 
 // ══ ВІДКРИТТЯ ABOUT-ШТОРКИ ══
 export function openAboutSheet() {
+    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+  aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
+  sheetOverlay.classList.add('overlay-visible');
+}
   let aboutSheet = document.getElementById('aboutSheet');
   if (!aboutSheet) {
     aboutSheet = document.createElement('div');
@@ -368,9 +372,3 @@ export function openAboutSheet() {
         }
       });
     }  
-
-  MetroApp.pushSheetHistory?.();
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-  sheetOverlay.classList.add('overlay-visible');
-}

@@ -1,7 +1,8 @@
 // Map interaction: click / keyboard / visited hatch overlay
 
-import { state }       from '../core/state.js';
-import { getCheckins } from '../features/checkin.js';
+import { state }                   from '../core/state.js';
+import { getCheckins }              from '../features/checkin.js';
+import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 
 const inner = document.getElementById('mapInner');
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -92,7 +93,7 @@ export function applyVisitedHatchOverlays(root = inner) {
 
   removeVisitedHatchOverlays(root);
 
-  const isHatchEnabled = localStorage.getItem('metro_checkin_hatch') !== 'false';
+  const isHatchEnabled = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
   if (!isHatchEnabled) return; 
 
   const targets = [...root.querySelectorAll('.is-visited-partial, .is-visited-full')]

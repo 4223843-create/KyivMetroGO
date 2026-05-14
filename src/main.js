@@ -42,7 +42,7 @@ import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
 import './infra/offline.js';
 import './infra/swUpdate.js';
-import './features/feedback.js';
+import './features/feedback/index.js';
 import './app.js';
 
 function releaseStartupLoader() {

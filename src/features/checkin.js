@@ -392,9 +392,7 @@ export function openCheckinSheet() {
       });
     });
 
-    const body = s.querySelector('#checkinBody');
-    MetroApp.initKinematicSwipe?.(s, body, closeHandler);
-  };
+    };
 
   if (!checkinSheet) {
     checkinSheet = document.createElement('div');
@@ -404,6 +402,16 @@ export function openCheckinSheet() {
   }
 
   renderCheckinContent();
+
+  if (!checkinSheet._swipeBound) {
+    checkinSheet._swipeBound = true;
+    MetroApp.initKinematicSwipe?.(
+      checkinSheet,
+      () => document.getElementById('checkinBody'),
+      closeHandler,
+    );
+  }
+
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   checkinSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
   sheetOverlay.classList.add('overlay-visible');

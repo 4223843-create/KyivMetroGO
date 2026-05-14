@@ -109,7 +109,7 @@ document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn
 
         if (isMainOn && hatchToggle) {
           // Автоматично вмикаємо штриховку при увімкненні чекіну
-          localStorage.setItem('metro_checkin_hatch', 'true');
+          Storage.set(STORAGE_KEYS.CHECKIN_HATCH, 'true');
           hatchToggle.checked = true;
         }
 
@@ -133,9 +133,9 @@ document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn
     // ── Check-in Штриховка (НОВИЙ БЛОК) ──
     const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
     if (hatchToggle) {
-      hatchToggle.checked = localStorage.getItem('metro_checkin_hatch') !== 'false';
+      hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
       hatchToggle.addEventListener('change', e => {
-        localStorage.setItem('metro_checkin_hatch', e.target.checked);
+        Storage.set(STORAGE_KEYS.CHECKIN_HATCH, e.target.checked);
         MetroApp.syncMapWithCheckins?.();
       });
     }
@@ -387,12 +387,9 @@ function syncToggles() {
     const isMainOn = isCheckinMode();
     
     const hatchTgl = document.getElementById('settingsCheckinHatchToggle');
-    if (hatchTgl) hatchTgl.checked = localStorage.getItem('metro_checkin_hatch') !== 'false';
+    if (hatchTgl) hatchTgl.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
 
-// тема синхронізується через applyTheme
-    const t = null;
-
-    const s = document.getElementById('settingsStartFavToggle');
+const s = document.getElementById('settingsStartFavToggle');
 const savedStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
     document.querySelectorAll('#settingsCheckinStatSeg .settings-seg-btn').forEach(btn =>
       btn.classList.toggle('is-active', btn.dataset.statVal === savedStat)

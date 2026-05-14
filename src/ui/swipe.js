@@ -8,10 +8,12 @@
  * @param {HTMLElement} body          - прокручуваний контент всередині
  * @param {Function}    closeCallback - викликається при достатньому свайпі вниз
  */
-export function initKinematicSwipe(sheet, body, closeCallback) {
+export function initKinematicSwipe(sheet, bodyOrGetter, closeCallback) {
+  const getBody = typeof bodyOrGetter === 'function' ? bodyOrGetter : () => bodyOrGetter;
   let startY = 0, currentY = 0, isDragging = false;
 
   sheet.addEventListener('touchstart', e => {
+    const body = getBody();
     const isHandle  = !!e.target.closest('.sheet-handle-bar');
     const isAtTop   = body ? body.scrollTop <= 0 : true;
 
