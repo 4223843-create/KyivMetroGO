@@ -10,7 +10,10 @@ export const BASE_MAP_HEIGHT = 840;
 const CENTER_X = 0.485;
 const CENTER_Y = 0.5;
 
-setTimeout(() => vp?.classList.remove('is-loading'), 10_000);
+setTimeout(() => {
+  vp?.classList.remove('is-loading');
+  document.getElementById('startupLoader')?.classList.add('hidden');
+}, 10_000);
 
 export function adjustViewportHeight() {
   if (!vp) return;
@@ -49,6 +52,10 @@ export function applyZoomAndCenter() {
     state.isMapReady = true;
     checkAppReady();
     MetroApp.applyVisitedHatchOverlays?.();
+    
+    // Знімаємо блюр з карти та повністю ховаємо лоадер
+    vp?.classList.remove('is-loading');
+    document.getElementById('startupLoader')?.classList.add('hidden');
   });
 }
 

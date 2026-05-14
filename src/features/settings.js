@@ -54,11 +54,10 @@ export function openSettingsSheet() {
       });
     });
 
-    const themeToggle = document.getElementById('settingsThemeToggle');
-    if (themeToggle) {
-      themeToggle.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
-      themeToggle.addEventListener('change', e => applyTheme(e.target.checked ? 'dark' : 'light'));
-    }
+document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => applyTheme(btn.dataset.themeVal));
+    });
+    applyTheme(null, false); // ініціалізуємо активну кнопку
 
     const startFavToggle = document.getElementById('settingsStartFavToggle');
     if (startFavToggle) {
@@ -106,22 +105,13 @@ export function openSettingsSheet() {
         Storage.set(STORAGE_KEYS.CHECKIN_MODE, isMainOn);
         updateCheckinDock();
 
-        const exitsRow = document.getElementById('checkinExitsRow');
-        if (exitsRow) {
-          exitsRow.classList.toggle('row-disabled', !isMainOn);
-        }
-
-        // --- НОВЕ: Логіка для рядка штриховки ---
-        const hatchRow = document.getElementById('checkinHatchRow');
         const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
-        if (hatchRow) hatchRow.classList.toggle('row-disabled', !isMainOn);
-        
+
         if (isMainOn && hatchToggle) {
           // Автоматично вмикаємо штриховку при увімкненні чекіну
           localStorage.setItem('metro_checkin_hatch', 'true');
           hatchToggle.checked = true;
         }
-        // ----------------------------------------
 
         const currentSlug = document.getElementById('stationSheet').classList.contains('sheet-open')
           ? (state.currentStationSlug ?? null)
@@ -151,14 +141,19 @@ export function openSettingsSheet() {
     }
 
     // ── Check-in по виходам ──
-    const byStationToggle = document.getElementById('settingsCheckinByStationToggle');
-    if (byStationToggle) {
-      byStationToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';
-      byStationToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.CHECKIN_BY_STATION, String(e.target.checked));
+const statSeg = document.getElementById('settingsCheckinStatSeg');
+    if (statSeg) {
+      const initStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
+      statSeg.querySelectorAll('.settings-seg-btn').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.statVal === initStat);
+        btn.addEventListener('click', () => {
+          Storage.set(STORAGE_KEYS.CHECKIN_BY_STATION, btn.dataset.statVal);
+          statSeg.querySelectorAll('.settings-seg-btn').forEach(b =>
+            b.classList.toggle('is-active', b === btn)
+          );
+        });
       });
     }
-
     // ── ОБ'ЄДНАНА Кнопка «i» (Довідка Check-in) ──
     document.getElementById('settingsCheckinCombinedInfo')?.addEventListener('click', e => {
       e.stopPropagation();
@@ -388,30 +383,24 @@ export function openSettingsSheet() {
     });
   }
 
-  function syncToggles() {
+function syncToggles() {
     const isMainOn = isCheckinMode();
-    const exitsRow = document.getElementById('checkinExitsRow');
-    if (exitsRow) {
-      exitsRow.classList.toggle('row-disabled', !isMainOn);
-    }
-
-    // --- НОВЕ: Синхронізація штриховки ---
-    const hatchRow = document.getElementById('checkinHatchRow');
-    if (hatchRow) hatchRow.classList.toggle('row-disabled', !isMainOn);
     
     const hatchTgl = document.getElementById('settingsCheckinHatchToggle');
     if (hatchTgl) hatchTgl.checked = localStorage.getItem('metro_checkin_hatch') !== 'false';
 
-    const t = document.getElementById('settingsThemeToggle');
+// тема синхронізується через applyTheme
+    const t = null;
 
     const s = document.getElementById('settingsStartFavToggle');
-    const b = document.getElementById('settingsCheckinByStationToggle');
-    if (b) b.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';
+const savedStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
+    document.querySelectorAll('#settingsCheckinStatSeg .settings-seg-btn').forEach(btn =>
+      btn.classList.toggle('is-active', btn.dataset.statVal === savedStat)
+    );
     const c = document.getElementById('settingsCheckinToggle');
     const l = document.getElementById('settingsLocalFeedbackToggle');
     const h = document.getElementById('settingsHideInfoToggle');
     
-    if (t) t.checked = (Storage.get(STORAGE_KEYS.THEME) || 'dark') === 'dark';
     if (s) s.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
     if (c) c.checked = isMainOn;
     if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';

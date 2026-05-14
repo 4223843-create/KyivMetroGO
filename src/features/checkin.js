@@ -175,7 +175,7 @@ function renderLineRings(lineStats) {
     const name  = LINE_NAMES[line];
 
     // ЛОГІКА: Якщо true — рахуємо по виходах, якщо false — по станціях
-    const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';
+const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
     const pct = byExits
       ? (s.totalExits    > 0 ? s.visitedExits    / s.totalExits    : 0)
       : (s.totalStations > 0 ? s.visitedStations / s.totalStations : 0);
@@ -261,8 +261,8 @@ export function openCheckinSheet() {
 
       const totalStationsAll = state.stationsData ? Object.keys(state.stationsData).length : 0;
       
-      // ЛОГІКА: Якщо true — рахуємо по виходах, якщо false — по станціях
-      const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'true';
+// ЛОГІКА: 'exits' — рахуємо по виходах, 'station' (за замовч.) — по станціях
+      const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
 
       let coverageValue = 0;
       let coverageText  = '0%';

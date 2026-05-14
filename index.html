@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="utf-8">
@@ -6,23 +6,23 @@
   <title>KyivMetroGO</title>
   
 <style id="critical-theme">
-    html, body { background: #000000; }
-    @media (prefers-color-scheme: light) { html, body { background: #e5e5ea; } }
-    /* Стилі нового лоадера */
-    .loader-container {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 120px; /* Оптимальний розмір для мобільних */
-      height: 120px;
-      z-index: 50;
-      display: none; /* Приховано за замовчуванням */
-      pointer-events: none;
+    html, body { background: #000000; } /* Темна за замовчуванням */
+    
+    /* Якщо примусово увімкнена світла: */
+    html[data-theme="light"], 
+    html[data-theme="light"] body { background: #e5e5ea; }
+    
+    /* Якщо системна світла І користувач не вибрав примусово темну: */
+    @media (prefers-color-scheme: light) { 
+      html:not([data-theme="dark"]), 
+      html:not([data-theme="dark"]) body { background: #e5e5ea; } 
     }
-    /* Лоадер видимий ТІЛЬКИ коли висить клас is-loading */
-    .is-loading .loader-container {
-      display: block;
+    /* Оскільки лоадер тепер окремо, ми керуємо його видимістю напряму через клас */
+    .loader-container {
+      display: block; /* Увімкнений за замовчуванням */
+    }
+    .loader-container.hidden {
+      display: none; /* Цей клас ми додамо з JS, коли треба буде сховати */
     }
     .loader-container svg {
       width: 100%;
@@ -38,8 +38,11 @@
 </style>
 <script>
     /* Миттєво застосовуємо збережену тему ДО малювання сторінки браузером */
-    const t = localStorage.getItem('metro_theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', t);
+    const t = localStorage.getItem('metro_theme') || 'system';
+const actual = t === 'system'
+  ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  : t;
+document.documentElement.setAttribute('data-theme', actual);
 </script>
 
 
@@ -61,18 +64,17 @@
 
 
 <main class="container">
-  <div id="mapViewport" class="map-viewport is-loading">
-    
-    <div class="loader-container" id="startupLoader">
-      <svg version="1.1" id="Layer_1" viewBox="0 0 36.31892 37.081547" xmlns="http://www.w3.org/2000/svg">
-        <defs id="defs3">
-          <clipPath clipPathUnits="userSpaceOnUse" id="clipPath23">
-            <rect style="fill:#040000;fill-opacity:1;stroke-width:6.38362;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:15.1" id="rect24" width="52.837963" height="47.786671" x="121.2369" y="117.18448" ry="1.3288821" />
+  
+  <div class="loader-container" id="startupLoader">
+    <svg version="1.1" viewBox="0 0 36.31892 37.081547" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+          <clipPath clipPathUnits="userSpaceOnUse" id="loaderClipPath">
+            <rect style="fill:#040000;fill-opacity:1;stroke-width:6.38362;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:15.1" width="52.837963" height="47.786671" x="121.2369" y="117.18448" ry="1.3288821" />
           </clipPath>
         </defs>
-        <g id="g3" transform="translate(-162.85484,-126.18087)">
-          <g id="g2" transform="translate(32.460036,2.9988233)" clip-path="url(#clipPath23)">
-            <g id="g3775" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
+        <g transform="translate(-162.85484,-126.18087)">
+          <g transform="translate(32.460036,2.9988233)" clip-path="url(#loaderClipPath)">
+            <g id="loaderPetals" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
               <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
               <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
               <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
@@ -90,16 +92,13 @@
               <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z" />
               <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z" />
             </g>
-            <path id="path3104" class="st16" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" />
+<path id="loaderCenter" class="st16" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" />
           </g>
         </g>
       </svg>
-    </div>
-    
-    <div id="mapInner" class="map-inner"></div>
-  </div>
-</main>
-
+    </div> <div id="mapViewport" class="map-viewport is-loading">
+      <div id="mapInner" class="map-inner"></div>
+    </div> </main>
 <button id="checkinBtn" class="dock-btn dock-btn-checkin" aria-label="Check-in" hidden></button>
 
 <nav class="bottom-nav-dock">
@@ -395,6 +394,8 @@
     </div>
   </template>
 
+
+
 <template id="tpl-settings-sheet">
   <div class="sheet-handle-bar">
     <div class="sheet-handle"></div>
@@ -402,149 +403,124 @@
     <button class="sheet-close-btn" id="settingsClose" aria-label="Закрити">✕</button>
   </div>
   <div class="sheet-body">
-    <div class="settings-content">
+    
 
+<div class="settings-content">
+
+      <!-- ВИГЛЯД -->
       <div class="settings-card">
+        <div class="settings-card-header">Вигляд</div>
+        <div class="settings-rule"></div>
         <div class="settings-row">
-          <span class="settings-label">Темна тема</span>
-          <label class="ios-toggle">
-            <input type="checkbox" id="settingsThemeToggle">
-            <span class="ios-toggle-slider"></span>
-          </label>
+          <span class="settings-label">Тема</span>
+          <div class="settings-seg" id="settingsThemeSeg">
+            <button type="button" class="settings-seg-btn" data-theme-val="system">Системна</button>
+            <button type="button" class="settings-seg-btn" data-theme-val="light">Світла</button>
+            <button type="button" class="settings-seg-btn" data-theme-val="dark">Темна</button>
+          </div>
         </div>
-      </div>
-
-
-
-      <div class="settings-card">
+        <div class="settings-rule"></div>
         <div class="settings-row">
-          <span class="settings-label">Показувати <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span> при запуску</span>
+          <span class="settings-label">Вибране при запуску</span>
           <label class="ios-toggle">
             <input type="checkbox" id="settingsStartFavToggle">
             <span class="ios-toggle-slider"></span>
           </label>
         </div>
         <div class="settings-rule"></div>
-        <div class="settings-actions">
-          <button type="button" class="settings-action-btn" id="settingsClearFavs">
-            очистити вибране
-          </button>
-        </div>
-      </div>
-
-<div class="settings-card">
-  <div class="settings-row">
-    <span class="settings-label">Режим локальних змін</span>
-    <label class="ios-toggle">
-      <input type="checkbox" id="settingsLocalFeedbackToggle">
-      <span class="ios-toggle-slider"></span>
-    </label>
-  </div>
-  <p class="settings-hint" id="settingsLocalFeedbackHint" hidden>
-    Правки, внесені через меню <span style="font-variant: small-caps; letter-spacing: 0.04em;">Запропонувати&nbsp;зміни</span>, не надходитимуть як пропозиції розробнику.<br><span style="font-variant: small-caps; letter-spacing: 0.04em;"><br>Очистити зміни</span> видаляє всі користувацькі дані, і повертає додаток в початковий стан
-  </p>
-  <div class="settings-rule"></div>
-  <div class="settings-actions">
-    <button type="button" class="settings-info-btn" id="settingsLocalFeedbackInfo" aria-label="Довідка">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
-        <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
-      </svg>
-    </button>
-    <button type="button" class="settings-action-btn" id="settingsClearLocalEdits">
-      очистити зміни
-    </button>
-  </div>
-</div>
-
-<div class="settings-card">
         <div class="settings-row">
-          <span class="settings-label">Функція <span style="font-variant: small-caps; letter-spacing: 0.04em;">Check-in</span></span>
-          <label class="ios-toggle">
-            <input type="checkbox" id="settingsCheckinToggle">
-            <span class="ios-toggle-slider"></span>
-          </label>
-        </div>
-        <div class="settings-rule"></div>
-        <div class="settings-row" id="checkinExitsRow">
-          <span class="settings-label"><span style="font-variant: small-caps; letter-spacing: 0.04em;">Check-in</span> по виходам</span>
-          <label class="ios-toggle">
-            <input type="checkbox" id="settingsCheckinByStationToggle">
-            <span class="ios-toggle-slider"></span>
-          </label>
-</div>
-
-        <div class="settings-rule" id="checkinHatchRule"></div>
-        <div class="settings-row" id="checkinHatchRow">
-          <span class="settings-label">Штриховка відвіданих станцій</span>
-          <label class="ios-toggle">
-            <input type="checkbox" id="settingsCheckinHatchToggle">
-            <span class="ios-toggle-slider"></span>
-          </label>
-        </div>
-        <p class="settings-hint" id="settingsCheckinCombinedHint" hidden>
-          Чекіньтесь на&nbsp;станціях метро, відмічаючи виходи, якими&nbsp;скористались. Натисніть шпильку, щоб&nbsp;позначити вихід як&nbsp;відвіданий.<br><br>
-          Коли налаштування „<span style="font-variant: small-caps; letter-spacing: 0.04em;">Check-in</span> по виходам“ увімкнене — прогрес візуалізується по кожному окремому виходу. Якщо вимкнене — прогрес рахується за загальною кількістю відвіданих станцій.
-        </p>
-        <div class="settings-rule"></div>
-        <div class="settings-actions">
-          <button type="button" class="settings-info-btn" id="settingsCheckinCombinedInfo" aria-label="Довідка">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
-              <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
-            </svg>
-          </button>
-          <button type="button" class="settings-action-btn" id="settingsClearCheckin">очистити check-in</button>
-        </div>
-      </div>
-
-      <div class="settings-card">
-        <div class="settings-row">
-          <span class="settings-label">Приховати інформаційні блоки</span>
+          <span class="settings-label">Приховати навчальні блоки</span>
           <label class="ios-toggle">
             <input type="checkbox" id="settingsHideInfoToggle">
             <span class="ios-toggle-slider"></span>
           </label>
         </div>
-        <p class="settings-hint" id="settingsHideInfoHint" hidden>Прибирає з&nbsp;інтерфейсу „навчальні" блоки про додавання до&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> при запуску</span>
- і&nbsp;списку <span style="font-variant: small-caps; letter-spacing: 0.04em;">check-in</span></p>
-        <div class="settings-rule"></div>
-        <div class="settings-actions">
-          <button type="button" class="settings-info-btn" id="settingsHideInfoBtn" aria-label="Довідка">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
-              <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187"
-              transform="translate(-65.818 -42.216)scale(.26458)"/>
-            </svg>
-          </button>
+      </div>
+
+      <!-- CHECK-IN -->
+      <div class="settings-card">
+        <div class="settings-card-header-row">
+          <span class="settings-card-header">Check-in</span>
+          <label class="ios-toggle">
+            <input type="checkbox" id="settingsCheckinToggle">
+            <span class="ios-toggle-slider"></span>
+          </label>
+        </div>
+        <div id="checkinSubRows">
+          <div class="settings-rule"></div>
+          <div class="settings-row" id="checkinExitsRow">
+            <span class="settings-label">Статистика</span>
+            <div class="settings-seg" id="settingsCheckinStatSeg">
+              <button type="button" class="settings-seg-btn" data-stat-val="station">по станціям</button>
+              <button type="button" class="settings-seg-btn" data-stat-val="exits">по виходам</button>
+            </div>
+          </div>
+          <div class="settings-rule"></div>
+          <div class="settings-row" id="checkinHatchRow">
+            <span class="settings-label">Штриховка відвіданих станцій</span>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsCheckinHatchToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+          <p class="settings-hint" id="settingsCheckinCombinedHint" hidden>
+            Чекіньтесь на&nbsp;станціях метро, відмічаючи виходи, якими&nbsp;скористались. Натисніть шпильку, щоб&nbsp;позначити вихід як&nbsp;відвіданий.<br><br>
+            Режим „по виходам" рахує прогрес по кожному окремому виходу. Режим „по станціям" — за кількістю відвіданих станцій.
+          </p>
+          <div class="settings-rule"></div>
+          <div class="settings-actions">
+            <button type="button" class="settings-info-btn" id="settingsCheckinCombinedInfo" aria-label="Довідка">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
+                <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-<div class="settings-card">
+      <!-- ДАНІ -->
+      <div class="settings-card">
+        <div class="settings-card-header">Дані</div>
+        <div class="settings-rule"></div>
         <div class="settings-row">
-          <span class="settings-label">Резервна копія даних</span>
+          <span class="settings-label">Режим локальних змін</span>
+          <label class="ios-toggle">
+            <input type="checkbox" id="settingsLocalFeedbackToggle">
+            <span class="ios-toggle-slider"></span>
+          </label>
         </div>
+        <p class="settings-hint" id="settingsLocalFeedbackHint" hidden>
+          Правки, внесені через меню <span style="font-variant: small-caps; letter-spacing: 0.04em;">Запропонувати&nbsp;зміни</span>, не надходитимуть як пропозиції розробнику.<br><br>
+          <span style="font-variant: small-caps; letter-spacing: 0.04em;">Всі локальні зміни</span> — видаляє всі користувацькі дані та повертає додаток у початковий стан.
+        </p>
         <div class="settings-rule"></div>
         <div class="settings-actions">
-          <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
-          <div class="settings-divider-v"></div> 
-          <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
-          <input type="file" id="importFile" accept=".json" style="display: none;">
+          <button type="button" class="settings-info-btn" id="settingsLocalFeedbackInfo" aria-label="Довідка">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
+              <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
+            </svg>
+          </button>
+          <span class="settings-actions-label">Очистити</span>
+          <button type="button" class="settings-action-btn" id="settingsClearFavs">вибране</button>
+          <button type="button" class="settings-action-btn" id="settingsClearCheckin">чекіни</button>
+          <button type="button" class="settings-action-btn" id="settingsClearLocalEdits">всі зміни</button>
         </div>
-      </div>
-    </div>
-  </div>
-</template> <template id="tpl-checkin-sheet">
-  <div class="sheet-handle-bar">
-    <div class="sheet-handle"></div>
-    <span class="sheet-sheet-title">Журнал Check-in</span>
-    <button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button>
-  </div>
-  <div class="sheet-body" id="checkinBody"></div>
+        <div class="settings-rule"></div>
+        <div class="settings-row">
+          <span class="settings-label">Резервна копія</span>
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
+          <div class="settings-divider-v"></div>
+          <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
+        </div>
+      </div> </div> </div> <div class="sheet-body" id="checkinBody"></div>
 </template>
 <script>
   (function startLoader() {
     const viewport = document.getElementById("mapViewport");
-    const center = document.getElementById("path3104");
-    const petalGroup = document.getElementById("g3775");
-    if (!viewport || !center || !petalGroup) return;
+const center = document.getElementById("loaderCenter");
+    const petalGroup = document.getElementById("loaderPetals");    if (!viewport || !center || !petalGroup) return;
 
     const petalNodes = Array.from(petalGroup.querySelectorAll("path"));
 
@@ -621,7 +597,7 @@
 
     const startTimestamp = Date.now();
     let tail = [];
-    const petalIntervals = new Map(); // Зберігаємо інтервали для кожної пелюстки
+    let loaderTimeout = null; // 🔴 ДОДАНО: Створюємо змінну для таймауту
 
     function getRandomPetal() {
       return Math.floor(Math.random() * petals.length);
@@ -646,9 +622,7 @@
 
     function animateLoader() {
       if (!viewport.classList.contains('is-loading')) {
-        // Очищуємо все при зупинці
-        petalIntervals.forEach(interval => clearTimeout(interval));
-        petalIntervals.clear();
+        if (loaderTimeout) clearTimeout(loaderTimeout); // Очищуємо
         return;
       }
 
@@ -657,8 +631,7 @@
       
       animatePetal(randomPetal);
 
-      const timeout = setTimeout(animateLoader, nextInterval);
-      petalIntervals.set(randomPetal, timeout);
+      loaderTimeout = setTimeout(animateLoader, nextInterval);
     }
 
     function animateCenterHeartbeat() {
