@@ -1,3 +1,8 @@
+// ══ ABOUT SHEET ══
+// P1-A fix: весь init-блок (let aboutSheet, if (!aboutSheet) {...}, updateLogo, bindBottomLoader)
+// повернуто всередину тіла openAboutSheet(). В оригіналі функція закривалась на рядку 196,
+// залишаючи решту коду на рівні модуля — це спричиняло ReferenceError при відкритті шторки.
+
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { setupDevModeTapCounter } from '../features/devmode.js';
 
@@ -189,11 +194,13 @@ function bindBottomLoader(aboutSheet) {
 }
 
 // ══ ВІДКРИТТЯ ABOUT-ШТОРКИ ══
+// P1-A fix: весь блок тепер знаходиться всередині функції.
+// В оригінальному коді фігурна дужка закривала функцію на рядку 196,
+// залишаючи let aboutSheet та весь init-блок на рівні модуля.
 export function openAboutSheet() {
-    document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-  sheetOverlay.classList.add('overlay-visible');
-}
+  MetroApp.pushSheetHistory?.();
+
+  // ── Ліниве створення DOM (один раз) ──
   let aboutSheet = document.getElementById('aboutSheet');
   if (!aboutSheet) {
     aboutSheet = document.createElement('div');
@@ -205,6 +212,7 @@ export function openAboutSheet() {
     setupDevModeTapCounter(aboutSheet);
   }
 
+  // ── Скидаємо стан підказок при кожному відкритті ──
   const hintAndroid = aboutSheet.querySelector('#hintAndroid');
   const hintIOS     = aboutSheet.querySelector('#hintIOS');
   const btnAndroid  = aboutSheet.querySelector('#btnInfoAndroid');
@@ -214,8 +222,7 @@ export function openAboutSheet() {
   btnAndroid?.classList.remove('info-btn-active');
   btnIOS?.classList.remove('info-btn-active');
 
-  // Прибираємо старі listener-и перед повторним додаванням
-  // (aboutClose — в #aboutClose, клонуємо кнопку щоб скинути listeners)
+  // ── Кнопка закриття: клонуємо щоб скинути накопичені listeners ──
   const oldClose = document.getElementById('aboutClose');
   if (oldClose) {
     const newClose = oldClose.cloneNode(true);
@@ -238,6 +245,7 @@ export function openAboutSheet() {
     });
   }
 
+  // ── Логотип ──
   let logoState = Storage.get(STORAGE_KEYS.LOGO_STATE);
 
   function updateLogo() {
@@ -273,6 +281,7 @@ export function openAboutSheet() {
   updateLogo();
   bindBottomLoader(aboutSheet);
 
+  // ── Кнопки «i» (Android / iOS підказки) ──
   const setActive = (btn, v) => btn?.classList.toggle('info-btn-active', v);
   const scrollTo  = el => setTimeout(() => {
     if (el.hidden) return;
@@ -301,74 +310,75 @@ export function openAboutSheet() {
     });
   }
 
-// ── Логіка форми "Повідомити про помилку" ──
-    const bugToggleBtn = aboutSheet.querySelector('#bugToggleBtn');
-    const bugFormWrap  = aboutSheet.querySelector('#bugFormWrap');
-    const bugTextarea  = aboutSheet.querySelector('#bugTextarea');
-    const bugSubmitBtn = aboutSheet.querySelector('#bugSubmitBtn');
-    const bugCancelBtn = aboutSheet.querySelector('#bugCancelBtn');
-    const bugResultMsg = aboutSheet.querySelector('#bugResultMsg');
+  // ── Форма «Повідомити про помилку» ──
+  const bugToggleBtn = aboutSheet.querySelector('#bugToggleBtn');
+  const bugFormWrap  = aboutSheet.querySelector('#bugFormWrap');
+  const bugTextarea  = aboutSheet.querySelector('#bugTextarea');
+  const bugSubmitBtn = aboutSheet.querySelector('#bugSubmitBtn');
+  const bugCancelBtn = aboutSheet.querySelector('#bugCancelBtn');
+  const bugResultMsg = aboutSheet.querySelector('#bugResultMsg');
 
-    if (bugToggleBtn && bugFormWrap) {
-      bugToggleBtn.addEventListener('click', () => {
-        bugToggleBtn.hidden = true;
-        bugFormWrap.hidden = false;
-        setTimeout(() => bugTextarea.focus(), 100);
-      });
+  if (bugToggleBtn && bugFormWrap) {
+    bugToggleBtn.addEventListener('click', () => {
+      bugToggleBtn.hidden = true;
+      bugFormWrap.hidden = false;
+      setTimeout(() => bugTextarea.focus(), 100);
+    });
 
-      bugCancelBtn.addEventListener('click', () => {
-        bugFormWrap.hidden = true;
-        bugToggleBtn.hidden = false;
-        bugTextarea.value = '';
-        bugTextarea.style.height = ''; 
-        bugResultMsg.textContent = '';
-      });
+    bugCancelBtn.addEventListener('click', () => {
+      bugFormWrap.hidden = true;
+      bugToggleBtn.hidden = false;
+      bugTextarea.value = '';
+      bugTextarea.style.height = '';
+      bugResultMsg.textContent = '';
+    });
 
-      // Плавне авторозширення поля вводу
-      bugTextarea.addEventListener('input', function() {
-        this.style.height = 'auto'; // Скидаємо для перерахунку
-        this.style.height = this.scrollHeight + 'px'; // Встановлюємо точну висоту тексту
-      });
+    bugTextarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
 
-      bugSubmitBtn.addEventListener('click', async () => {
-        const text = bugTextarea.value.trim();
-        if (!text) {
-          bugTextarea.focus();
-          return;
+    bugSubmitBtn.addEventListener('click', async () => {
+      const text = bugTextarea.value.trim();
+      if (!text) { bugTextarea.focus(); return; }
+
+      bugSubmitBtn.disabled = true;
+      bugSubmitBtn.textContent = 'Відправка...';
+      bugResultMsg.textContent = '';
+
+      try {
+        const res = await fetch('https://formspree.io/f/xpqbovbw', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            message: text,
+            source:  'About Sheet Bug Report',
+            time:    new Date().toLocaleString('uk-UA'),
+          }),
+        });
+
+        if (res.ok) {
+          bugTextarea.hidden              = true;
+          bugSubmitBtn.parentElement.hidden = true;
+          bugResultMsg.textContent        = '✓ Дякуємо! Помилку надіслано.';
+          bugResultMsg.style.color        = 'var(--line-green)';
+          bugResultMsg.style.fontWeight   = '600';
+          bugResultMsg.style.fontSize     = 'var(--fs-md)';
+          bugResultMsg.style.marginTop    = '8px';
+        } else {
+          throw new Error('Server error');
         }
+      } catch {
+        bugSubmitBtn.disabled        = false;
+        bugSubmitBtn.textContent     = 'Відправити';
+        bugResultMsg.textContent     = 'Помилка відправки. Спробуйте пізніше.';
+        bugResultMsg.style.color     = 'var(--line-red)';
+      }
+    });
+  }
 
-        bugSubmitBtn.disabled = true;
-        bugSubmitBtn.textContent = 'Відправка...';
-        bugResultMsg.textContent = '';
-
-        try {
-          const res = await fetch('https://formspree.io/f/xpqbovbw', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              message: text,
-              source: 'About Sheet Bug Report',
-              time: new Date().toLocaleString('uk-UA')
-            })
-          });
-
-          if (res.ok) {
-            bugTextarea.hidden = true;
-            bugSubmitBtn.parentElement.hidden = true;
-            
-            bugResultMsg.textContent = '✓ Дякуємо! Помилку надіслано.';
-            bugResultMsg.style.color = 'var(--line-green)';
-            bugResultMsg.style.fontWeight = '600';
-            bugResultMsg.style.fontSize = 'var(--fs-md)';
-            bugResultMsg.style.marginTop = '8px';
-          } else {
-            throw new Error('Server error');
-          }
-        } catch (error) {
-          bugSubmitBtn.disabled = false;
-          bugSubmitBtn.textContent = 'Відправити';
-          bugResultMsg.textContent = 'Помилка відправки. Спробуйте пізніше.';
-          bugResultMsg.style.color = 'var(--line-red)';
-        }
-      });
-    }  
+  // ── Відкриваємо шторку ──
+  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+  aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
+  sheetOverlay.classList.add('overlay-visible');
+}

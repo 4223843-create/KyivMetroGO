@@ -1,37 +1,18 @@
-import { state }               from '../core/state.js';
-import { slugByName }          from '../data/stations.js';
-import { openStation } from './stationSheet.js';
-import { openAboutSheet }      from './aboutSheet.js';
-import { isFav, toggleFav }   from '../features/favorites.js';
-import { heartSvg }            from '../ui/components.js';
+import { bus }                from '../core/eventBus.js';
+import { withUnsavedCheck }  from '../core/unsavedCheck.js';
+import { openStation }       from './stationSheet.js';
+import { openAboutSheet }    from './aboutSheet.js';
+import { isFav, toggleFav }  from '../features/favorites.js';
+import { heartSvg }          from '../ui/components.js';
+import { reloadStationsData } from '../data/stations.js';
 
-export { openStation, openAboutSheet };
+export { openStation, openAboutSheet, withUnsavedCheck };
 
 const sheet        = document.getElementById('stationSheet');
 const sheetBody    = document.getElementById('sheetBody');
 const sheetClose   = document.getElementById('sheetClose');
 const sheetOverlay = document.getElementById('sheetOverlay');
 const dropMenuEl   = document.getElementById('dropMenu');
-
-// ══ ПЕРЕВІРКА НЕЗБЕРЕЖЕНИХ ЗМІН ══
-export function withUnsavedCheck(proceed) {
-  if (MetroApp.hasUnsavedFeedback?.()) {
-    const _fbSlug = document.getElementById('fbStation')?.value || '';
-    const _fbData = _fbSlug ? state.stationsData?.[_fbSlug] : null;
-    const stationName = _fbData?.name || '';
-    const question    = stationName
-      ? `Зберегти зміни для станції <span style="white-space: nowrap; font-variant: small-caps; letter-spacing: 0.04em;">${stationName}?</span>`
-      : 'Зберегти зміни?';
-    MetroApp.showCustomConfirm?.(question,
-      () => { MetroApp.triggerFeedbackSubmit?.(true); MetroApp.fbUnsaved = false; proceed(); },
-      () => { MetroApp.fbUnsaved = false; proceed(); },
-      () => {}
-    );
-    return true;
-  }
-  proceed();
-  return false;
-}
 
 // ══ ЗАКРИТТЯ ВСІХ ШТОРОК ══
 export function closeAllSheets(force = false) {
@@ -78,24 +59,14 @@ if (sheetOverlay) {
     if (zone?.id) {
       const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
       const slug  = MetroApp.SLUG_BY_LOWER?.[rawId];
-      if (slug && slug !== state.currentStationSlug) { openStation(slug); return; }
+      if (slug) { openStation(slug); return; }
     }
     closeAllSheets();
   });
 }
 
-if (sheetBody) {
-  sheetBody.addEventListener('click', e => {
-    const navLabel = e.target.closest('.nav-label');
-    if (navLabel) {
-      const target = slugByName(navLabel.dataset.name || '');
-      if (target && target !== state.currentStationSlug) {
-        e.stopPropagation();
-        openStation(target);
-      }
-    }
-  });
-}
+// P1-D fix: nav-label handler видалено — stationEvents.js вже обробляє
+// кліки через делеговану подію і емітує bus.emit('station:open', { slug }).
 
 const mainFavBtn = sheet?.querySelector('.fav-btn-bar');
 if (mainFavBtn) {
@@ -112,3 +83,32 @@ if (mainFavBtn) {
 setTimeout(() => {
   MetroApp.initKinematicSwipe?.(sheet, sheetBody, () => closeAllSheets());
 }, 0);
+
+// ══ BUS-ПІДПИСКИ ══
+
+// P1-C fix: feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
+bus.on('sheet:close', ({ sheetEl }) => {
+  if (!sheetEl) return;
+  MetroApp.animateSheetClose?.(sheetEl, () => {
+    sheetEl.classList.remove('sheet-open');
+    if (!document.querySelectorAll('.station-sheet.sheet-open').length) {
+      sheetOverlay?.classList.remove('overlay-visible');
+    }
+  });
+  if (!MetroApp.animateSheetClose) {
+    sheetEl.classList.remove('sheet-open');
+    if (!document.querySelectorAll('.station-sheet.sheet-open').length) {
+      sheetOverlay?.classList.remove('overlay-visible');
+    }
+  }
+});
+
+// P1-C fix: fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.
+bus.on('data:reload-stations', async ({ onDone } = {}) => {
+  try {
+    await reloadStationsData();
+    onDone?.();
+  } catch (err) {
+    console.error('[sheetsManager] data:reload-stations failed:', err);
+  }
+});

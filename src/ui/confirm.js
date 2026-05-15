@@ -1,8 +1,4 @@
-import { bus } from '@core/eventBus.js';
-bus.on('ui:confirm', ({ message, onYes, onNo, onCancel }) =>
-  showCustomConfirm(message, onYes, onNo, onCancel)
-);
-
+import { bus }           from '../core/eventBus.js';
 import { runDoorAnimation } from './animations.js';
 import { TIMING }           from '../core/timing.js';
 
@@ -58,11 +54,18 @@ export function showCustomConfirm(
   overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
 }
 
+// ── Єдиний bus-обробник (P1-B fix: було два, залишаємо один) ──
+// Підтримує розширені параметри (labelYes, labelNo, styleYes, styleNo)
+// для сумісності з bus.emit із settings.js та backup.js.
 bus.on('ui:confirm', (payload) => {
-  MetroApp.showCustomConfirm(
-    payload.message, 
-    payload.onYes, 
-    payload.onNo, 
-    payload.onCancel
+  showCustomConfirm(
+    payload.message,
+    payload.onYes,
+    payload.onNo    ?? null,
+    payload.onCancel ?? null,
+    payload.labelYes ?? 'Зберегти',
+    payload.labelNo  ?? 'Не зберігати',
+    payload.styleYes ?? 'confirm-btn-save',
+    payload.styleNo  ?? 'confirm-btn-discard',
   );
 });

@@ -6,20 +6,18 @@ window.MetroApp = window.MetroApp || {};
 
 import {
   LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES,
-  STATIONS_WITH_POTENTIAL_EXITS, NAME_TO_SLUG, SLUG_BY_LOWER,
+  STATIONS_WITH_POTENTIAL_EXITS
 } from './core/constants.js';
 
 MetroApp.LINE_COLOR                    = LINE_COLOR;
 MetroApp.FAV_DISPLAY_NAMES             = FAV_DISPLAY_NAMES;
 MetroApp.DIR_SHORT_NAMES               = DIR_SHORT_NAMES;
 MetroApp.STATIONS_WITH_POTENTIAL_EXITS = STATIONS_WITH_POTENTIAL_EXITS;
-MetroApp.NAME_TO_SLUG                  = NAME_TO_SLUG;
-MetroApp.SLUG_BY_LOWER                 = SLUG_BY_LOWER;
 
 import { animateSheetClose, dismissHintWithDoors } from './ui/animations.js';
 import { showCustomConfirm }                       from './ui/confirm.js';
 import { initKinematicSwipe }                      from './ui/swipe.js';
-import { configureEdgeToEdge, pushSheetHistory } from './ui/system.js';
+import { configureEdgeToEdge, pushSheetHistory }   from './ui/system.js';
 
 MetroApp.animateSheetClose    = animateSheetClose;
 MetroApp.dismissHintWithDoors = dismissHintWithDoors;
@@ -27,6 +25,7 @@ MetroApp.showCustomConfirm    = showCustomConfirm;
 MetroApp.initKinematicSwipe   = initKinematicSwipe;
 MetroApp.configureEdgeToEdge  = configureEdgeToEdge;
 MetroApp.pushSheetHistory     = pushSheetHistory;
+
 import { Icons } from './ui/icons.js';
 MetroApp.Icons = Icons;
 
@@ -43,6 +42,9 @@ import { registerServiceWorker }          from './infra/serviceWorker.js';
 import './infra/offline.js';
 import './infra/swUpdate.js';
 import './features/feedback/index.js';
+// P1-C fix: sheetsManager реєструє bus.on('sheet:close') і bus.on('data:reload-stations').
+// Імпорт тут гарантує, що handlers зареєстровані до будь-якого emit із feedback/.
+import './sheets/sheetsManager.js';
 import './app.js';
 
 function releaseStartupLoader() {
@@ -56,7 +58,9 @@ window.addEventListener('unhandledrejection',
 async function bootstrap() {
   try {
     await Storage.init();
-    Storage.remove(STORAGE_KEYS.CHECKIN_HINT_SEEN);
+
+    // P2-D fix: прибрано Storage.remove(STORAGE_KEYS.CHECKIN_HINT_SEEN) —
+    // це скидало підказку при кожному старті, що суперечить логіці «показати один раз».
 
     const savedTheme = Storage.get(STORAGE_KEYS.THEME)
       || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');

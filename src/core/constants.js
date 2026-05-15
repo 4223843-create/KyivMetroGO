@@ -1,5 +1,11 @@
 // ══ СТАТИЧНІ КОНСТАНТИ ДОДАТКУ ══
 // Значення, що ніколи не змінюються під час роботи.
+//
+// P2-E fix: NAME_TO_SLUG та SLUG_BY_LOWER видалено звідси.
+// Вони були порожніми об'єктами, які заповнювались через MetroApp —
+// що порушувало ESM-інкапсуляцію і плутало споживачів (отримували порожній об'єкт).
+// Тепер вони є приватними змінними всередині data/stations.js
+// і доступні виключно через slugByName() та getSlugByLower().
 
 export const LINE_COLOR = {
   red:   '#c8523a',
@@ -24,6 +30,3 @@ export const STATIONS_WITH_POTENTIAL_EXITS = new Set([
   'G.Osokorky',
   'G.Chervonyi_khutir',
 ]);
-
-export const NAME_TO_SLUG  = {};
-export const SLUG_BY_LOWER = {};
