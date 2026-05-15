@@ -1,9 +1,11 @@
-import { STORAGE_KEYS, Storage }        from '../core/storage.js';
-import { applyTheme }           from '../ui/theme.js';
+import { STORAGE_KEYS, Storage }   from '../core/storage.js';
+import { applyTheme }              from '../ui/theme.js';
 import { getFavs, getExitFavs, saveFavs, updateFavDock } from './favorites.js';
 import { isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache } from './checkin.js';
-import { state }                from '../core/state.js';
-import { isDevMode, getDevLog } from './devmode.js';
+import { state }                   from '../core/state.js';
+import { isDevMode, getDevLog }    from './devmode.js';
+import { bus }                     from '../core/eventBus.js';
+import { BackupService }           from '../services/backup.js';
 
 function showCheckinLockToast(rowEl) {
   const existing = document.getElementById('checkinLockToast');
@@ -297,89 +299,50 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
     });
 
     // ── Експорт (Збереження у файл) ──
+// ── Експорт ──
     document.getElementById('settingsExport')?.addEventListener('click', e => {
       e.stopPropagation();
       try {
-        const allData = {};
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          allData[key] = localStorage.getItem(key);
-        }
-
-        if (isDevMode()) {
-          const log = getDevLog();
-          if (log.length > 0) {
-            allData['═══════════════════════════════════════════════════════════'] =
-              '══ ЛОГ ЗМІН — РЕЖИМ РОЗРОБНИКА ══';
-            allData['_dev_change_log'] = log.map(entry => ({
-              час:     new Date(entry.ts).toLocaleString('uk-UA'),
-              станція: entry.station,
-              slug:    entry.slug,
-              напрям:  entry.dir   || '—',
-              вихід:   entry.exit  || '—',
-              поле:    entry.field || '—',
-              було:    entry.from  ?? '—',
-              стало:   entry.to    ?? '—',
-            }));
-          }
-        }
-
-        const dataStr = JSON.stringify(allData, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `KyivMetroGO_backup_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        MetroApp.showCustomConfirm?.('Не вдалося створити файл резервної копії.', () => {});
+        BackupService.exportData({
+          devLog: isDevMode() ? getDevLog() : null,
+        });
+      } catch {
+        bus.emit('ui:confirm', {
+          message:  'Не вдалося створити файл резервної копії.',
+          onYes:    () => {},
+          labelYes: 'Зрозуміло',
+          styleYes: 'confirm-btn-save',
+        });
       }
     });
 
-    // ── Імпорт (Відновлення з файлу) ──
-    document.getElementById('settingsImport')?.addEventListener('click', e => {
+// ── Імпорт ──
+    document.getElementById('settingsImport')?.addEventListener('click', async e => {
       e.stopPropagation();
-      const input = document.createElement('input');
-      input.type   = 'file';
-      input.accept = '.json';
-      input.style.display = 'none';
-      document.body.appendChild(input);
+      const result = await BackupService.pickAndValidateBackup();
 
-      input.addEventListener('change', () => {
-        const file = input.files[0];
-        document.body.removeChild(input);
-        if (!file) return;
-        MetroApp.showCustomConfirm(
-          'Відновити дані з цього файлу? Поточні налаштування, Вибране та Check-in будуть замінені.',
-          () => {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-              try {
-                const importedData = JSON.parse(ev.target.result);
-                if (!importedData[STORAGE_KEYS.FAVS] && !importedData['metro_favs']) {
-                  throw new Error('Invalid backup file');
-                }
-                localStorage.clear();
-                for (const key in importedData) {
-                  localStorage.setItem(key, importedData[key]);
-                }
-                window.location.reload();
-              } catch (err) {
-                MetroApp.showCustomConfirm?.('Помилка: файл пошкоджений або не є резервною копією KyivMetroGO.', () => {});
-              }
-            };
-            reader.readAsText(file);
-          },
-          null, null,
-          'Відновити', 'Скасувати',
-          'confirm-btn-save', 'confirm-btn-discard'
-        );
+      if (result.status === 'cancelled') return;
+
+      if (result.status === 'invalid' || result.status === 'error') {
+        bus.emit('ui:confirm', {
+          message:  result.reason ?? 'Не вдалося прочитати файл.',
+          onYes:    () => {},
+          labelYes: 'Зрозуміло',
+          styleYes: 'confirm-btn-save',
+        });
+        return;
+      }
+
+      // status === 'success': просимо підтвердження перед записом
+      bus.emit('ui:confirm', {
+        message:  'Відновити дані з цього файлу? Поточні налаштування, Вибране та Check-in будуть замінені.',
+        onYes:    () => BackupService.restoreAndReload(result.data),
+        onNo:     () => {},
+        labelYes: 'Відновити',
+        labelNo:  'Скасувати',
+        styleYes: 'confirm-btn-save',
+        styleNo:  'confirm-btn-discard',
       });
-
-      input.click();
     });
   }
 
@@ -389,11 +352,13 @@ function syncToggles() {
     const hatchTgl = document.getElementById('settingsCheckinHatchToggle');
     if (hatchTgl) hatchTgl.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
 
-const s = document.getElementById('settingsStartFavToggle');
-const savedStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
+    const s = document.getElementById('settingsStartFavToggle');
+    const savedStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
+    
     document.querySelectorAll('#settingsCheckinStatSeg .settings-seg-btn').forEach(btn =>
       btn.classList.toggle('is-active', btn.dataset.statVal === savedStat)
     );
+    
     const c = document.getElementById('settingsCheckinToggle');
     const l = document.getElementById('settingsLocalFeedbackToggle');
     const h = document.getElementById('settingsHideInfoToggle');
@@ -403,21 +368,19 @@ const savedStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
     if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
     if (h) h.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
 
+    const clearFavsBtn    = document.getElementById('settingsClearFavs');
+    const clearCheckinBtn = document.getElementById('settingsClearCheckin');
+    const clearLocalBtn   = document.getElementById('settingsClearLocalEdits');
+
     const hasFavs     = getExitFavs().length > 0 || getFavs().length > 0;
     const hasCheckins = Object.keys(getCheckins()).length > 0;
-    const editsData   = Storage.get(STORAGE_KEYS.LOCAL_EDITS);
-    const labelsData  = Storage.get(STORAGE_KEYS.EXIT_LABELS);
-    const hasEdits    = (editsData && editsData !== '{}') || (labelsData && labelsData !== '{}');
-
-    const clearFavsBtn     = document.getElementById('settingsClearFavs');
-    const clearCheckinBtn  = document.getElementById('settingsClearCheckin');
-    const clearLocalBtn    = document.getElementById('settingsClearLocalEdits');
+    const hasAnyData  = BackupService.hasUserData(); // Виклик твого нового сервісу
 
     if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
     if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
-    if (clearLocalBtn)   clearLocalBtn.disabled   = !(hasFavs || hasCheckins || hasEdits);
+    if (clearLocalBtn)   clearLocalBtn.disabled   = !hasAnyData;
   }
-  syncToggles();
+    syncToggles();
 
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   settingsSheet.classList.add('sheet-open');

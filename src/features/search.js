@@ -1,41 +1,11 @@
 import { state } from '../core/state.js';
+import { fuzzyMatchToken } from '../utils/stringMatchers.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
   'петрівка': 'B.Pochaina',
-  'дружби народів': 'G.Zvirynetska',
-  };
-
-// ── Алгоритм відстані Левенштейна ────────────────────────────
-// Повертає мінімальну кількість правок (вставка/видалення/заміна).
-// Рання відмова: якщо різниця довжин > 3 — не витрачаємо час.
-function levenshtein(a, b) {
-  const la = a.length, lb = b.length;
-  if (Math.abs(la - lb) > 3) return 99;
-  // Одновимірний DP-масив для економії пам'яті.
-  let prev = Array.from({ length: lb + 1 }, (_, j) => j);
-  for (let i = 1; i <= la; i++) {
-    const curr = [i];
-    for (let j = 1; j <= lb; j++) {
-      curr[j] = a[i - 1] === b[j - 1]
-        ? prev[j - 1]
-        : 1 + Math.min(prev[j], curr[j - 1], prev[j - 1]);
-    }
-    prev = curr;
-  }
-  return prev[lb];
-}
-
-// ── Нечіткий збіг одного токена ──────────────────────────────
-// Спочатку — дешевий prefix-check; Левенштейн лише якщо потрібно.
-// Поріг: 1 правка для ≤5 символів, 2 — для довших.
-function fuzzyMatchToken(query, token) {
-  if (token.startsWith(query)) return true;
-  if (query.length < 4) return false; // Короткі запити — тільки prefix
-  const prefix    = token.slice(0, query.length + 1); // Не порівнюємо весь токен
-  const threshold = query.length <= 5 ? 1 : 2;
-  return levenshtein(query, prefix) <= threshold;
-}
+  'дружби народів': 'G.Zvirynetska'
+};
 
 export function renderSearchResults(query, container, lineFilter = new Set()) {
   if (!state.stationsData) {

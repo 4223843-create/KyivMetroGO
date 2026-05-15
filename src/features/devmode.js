@@ -1,60 +1,7 @@
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { state }                  from '../core/state.js';
+import { PhotoStorage }           from '../data/photoStorage.js';
 
-// Навмисно НЕ імпортуємо з sheets.js та ui.js —
-// уникаємо кругової залежності (sheets → devmode → sheets).
-// Використовуємо MetroApp?.() — функції гарантовано ініціалізовані
-// до того, як devmode-обробники спрацьовують.
-
-// ═══════════════════════════════════════════════════════
-// РЕЖИМ РОЗРОБНИКА — DEV MODE
-// ═══════════════════════════════════════════════════════
-
-const DEV_CHECK_SVG = `<svg style="width: 26px !important; height: 26px !important; display: block !important; transform: translateY(-1px) !important; flex-shrink: 0 !important;" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M14.83 4.89l1.34.94-5.81 8.38H9.02L5.78 9.67l1.34-1.25 2.57 2.4z"/></svg>`;
-
-const DEV_NOTE_SVG = `<svg style="width: 20px !important; height: 20px !important; display: block !important; flex-shrink: 0 !important;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 12h14M5 16h6"/></svg>`;
-
-const DEV_PHOTO_SVG = `<svg style="width: 17px !important; height: 17px !important; display: block !important; flex-shrink: 0 !important;" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" width="26" height="20"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="3,22.3 11,14.3 22.5,25.9 "/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="17.4,20.9 22,16.3 28.9,23.2 "/></svg>`;
-
-// ── База даних для великих фотографій ──
-const PhotoDB = {
-  dbName: 'MetroPhotoDB',
-  storeName: 'photos',
-  async open() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
-      request.onupgradeneeded = () => request.result.createObjectStore(this.storeName);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror   = () => reject(request.error);
-    });
-  },
-  async get(id) {
-    const db = await this.open();
-    return new Promise((resolve, reject) => {
-      const req = db.transaction(this.storeName).objectStore(this.storeName).get(id);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror   = () => reject(req.error);
-    });
-  },
-  async set(id, data) {
-    const db = await this.open();
-    return new Promise((resolve, reject) => {
-      const tx  = db.transaction(this.storeName, 'readwrite');
-      const req = tx.objectStore(this.storeName).put(data, id);
-      req.onsuccess = () => resolve();
-      req.onerror   = () => reject(req.error);
-    });
-  },
-  async delete(id) {
-    const db = await this.open();
-    return new Promise((resolve, reject) => {
-      const tx  = db.transaction(this.storeName, 'readwrite');
-      const req = tx.objectStore(this.storeName).delete(id);
-      req.onsuccess = () => resolve();
-      req.onerror   = () => reject(req.error);
-    });
-  }
-};
 
 // ── Активація / деактивація ──────────────────────────
 export function isDevMode() {
@@ -176,7 +123,7 @@ export function attachDevModeUI(container, slug) {
 
     row.prepend(photoBtn, noteBtn, checkBtn);
 
-    PhotoDB.get(photoId).then(hasPhoto => {
+    PhotoStorage.loadPhoto(photoId).then(hasPhoto => {
       if (hasPhoto) {
         photoBtn.style.color   = lineColor;
         photoBtn.style.opacity = '1';
@@ -264,8 +211,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
   });
 
   const photoId = `${slug}_${posIdx}`;
-  const existingPhoto = await PhotoDB.get(photoId);
-
+const existingPhoto = await PhotoStorage.loadPhoto(photoId);
   const panel = document.createElement('div');
   panel.className = 'dev-note-panel';
   panel.dataset.type = 'photo';
@@ -294,7 +240,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (ev) => {
-      await PhotoDB.set(photoId, ev.target.result);
+      await PhotoStorage.savePhoto(photoId, ev.target.result);
       photoBtn.style.color   = lineColor;
       photoBtn.style.opacity = '1';
       panel.classList.remove('panel-open');
@@ -310,7 +256,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
   if (clearBtn) {
     clearBtn.addEventListener('click', async e => {
       e.stopPropagation();
-      await PhotoDB.delete(photoId);
+await PhotoStorage.removePhoto(photoId);
       photoBtn.style.color   = defaultColor;
       photoBtn.style.opacity = defaultOpacity;
       panel.classList.remove('panel-open');
@@ -416,10 +362,9 @@ function setupDevDataClear(container) {
             Storage.remove(STORAGE_KEYS.DEV_LOG);
             Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
             Storage.remove(STORAGE_KEYS.DEV_NOTES);
-            try {
-              const db = await PhotoDB.open();
-              db.transaction('photos', 'readwrite').objectStore('photos').clear();
-            } catch (err) { console.warn('[KyivMetroGO] Помилка очищення PhotoDB:', err); }
+            await PhotoStorage.clearAllPhotos().catch(err =>
+              console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
+            );
             setTimeout(() => location.reload(), 180);
           },
           null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-neutral'
