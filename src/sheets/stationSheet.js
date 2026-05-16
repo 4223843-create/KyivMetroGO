@@ -1,12 +1,3 @@
-// ══ STATION SHEET ══
-// Відповідальність: відкриття/оновлення/закриття картки станції.
-//
-// Розподіл логіки:
-//   Рендер HTML   → renderStation.js     (renderDirections, applyFavPillStyles)
-//   Жести / події → stationEvents.js     (bindSheetGestures, applyInitialFavStyles)
-//   Unsaved guard → core/unsavedCheck.js (withUnsavedCheck)
-//   Міжмодульний зв'язок → core/eventBus.js (bus)
-
 import { state }                   from '../core/state.js';
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { heartSvg }                from '../ui/components.js';
@@ -19,15 +10,13 @@ import { withUnsavedCheck }        from '../core/unsavedCheck.js';
 import { renderDirections }        from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
 
-// ══ DOM-вузли (існують в index.html, ніколи не lazy) ══
+// ══ DOM-вузли ══
 const sheet            = document.getElementById('stationSheet');
 const sheetBody        = document.getElementById('sheetBody');
 const sheetOverlay     = document.getElementById('sheetOverlay');
 const stationTitleMain = document.getElementById('stationTitleMain');
 
-// ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ (один раз на весь час сесії) ══
-// getCtx() — getter, бо slug і color змінюються між відкриттями,
-// а сам listener залишається незмінним.
+// ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
 bindSheetGestures(
   sheetBody,
   () => ({
@@ -37,15 +26,30 @@ bindSheetGestures(
   }),
 );
 
-// ══ BUS-ПІДПИСКИ ══
+// ══ КЕШІ (module scope) ══════════════════════════════════════
 
-// feedback/index.js та devmode.js емітують 'station:refresh'
-bus.on('station:refresh', refreshCurrentStation);
+// [OPT-P1] Кеш HTML рядка renderDirections.
+// Ключ: slug. Інвалідується при station:refresh (дані змінились).
+const _directionsHtmlCache = new Map(); // slug → html
 
-// stationEvents.js емітує 'station:open' при кліку на nav-link
+// [OPT-P2] Кеш slug-маппінгу для nav-label елементів.
+// Ключ: slug. Значення: Map<labelName, targetSlug|null>.
+// Стабільний між відкриттями (назви напрямків незмінні).
+const _navLinkCache = new Map();
+
+// [OPT-P4] Статичний список всіх шторок — кешуємо при ініціалізації модуля
+const _allSheets = [...document.querySelectorAll('.station-sheet')];
+
+// ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
+
+// [OPT-P1] При оновленні даних — інвалідуємо кеш HTML поточної станції
+bus.on('station:refresh', () => {
+  _directionsHtmlCache.delete(state.currentStationSlug);
+  refreshCurrentStation();
+});
+
 bus.on('station:open', ({ slug }) => openStation(slug));
 
-// stationEvents.js емітує 'sheet:open-feedback-for' при кліку на олівець
 bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
   MetroApp.animateSheetClose?.(sheet, () => {
     sheet.classList.remove('sheet-open');
@@ -56,41 +60,65 @@ bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
   });
 });
 
-// ══ ХЕЛПЕР: позначити nav-label як nav-link якщо веде на іншу станцію ══
+// ── ОПТИМІЗОВАНИЙ applyNavLinks ───────────────────────────────
 
 function applyNavLinks(slug) {
-  sheetBody.querySelectorAll('.nav-label').forEach(el => {
-    const target = slugByName(el.dataset.name || '');
-    if (target && target !== slug) {
-      el.classList.add('nav-link');
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
-    }
-  });
+  const labels = sheetBody.querySelectorAll('.nav-label');
+  let nameToTarget = _navLinkCache.get(slug);
+
+  if (!nameToTarget) {
+    // [OPT-P2] Перший візит: обчислюємо slugByName() і кешуємо результат
+    nameToTarget = new Map();
+    labels.forEach(el => {
+      const name = el.dataset.name || '';
+      if (!nameToTarget.has(name)) {
+        // slugByName() викликається по одному разу на унікальну назву
+        nameToTarget.set(name, slugByName(name) || null);
+      }
+      const target = nameToTarget.get(name);
+      if (target && target !== slug) {
+        el.classList.add('nav-link');
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+      }
+    });
+    _navLinkCache.set(slug, nameToTarget);
+  } else {
+    // [OPT-P2] Повторний візит: нуль slugByName() — тільки DOM writes
+    labels.forEach(el => {
+      const target = nameToTarget.get(el.dataset.name || '');
+      if (target && target !== slug) {
+        el.classList.add('nav-link');
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+      }
+    });
+  }
 }
 
-// ══ ВІДКРИТТЯ СТАНЦІЇ ══
+// ── ВІДКРИТТЯ СТАНЦІЇ ─────────────────────────────────────────
 
-/**
- * Публічна точка входу. Якщо є незбережені зміни у feedback —
- * withUnsavedCheck показує confirm і відкриває станцію після рішення.
- *
- * @param {string} slug
- */
 export function openStation(slug) {
   withUnsavedCheck(() => actualOpenStation(slug));
 }
 
 function actualOpenStation(slug) {
   if (!state.stationsData?.[slug]) return;
-  state.currentStationSlug = slug;
-
-  MetroApp.dismissFavOnlyHint?.();
 
   const s     = state.stationsData[slug];
   const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
-  const fav   = isFav(slug);
 
+  // [OPT-P1] Guard: та сама станція вже відкрита — пропускаємо повний re-render
+  if (state.currentStationSlug === slug && sheet.classList.contains('sheet-open')) {
+    // Лише оновлюємо fav-кнопку (стан міг змінитись ззовні)
+    _updateFavBtn(slug, color);
+    return;
+  }
+
+  state.currentStationSlug = slug;
+  MetroApp.dismissFavOnlyHint?.();
+
+  const fav            = isFav(slug);
   const hideInfoBlocks = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
   const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
     ? `<div class="onboarding-hint" id="onboardingHint">` +
@@ -101,26 +129,28 @@ function actualOpenStation(slug) {
 
   stationTitleMain.textContent = s.name;
 
-  // ── Рендер тіла шторки ──
   const hasDirections  = s.directions?.length > 0;
   const allExitsClosed = hasDirections && !s.directions.some(dir =>
     dir.exits?.some(exit => exit.positions?.some(pos => !pos.closed))
   );
 
   if (!hasDirections) {
-    sheetBody.innerHTML =
-      `<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>`;
+    sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>';
   } else if (allExitsClosed) {
-    sheetBody.innerHTML =
-      `<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>`;
+    sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
   } else {
-    sheetBody.innerHTML = onboardingHtml + renderDirections(s, color);
+    // [OPT-P1] Читаємо з кешу або рендеримо і зберігаємо
+    let directionsHtml = _directionsHtmlCache.get(slug);
+    if (!directionsHtml) {
+      directionsHtml = renderDirections(s, color);
+      _directionsHtmlCache.set(slug, directionsHtml);
+    }
+    sheetBody.innerHTML = onboardingHtml + directionsHtml;
   }
 
   sheetBody.scrollTop = 0;
-  applyNavLinks(slug);
+  applyNavLinks(slug); // [OPT-P2] кешований slugByName на повторних відкриттях
 
-  // ── Розмір шторки ──
   if (s.slug === 'R.Khreshchatyk') {
     sheet.classList.add('sheet-fullscreen', 'sheet-scrollable');
     sheet.style.maxHeight = '';
@@ -129,40 +159,36 @@ function actualOpenStation(slug) {
     sheet.classList.remove('sheet-fullscreen', 'sheet-scrollable');
   }
 
-  // ── Handle та кнопка серця ──
   const handle = sheet.querySelector('.sheet-handle');
   if (handle) handle.style.background = color;
 
-  const favBtnBar = sheet.querySelector('.fav-btn-bar');
-  if (favBtnBar) {
-    favBtnBar.dataset.slug  = slug;
-    favBtnBar.dataset.color = color;
-    favBtnBar.innerHTML     = heartSvg(fav, slug, color);
-    favBtnBar.classList.toggle('fav-active', fav);
-  }
+  _updateFavBtn(slug, color);
 
-  // ── Відкрити шторку ──
-  document.querySelectorAll('.station-sheet').forEach(el => {
-    if (el.id !== 'stationSheet') el.classList.remove('sheet-open');
-  });
+  // [OPT-P4] Кешований список шторок — без querySelectorAll по документу
+  _allSheets.forEach(el => { if (el.id !== 'stationSheet') el.classList.remove('sheet-open'); });
   if (!sheet.classList.contains('sheet-open')) {
     sheet.classList.add('sheet-open');
     sheetOverlay?.classList.add('overlay-visible');
   }
 
-  // ── Post-render: стилі улюблених + dev mode + check-in ──
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);
-  sheet.querySelector('.row-checkin-btn')?.remove();
+  // [OPT-P3] querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
+  sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   MetroApp.attachCheckinButtons?.(sheet, slug, color);
 }
 
-// ══ ОНОВЛЕННЯ ПОТОЧНОЇ КАРТКИ ══
+function _updateFavBtn(slug, color) {
+  const favBtnBar = sheet.querySelector('.fav-btn-bar');
+  if (!favBtnBar) return;
+  favBtnBar.dataset.slug  = slug;
+  favBtnBar.dataset.color = color;
+  favBtnBar.innerHTML     = heartSvg(isFav(slug), slug, color);
+  favBtnBar.classList.toggle('fav-active', isFav(slug));
+}
 
-/**
- * Перемальовує вміст відкритої шторки без закриття/відкриття.
- * Викликається через bus.on('station:refresh') після змін у feedback або check-in.
- */
+// ── ОНОВЛЕННЯ ПОТОЧНОЇ КАРТКИ ─────────────────────────────────
+
 export function refreshCurrentStation() {
   if (!state.currentStationSlug) return;
   applyExitLabels(state.stationsData);
@@ -174,19 +200,21 @@ export function refreshCurrentStation() {
   const color      = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
   const prevScroll = sheetBody.scrollTop;
 
+  // [OPT-P1] Кеш вже інвалідовано в bus.on('station:refresh') вище
   stationTitleMain.textContent = s.name;
   sheetBody.innerHTML = renderDirections(s, color);
+  // Зберігаємо свіжий HTML в кеш для наступного відкриття
+  _directionsHtmlCache.set(slug, sheetBody.innerHTML);
 
   applyNavLinks(slug);
-
-  // Gesture listeners живуть (bindSheetGestures) — лише оновлюємо стилі
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);
-  sheet.querySelector('.row-checkin-btn')?.remove();
+  // [OPT-P3] Всі кнопки, а не тільки перша
+  sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   MetroApp.attachCheckinButtons?.(sheet, slug, color);
 
   sheetBody.scrollTop = prevScroll;
 }
 
-// ── Перехідний фасад (TODO: видалити після повної міграції на bus) ──
 MetroApp.refreshCurrentStation = refreshCurrentStation;
+MetroApp.openStation = openStation;

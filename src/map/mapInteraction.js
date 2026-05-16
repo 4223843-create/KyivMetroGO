@@ -1,110 +1,93 @@
-// Map interaction: click / keyboard / visited hatch overlay
-
-import { state }                   from '../core/state.js';
-import { getCheckins }              from '../features/checkin.js';
-import { STORAGE_KEYS, Storage }   from '../core/storage.js';
+import { state }                  from '../core/state.js';
+import { getCheckins }            from '../features/checkin.js';
+import { STORAGE_KEYS, Storage }  from '../core/storage.js';
+import { getSlugByLower }         from '../data/stations.js';
 
 const inner = document.getElementById('mapInner');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
-const HATCH_OVERLAY_CLASS = 'ci-visited-hatch-overlay';
+const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
 const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
-const HATCH_LINE_CLASS = 'ci-visited-hatch-line';
-const HATCH_STEP_PX = 8;
-const HATCH_SAMPLE_PX = 0.75;
+const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
+const HATCH_STEP_PX  = 8;
 
 export function handleMapInteraction(e) {
   if (!state.stationsData) return;
   if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
 
-  const zone  = e.target.closest('[id]');
+  const zone = e.target.closest('[id]');
   if (!zone?.id) return;
 
   const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
-  const slug  = MetroApp.SLUG_BY_LOWER[rawId];
+  const slug  = getSlugByLower(rawId);
   if (slug) { e.preventDefault(); MetroApp.openStation?.(slug); }
 }
 
-inner.addEventListener('click',   handleMapInteraction);
-inner.addEventListener('keydown', handleMapInteraction);
+inner?.addEventListener('click',   handleMapInteraction);
+inner?.addEventListener('keydown', handleMapInteraction);
 
-export function syncMapWithCheckins() {
-  if (!inner || !state.stationsData) return;
-
-  const checkins = getCheckins();
-  const visitedExitsBySlug = {};
-
-  // Збираємо відвідані унікальні виходи (вагон + двері) по кожній станції
-  for (const entry of Object.values(checkins)) {
-    if (!entry.slug) continue;
-    if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
-    visitedExitsBySlug[entry.slug].add(`${entry.wagon}|${entry.doors}`);
-  }
-
-  const visitedNames = Object.keys(visitedExitsBySlug).map(slug => {
-    return state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase();
-  }).filter(Boolean);
-
-  removeVisitedHatchOverlays();
-
-  // Очищаємо всі старі класи
-  inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full').forEach(el => {
-    el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full');
-  });
-
-  // Визначаємо частково чи повністю відвідана станція
-// Визначаємо частково чи повністю відвідана станція
-  inner.querySelectorAll('[id]').forEach(el => {
-    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    const slug  = MetroApp.SLUG_BY_LOWER?.[rawId];
-    
-    if (slug && visitedExitsBySlug[slug]) {
-      const stData = state.stationsData[slug];
-      
-      // Захист: якщо виходів у базі немає, вважаємо, що достатньо 1 чекіна для статусу "Full"
-      const totalOpenExits = stData?.positions?.length 
-        ? stData.positions.filter(p => !p.closed).length 
-        : 1; 
-        
-      const visitedCount = visitedExitsBySlug[slug].size;
-
-      if (visitedCount >= totalOpenExits) {
-        el.classList.add('is-visited-full');
-      } else {
-        el.classList.add('is-visited-partial');
-      }
-    }
-  });
-  inner.querySelectorAll('text').forEach(txt => {
-    const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
-    const isMatch = visitedNames.some(name => cleanText.includes(name) || name.includes(cleanText));
-
-    if (isMatch && cleanText.length > 2) {
-      txt.classList.add('station-checked-in');
-      txt.querySelectorAll('tspan').forEach(tspan => tspan.classList.add('station-checked-in'));
-    }
-  });
-
-  applyVisitedHatchOverlays();
+function removeVisitedHatchOverlays(root = inner) {
+  root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
 }
+
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
+const _hatchLineCache = new WeakMap();
+
+// [OPT-P4] Кеш зон станцій (будується один раз після renderMapZones)
+let _stationZoneEls = null;
+function _getStationZoneEls() {
+  // Повертаємо кеш, ТІЛЬКИ якщо він не порожній
+  if (_stationZoneEls && _stationZoneEls.length > 0) return _stationZoneEls;
+  
+  const els = [...inner.querySelectorAll('[id]')].filter(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    return !!getSlugByLower(rawId);
+  });
+  
+  // Кешуємо тільки тоді, коли станції реально знайшлися на карті
+  if (els.length > 0) {
+    _stationZoneEls = els;
+  }
+  
+  return els;
+}
+
+export function invalidateStationZoneCache() { _stationZoneEls = null; }
+
+let _clipIdCounter = 0;
+
+let _hatchRafId = null;
 
 export function applyVisitedHatchOverlays(root = inner) {
   if (!root) return;
+  if (_hatchRafId !== null) return;
+  _hatchRafId = requestAnimationFrame(() => {
+    _hatchRafId = null;
+    _doApplyHatch(root);
+  });
+}
 
+function _doApplyHatch(root) {
   removeVisitedHatchOverlays(root);
 
   const isHatchEnabled = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
-  if (!isHatchEnabled) return; 
+  if (!isHatchEnabled) return;
 
   const targets = [...root.querySelectorAll('.is-visited-partial, .is-visited-full')]
     .filter(el => el.closest('.is-visited-partial, .is-visited-full') === el);
 
+  if (!targets.length) return;
+
+  const globalScale = _getGlobalSvgScale();
+
   targets.forEach(target => {
-    const shapes = getVisitedGeometry(target);
+    const shapes = _getValidGeometry(target);
     if (!shapes.length) return;
 
-    // Визначаємо напрямок: повний = 1 (/), частковий = -1 (\)
-const isFull = target.classList.contains('is-visited-full');
+    const isFull = target.classList.contains('is-visited-full');
 
     const overlay = document.createElementNS(SVG_NS, 'g');
     overlay.classList.add(HATCH_OVERLAY_CLASS, isFull ? 'ci-hatch-full' : 'ci-hatch-partial');
@@ -112,7 +95,7 @@ const isFull = target.classList.contains('is-visited-full');
     overlay.setAttribute('focusable', 'false');
     overlay.dataset.hatchFor = target.id || '';
 
-    shapes.forEach(shape => appendShapeHatch(shape, overlay, isFull));
+    shapes.forEach(shape => _appendShapeHatch(shape, overlay, isFull, globalScale));
     if (!overlay.childElementCount) return;
 
     if (target instanceof SVGGElement) {
@@ -123,61 +106,75 @@ const isFull = target.classList.contains('is-visited-full');
   });
 }
 
-function removeVisitedHatchOverlays(root = inner) {
-  root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
+function _getGlobalSvgScale() {
+  const ref = inner.querySelector('path, polygon, rect');
+  if (!ref) return 1;
+  const ctm   = ref.getScreenCTM?.();
+  const scale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
+  return (Number.isFinite(scale) && scale > 0) ? scale : 1;
 }
 
-function getVisitedGeometry(target) {
+const _geometryCache = new WeakMap();
+
+function _getValidGeometry(target) {
+  if (_geometryCache.has(target)) return _geometryCache.get(target);
+
   const geometry = target.matches(HATCH_GEOMETRY_SELECTOR)
     ? [target]
     : [...target.querySelectorAll(HATCH_GEOMETRY_SELECTOR)];
 
-  return geometry.filter(shape => {
+  // [OPT-P1] getBBox() тільки при першому зверненні до target
+  const valid = geometry.filter(shape => {
     if (shape.closest(`.${HATCH_OVERLAY_CLASS}`)) return false;
-    try {
-      const box = shape.getBBox();
-      return box.width > 0 && box.height > 0;
-    } catch (e) {
-      return false;
-    }
+    try { const b = shape.getBBox(); return b.width > 0 && b.height > 0; }
+    catch { return false; }
   });
+
+  // Запобіжник: не кешуємо порожній результат (якщо SVG ще не відмалювався)
+  if (valid.length > 0) {
+    _geometryCache.set(target, valid);
+  }
+  
+  return valid;
 }
 
-function appendShapeHatch(shape, overlay, isFull) {
+function _appendShapeHatch(shape, overlay, isFull, globalScale) {
+  const cached = _hatchLineCache.get(shape);
+  let lines, strokeWidth;
+
+  if (cached && cached.isFull === isFull && Math.abs(cached.scale - globalScale) / globalScale < 0.02) {
+    // Cache hit: нуль getBBox(), нуль layout flush
+    ({ lines, strokeWidth } = cached);
+  } else {
+    // Cache miss: рахуємо один раз (один getBBox всередині buildHatchLines)
+    ({ lines, strokeWidth } = buildHatchLines(shape, isFull, globalScale));
+    _hatchLineCache.set(shape, { isFull, scale: globalScale, lines, strokeWidth });
+  }
+
+  if (!lines.length) return;
+
   const shapeOverlay = document.createElementNS(SVG_NS, 'g');
-  const transform = shape.getAttribute('transform');
+  const transform    = shape.getAttribute('transform');
   if (transform) shapeOverlay.setAttribute('transform', transform);
 
-// 1. Створюємо унікальну маску (clip-path) для ідеально рівних країв
-  const clipId = 'ci-clip-' + Math.random().toString(36).substr(2, 9);
-  const defs = document.createElementNS(SVG_NS, 'defs');
+  // [OPT-P5] Монотонний лічильник замість Math.random()
+  const clipId   = `ci-clip-${_clipIdCounter++}`;
+  const defs     = document.createElementNS(SVG_NS, 'defs');
   const clipPath = document.createElementNS(SVG_NS, 'clipPath');
   clipPath.setAttribute('id', clipId);
-  
   const clipGeometry = shape.cloneNode(false);
   clipGeometry.removeAttribute('id');
   clipGeometry.removeAttribute('class');
-  
-  // ДОДАТИ ЦЕЙ РЯДОК: Розширюємо маску на 1px, щоб прибрати "білі щілини" на краях
   clipGeometry.setAttribute('stroke-width', '1');
   clipGeometry.setAttribute('stroke', 'black');
-  
   clipPath.appendChild(clipGeometry);
   defs.appendChild(clipPath);
   shapeOverlay.appendChild(defs);
-  // 2. Створюємо групу, яка обрізається по цій масці
+
   const clippedGroup = document.createElementNS(SVG_NS, 'g');
   clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
   shapeOverlay.appendChild(clippedGroup);
-
   overlay.appendChild(shapeOverlay);
-
-  // 4. Малюємо лінії (тепер вони обрізаються браузером ідеально рівно)
-const { lines, strokeWidth } = buildHatchLines(shape, isFull);
-  if (!lines.length) {
-    shapeOverlay.remove();
-    return;
-  }
 
   lines.forEach(d => {
     const line = document.createElementNS(SVG_NS, 'path');
@@ -188,52 +185,85 @@ const { lines, strokeWidth } = buildHatchLines(shape, isFull);
   });
 }
 
-// Універсальний генератор ліній (тепер супершвидкий, без isPointInShape)
-function buildHatchLines(sourceShape, isFull) {
-  const box = sourceShape.getBBox();
-  const scale = getSvgToCssPixelScale(sourceShape);
+// Оновлена сигнатура: приймає globalScale, щоб не викликати getScreenCTM()
+function buildHatchLines(sourceShape, isFull, scale) {
+  const box  = sourceShape.getBBox(); // єдиний getBBox() на shape
+  // scale передається ззовні — не потрібен getScreenCTM() тут
   const step = HATCH_STEP_PX / scale;
-  const pad = step * 2;
+  const pad  = step * 2;
 
-  const minX = box.x - pad;
-  const maxX = box.x + box.width + pad;
-  const minY = box.y - pad;
-  const maxY = box.y + box.height + pad;
+  const minX = box.x - pad, maxX = box.x + box.width  + pad;
+  const minY = box.y - pad, maxY = box.y + box.height + pad;
 
-  const cStep = step * Math.SQRT2;
-  const lines = [];
-
-
-const cMin_raw = isFull ? (minX + minY) : (minX - maxY);
+  const cStep    = step * Math.SQRT2;
+  const cMin_raw = isFull ? (minX + minY) : (minX - maxY);
   const cMax     = isFull ? (maxX + maxY) : (maxX - minY);
-  const cMin = Math.floor(cMin_raw / cStep) * cStep;
+  const cMin     = Math.floor(cMin_raw / cStep) * cStep;
 
+  const lines = [];
   for (let c = cMin; c <= cMax; c += cStep) {
-    let x1 = minX;
-    let y1 = isFull ? (c - x1) : (x1 - c);
-
-    let x2 = maxX;
-    let y2 = isFull ? (c - x2) : (x2 - c);
-
+    const x1 = minX, x2 = maxX;
+    const y1 = isFull ? (c - x1) : (x1 - c);
+    const y2 = isFull ? (c - x2) : (x2 - c);
     lines.push(`M ${round(x1)} ${round(y1)} L ${round(x2)} ${round(y2)}`);
   }
-
   return { lines, strokeWidth: round(step * 0.35) };
 }
 
+export function syncMapWithCheckins() {
+  if (!inner || !state.stationsData) return;
 
-  
+  const checkins = getCheckins();
+  const visitedExitsBySlug = {};
 
+  for (const entry of Object.values(checkins)) {
+    if (!entry.slug) continue;
+    if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
+    visitedExitsBySlug[entry.slug].add(`${entry.wagon}|${entry.doors}`);
+  }
 
-function getSvgToCssPixelScale(shape) {
-  const ctm = shape.getScreenCTM?.();
-  const scale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  // [OPT] Set для O(1) lookup замість O(V) array.some()
+  const visitedNameSet = new Set(
+    Object.keys(visitedExitsBySlug)
+      .map(slug => state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase())
+      .filter(Boolean)
+  );
+
+  removeVisitedHatchOverlays();
+
+  inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
+    .forEach(el => el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full'));
+
+  // [OPT-P4] Кешований список лише зон станцій (не всього SVG)
+  _getStationZoneEls().forEach(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    const slug  = getSlugByLower(rawId);
+    if (!slug || !visitedExitsBySlug[slug]) return;
+
+    const stData         = state.stationsData[slug];
+    const totalOpenExits = stData?.positions?.length
+      ? stData.positions.filter(p => !p.closed).length
+      : 1;
+
+    el.classList.add(visitedExitsBySlug[slug].size >= totalOpenExits
+      ? 'is-visited-full'
+      : 'is-visited-partial');
+  });
+
+  inner.querySelectorAll('text').forEach(txt => {
+    const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
+    if (cleanText.length <= 2) return;
+    // [OPT] O(1) Set.has() замість O(V) array.some() з substring-matching
+    // Повна відповідність достатня: SVG text збігається з нормалізованою назвою
+    if (visitedNameSet.has(cleanText)) {
+      txt.classList.add('station-checked-in');
+      txt.querySelectorAll('tspan').forEach(t => t.classList.add('station-checked-in'));
+    }
+  });
+
+  applyVisitedHatchOverlays();
 }
 
-function round(value) {
-  return Math.round(value * 100) / 100;
-}
-
+window.MetroApp = window.MetroApp || {};
 MetroApp.syncMapWithCheckins = syncMapWithCheckins;
 MetroApp.applyVisitedHatchOverlays = applyVisitedHatchOverlays;

@@ -238,7 +238,7 @@
         }
       ]
     },
-    {
+{
       "slug": "B.Lybidska",
       "name": "Либідська",
       "line": "blue",
@@ -262,10 +262,24 @@
               ]
             }
           ]
+        },
+        {
+          "from": "попередня Деміївська",
+          "exits": [
+            {
+              "label": "",
+              "positions": [
+                {
+                  "wagon": "2",
+                  "doors": "3"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
-    {
+        {
       "slug": "B.Maidan_Nezalezhnosti",
       "name": "Майдан Незалежності",
       "line": "blue",

@@ -947,7 +947,7 @@ color: var(--text-muted);
 .fb-change-station-btn {
   display: block;
   margin: 0 auto 16px auto;
-  padding: 6px 18px;
+  padding: 5px 18px 7px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: transparent;
@@ -964,7 +964,7 @@ color: var(--text-muted);
 }
 
 /* КНОПКА ТА ПОВІДОМЛЕННЯ (Без змін) */
-.fb-send-btn { width: 100%; margin: 16px 0 8px; padding: 13px; background: var(--bg-card); color: var(--text); border: 0.5px solid var(--border); border-radius: 12px; font-size: var(--fs-md); font-weight: var(--fw-semi); cursor: pointer; }
+.fb-send-btn { width: 100%; margin: 16px 0 8px; padding: 12px 13px 14px; background: var(--bg-card); color: var(--text); border: 0.5px solid var(--border); border-radius: 12px; font-size: var(--fs-md); font-weight: var(--fw-semi); cursor: pointer; }
 .fb-send-btn:disabled { 
   opacity: 0.4; 
   cursor: default; 
@@ -1075,7 +1075,8 @@ color: var(--text-muted);
 }
 
 .confirm-main-btn {
-  flex: 1;
+  padding: 0 32px 2px;
+  min-width: 120px;
   height: 38px;
   border-radius: 10px;
   font-size: var(--fs-sm);
@@ -1575,7 +1576,7 @@ padding: 0 8px;
   font-weight: var(--fw-semi);
   text-decoration: none;
   border-radius: 8px;
-  padding: 6px 24px;
+  padding: 5px 24px 7px;
   width: auto;
   margin: 0;
   line-height: 1;
@@ -1992,6 +1993,7 @@ margin: 0 0 4px 0;
   align-items: baseline;
   gap: 6px;
   min-width: 0;
+  flex: 1;
 }
 /* Підказка при збігу по виходах — блідіший текст поруч з назвою */
 .search-item-hint {
@@ -1999,6 +2001,7 @@ margin: 0 0 4px 0;
   font-weight: var(--fw-normal);
   color: var(--text-muted);
   opacity: 0.50;
+  flex-shrink: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2229,7 +2232,7 @@ svg [role="button"]:focus:not(:focus-visible) {
   margin: 0;
 
   height: 34px;
-  padding: 0 16px;
+  padding: 0 16px 2px;
 
   flex-shrink: 0;
   border-radius: 20px;
@@ -2311,11 +2314,11 @@ svg [role="button"]:focus:not(:focus-visible) {
   border: none;
   padding: 6px;
   cursor: pointer;
-  color: var(--border); /* ⬅️ Беремо колір перетинки (8% для темної, 14% для світлої) */
+  color: var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 1; /* Залишаємо 1, бо прозорість вже зашита в самому кольорі var(--border) */
+  opacity: 1;
   transition: opacity 0.2s, transform 0.15s;
   -webkit-tap-highlight-color: transparent;
   z-index: 2;
@@ -2554,43 +2557,6 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   pointer-events: none;
 }
 
-.settings-info-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  padding: 0;
-  width: 15px;
-  height: 15px;
-  
-  color: var(--text-muted); 
-  
-  cursor: pointer;
-  margin-right: auto;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s;
-  opacity: 1;
-}
-
-.settings-info-btn svg { 
-  width: 100%; 
-  height: 100%; 
-}
-
-.settings-info-btn:active,
-.settings-info-btn.settings-info-btn-active { 
-  color: var(--text-secondary); 
-}
-.settings-hint {
-  margin: 0;
-  padding: 0 16px 12px;
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--text-muted);
-  text-align: left;
-}
-
 /* Жорстке позиціонування піна в тексті */
 .hint-pin-wrap {
   display: inline-block;
@@ -2687,6 +2653,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   color: #1c1c1e;
   background: var(--text-muted) !important;
   border: none;
+  padding-bottom: 2px;
   border-radius: 10px;
   width: 52px;
   height: 34px;
@@ -2933,9 +2900,9 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px; /* Збільшили контейнери, щоб іконкам було не тісно */
+  width: 28px;
   height: 28px;
-  padding: 0;
+  padding: 0; /* Тут не додаємо асиметричний відступ, бо іконки центруються через svg transform */
   background: none;
   border: none;
   cursor: pointer;
@@ -2949,7 +2916,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .dev-note-btn  { left: 32px; }
 .dev-photo-btn { left: 60px; }
 
-/* Робимо SVG блочними і ЗАБОРОНЯЄМО браузеру їх стискати (flex-shrink: 0) */
+/* Робимо SVG блочними і ЗАБОРОНЯЄМО браузеру їх стискати */
 .dev-check-btn svg,
 .dev-note-btn svg,
 .dev-photo-btn svg {
@@ -3038,11 +3005,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 .dev-note-actions button {
   flex: 1;
-  height: 34px; /* Зробив трохи вищими для ідеального вигляду */
+  height: 34px;
+  padding-bottom: 2px;
   border-radius: 8px;
   font-size: var(--fs-xs);
   font-weight: var(--fw-medium);
-  background: var(--bg-pill); /* Додаємо фірмовий фон кнопок */
+  background: var(--bg-pill);
   color: var(--text-muted);
   cursor: pointer;
   border: none;
@@ -3122,7 +3090,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     opacity: 1 !important;
 }
 
-.settings-info-btn, .fb-add-doors-info {
+.fb-add-doors-info {
     position: relative;
 }
 .settings-info-btn::after, .fb-add-doors-info::after {
@@ -3154,7 +3122,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
     display: block;
 }
 
-.settings-info-btn, .fb-add-doors-info, #btnInfoAndroid, #btnInfoIOS {
+.fb-add-doors-info, #btnInfoAndroid, #btnInfoIOS {
     position: relative;
 }
 .settings-info-btn::after, .fb-add-doors-info::after, #btnInfoAndroid::after, #btnInfoIOS::after {
@@ -3317,6 +3285,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .bug-actions button {
   flex: 1;
   height: 38px;
+  padding-bottom: 2px;
   border-radius: 10px;
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
@@ -3369,11 +3338,13 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 .ci-hatch-full .ci-visited-hatch-line {
-  stroke: rgba(0, 0, 0, 0.28);
+  stroke: var(--hatch-color);
+  stroke-opacity: 0.28;
 }
 
 .ci-hatch-partial .ci-visited-hatch-line {
-  stroke: rgba(0, 0, 0, 0.12);
+  stroke: var(--hatch-color);
+  stroke-opacity: 0.12;
 }
 
 .ci-line-rings-row {
@@ -3486,7 +3457,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   font-family: inherit;
   font-size: 0.78rem;
   font-weight: 500;
-  padding: 5px 8px;
+  padding: 4px 8px 6px;
   border-radius: 7px;
   cursor: pointer;
   transition: background 0.18s, color 0.18s;
@@ -3517,4 +3488,88 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   color: var(--text-muted);
   margin-right: 2px;
   white-space: nowrap;
+}
+
+.clear-data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.clear-data-chevron {
+  color: var(--text-muted);
+  opacity: 0.4;
+  font-size: 14px;
+  transition: transform 0.22s ease;
+  display: inline-block;
+  line-height: 1;
+}
+.clear-data-chevron.open { transform: rotate(180deg); }
+.clear-data-dropdown {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+.clear-data-dropdown.open { max-height: 200px; }
+.clear-data-separator {
+  height: 0.5px;
+  background: var(--border);
+  margin: 0 16px;
+}
+.clear-data-item {
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  -webkit-tap-highlight-color: transparent;
+  background: #2c2c2e;
+  transition: opacity 0.15s;
+}
+.clear-data-item:last-child { border-bottom: none; }
+.clear-data-item:active { opacity: 0.6; }
+.clear-data-item.is-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ── СТИЛІ ДЛЯ ПІДПИСІВ (СУБЛЕЙБЛІВ) ── */
+.settings-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  padding-right: 6px; /* Відступ від тумблера */
+}
+
+.settings-sublabel {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.75;
+  line-height: 1.3;
+  text-transform: none;
+  font-weight: normal;
+  text-align: left !important;
+}
+
+/* ── ВЕРТИКАЛЬНЕ ЦЕНТРУВАННЯ ЗАГОЛОВКІВ (Вигляд, Check-in, Дані) ── */
+.settings-card-header {
+  padding: 14px 16px; /* Симетричні відступи зверху і знизу */
+  line-height: 1;
+}
+
+.settings-card-header-row {
+  padding: 14px 16px; /* Щоб Check-in збігався з іншими */
+}
+
+/* ── ВЕРТИКАЛЬНИЙ РОЗДІЛЮВАЧ (Зберегти | Відновити) ── */
+.settings-divider-v {
+  width: 1px; /* Точно як горизонтальна лінія .settings-rule */
+  height: 16px;
+  background: var(--border);
+  flex-shrink: 0;
 }

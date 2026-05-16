@@ -3,9 +3,23 @@ import { fuzzyMatchToken } from '../utils/stringMatchers.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
-  'петрівка': 'B.Pochaina',
-  'дружби народів': 'G.Zvirynetska'
+  'петрівка':            'B.Pochaina',
+  'дружби народів':      'G.Zvirynetska',
+  'кпі':                 'R.Politekhnychnyi_instytut',
 };
+
+// [OPT-P2] Підняти в module scope — не алокуємо масив в циклі по станціях
+const SEARCH_ALIASES_ENTRIES = Object.entries(SEARCH_ALIASES);
+
+// [OPT-P5] Кеш HTML для порожнього запиту без лінійних фільтрів
+// Інвалідується при зміні stationsData (нове посилання після reloadStationsData)
+let _emptyQueryHtml    = null;
+let _emptyQueryDataRef = null;
+
+export function invalidateSearchCache() {
+  _emptyQueryHtml    = null;
+  _emptyQueryDataRef = null;
+}
 
 export function renderSearchResults(query, container, lineFilter = new Set()) {
   if (!state.stationsData) {
@@ -15,12 +29,23 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
 
   let stations = Object.values(state.stationsData);
 
-  // Фільтрація по лініях
   if (lineFilter.size > 0) {
     stations = stations.filter(s => lineFilter.has(s.line));
   }
 
-  // ── Без запиту — просто алфавітний список ─────────────────
+  // ── Порожній запит без фільтра: повертаємо кешований HTML ─
+  if (!query && lineFilter.size === 0) {
+    if (_emptyQueryDataRef !== state.stationsData || !_emptyQueryHtml) {
+      // [OPT-P5] Сортуємо і рендеримо лише один раз між перезавантаженнями
+      const sorted = [...stations].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+      _emptyQueryHtml    = sorted.map(s => _renderItem(s, false, null)).join('');
+      _emptyQueryDataRef = state.stationsData;
+    }
+    container.innerHTML = _emptyQueryHtml;
+    return;
+  }
+
+  // ── Порожній запит з фільтром лінії ───────────────────────
   if (!query) {
     stations.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
     container.innerHTML = stations.map(s => _renderItem(s, false, null)).join('');
@@ -31,25 +56,31 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
   const queryWords    = rawQuery.split(/\s+/).filter(w => w.length > 0);
   const queryNoSpaces = rawQuery.replace(/\s+/g, '');
 
-  // ── Матчимо кожну станцію і запам'ятовуємо тип збігу ──────
-  const matched = []; // { s, isExitOnly, exitHint }
+  const matched = [];
 
   for (const s of stations) {
-    // Збіги по назві/індексу
-    const isAlias = Object.entries(SEARCH_ALIASES).some(([alias, slug]) =>
+    // [OPT-P2] SEARCH_ALIASES_ENTRIES — module-level constant, без алокацій в циклі
+    const isAlias = SEARCH_ALIASES_ENTRIES.some(([alias, slug]) =>
       slug === s.slug && (alias.startsWith(rawQuery) || alias.includes(rawQuery))
     );
+
     const isWord = queryWords.every(qWord =>
       s._searchIndex.some(idx => idx.startsWith(qWord))
     );
-    const abbrev = s._searchIndex.map(w => w[0]).join('');
-    const isAbbrev = abbrev.startsWith(rawQuery);
-    const abbrevLong = s._searchIndex.length > 1
-      ? s._searchIndex[0].substring(0, 2) + s._searchIndex.slice(1).map(w => w[0]).join('')
-      : '';
-    const isAbbrevLong = abbrevLong.startsWith(rawQuery);
-    const isSubstr = s._searchIndex.join('').includes(queryNoSpaces);
-    const isFuzzyName = rawQuery.length >= 4 && queryWords.every(qWord =>
+
+    // [OPT-P3] Lazy write-once cache на об'єкті станції.
+    // _searchIndex незмінний після hydrateStations, тому обчислюємо один раз.
+    if (s._abbrev === undefined) {
+      s._abbrev     = s._searchIndex.map(w => w[0]).join('');
+      s._abbrevLong = s._searchIndex.length > 1
+        ? s._searchIndex[0].substring(0, 2) + s._searchIndex.slice(1).map(w => w[0]).join('')
+        : '';
+    }
+
+    const isAbbrev     = s._abbrev.startsWith(rawQuery);
+    const isAbbrevLong = s._abbrevLong.startsWith(rawQuery);
+    const isSubstr     = s._searchIndex.join('').includes(queryNoSpaces);
+    const isFuzzyName  = rawQuery.length >= 4 && queryWords.every(qWord =>
       s._searchIndex.some(tok => fuzzyMatchToken(qWord, tok))
     );
 
@@ -70,10 +101,7 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
     }
   }
 
-  if (!state.stationsData || Object.keys(state.stationsData).length === 0) {
-    container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються…</p>';
-    return;
-  }
+  // [OPT-P4] Мертвий null-check видалено (state.stationsData вже перевірено вгорі)
 
   matched.sort((a, b) => {
     if (a.isExitOnly !== b.isExitOnly) return a.isExitOnly ? 1 : -1;
@@ -142,8 +170,26 @@ export function openSearchSheet() {
     const resultsContainer = document.getElementById('searchResults');
 
     // Обробка вводу
+    let _searchRaf     = null;
+    let _lastQuery     = Symbol(); // унікальна мітка, щоб перший раз 100% спрацювало
+    let _lastFilterKey = '';
+
     input.addEventListener('input', e => {
-      renderSearchResults(e.target.value.trim().toLowerCase(), resultsContainer, state.activeLineFilter);
+      if (_searchRaf) cancelAnimationFrame(_searchRaf);
+      _searchRaf = requestAnimationFrame(() => {
+        _searchRaf = null;
+        
+        const q         = e.target.value.trim().toLowerCase();
+        const filterKey = [...state.activeLineFilter].sort().join(',');
+        
+        // Guard: Якщо текст запиту і вибрані гілки не змінилися — нічого не перемальовуємо
+        if (q === _lastQuery && filterKey === _lastFilterKey) return;
+        
+        _lastQuery     = q;
+        _lastFilterKey = filterKey;
+        
+        renderSearchResults(q, resultsContainer, state.activeLineFilter);
+      });
     });
 
     // Фільтри ліній

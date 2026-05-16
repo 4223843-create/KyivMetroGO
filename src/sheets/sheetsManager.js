@@ -5,6 +5,7 @@ import { openAboutSheet }    from './aboutSheet.js';
 import { isFav, toggleFav }  from '../features/favorites.js';
 import { heartSvg }          from '../ui/components.js';
 import { reloadStationsData } from '../data/stations.js';
+import { getSlugByLower }    from '../data/stations.js';
 
 export { openStation, openAboutSheet, withUnsavedCheck };
 
@@ -58,7 +59,7 @@ if (sheetOverlay) {
     const zone = elUnder?.closest('[id]');
     if (zone?.id) {
       const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
-      const slug  = MetroApp.SLUG_BY_LOWER?.[rawId];
+      const slug  = getSlugByLower(rawId);
       if (slug) { openStation(slug); return; }
     }
     closeAllSheets();

@@ -85,8 +85,16 @@ export function replaceExitFav(slug, dir, oldWagon, oldDoors, newWagon, newDoors
 
 // ══ СИНХРОНІЗАЦІЯ ВКЛАДОК ════════════════════════════════════
 window.addEventListener('storage', e => {
-  if      (e.key === STORAGE_KEYS.FAVS)      { try { favCache     = JSON.parse(e.newValue || '[]'); } catch { favCache     = []; } }
-  else if (e.key === STORAGE_KEYS.EXIT_FAVS) { try { exitFavCache = JSON.parse(e.newValue || '[]'); } catch { exitFavCache = []; } }
+  if (e.key === STORAGE_KEYS.FAVS) {
+    try { favCache = JSON.parse(e.newValue || '[]'); } catch { favCache = []; }
+    updateFavDock();
+    // Якщо шторка відкрита — одразу перемалювати список
+    const favSheet = document.getElementById('favSheet');
+    if (favSheet?.classList.contains('sheet-open')) renderFavList(getFavs());
+  } else if (e.key === STORAGE_KEYS.EXIT_FAVS) {
+    try { exitFavCache = JSON.parse(e.newValue || '[]'); } catch { exitFavCache = []; }
+    updateFavDock();
+  }
 });
 
 // ══ ПОРОЖНІЙ СТАН ════════════════════════════════════════════

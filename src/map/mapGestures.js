@@ -95,12 +95,19 @@ document.addEventListener('touchmove', e => {
   }
 }, { passive: false });
 
+let _hatchTimer = null;
+
 document.addEventListener('touchend', e => {
   if (e.touches.length < 2) {
     pinchStartDist    = 0;
     pendingPinch      = null;
     pinchRAFScheduled = false;
-    MetroApp.applyVisitedHatchOverlays?.();
+    // Перерисовуємо хетч тільки якщо масштаб реально змінився,
+    // і не частіше ніж раз на 300 мс
+    clearTimeout(_hatchTimer);
+    _hatchTimer = setTimeout(() => {
+      MetroApp.applyVisitedHatchOverlays?.();
+    }, 300);
   }
   if (e.touches.length === 1 && !sheetOverlay.classList.contains('overlay-visible')) {
     isPanActive        = true;

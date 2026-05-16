@@ -56,17 +56,24 @@ export function openSettingsSheet() {
       });
     });
 
-document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn').forEach(btn => {
+    document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => applyTheme(btn.dataset.themeVal));
     });
     applyTheme(null, false); // ініціалізуємо активну кнопку
 
-    const startFavToggle = document.getElementById('settingsStartFavToggle');
-    if (startFavToggle) {
-      startFavToggle.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
-      startFavToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.START_ON_FAV, e.target.checked);
-        if (e.target.checked) MetroApp.dismissFavOnlyHint?.();
+    // ── Стартовий екран (Сегментований) ──
+    const startSegButtons = document.querySelectorAll('#settingsStartSeg .settings-seg-btn');
+    if (startSegButtons.length > 0) {
+      startSegButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = btn.dataset.startVal;
+          Storage.set(STORAGE_KEYS.START_ON_FAV, val);
+          
+          startSegButtons.forEach(b => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          
+          if (val === 'true') MetroApp.dismissFavOnlyHint?.();
+        });
       });
     }
 
@@ -79,31 +86,15 @@ document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn
       );
     }
 
-    // ── Кнопка «i» (Довідка Локальних змін) ──
-    function closeAllSettingsHints() {
-      settingsSheet.querySelectorAll('.settings-hint').forEach(h => { h.hidden = true; });
-      settingsSheet.querySelectorAll('.settings-info-btn').forEach(b => { b.classList.remove('settings-info-btn-active'); });
-    }
-
-    document.getElementById('settingsLocalFeedbackInfo')?.addEventListener('click', e => {
-      e.stopPropagation();
-      const hint = document.getElementById('settingsLocalFeedbackHint');
-      const btn  = document.getElementById('settingsLocalFeedbackInfo');
-      if (!hint) return;
-      const wasOpen = !hint.hidden;
-      closeAllSettingsHints();
-      if (!wasOpen) {
-        hint.hidden = false;
-        btn.classList.add('settings-info-btn-active');
-      }
-    });
-
     // ── Check-in Головний ──
     const checkinToggle = document.getElementById('settingsCheckinToggle');
     if (checkinToggle) {
       checkinToggle.checked = isCheckinMode();
       checkinToggle.addEventListener('change', e => {
         const isMainOn = e.target.checked;
+        // Показуємо/приховуємо решту блоку
+        const collapsible = document.getElementById('settingsCheckinCollapsible');
+        collapsible?.classList.toggle('is-hidden', !isMainOn);
         Storage.set(STORAGE_KEYS.CHECKIN_MODE, isMainOn);
         updateCheckinDock();
 
@@ -126,7 +117,8 @@ document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn
           sheet.querySelector('.row-checkin-btn')?.remove();
           if (isMainOn) MetroApp.attachCheckinButtons?.(sheet, currentSlug, color);
         }
-        
+
+            
         // Оновлюємо карту
         MetroApp.syncMapWithCheckins?.();
       });
@@ -143,7 +135,7 @@ document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn
     }
 
     // ── Check-in по виходам ──
-const statSeg = document.getElementById('settingsCheckinStatSeg');
+    const statSeg = document.getElementById('settingsCheckinStatSeg');
     if (statSeg) {
       const initStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
       statSeg.querySelectorAll('.settings-seg-btn').forEach(btn => {
@@ -156,22 +148,7 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
         });
       });
     }
-    // ── ОБ'ЄДНАНА Кнопка «i» (Довідка Check-in) ──
-    document.getElementById('settingsCheckinCombinedInfo')?.addEventListener('click', e => {
-      e.stopPropagation();
-      const hint = document.getElementById('settingsCheckinCombinedHint');
-      const btn  = document.getElementById('settingsCheckinCombinedInfo');
-      if (!hint || !btn) return;
-      
-      const wasOpen = !hint.hidden;
-      closeAllSettingsHints(); 
-      
-      if (!wasOpen) {
-        hint.hidden = false;
-        btn.classList.add('settings-info-btn-active');
-      }
-    });
-
+    
     // ── Приховати інформаційні блоки ──
     const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
     if (hideInfoToggle) {
@@ -181,25 +158,11 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
       );
     }
 
-    // ── Кнопка «i» (Довідка Приховати блоки) ──
-    document.getElementById('settingsHideInfoBtn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      const hint = document.getElementById('settingsHideInfoHint');
-      const btn  = document.getElementById('settingsHideInfoBtn');
-      if (!hint) return;
-      const wasOpen = !hint.hidden;
-      closeAllSettingsHints();
-      if (!wasOpen) {
-        hint.hidden = false;
-        btn.classList.add('settings-info-btn-active');
-      }
-    });
-
     // ── Очистити Вибране ──
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {
       e.stopPropagation();
       if (e.currentTarget.disabled) {
-        MetroApp.showCustomConfirm('<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> немає', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
+        MetroApp.showCustomConfirm('<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> немає', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-neutral', '');
         return;
       }
       MetroApp.showCustomConfirm('Очистити <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span>?',
@@ -217,7 +180,7 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
     document.getElementById('settingsClearCheckin')?.addEventListener('click', e => {
       e.stopPropagation();
       if (e.currentTarget.disabled) {
-        MetroApp.showCustomConfirm('Список check-in порожній', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
+        MetroApp.showCustomConfirm('Список check-in порожній', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-neutral', '');
         return;
       }
       MetroApp.showCustomConfirm('Очистити історію check-in?',
@@ -235,7 +198,7 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
     document.getElementById('settingsClearLocalEdits')?.addEventListener('click', e => {
       e.stopPropagation();
       if (e.currentTarget.disabled) {
-        MetroApp.showCustomConfirm('Дані користувача відсутні', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-save', '');
+        MetroApp.showCustomConfirm('Дані користувача відсутні', () => {}, null, null, 'Зрозуміло', '', 'confirm-btn-neutral', '');
         return;
       }
       MetroApp.showCustomConfirm('Очистити всі дані користувача (<span style="font-variant:small-caps;letter-spacing:0.04em">Вибране</span>, <span style="font-variant:small-caps;letter-spacing:0.04em">Check-in</span>, назви виходів)?',
@@ -257,19 +220,17 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
       );
     });
 
-    settingsSheet.querySelectorAll('.settings-card').forEach(card => {
-      card.addEventListener('click', e => {
-        const inBottomArea = !!e.target.closest('.settings-actions, .settings-rule, .settings-hint');
-        if (inBottomArea) {
-          if (!e.target.closest('button, a')) {
-            const cardRect  = card.getBoundingClientRect();
-            if (e.clientX < cardRect.left + cardRect.width / 2) {
-              card.querySelector('.settings-info-btn')?.click();
-            }
-          }
-          return;
-        }
+// ── Dropdown «Очистити дані» ──
+    const clearDataRow      = settingsSheet.querySelector('#clearDataRow');
+    const clearDataDropdown = settingsSheet.querySelector('#clearDataDropdown');
+    const clearDataChevron  = settingsSheet.querySelector('#clearDataChevron');
 
+    clearDataRow?.addEventListener('click', () => {
+      const isOpen = clearDataDropdown.classList.toggle('open');
+      clearDataChevron.classList.toggle('open', isOpen);
+    });
+
+    settingsSheet.querySelectorAll('.settings-card').forEach(card => {      card.addEventListener('click', e => {
         if (e.target.closest('button, a')) return;
 
         const row = e.target.closest('.settings-row');
@@ -298,8 +259,7 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
       document.getElementById('settingsClose').click();
     });
 
-    // ── Експорт (Збереження у файл) ──
-// ── Експорт ──
+    // ── Експорт ──
     document.getElementById('settingsExport')?.addEventListener('click', e => {
       e.stopPropagation();
       try {
@@ -316,7 +276,7 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
       }
     });
 
-// ── Імпорт ──
+    // ── Імпорт ──
     document.getElementById('settingsImport')?.addEventListener('click', async e => {
       e.stopPropagation();
       const result = await BackupService.pickAndValidateBackup();
@@ -346,15 +306,20 @@ const statSeg = document.getElementById('settingsCheckinStatSeg');
     });
   }
 
-function syncToggles() {
+  function syncToggles() {
     const isMainOn = isCheckinMode();
-    
+    const collapsible = document.getElementById('settingsCheckinCollapsible');
+    if (collapsible) collapsible.classList.toggle('is-hidden', !isCheckinMode());
     const hatchTgl = document.getElementById('settingsCheckinHatchToggle');
     if (hatchTgl) hatchTgl.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
 
-    const s = document.getElementById('settingsStartFavToggle');
+    // Синхронізація нового сегментованого старту
+    const savedStart = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true' ? 'true' : 'false';
+    document.querySelectorAll('#settingsStartSeg .settings-seg-btn').forEach(btn =>
+      btn.classList.toggle('is-active', btn.dataset.startVal === savedStart)
+    );
+
     const savedStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
-    
     document.querySelectorAll('#settingsCheckinStatSeg .settings-seg-btn').forEach(btn =>
       btn.classList.toggle('is-active', btn.dataset.statVal === savedStat)
     );
@@ -363,7 +328,6 @@ function syncToggles() {
     const l = document.getElementById('settingsLocalFeedbackToggle');
     const h = document.getElementById('settingsHideInfoToggle');
     
-    if (s) s.checked = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
     if (c) c.checked = isMainOn;
     if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
     if (h) h.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
@@ -374,13 +338,14 @@ function syncToggles() {
 
     const hasFavs     = getExitFavs().length > 0 || getFavs().length > 0;
     const hasCheckins = Object.keys(getCheckins()).length > 0;
-    const hasAnyData  = BackupService.hasUserData(); // Виклик твого нового сервісу
+    const hasAnyData  = BackupService.hasUserData(); 
 
     if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
     if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
     if (clearLocalBtn)   clearLocalBtn.disabled   = !hasAnyData;
   }
-    syncToggles();
+  
+  syncToggles();
 
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   settingsSheet.classList.add('sheet-open');

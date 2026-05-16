@@ -28,7 +28,7 @@ export function showCustomConfirm(
       <div class="global-confirm-text">${message}</div>
       <div class="global-confirm-btns-main">
         <button class="confirm-main-btn ${yesClass}" id="confirmYes">${yesText}</button>
-        <button class="confirm-main-btn ${noClass}"  id="confirmNo">${noText}</button>
+        ${noText ? `<button class="confirm-main-btn ${noClass}" id="confirmNo">${noText}</button>` : ''}
       </div>
       ${onCancel ? `<button class="confirm-text-btn" id="confirmCancel">Скасувати</button>` : ''}
     </div>`;
