@@ -1,15 +1,20 @@
 // ══ STATIONS DATA ══
 // Відповідальність: завантаження, парсинг та гідратація даних станцій.
 //
-// P2-E fix: NAME_TO_SLUG та SLUG_BY_LOWER більше не живуть у MetroApp і не
-// імпортуються з constants.js. Вони є приватними змінними цього модуля
-// і доступні ззовні виключно через slugByName() та getSlugByLower().
-// Це єдине джерело правди для пошуку slug за назвою станції.
+// Архітектурне правило (Блок Б):
+//   hydrateStations() більше не знає про MetroApp-шар.
+//   Після побудови stationsData емітується bus-подія 'data:stations-hydrated'.
+//   data/localEdits.js підписується і застосовує localEdits + exitLabels синхронно
+//   (EventBus викликає handlers одразу, до повернення emit()).
+//
+// Решта MetroApp-викликів (syncMapWithCheckins, renderFavOnLoad, openStation,
+// facades reloadStationsData/slugByName) прибираються у Блоках Д, Г та Е.
 
 import { state, startupSlug } from '../core/state.js';
+import { bus }                from '../core/eventBus.js';
 import { traversePositions }  from './positions.js';
 
-// ══ ПРИВАТНІ СЛОВНИКИ (closure) ══
+// ══ ПРИВАТНІ СЛОВНИКИ (closure) ══════════════════════════════
 // Заповнюються у hydrateStations(), читаються через slugByName() / getSlugByLower().
 // Жоден зовнішній модуль не має прямого доступу до цих об'єктів.
 
@@ -19,15 +24,15 @@ const _nameToSlug  = {};
 /** @type {Record<string, string>}  slug_lowercase → slug (оригінальний кейс) */
 const _slugByLower = {};
 
-// ══ АЛІАСИ ДЛЯ ПОШУКУ ══
+// ══ АЛІАСИ ДЛЯ ПОШУКУ ═══════════════════════════════════════
 // Застарілі або розмовні назви → нормалізований варіант.
 
 const STATION_ALIASES = {
-  'театральну':                 'театральна',
-  'площу українських героїв':  'площа українських героїв',
+  'театральну':                'театральна',
+  'площу українських героїв': 'площа українських героїв',
 };
 
-// ══ ДОПОМІЖНІ ФУНКЦІЇ ══
+// ══ ДОПОМІЖНІ ФУНКЦІЇ ════════════════════════════════════════
 
 function getAppBaseHref() {
   const { origin, pathname } = window.location;
@@ -43,7 +48,7 @@ function getStationsUrl() {
   return new URL('stations.json', getAppBaseHref());
 }
 
-// ══ ПУБЛІЧНІ ХЕЛПЕРИ ══
+// ══ ПУБЛІЧНІ ХЕЛПЕРИ ══════════════════════════════════════════
 
 /**
  * Повертає slug станції за довільним рядком назви.
@@ -58,7 +63,7 @@ export function slugByName(raw) {
 
   let normalized = raw
     .toLowerCase()
-    .replace(/[\u00a0\u202f\u2009]/g, ' ')          // NBSP та вузькі пробіли → звичайний пробіл
+    .replace(/[\u00a0\u202f\u2009]/g, ' ')           // NBSP та вузькі пробіли → звичайний пробіл
     .replace(/(?:короткий |довгий )?пере(?:садка|хід) на\s*/g, '')
     .replace(/попередня\s*/g, '')
     .replace(/["'„"«».,]/g, '')
@@ -97,11 +102,15 @@ export function getSlugByLower(lowerSlug) {
   return _slugByLower[lowerSlug] ?? null;
 }
 
-// ══ ГІДРАТАЦІЯ ══
+// ══ ГІДРАТАЦІЯ ════════════════════════════════════════════════
 
 /**
  * Заповнює state.stationsData та приватні словники зі свіжих даних.
  * Викликається з reloadStationsData після кожного fetch.
+ *
+ * Після наповнення stationsData синхронно емітує 'data:stations-hydrated'.
+ * data/localEdits.js підписаний на цю подію і застосовує localEdits + exitLabels
+ * до тих самих об'єктів (EventBus — синхронний, handlers запускаються до повернення emit).
  *
  * @param {{ stations: Array }} data — розібраний stations.json
  * @returns {Record<string, object>} state.stationsData
@@ -166,13 +175,16 @@ export function hydrateStations(data) {
     state.stationsData[station.slug] = station;
   });
 
-  if (MetroApp.applyLocalEdits)  MetroApp.applyLocalEdits(state.stationsData);
-  if (MetroApp.applyExitLabels)  MetroApp.applyExitLabels(state.stationsData);
-  MetroApp.currentStationsData = state.stationsData;
+  // Блок Б: замість прямих викликів MetroApp.applyLocalEdits / MetroApp.applyExitLabels
+  // та присвоєння MetroApp.currentStationsData — емітуємо подію.
+  // data/localEdits.js підписаний через bus.on('data:stations-hydrated') і виконує
+  // applyLocalEdits + applyExitLabels синхронно перед поверненням цієї функції.
+  bus.emit('data:stations-hydrated', { stationsData: state.stationsData });
+
   return state.stationsData;
 }
 
-// ══ ЗОНИ КАРТИ ══
+// ══ ЗОНИ КАРТИ ════════════════════════════════════════════════
 
 /**
  * Прив'язує SVG-зони на карті до slug-ів станцій.
@@ -210,11 +222,12 @@ export function checkAppReady() {
 
   requestAnimationFrame(() => {
     document.getElementById('mapViewport')?.classList.remove('is-loading');
-    MetroApp.syncMapWithCheckins?.();
+    // TODO Блок Д: замінити на bus.emit('map:sync-checkins')
+    bus.emit('map:sync-checkins');
   });
 }
 
-// ══ ЗАВАНТАЖЕННЯ ══
+// ══ ЗАВАНТАЖЕННЯ ══════════════════════════════════════════════
 
 export async function reloadStationsData(forceFresh = false) {
   const stationsUrl = getStationsUrl();
@@ -247,7 +260,8 @@ export async function reloadStationsData(forceFresh = false) {
   const favSheet = document.getElementById('favSheet');
   const favBody  = document.getElementById('favBody');
   if (favSheet?.classList.contains('sheet-open') && favBody?.querySelector('.fav-empty-text')) {
-    MetroApp.renderFavOnLoad?.();
+    // TODO Блок Г: замінити на bus.emit('fav:render-on-load')
+    bus.emit('fav:render-on-load');
   }
 
   return hydrated;
@@ -255,10 +269,7 @@ export async function reloadStationsData(forceFresh = false) {
 
 function handleStartupStation(data) {
   if (startupSlug && data[startupSlug]) {
-    requestAnimationFrame(() => MetroApp.openStation?.(startupSlug));
+    // TODO Блок Е: замінити на bus.emit('station:open', { slug: startupSlug })
+    requestAnimationFrame(() => bus.emit('station:open', { slug: startupSlug }));
   }
 }
-
-// ── Перехідний фасад (TODO: видалити після міграції всіх споживачів) ──
-MetroApp.reloadStationsData = reloadStationsData;
-MetroApp.slugByName         = slugByName;

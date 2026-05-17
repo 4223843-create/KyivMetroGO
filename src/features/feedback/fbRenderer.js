@@ -7,13 +7,15 @@ import { state as appState }     from '@core/state.js';
 import { getLocalEdits }         from '@data/localEdits.js';
 import { hasLocalEdits }         from '@data/localEdits.js';
 import { fbState, initFeedbackState } from './fbState.js';
+import { Icons }                                       from '../../ui/icons.js';
+import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS }  from '@core/constants.js';
 
 // ── Константи ────────────────────────────────────────────────
 
 const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
-const INFO_SVG  = MetroApp.Icons?.info  ?? 'i';
-const UNDO_SVG  = MetroApp.Icons?.undo  ?? '↺';
-const PENCIL    = MetroApp.Icons?.pencil ?? PENCIL_SVG;
+const INFO_SVG  = Icons.info;
+const UNDO_SVG  = Icons.undo;
+const PENCIL    = Icons.pencil;
 
 // ── Атомарні генератори ──────────────────────────────────────
 
@@ -160,7 +162,7 @@ function dirGroupHtml(g, slug, lineColor) {
     return positionItemHtml(item, st, lineColor) + divider;
   }).join('');
 
-  const canAddMore  = MetroApp.STATIONS_WITH_POTENTIAL_EXITS?.has(slug) ?? false;
+  const canAddMore  = STATIONS_WITH_POTENTIAL_EXITS.has(slug);
   const hasNewAlrdy = Object.values(fbState.current).some(s => s.isNew && s.dir === g.dir);
   const addBtnHtml  = (canAddMore && !hasNewAlrdy)
     ? `<div class="fb-add-exit-row">
@@ -202,7 +204,7 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
 
   try {
     const s          = appState.stationsData[slug];
-    const lineColor  = MetroApp.LINE_COLOR?.[s?.line] ?? 'var(--text-muted)';
+    const lineColor  = LINE_COLOR[s?.line] ?? 'var(--text-muted)';
 
     // Оновлюємо заголовок шторки
     const titleEl     = document.getElementById('fbStationTitle');
@@ -283,7 +285,7 @@ export function stationListHtml(activeLine, activeSlug = '') {
     .filter(st => activeLine === '' || st.line === activeLine)
     .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
     .map(st => {
-      const color  = MetroApp.LINE_COLOR?.[st.line] ?? '#888';
+      const color  = LINE_COLOR[st.line] ?? '#888';
       const active = st.slug === activeSlug ? ' fb-station-active' : '';
       return `<div class="search-item fb-station-item${active}" data-slug="${st.slug}">
         <div class="search-item-line" style="background-color:${color}"></div>

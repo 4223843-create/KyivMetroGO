@@ -1,5 +1,6 @@
 import { state }                  from '../core/state.js';
-import { getCheckins }            from '../features/checkin.js';
+import { getCheckins }            from '../domain/checkin.js';
+import { bus }                    from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { getSlugByLower }         from '../data/stations.js';
 
@@ -20,7 +21,7 @@ export function handleMapInteraction(e) {
 
   const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
   const slug  = getSlugByLower(rawId);
-  if (slug) { e.preventDefault(); MetroApp.openStation?.(slug); }
+  if (slug) { e.preventDefault(); bus.emit('station:open', { slug }); }
 }
 
 inner?.addEventListener('click',   handleMapInteraction);
@@ -264,6 +265,5 @@ export function syncMapWithCheckins() {
   applyVisitedHatchOverlays();
 }
 
-window.MetroApp = window.MetroApp || {};
-MetroApp.syncMapWithCheckins = syncMapWithCheckins;
-MetroApp.applyVisitedHatchOverlays = applyVisitedHatchOverlays;
+bus.on('map:sync-checkins',       syncMapWithCheckins);
+bus.on('data:stations-hydrated',  invalidateStationZoneCache);

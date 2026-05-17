@@ -1,13 +1,14 @@
 // ══ UI-ПРИВ'ЯЗКИ ДОДАТКУ ══
 // Тільки addEventListener. Нуль мережевих запитів, нуль ініціалізації даних.
 
-import { openFavSheet }                              from './features/favorites.js';
-import { openCheckinSheet }                          from './features/checkin.js';
-import { openSearchSheet }                           from './features/search.js';
-import { openSettingsSheet }                         from './features/settings.js';
+import { openFavSheet }    from './features/favorites/index.js';
+import { openCheckinSheet } from './features/checkin/index.js';
+import { openSearchSheet } from './features/search.js';
+import { openSettingsSheet } from './features/settings.js';
 import {
   openStation, closeAllSheets, openAboutSheet, withUnsavedCheck,
 } from './sheets/sheetsManager.js';
+import { bus } from './core/eventBus.js';
 
 // ── Bottom bar ─────────────────────────────────────────────────
 document.getElementById('favListBtn')?.addEventListener('click', openFavSheet);
@@ -46,7 +47,7 @@ if (menuBtn && dropMenu) {
     e.preventDefault(); e.stopPropagation();
     closeDropMenu();
     document.getElementById('aboutSheet')?.classList.remove('sheet-open');
-    MetroApp.openFeedbackSheet?.();
+    bus.emit('sheet:open-feedback');
   });
 
   document.getElementById('aboutItem')?.addEventListener('click', e => {
@@ -65,7 +66,3 @@ window.addEventListener('popstate', () => {
     closeAllSheets(true);
   }
 });
-
-// ── Реєстрація на MetroApp ────────────────────────────────────
-MetroApp.openStation    = openStation;
-MetroApp.closeAllSheets = closeAllSheets;

@@ -1,9 +1,12 @@
 import { state }                   from '../core/state.js';
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { heartSvg }                from '../ui/components.js';
+import { Icons }                   from '../ui/icons.js';
+import { LINE_COLOR }              from '../core/constants.js';
+import { animateSheetClose }       from '../ui/animations.js';
 import { slugByName }              from '../data/stations.js';
 import { applyExitLabels }         from '../data/localEdits.js';
-import { isFav, getExitFavs }      from '../features/favorites.js';
+import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI }         from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
@@ -21,7 +24,7 @@ bindSheetGestures(
   sheetBody,
   () => ({
     slug:      state.currentStationSlug,
-    lineColor: MetroApp.LINE_COLOR[state.stationsData?.[state.currentStationSlug]?.line]
+    lineColor: LINE_COLOR[state.stationsData?.[state.currentStationSlug]?.line]
                ?? 'var(--text-muted)',
   }),
 );
@@ -51,9 +54,9 @@ bus.on('station:refresh', () => {
 bus.on('station:open', ({ slug }) => openStation(slug));
 
 bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
-  MetroApp.animateSheetClose?.(sheet, () => {
+  animateSheetClose(sheet, () => {
     sheet.classList.remove('sheet-open');
-    MetroApp.openFeedbackSheet?.();
+    bus.emit('sheet:open-feedback');
     setTimeout(() => {
       document.querySelector(`.fb-station-item[data-slug="${editSlug}"]`)?.click();
     }, 50);
@@ -106,7 +109,7 @@ function actualOpenStation(slug) {
   if (!state.stationsData?.[slug]) return;
 
   const s     = state.stationsData[slug];
-  const color = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
+  const color = LINE_COLOR[s.line] || 'var(--text-muted)';
 
   // [OPT-P1] Guard: та сама станція вже відкрита — пропускаємо повний re-render
   if (state.currentStationSlug === slug && sheet.classList.contains('sheet-open')) {
@@ -116,13 +119,13 @@ function actualOpenStation(slug) {
   }
 
   state.currentStationSlug = slug;
-  MetroApp.dismissFavOnlyHint?.();
+  bus.emit('fav:dismiss-hint');
 
   const fav            = isFav(slug);
   const hideInfoBlocks = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
   const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
     ? `<div class="onboarding-hint" id="onboardingHint">` +
-      `<span class="hint-icon-wrap" style="color:${color}">${MetroApp.Icons.info}</span>` +
+      `<span class="hint-icon-wrap" style="color:${color}">${Icons.info}</span>` +
       `Натисніть двічі на вагон та двері,<br>щоб зберегти вихід` +
       `</div>`
     : '';
@@ -175,7 +178,7 @@ function actualOpenStation(slug) {
   attachDevModeUI(sheetBody, slug);
   // [OPT-P3] querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
-  MetroApp.attachCheckinButtons?.(sheet, slug, color);
+  bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
 }
 
 function _updateFavBtn(slug, color) {
@@ -197,7 +200,7 @@ export function refreshCurrentStation() {
   if (!s || !sheet.classList.contains('sheet-open')) return;
 
   const slug       = state.currentStationSlug;
-  const color      = MetroApp.LINE_COLOR[s.line] || 'var(--text-muted)';
+  const color      = LINE_COLOR[s.line] || 'var(--text-muted)';
   const prevScroll = sheetBody.scrollTop;
 
   // [OPT-P1] Кеш вже інвалідовано в bus.on('station:refresh') вище
@@ -211,10 +214,7 @@ export function refreshCurrentStation() {
   attachDevModeUI(sheetBody, slug);
   // [OPT-P3] Всі кнопки, а не тільки перша
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
-  MetroApp.attachCheckinButtons?.(sheet, slug, color);
+  bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
 
   sheetBody.scrollTop = prevScroll;
 }
-
-MetroApp.refreshCurrentStation = refreshCurrentStation;
-MetroApp.openStation = openStation;

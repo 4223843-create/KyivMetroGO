@@ -1,6 +1,7 @@
 // ══ ЖЕСТИ КАРТИ: PAN + PINCH ZOOM ══
 
 import { BASE_MAP_WIDTH, BASE_MAP_HEIGHT } from './mapInit.js';
+import { applyVisitedHatchOverlays } from './mapInteraction.js';
 
 const vp           = document.getElementById('mapViewport');
 const inner        = document.getElementById('mapInner');
@@ -106,7 +107,7 @@ document.addEventListener('touchend', e => {
     // і не частіше ніж раз на 300 мс
     clearTimeout(_hatchTimer);
     _hatchTimer = setTimeout(() => {
-      MetroApp.applyVisitedHatchOverlays?.();
+      applyVisitedHatchOverlays();
     }, 300);
   }
   if (e.touches.length === 1 && !sheetOverlay.classList.contains('overlay-visible')) {

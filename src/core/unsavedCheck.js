@@ -5,6 +5,9 @@
 // Імпортується незалежно і в sheetsManager.js, і в stationSheet.js.
 
 import { state } from './state.js';
+import { bus }                from './eventBus.js';
+import { hasUnsavedFeedback } from '../features/feedback/index.js';
+import { submitFeedback }     from '../features/feedback/fbApi.js';
 
 /**
  * Перевіряє наявність незбережених змін у feedback-формі.
@@ -15,7 +18,7 @@ import { state } from './state.js';
  * @returns {boolean} true, якщо діалог було показано (proceed відкладено)
  */
 export function withUnsavedCheck(proceed) {
-  if (!MetroApp.hasUnsavedFeedback?.()) {
+  if (!hasUnsavedFeedback()) {
     proceed();
     return false;
   }
@@ -26,11 +29,12 @@ export function withUnsavedCheck(proceed) {
     ? `Зберегти зміни для станції <span style="white-space:nowrap;font-variant:small-caps;letter-spacing:0.04em;">${stationName}?</span>`
     : 'Зберегти зміни?';
 
-  MetroApp.showCustomConfirm?.(
-    question,
-    () => { MetroApp.triggerFeedbackSubmit?.(true); MetroApp.fbUnsaved = false; proceed(); },
-    () => { MetroApp.fbUnsaved = false; proceed(); },
-    () => {},
-  );
+  bus.emit('ui:confirm', {
+  message:  question,
+  onYes:    () => { submitFeedback(true); proceed(); },
+  onNo:     () => { proceed(); },
+  onCancel: () => {},
+});
+
   return true;
 }

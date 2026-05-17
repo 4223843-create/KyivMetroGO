@@ -13,6 +13,8 @@ import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
 import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
 import { renderFeedbackPositions, renderResetBtn,
          stationListHtml }                              from './fbRenderer.js';
+import { initKinematicSwipe } from '../../ui/swipe.js';
+import { Icons }              from '../../ui/icons.js';
 
 // ── Внутрішні DOM-хелпери ────────────────────────────────────
 
@@ -139,11 +141,11 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
   document.getElementById('feedbackClose').addEventListener('click', onClose);
 
   // ── Swipe — один раз, getter щоб завжди брати актуальний body ─
-  MetroApp.initKinematicSwipe?.(
-    sheet,
-    () => document.getElementById('feedbackBody'),
-    onClose,
-  );
+  initKinematicSwipe(
+  sheet,
+  () => document.getElementById('feedbackBody'),
+  onClose,
+);
 }
 
 // ── Приватні обробники ────────────────────────────────────────
@@ -383,7 +385,7 @@ function _handleLabelChange(input, slug) {
   if (!editBtn) return;
   if (input.value.trim()) {
     editBtn.className = 'fb-exit-label-edit-btn';
-    editBtn.innerHTML = MetroApp.Icons?.pencil ?? '';
+    editBtn.innerHTML = Icons.pencil;
     editBtn.setAttribute('aria-label', 'Редагувати');
     editBtn.removeAttribute('style');
   } else {

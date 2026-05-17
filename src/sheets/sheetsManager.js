@@ -2,10 +2,12 @@ import { bus }                from '../core/eventBus.js';
 import { withUnsavedCheck }  from '../core/unsavedCheck.js';
 import { openStation }       from './stationSheet.js';
 import { openAboutSheet }    from './aboutSheet.js';
-import { isFav, toggleFav }  from '../features/favorites.js';
+import { isFav, toggleFav } from '../features/favorites/index.js';
 import { heartSvg }          from '../ui/components.js';
 import { reloadStationsData } from '../data/stations.js';
 import { getSlugByLower }    from '../data/stations.js';
+import { animateSheetClose }  from '../ui/animations.js';
+import { initKinematicSwipe } from '../ui/swipe.js';
 
 export { openStation, openAboutSheet, withUnsavedCheck };
 
@@ -31,15 +33,11 @@ export function closeAllSheets(force = false) {
   }
 
   const topSheet = openSheets[openSheets.length - 1];
-  MetroApp.animateSheetClose?.(topSheet, () => {
-    openSheets.forEach(el => el.classList.remove('sheet-open'));
-    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
-  });
-  if (!MetroApp.animateSheetClose) {
-    openSheets.forEach(el => el.classList.remove('sheet-open'));
-    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
+  animateSheetClose(topSheet, () => {
+  openSheets.forEach(el => el.classList.remove('sheet-open'));
+  if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
+});
   }
-}
 
 // ══ ОБРОБНИКИ ПОДІЙ ══
 
@@ -82,7 +80,7 @@ if (mainFavBtn) {
 }
 
 setTimeout(() => {
-  MetroApp.initKinematicSwipe?.(sheet, sheetBody, () => closeAllSheets());
+  initKinematicSwipe(sheet, sheetBody, () => closeAllSheets());
 }, 0);
 
 // ══ BUS-ПІДПИСКИ ══
@@ -90,18 +88,12 @@ setTimeout(() => {
 // P1-C fix: feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
 bus.on('sheet:close', ({ sheetEl }) => {
   if (!sheetEl) return;
-  MetroApp.animateSheetClose?.(sheetEl, () => {
+  animateSheetClose(sheetEl, () => {
     sheetEl.classList.remove('sheet-open');
     if (!document.querySelectorAll('.station-sheet.sheet-open').length) {
       sheetOverlay?.classList.remove('overlay-visible');
     }
   });
-  if (!MetroApp.animateSheetClose) {
-    sheetEl.classList.remove('sheet-open');
-    if (!document.querySelectorAll('.station-sheet.sheet-open').length) {
-      sheetOverlay?.classList.remove('overlay-visible');
-    }
-  }
 });
 
 // P1-C fix: fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.

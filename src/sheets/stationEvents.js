@@ -12,7 +12,9 @@ import { applyExitLabels }        from '../data/localEdits.js';
 import {
   isFav, getExitFavs, isExitFav,
   toggleExitFav, replaceExitFav,
-} from '../features/favorites.js';
+} from '../features/favorites/index.js';
+import { dismissHintWithDoors } from '../ui/animations.js';
+import { Icons }                from '../ui/icons.js';
 import { applyFavPillStyles }     from './renderStation.js';
 import { heartSvg }               from '../ui/components.js';
 
@@ -133,7 +135,7 @@ function _triggerExitFav(favTarget, slug, lineColor) {
 
 function _maybeDismissOnboarding(lineColor) {
   const hint = document.getElementById('onboardingHint');
-  if (hint) MetroApp.dismissHintWithDoors?.(hint, () => _maybeShowCheckinHint(lineColor));
+  if (hint) dismissHintWithDoors(hint, () => _maybeShowCheckinHint(lineColor));
   else      _maybeShowCheckinHint(lineColor);
 }
 
@@ -147,7 +149,7 @@ function _maybeShowCheckinHint(lineColor) {
   hint.id        = 'checkinHint';
   hint.className = 'onboarding-hint';
   hint.innerHTML =
-    `<span class="hint-icon-wrap" style="color:${lineColor}">${MetroApp.Icons.info}</span>` +
+    `<span class="hint-icon-wrap" style="color:${lineColor}">${Icons.info}</span>` +
     `Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід&nbsp;зі&nbsp;станції як&nbsp;відвіданий`;
   sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
 }

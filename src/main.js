@@ -1,33 +1,5 @@
-// ══ ТОЧКА ВХОДУ — BOOTSTRAP ══
-// Відповідальність: ініціалізація даних і навігація при старті.
-// UI-прив'язки — в app.js. Реєстрація SW — в infra/serviceWorker.js.
-
 window.MetroApp = window.MetroApp || {};
 
-import {
-  LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES,
-  STATIONS_WITH_POTENTIAL_EXITS
-} from './core/constants.js';
-
-MetroApp.LINE_COLOR                    = LINE_COLOR;
-MetroApp.FAV_DISPLAY_NAMES             = FAV_DISPLAY_NAMES;
-MetroApp.DIR_SHORT_NAMES               = DIR_SHORT_NAMES;
-MetroApp.STATIONS_WITH_POTENTIAL_EXITS = STATIONS_WITH_POTENTIAL_EXITS;
-
-import { animateSheetClose, dismissHintWithDoors } from './ui/animations.js';
-import { showCustomConfirm }                       from './ui/confirm.js';
-import { initKinematicSwipe }                      from './ui/swipe.js';
-import { configureEdgeToEdge, pushSheetHistory }   from './ui/system.js';
-
-MetroApp.animateSheetClose    = animateSheetClose;
-MetroApp.dismissHintWithDoors = dismissHintWithDoors;
-MetroApp.showCustomConfirm    = showCustomConfirm;
-MetroApp.initKinematicSwipe   = initKinematicSwipe;
-MetroApp.configureEdgeToEdge  = configureEdgeToEdge;
-MetroApp.pushSheetHistory     = pushSheetHistory;
-
-import { Icons } from './ui/icons.js';
-MetroApp.Icons = Icons;
 
 import { STORAGE_KEYS, Storage }          from './core/storage.js';
 import { applyTheme }                     from './ui/theme.js';
@@ -35,8 +7,8 @@ import { initMap }                        from './map/mapInit.js';
 import './map/mapGestures.js';
 import './map/mapInteraction.js';
 import { reloadStationsData }             from './data/stations.js';
-import { updateFavDock, openFavSheet }    from './features/favorites.js';
-import { updateCheckinDock }              from './features/checkin.js';
+import { updateFavDock, openFavSheet } from './features/favorites/index.js';
+import { updateCheckinDock }           from './features/checkin/index.js';
 import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
 import './infra/offline.js';
@@ -44,8 +16,12 @@ import './infra/swUpdate.js';
 import './features/feedback/index.js';
 // P1-C fix: sheetsManager реєструє bus.on('sheet:close') і bus.on('data:reload-stations').
 // Імпорт тут гарантує, що handlers зареєстровані до будь-якого emit із feedback/.
+import './features/checkin/index.js';
+import './features/favorites/index.js';
+import './data/localEdits.js';
 import './sheets/sheetsManager.js';
 import './app.js';
+import { configureEdgeToEdge } from './ui/system.js';
 
 function releaseStartupLoader() {
   document.getElementById('mapViewport')?.classList.remove('is-loading');

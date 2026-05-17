@@ -5,6 +5,8 @@
 
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { setupDevModeTapCounter } from '../features/devmode.js';
+import { pushSheetHistory }  from '../ui/system.js';
+import { animateSheetClose } from '../ui/animations.js';
 
 const sheetOverlay = document.getElementById('sheetOverlay');
 
@@ -198,7 +200,7 @@ function bindBottomLoader(aboutSheet) {
 // В оригінальному коді фігурна дужка закривала функцію на рядку 196,
 // залишаючи let aboutSheet та весь init-блок на рівні модуля.
 export function openAboutSheet() {
-  MetroApp.pushSheetHistory?.();
+  pushSheetHistory();
 
   // ── Ліниве створення DOM (один раз) ──
   let aboutSheet = document.getElementById('aboutSheet');
@@ -237,11 +239,12 @@ export function openAboutSheet() {
       b1?.classList.remove('info-btn-active');
       b2?.classList.remove('info-btn-active');
 
-      MetroApp.animateSheetClose?.(aboutSheet, () => {
-        aboutSheet.classList.remove('sheet-open');
-        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-          sheetOverlay.classList.remove('overlay-visible');
-      });
+      animateSheetClose(aboutSheet, () => {
+  aboutSheet.classList.remove('sheet-open');
+  if (!document.querySelectorAll('.station-sheet.sheet-open').length)
+    sheetOverlay.classList.remove('overlay-visible');
+});
+
     });
   }
 

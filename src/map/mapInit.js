@@ -1,6 +1,7 @@
 import svgText from '../../KyivMetroScheme.svg?raw';
 import { state }                        from '../core/state.js';
 import { renderMapZones, checkAppReady } from '../data/stations.js';
+import { applyVisitedHatchOverlays } from './mapInteraction.js';
 
 const vp    = document.getElementById('mapViewport');
 const inner = document.getElementById('mapInner');
@@ -51,7 +52,7 @@ export function applyZoomAndCenter() {
     vp.scrollTop  = Math.max(0, padY + newH * CENTER_Y - vp.clientHeight / 2);
     state.isMapReady = true;
     checkAppReady();
-    MetroApp.applyVisitedHatchOverlays?.();
+    applyVisitedHatchOverlays();
     
     // Знімаємо блюр з карти та повністю ховаємо лоадер
     vp?.classList.remove('is-loading');
@@ -65,8 +66,6 @@ export function initMap() {
   adjustViewportHeight();
   applyZoomAndCenter();
 }
-
-MetroApp.applyZoomAndCenter = applyZoomAndCenter;
 
 // ── Resize ────────────────────────────────────────────────────
 let resizeTimer;

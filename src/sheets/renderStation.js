@@ -1,19 +1,10 @@
-// ══ RENDER STATION ══
-// Відповідальність: генерація HTML-рядків для картки станції.
-// Правило: жодних addEventListener, жодних прямих маніпуляцій з DOM.
-//          Лише чисті функції state → string, плюс applyFavPillStyles
-//          як єдина точка стилізації пілюль (використовується stationEvents.js).
-
 import { slugByName } from '../data/stations.js';
 import { state }      from '../core/state.js';
 import { pill }       from '../ui/components.js';
+import { LINE_COLOR } from '../core/constants.js';
+import { Icons }      from '../ui/icons.js';
 
-// ══ ФОРМАТУВАННЯ ЗАГОЛОВКІВ ══
 
-/**
- * Форматує рядок напрямку: перше слово lowercase, решта — у <span>.
- * Наприклад: "До Академмістечка" → "до <span class="dir-name-caps">Академмістечка</span>"
- */
 function formatDirLabel(raw) {
   if (!raw) return raw;
   const match = raw.trim().match(/^([^\s&]+)(?:\s+|&nbsp;)(.*)$/i);
@@ -21,9 +12,6 @@ function formatDirLabel(raw) {
   return `${match[1].toLowerCase()} <span class="dir-name-caps">${match[2]}</span>`;
 }
 
-/**
- * Форматує підпис виходу. Якщо це пересадка — рендерить кольорові лінії.
- */
 function formatLabel(raw) {
   const text      = raw.trim();
   const cleanText = text.replace(/&nbsp;/g, ' ').toLowerCase();
@@ -31,7 +19,7 @@ function formatLabel(raw) {
   if (isTransfer) {
     const targetSlug = slugByName(cleanText);
     if (targetSlug && state.stationsData?.[targetSlug]) {
-      const color = MetroApp.LINE_COLOR[state.stationsData[targetSlug].line];
+      const color = LINE_COLOR[state.stationsData[targetSlug].line];
       return `<span class="transfer-label">` +
         `<span class="transfer-line" style="background:${color}"></span>` +
         `<span class="transfer-text">${text}</span>` +
@@ -91,7 +79,7 @@ function renderPositions(positions, color, multiRow) {
     const p       = positions[0];
     const isMulti = String(p.wagon).includes(',');
     const edited  = p._edited
-      ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${MetroApp.Icons.pencil}</span>`
+      ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
       : '';
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
       ${edited}${favTargetHtml(p.wagon, p.doors, color)}
@@ -102,7 +90,7 @@ function renderPositions(positions, color, multiRow) {
   if (multiRow) {
     const editedPos = positions.find(p => p._edited);
     const edited    = editedPos
-      ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${MetroApp.Icons.pencil}</span>`
+      ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${Icons.pencil}</span>`
       : '';
     const spacer  = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
     const targets = positions.map((p, i) =>
@@ -129,7 +117,7 @@ function renderPositions(positions, color, multiRow) {
 function renderExitLabel(exit) {
   if (!exit.label) return '';
   const edited = exit._labelEdited
-    ? `<span class="pos-edited-mark label-pencil" data-slug="${exit._slug}">${MetroApp.Icons.pencil}</span>`
+    ? `<span class="pos-edited-mark label-pencil" data-slug="${exit._slug}">${Icons.pencil}</span>`
     : '';
   return `<div class="exit-label nav-label" data-name="${exit.label}">
     <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
@@ -171,7 +159,7 @@ export function renderDirections(s, color) {
           `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
         ).join('');
         const edited = exit._labelEdited
-          ? `<span class="pos-edited-mark" data-slug="${exit._slug}">${MetroApp.Icons.pencil}</span>`
+          ? `<span class="pos-edited-mark" data-slug="${exit._slug}">${Icons.pencil}</span>`
           : '';
         return `<div class="long-transfer-exit">
           <div class="long-transfer-exit-label" style="position:relative;">${edited}${exit.label}</div>
@@ -182,9 +170,9 @@ export function renderDirections(s, color) {
       longHtml = `<div class="long-transfer-block">
         <div class="long-transfer-title">
           <span class="transfer-label">
-            <span class="transfer-line" style="background:${MetroApp.LINE_COLOR['blue']}"></span>
+            <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
             <span class="transfer-text">довгий&nbsp;перехід на&nbsp;Майдан&nbsp;Незалежності</span>
-            <span class="transfer-line" style="background:${MetroApp.LINE_COLOR['blue']}"></span>
+            <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
           </span>
         </div>
         ${rows}

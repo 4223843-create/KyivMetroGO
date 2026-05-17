@@ -1,114 +1,75 @@
-import Sortable        from 'sortablejs';
-import { state }        from '../core/state.js';
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
+// ══ FEATURE: ОБРАНЕ — UI-ШАР ══
+// Відповідальність: рендеринг та взаємодія UI для Обраного.
+// Бізнес-логіка — у domain/favorites.js.
+//
+// Публічне API (UI):
+//   updateFavDock()    → оновлює іконку dock
+//   openFavSheet()     → відкриває шторку Обраного
+//   closeFavSheet()    → закриває шторку
+//   renderFavList(favs)→ перемальовує список
+//   getEmptyFavHtml()  → HTML порожнього стану
+//
+// Ре-експорти з domain (для зворотної сумісності зі споживачами):
+//   getFavs, saveFavs, isFav, toggleFav,
+//   getExitFavs, exitFavId, isExitFav, toggleExitFav, replaceExitFav
+//
+// Bus-підписки:
+//   'fav:updated'           → updateFavDock()
+//   'fav:externally-updated'→ updateFavDock() + re-render якщо шторка відкрита
+//   'fav:render-on-load'    → замінює MetroApp.renderFavOnLoad
+//   'fav:dismiss-hint'      → замінює MetroApp.dismissFavOnlyHint
+
+import Sortable            from 'sortablejs';
+import { state }           from '../../core/state.js';
+import { STORAGE_KEYS, Storage } from '../../core/storage.js';
+import { bus }             from '../../core/eventBus.js';
+import { Icons }           from '../../ui/icons.js';
+import { LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES } from '../../core/constants.js';
+import { animateSheetClose }  from '../../ui/animations.js';
+import { initKinematicSwipe } from '../../ui/swipe.js';
+import { pushSheetHistory }   from '../../ui/system.js';
+import { slugByName }         from '../../data/stations.js';
+
+import {
+  getFavs,
+  saveFavs,
+  isFav,
+  toggleFav,
+  getExitFavs,
+  exitFavId,
+  isExitFav,
+  toggleExitFav,
+  replaceExitFav,
+} from '../../domain/favorites.js';
+
+// ── Ре-експорти для зворотної сумісності ─────────────────────
+// sheetsManager.js, stationSheet.js, stationEvents.js, settings.js
+// імпортують ці функції з features/favorites — вони делегують у domain.
+export {
+  getFavs, saveFavs, isFav, toggleFav,
+  getExitFavs, exitFavId, isExitFav, toggleExitFav, replaceExitFav,
+};
+
+// ══ DOM-ВУЗЛИ ════════════════════════════════════════════════
 
 const favSheet     = document.getElementById('favSheet');
 const favBody      = document.getElementById('favBody');
 const favClose     = document.getElementById('favClose');
 const sheetOverlay = document.getElementById('sheetOverlay');
 
-// ══ ОБРАНІ СТАНЦІЇ ══════════════════════════════════════════
-let favCache = null;
-
-function readFavCache() {
-  if (!favCache) {
-    try { favCache = JSON.parse(Storage.get(STORAGE_KEYS.FAVS) || '[]'); }
-    catch (e) { console.warn('[KyivMetroGO] Помилка парсингу Обраних:', e); favCache = []; }
-  }
-  return favCache;
-}
-
-export function getFavs()     { return [...readFavCache()]; }
-export function saveFavs(arr) { favCache = [...arr]; Storage.set(STORAGE_KEYS.FAVS, JSON.stringify(favCache)); }
-export const isFav = slug => readFavCache().includes(slug);
-
-export function toggleFav(slug) {
-  let favs = getFavs();
-  favs = favs.includes(slug) ? favs.filter(s => s !== slug) : [...favs, slug];
-  saveFavs(favs);
-  updateFavDock();
-  return favs.includes(slug);
-}
-
-// ══ ОБРАНІ ВИХОДИ ═══════════════════════════════════════════
-let exitFavCache = null;
-
-function readExitFavCache() {
-  if (exitFavCache) return exitFavCache;
-  try { exitFavCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_FAVS) || '[]'); }
-  catch (e) { console.warn('[KyivMetroGO] Помилка парсингу Обраних виходів:', e); exitFavCache = []; }
-  return exitFavCache;
-}
-
-export function getExitFavs() { return [...readExitFavCache()]; }
-export function exitFavId(slug, dir, wagon, doors) { return `${slug}|${dir}|${wagon}|${doors}`; }
-
-export function isExitFav(slug, dir, wagon, doors) {
-  const id = exitFavId(slug, dir, wagon, doors);
-  return readExitFavCache().some(f => f.id === id);
-}
-
-export function toggleExitFav(slug, dir, wagon, doors) {
-  const favs = readExitFavCache();
-  const id   = exitFavId(slug, dir, wagon, doors);
-  const idx  = favs.findIndex(f => f.id === id);
-
-  if (idx >= 0) {
-    favs.splice(idx, 1);
-    Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
-    return { status: 'removed' };
-  }
-
-  const slugDirFavs = favs.filter(f => f.slug === slug && f.dir === dir);
-  if (slugDirFavs.length >= 1) return { status: 'replace', existing: slugDirFavs[0] };
-
-  favs.push({ id, slug, dir, wagon, doors });
-  let mainFavs = getFavs();
-  if (!mainFavs.includes(slug)) { mainFavs.push(slug); saveFavs(mainFavs); }
-  Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
-  return { status: 'added' };
-}
-
-export function replaceExitFav(slug, dir, oldWagon, oldDoors, newWagon, newDoors) {
-  const favs  = readExitFavCache();
-  const oldId = exitFavId(slug, dir, oldWagon, oldDoors);
-  const idx   = favs.findIndex(f => f.id === oldId);
-  if (idx >= 0) favs.splice(idx, 1);
-  const newId = exitFavId(slug, dir, newWagon, newDoors);
-  favs.push({ id: newId, slug, dir, wagon: newWagon, doors: newDoors });
-  Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
-  let mainFavs = getFavs();
-  if (!mainFavs.includes(slug)) { mainFavs.push(slug); saveFavs(mainFavs); }
-  updateFavDock();
-  return { status: 'replaced' };
-}
-
-// ══ СИНХРОНІЗАЦІЯ ВКЛАДОК ════════════════════════════════════
-window.addEventListener('storage', e => {
-  if (e.key === STORAGE_KEYS.FAVS) {
-    try { favCache = JSON.parse(e.newValue || '[]'); } catch { favCache = []; }
-    updateFavDock();
-    // Якщо шторка відкрита — одразу перемалювати список
-    const favSheet = document.getElementById('favSheet');
-    if (favSheet?.classList.contains('sheet-open')) renderFavList(getFavs());
-  } else if (e.key === STORAGE_KEYS.EXIT_FAVS) {
-    try { exitFavCache = JSON.parse(e.newValue || '[]'); } catch { exitFavCache = []; }
-    updateFavDock();
-  }
-});
-
 // ══ ПОРОЖНІЙ СТАН ════════════════════════════════════════════
+
 export function getEmptyFavHtml() {
   const colors = ['var(--line-blue)', 'var(--line-red)', 'var(--line-green)'];
   const color  = colors[state.emptyFavColorIdx % colors.length];
   state.emptyFavColorIdx++;
-  
+
   return `
     <div class="fav-empty-state">
       <p class="fav-empty-text-lg">
         Натисніть
         <svg viewBox="0 0 17 17" fill="${color}" class="fav-empty-heart">
-          <path d="${MetroApp.Icons.heartOutlinePath}"></path>
+          <path d="${Icons.heartOutlinePath}"></path>
         </svg> на картці станції,<br>щоб зберегти її до <span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span>
       </p>
     <br>
@@ -127,24 +88,28 @@ export function getEmptyFavHtml() {
     </div>`;
 }
 
-// ══ РЕНДЕР СПИСКУ ОБРАНОГО ═══════════════════════════════════
+// ══ РЕНДЕР СПИСКУ ОБРАНОГО ════════════════════════════════════
+
 export function renderFavList(favs) {
   if (!favs.length) { favBody.innerHTML = getEmptyFavHtml(); return; }
 
-  const exitFavs = readExitFavCache();
-  const items    = [];
+  const exitFavsList = getExitFavs();
+  const items        = [];
 
   favs.forEach(slug => {
     const s = state.stationsData?.[slug];
     if (!s) return;
-    const stationExits = exitFavs.filter(f => f.slug === slug);
+    const stationExits = exitFavsList.filter(f => f.slug === slug);
     if (!stationExits.length) {
-      items.push({ slug, name: s.name, dir: '', color: MetroApp.LINE_COLOR[s.line], exits: [] });
+      items.push({ slug, name: s.name, dir: '', color: LINE_COLOR[s.line], exits: [] });
     } else {
       const grouped = {};
-      stationExits.forEach(e => { if (!grouped[e.dir]) grouped[e.dir] = []; grouped[e.dir].push(e); });
+      stationExits.forEach(e => {
+        if (!grouped[e.dir]) grouped[e.dir] = [];
+        grouped[e.dir].push(e);
+      });
       Object.entries(grouped).forEach(([dir, eList]) => {
-        items.push({ slug, name: s.name, dir, color: MetroApp.LINE_COLOR[s.line], exits: eList });
+        items.push({ slug, name: s.name, dir, color: LINE_COLOR[s.line], exits: eList });
       });
     }
   });
@@ -155,7 +120,7 @@ export function renderFavList(favs) {
   try { savedOrder = JSON.parse(Storage.get(STORAGE_KEYS.FAV_ROWS_ORDER) || '[]'); }
   catch { savedOrder = []; }
 
-  const orderMap = new Map(savedOrder.map((id, i) => [id, i]));
+  const orderMap      = new Map(savedOrder.map((id, i) => [id, i]));
   const getEffectiveIdx = item => {
     const direct = orderMap.get(item.rowId);
     if (direct !== undefined) return direct;
@@ -172,7 +137,7 @@ export function renderFavList(favs) {
   });
 
   const listHtml = items.map(item => {
-    const displayName = MetroApp.FAV_DISPLAY_NAMES?.[item.slug] || item.name;
+    const displayName = FAV_DISPLAY_NAMES[item.slug] || item.name;
 
     let formattedDir = '';
     if (item.dir && item.dir !== 'undefined') {
@@ -183,13 +148,13 @@ export function renderFavList(favs) {
       } else if (lower.includes('довгий перехід')) {
         formattedDir = 'довгий перехід на Майдан Незалежності';
       } else {
-        const isPrev = lower.startsWith('попередня');
-        let stationName = cleanDir.replace(/^попередня\s+/i, '').trim();
-        const targetSlug = MetroApp.slugByName?.(stationName);
-        if (targetSlug && MetroApp.FAV_DISPLAY_NAMES?.[targetSlug]) {
-          stationName = MetroApp.FAV_DISPLAY_NAMES[targetSlug];
+        const isPrev       = lower.startsWith('попередня');
+        let stationName    = cleanDir.replace(/^попередня\s+/i, '').trim();
+        const targetSlug   = slugByName(stationName);
+        if (targetSlug && FAV_DISPLAY_NAMES[targetSlug]) {
+          stationName = FAV_DISPLAY_NAMES[targetSlug];
         } else if (item.exits.length > 1) {
-          stationName = MetroApp.DIR_SHORT_NAMES?.[stationName.toLowerCase()] || stationName;
+          stationName = DIR_SHORT_NAMES[stationName.toLowerCase()] || stationName;
         }
         formattedDir = isPrev ? `попередня ${stationName}` : stationName;
       }
@@ -246,12 +211,13 @@ export function renderFavList(favs) {
 
 favBody.addEventListener('click', e => {
   const btn = e.target.closest('.fav-open-btn');
-  if (btn?.dataset.slug) MetroApp.openStation?.(btn.dataset.slug);
+  if (btn?.dataset.slug) bus.emit('station:open', { slug: btn.dataset.slug });
 });
 
-// ══ ВІДКРИТТЯ / ЗАКРИТТЯ ═════════════════════════════════════
+// ══ ВІДКРИТТЯ / ЗАКРИТТЯ ══════════════════════════════════════
+
 export function openFavSheet() {
-  MetroApp.pushSheetHistory();
+  pushSheetHistory();
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   const favs = getFavs();
   if (!state.stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
@@ -262,55 +228,75 @@ export function openFavSheet() {
 
   const hideInfo   = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
   const startOnFav = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
-
-  const hasAnyFavs = getFavs().length > 0 || readExitFavCache().length > 0;
+  const hasAnyFavs = getFavs().length > 0 || getExitFavs().length > 0;
 
   if (!hideInfo && !startOnFav && hasAnyFavs) {
     const streak = parseInt(Storage.get(STORAGE_KEYS.FAV_ONLY_STREAK) || '0', 10) + 1;
     Storage.set(STORAGE_KEYS.FAV_ONLY_STREAK, String(streak));
     if (streak >= 5 && !document.getElementById('favOnlyHint')) {
-      MetroApp.insertFavOnlyHint();
+      _insertFavOnlyHint();
     }
   }
 }
 
 export function closeFavSheet() {
-  MetroApp.animateSheetClose(favSheet, () => {
+  animateSheetClose(favSheet, () => {
     favSheet.classList.remove('sheet-open');
     if (!document.querySelectorAll('.station-sheet.sheet-open').length)
       sheetOverlay.classList.remove('overlay-visible');
   });
 }
 
-MetroApp.renderFavOnLoad = () => {
-  const favs = getFavs();
-  if (!favs.length) favBody.innerHTML = getEmptyFavHtml();
-  else renderFavList(favs);
-};
-
 // ══ DOCK-ІКОНКА ══════════════════════════════════════════════
+
 export function updateFavDock() {
   const btn = document.getElementById('favListBtn');
   if (!btn) return;
-  btn.innerHTML = getFavs().length > 0 ? MetroApp.Icons.dockHeartFilled : MetroApp.Icons.dockHeartEmpty;
+  btn.innerHTML = getFavs().length > 0
+    ? Icons.dockHeartFilled
+    : Icons.dockHeartEmpty;
 }
 
-// ══ ПІДКАЗКА «ВИБРАНЕ ПРИ ЗАПУСКУ» ══════════════════════════
-MetroApp.insertFavOnlyHint = function() {
+// ══ ПІДКАЗКА «ВИБРАНЕ ПРИ ЗАПУСКУ» ═══════════════════════════
+
+function _insertFavOnlyHint() {
   if (document.getElementById('favOnlyHint')) return;
-  const hint = document.createElement('p');
+  const hint     = document.createElement('p');
   hint.id        = 'favOnlyHint';
   hint.className = 'fav-empty-text-lg';
   hint.innerHTML = `Внесли до <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> все, чого&nbsp;потребуєте для&nbsp;швидкої навігації в&nbsp;метро? <br>Активуйте в&nbsp;налаштуваннях режим „Показувати&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span> при&nbsp;запуску"`;
   favBody.insertBefore(hint, favBody.firstChild);
-};
+}
 
-MetroApp.dismissFavOnlyHint = function() {
+function _dismissFavOnlyHint() {
   Storage.set(STORAGE_KEYS.FAV_ONLY_STREAK, '0');
   document.getElementById('favOnlyHint')?.remove();
-};
+}
+
+// ══ BUS-ПІДПИСКИ ══════════════════════════════════════════════
+
+// Після toggleFav / replaceExitFav (domain) → оновлюємо dock.
+bus.on('fav:updated', updateFavDock);
+
+// Крос-табна синхронізація: domain оновив кеш і емітував подію.
+bus.on('fav:externally-updated', ({ key }) => {
+  updateFavDock();
+  if (key === STORAGE_KEYS.FAVS && favSheet?.classList.contains('sheet-open')) {
+    renderFavList(getFavs());
+  }
+});
+
+// Замінює: MetroApp.renderFavOnLoad = () => {...}
+bus.on('fav:render-on-load', () => {
+  const favs = getFavs();
+  if (!favs.length) favBody.innerHTML = getEmptyFavHtml();
+  else renderFavList(favs);
+});
+
+// Замінює: MetroApp.dismissFavOnlyHint = function() {...}
+bus.on('fav:dismiss-hint', _dismissFavOnlyHint);
+
+// ══ ІНІЦІАЛІЗАЦІЯ ═════════════════════════════════════════════
 
 favClose.addEventListener('click', closeFavSheet);
-setTimeout(() => {
-  MetroApp.initKinematicSwipe?.(favSheet, favBody, closeFavSheet);
-}, 0);
+setTimeout(() => initKinematicSwipe(favSheet, favBody, closeFavSheet), 0);

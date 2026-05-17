@@ -1,5 +1,10 @@
 import { state } from '../core/state.js';
 import { fuzzyMatchToken } from '../utils/stringMatchers.js';
+import { pushSheetHistory }   from '../ui/system.js';
+import { animateSheetClose }  from '../ui/animations.js';
+import { initKinematicSwipe } from '../ui/swipe.js';
+import { bus }                from '../core/eventBus.js';
+import { LINE_COLOR } from '../core/constants.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
@@ -124,7 +129,7 @@ function _findExitLabel(s, hitTok) {
 }
 
 function _renderItem(s, isExitOnly, exitHint) {
-  const color    = MetroApp.LINE_COLOR[s.line];
+  const color = LINE_COLOR[s.line];
   const hintHtml = isExitOnly && exitHint
     ? `<span class="search-item-hint">${exitHint}</span>`
     : '';
@@ -141,7 +146,7 @@ function _renderItem(s, isExitOnly, exitHint) {
  * Відкриття шторки пошуку
  */
 export function openSearchSheet() {
-  MetroApp.pushSheetHistory(); 
+  pushSheetHistory();
   const sheetOverlay = document.getElementById('sheetOverlay');
   let searchSheet    = document.getElementById('searchSheet');
 
@@ -159,7 +164,7 @@ export function openSearchSheet() {
       searchSheet._cleanupVP?.();
       searchSheet.style.maxHeight = '';
       document.getElementById('searchInput').blur();
-      MetroApp.animateSheetClose(searchSheet, () => {
+      animateSheetClose(searchSheet, () => {
         searchSheet.classList.remove('sheet-open');
         if (!document.querySelectorAll('.station-sheet.sheet-open').length)
           sheetOverlay.classList.remove('overlay-visible');
@@ -221,11 +226,11 @@ export function openSearchSheet() {
       if (!item) return;
       document.getElementById('searchInput').blur();
       document.getElementById('searchClose').click();
-      setTimeout(() => MetroApp.openStation?.(item.dataset.slug), 200);
+      setTimeout(() => bus.emit('station:open', { slug: item.dataset.slug }), 200);
     });
 
     // Кінематичний свайп
-    MetroApp.initKinematicSwipe(searchSheet, searchSheet.querySelector('.sheet-body'), () => {
+    initKinematicSwipe(searchSheet, searchSheet.querySelector('.sheet-body'), () => {
       document.getElementById('searchClose').click();
     });
   }

@@ -11,7 +11,9 @@ const DEV_PHOTO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/sv
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { state }                  from '../core/state.js';
 import { PhotoStorage }           from '../data/photoStorage.js';
-
+import { bus }        from '../core/eventBus.js';
+import { LINE_COLOR } from '../core/constants.js';
+import { renderFeedbackPositions } from './feedback/index.js';
 
 // ── Активація / деактивація ──────────────────────────
 export function isDevMode() {
@@ -83,7 +85,7 @@ export function setDevNote(slug, posIdx, text) {
 // ── UI: кнопки в картці станції ──────────────────────
 export function attachDevModeUI(container, slug) {
   if (!isDevMode()) return;
-  const lineColor = MetroApp.LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)';
+  const lineColor = LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)';
 
   const defaultColor   = 'var(--border)';
   const defaultOpacity = '1';
@@ -341,7 +343,7 @@ export function setupDevModeTapCounter(aboutSheet) {
       const nowActive = toggleDevMode();
       showDevModeToast(nowActive);
       updateDevModeIndicator(aboutSheet, nowActive);
-      MetroApp.refreshCurrentStation?.();
+      bus.emit('station:refresh');
     } else {
       tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
     }
@@ -366,9 +368,10 @@ function setupDevDataClear(container) {
       if (clearTaps >= 5) {
         document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
         // Прямий виклик — без typeof guard
-        MetroApp.showCustomConfirm?.(
-          'Очистити всі дані режиму розробника?',
-          async () => {
+        bus.emit('ui:confirm', {
+        message:  'Очистити всі дані режиму розробника?',
+
+          onYes:    async () => {
             Storage.remove(STORAGE_KEYS.DEV_LOG);
             Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
             Storage.remove(STORAGE_KEYS.DEV_NOTES);
@@ -377,8 +380,13 @@ function setupDevDataClear(container) {
             );
             setTimeout(() => location.reload(), 180);
           },
-          null, null, 'Очистити', 'Скасувати', 'confirm-btn-discard', 'confirm-btn-neutral'
-        );
+            onNo:     null,
+            onCancel: null,
+            labelYes: 'Очистити',
+            labelNo:  'Скасувати',
+            styleYes: 'confirm-btn-discard',
+            styleNo:  'confirm-btn-neutral',
+          });
       }
       clearTaps = 0;
     }, 400); 

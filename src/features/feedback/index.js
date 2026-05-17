@@ -2,12 +2,16 @@
 // Єдина точка входу для зовнішніх модулів.
 // Містить MetroApp-сумісний фасад для поетапної міграції.
 
-import { bus }                       from '@core/eventBus.js';
-import { state as appState }         from '@core/state.js';
+import { bus }                                   from '../../core/eventBus.js';
+import { state as appState }                     from '../../core/state.js';
 import { fbState, resetFbState, computeIsDirty } from './fbState.js';
-import { submitFeedback }            from './fbApi.js';
-import { renderFeedbackPositions }   from './fbRenderer.js';
-import { bindFeedbackSheet, markFeedbackDirty } from './fbEvents.js';
+import { submitFeedback }                        from './fbApi.js';
+import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
+
+// РЕЕКСПОРТ: передаємо функцію далі назовні (для devmode.js)
+export { renderFeedbackPositions }               from './fbRenderer.js';
+
+bus.on('sheet:open-feedback', openFeedbackSheet);
 
 let _sheetEl         = null;   // кешований DOM-вузол
 let _sheetBound      = false;  // чи вже підписані listeners
@@ -95,27 +99,3 @@ function _forceClose() {
   // Анімація через bus — не через MetroApp напряму
   bus.emit('sheet:close', { sheetEl: _sheetEl });
 }
-
-// ── Підписка на зовнішні події ──────────────────────────────
-// stationSheet.js емітить 'station:refresh' — ми нічого не робимо.
-// Але якщо хтось емітить 'ui:confirm' — confirm.js обробляє.
-
-// ── MetroApp-сумісний фасад (перехідний шар) ────────────────
-// TODO: після міграції всіх викликів — видалити цей блок.
-MetroApp.openFeedbackSheet    = openFeedbackSheet;
-MetroApp.closeFeedbackSheet   = closeFeedbackSheet;
-MetroApp.hasUnsavedFeedback   = () => hasUnsavedFeedback();
-MetroApp.triggerFeedbackSubmit = submitFeedback;
-MetroApp._renderFeedbackPositions = renderFeedbackPositions; // для devmode.js
-
-// ── Підключення слухачів bus у зовнішніх модулях ────────────
-// stationSheet.js має замінити:
-//   MetroApp.refreshCurrentStation?.()
-// на:
-//   bus.emit('station:refresh')
-// і підписатись:
-//   bus.on('station:refresh', refreshCurrentStation)
-//
-// confirm.js має підписатись:
-//   bus.on('ui:confirm', ({ message, onYes, onNo, onCancel }) =>
-//     showCustomConfirm(message, onYes, onNo, onCancel))
