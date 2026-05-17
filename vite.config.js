@@ -33,15 +33,6 @@ export default defineConfig({
     rollupOptions: {
       input: 'index.html',
       output: {
-        // Розбиваємо бандл по шарах — краще кешування
-        manualChunks(id) {
-          if (id.includes('/src/core/'))     return 'core';
-          if (id.includes('/src/ui/'))       return 'ui';
-          if (id.includes('/src/data/'))     return 'data';
-          if (id.includes('/src/map/'))      return 'map';
-          if (id.includes('/src/features/')) return 'features';
-          if (id.includes('/src/sheets/'))   return 'sheets';
-        },
         entryFileNames: 'assets/[name].[hash].js',
         chunkFileNames: 'assets/[name].[hash].js',
         assetFileNames: 'assets/[name].[hash][extname]',
