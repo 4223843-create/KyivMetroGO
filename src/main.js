@@ -14,8 +14,6 @@ import { registerServiceWorker }          from './infra/serviceWorker.js';
 import './infra/offline.js';
 import './infra/swUpdate.js';
 import './features/feedback/index.js';
-// P1-C fix: sheetsManager реєструє bus.on('sheet:close') і bus.on('data:reload-stations').
-// Імпорт тут гарантує, що handlers зареєстровані до будь-якого emit із feedback/.
 import './features/checkin/index.js';
 import './features/favorites/index.js';
 import './data/localEdits.js';
@@ -25,6 +23,7 @@ import { configureEdgeToEdge } from './ui/system.js';
 
 function releaseStartupLoader() {
   document.getElementById('mapViewport')?.classList.remove('is-loading');
+  document.getElementById('startupLoader')?.classList.add('hidden');
 }
 window.addEventListener('error',
   e => { console.error('[startup] uncaught error', e.error || e.message); releaseStartupLoader(); });
@@ -34,9 +33,6 @@ window.addEventListener('unhandledrejection',
 async function bootstrap() {
   try {
     await Storage.init();
-
-    // P2-D fix: прибрано Storage.remove(STORAGE_KEYS.CHECKIN_HINT_SEEN) —
-    // це скидало підказку при кожному старті, що суперечить логіці «показати один раз».
 
     const savedTheme = Storage.get(STORAGE_KEYS.THEME)
       || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
