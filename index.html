@@ -635,6 +635,18 @@ const center = document.getElementById("loaderCenter");
 <script>
   window.MetroApp = window.MetroApp || {};
 </script>
-  <script type="module" src="/src/main.js"></script>
+<script>
+  // Цей радар зловить помилку ДО запуску модулів і покаже її на екрані
+  window.addEventListener('error', function(e) {
+    alert('CRASH: ' + (e.message || e.error));
+    document.getElementById('startupLoader').style.display = 'none';
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    alert('PROMISE CRASH: ' + e.reason);
+    document.getElementById('startupLoader').style.display = 'none';
+  });
+</script>
+
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>
