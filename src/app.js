@@ -6,8 +6,9 @@ import { openCheckinSheet } from './features/checkin/index.js';
 import { openSearchSheet } from './features/search.js';
 import { openSettingsSheet } from './features/settings.js';
 import {
-  openStation, closeAllSheets, openAboutSheet, withUnsavedCheck,
+  openStation, closeAllSheets, openAboutSheet
 } from './sheets/sheetsManager.js';
+import { withUnsavedCheck } from './core/unsavedCheck.js';
 import { bus } from './core/eventBus.js';
 
 // ── Bottom bar ─────────────────────────────────────────────────
