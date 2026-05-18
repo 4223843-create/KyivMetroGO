@@ -4,8 +4,7 @@ import { openStation }       from './stationSheet.js';
 import { openAboutSheet }    from './aboutSheet.js';
 import { isFav, toggleFav } from '../features/favorites/index.js';
 import { heartSvg }          from '../ui/components.js';
-import { reloadStationsData } from '../data/stations.js';
-import { getSlugByLower }    from '../data/stations.js';
+import { reloadStationsData, getSlugByLower } from '../data/stations.js';
 import { animateSheetClose }  from '../ui/animations.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 
@@ -34,10 +33,10 @@ export function closeAllSheets(force = false) {
 
   const topSheet = openSheets[openSheets.length - 1];
   animateSheetClose(topSheet, () => {
-  openSheets.forEach(el => el.classList.remove('sheet-open'));
-  if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
-});
-  }
+    openSheets.forEach(el => el.classList.remove('sheet-open'));
+    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
+  });
+}
 
 // ══ ОБРОБНИКИ ПОДІЙ ══
 

@@ -1,64 +1,86 @@
-window.MetroApp = window.MetroApp || {};
+// ══ STORAGE KEYS ══
+export const STORAGE_KEYS = {
+  THEME:          'metro_theme',
+  FAVS:           'metro_favs',
+  EXIT_FAVS:      'metro_exit_favs',
+  EXIT_LABELS:    'metro_exit_labels',
+  LOCAL_EDITS:    'metro_local_edits',
+  FAV_ROWS_ORDER: 'metro_fav_rows_order',
+  CHECKINS:       'metro_checkins',
+  CHECKIN_MODE:       'metro_checkin_mode',
+  CHECKIN_BY_STATION: 'metro_checkin_by_station',
+  START_ON_FAV:   'metro_start_on_fav',
+  LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
+  CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
+  HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
+  FAV_ONLY_STREAK:     'metro_fav_only_streak',
+  // Режим розробника
+  DEV_MODE:     'metro_dev_mode',
+  DEV_LOG:      'metro_dev_log',
+  DEV_VERIFIED: 'metro_dev_verified',
+  DEV_NOTES:    'metro_dev_notes',
+  LOGO_STATE:     'metro_logo_state',
+  LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
+  CHECKIN_HATCH:  'metro_checkin_hatch',
+};
 
+// Внутрішній кеш для синхронного доступу
+const memoryCache = new Map();
 
-import { STORAGE_KEYS, Storage }          from './core/storage.js';
-import { applyTheme }                     from './ui/theme.js';
-import { initMap }                        from './map/mapInit.js';
-import './map/mapGestures.js';
-import './map/mapInteraction.js';
-import { reloadStationsData }             from './data/stations.js';
-import { updateFavDock, openFavSheet } from './features/favorites/index.js';
-import { updateCheckinDock }           from './features/checkin/index.js';
-import { openSearchSheet }                from './features/search.js';
-import { registerServiceWorker }          from './infra/serviceWorker.js';
-import './infra/offline.js';
-import './infra/swUpdate.js';
-import './features/feedback/index.js';
-import './features/checkin/index.js';
-import './features/favorites/index.js';
-import './data/localEdits.js';
-import './sheets/sheetsManager.js';
-import './app.js';
-import { configureEdgeToEdge } from './ui/system.js';
+// ══ STORAGE ADAPTER ══
+// Адаптовано для плавного переходу на Capacitor Preferences API
+export const Storage = {
+  // 1. Асинхронна ініціалізація (викликатимемо один раз при старті)
+  async init() {
+    // ТУТ У МАЙБУТНЬОМУ БУДЕ: const keys = (await Preferences.keys()).keys;
+    const keys = Object.values(STORAGE_KEYS);    
+    for (const key of keys) {
+      // ТУТ У МАЙБУТНЬОМУ БУДЕ: const { value } = await Preferences.get({ key });
+      const value = localStorage.getItem(key);
+      if (value !== null) {
+        memoryCache.set(key, value);
+      }
+    }
+  },
 
-function releaseStartupLoader() {
-  document.getElementById('mapViewport')?.classList.remove('is-loading');
-  document.getElementById('startupLoader')?.classList.add('hidden');
-}
-window.addEventListener('error',
-  e => { console.error('[startup] uncaught error', e.error || e.message); releaseStartupLoader(); });
-window.addEventListener('unhandledrejection',
-  e => { console.error('[startup] unhandled rejection', e.reason); releaseStartupLoader(); });
+  // 2. Синхронне читання (код працює як раніше!)
+  get(key) {
+    return memoryCache.get(key) ?? null;
+  },
 
-async function bootstrap() {
-  try {
-    await Storage.init();
+  // 3. Збереження (оновлює кеш миттєво, а в базу пише асинхронно)
+  set(key, value) {
+    const valStr = String(value);
+    memoryCache.set(key, valStr);
+    
+    // ТУТ У МАЙБУТНЬОМУ БУДЕ: Preferences.set({ key, value: valStr });
+    // Загортаємо в Promise.resolve для імітації фонової роботи
+    Promise.resolve().then(() => {
+      localStorage.setItem(key, valStr);
+    });
+  },
 
-    const savedTheme = Storage.get(STORAGE_KEYS.THEME)
-      || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    applyTheme(savedTheme);
+  // 4. Видалення
+  remove(key) {
+    memoryCache.delete(key);
+    
+    // ТУТ У МАЙБУТНЬОМУ БУДЕ: Preferences.remove({ key });
+    Promise.resolve().then(() => {
+      localStorage.removeItem(key);
+    });
+  },
+};
 
-    initMap();
-    await configureEdgeToEdge();
-    await reloadStationsData();
+// ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ ══
+// Один раз при ініціалізації модуля — не алокуємо масив на кожен storage-івент
+const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
 
-    updateCheckinDock();
-    updateFavDock();
-
-    const params = new URLSearchParams(window.location.search);
-    const action = params.get('action');
-
-    if      (action === 'search') openSearchSheet();
-    else if (action === 'fav')    openFavSheet();
-    else if (Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true') openFavSheet();
-
-    if (action) window.history.replaceState({}, document.title, window.location.pathname);
-
-  } catch (err) {
-    console.error('[startup] bootstrap failed', err);
-    releaseStartupLoader();
+window.addEventListener('storage', (e) => {
+  if (_VALID_KEYS.has(e.key)) {
+    if (e.newValue === null) {
+      memoryCache.delete(e.key);
+    } else {
+      memoryCache.set(e.key, e.newValue);
+    }
   }
-}
-
-bootstrap();
-registerServiceWorker();
+});

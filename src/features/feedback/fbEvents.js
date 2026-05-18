@@ -13,8 +13,8 @@ import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
 import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
 import { renderFeedbackPositions, renderResetBtn,
          stationListHtml }                              from './fbRenderer.js';
-import { initKinematicSwipe } from '../../ui/swipe.js';
-import { Icons }              from '../../ui/icons.js';
+import { initKinematicSwipe } from '@ui/swipe.js';
+import { Icons }              from '@ui/icons.js';
 
 // ── Внутрішні DOM-хелпери ────────────────────────────────────
 
@@ -58,8 +58,7 @@ export function markFeedbackDirty() {
  * Викликається ОДИН РАЗ після createElement.
  *
  * @param {HTMLElement} sheet
- * @param {{
- *   onClose:  () => void,
+ * @param {{\n *   onClose:  () => void,
  *   onSubmit: () => void,
  * }} callbacks
  */
@@ -142,10 +141,10 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
 
   // ── Swipe — один раз, getter щоб завжди брати актуальний body ─
   initKinematicSwipe(
-  sheet,
-  () => document.getElementById('feedbackBody'),
-  onClose,
-);
+    sheet,
+    () => document.getElementById('feedbackBody'),
+    onClose,
+  );
 }
 
 // ── Приватні обробники ────────────────────────────────────────
@@ -320,8 +319,8 @@ function _cancelThird(idx) {
 }
 
 function _handleStep(btn) {
-  const id    = btn.dataset.id;
-  const el    = document.getElementById(id);
+  const id  = btn.dataset.id;
+  const el  = document.getElementById(id);
   if (!el) return;
 
   const isExtra = id.includes('_ex');
@@ -350,8 +349,8 @@ function _handleStep(btn) {
     document.getElementById(`fbD_ex${idx}`).textContent = curD;
 
     // Третій вхід — автопозиція
-    const ex2W = document.getElementById(`fbW_ex2_${idx}`);
-    const ex2D = document.getElementById(`fbD_ex2_${idx}`);
+    const ex2W  = document.getElementById(`fbW_ex2_${idx}`);
+    const ex2D  = document.getElementById(`fbD_ex2_${idx}`);
     const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
     if (ex2W && ex2D && wrap2 && !wrap2.classList.contains('is-hidden')) {
       const adj3     = getAdjacentDoors(curW, curD);
@@ -370,12 +369,12 @@ function _handleStep(btn) {
 
 function _handleLabelChange(input, slug) {
   input.dataset.changed = 'true';
-  const wrapId  = input.id.replace('fbLabelInput', '');
+  const wrapId = input.id.replace('fbLabelInput', '');
   if (slug && wrapId !== '') saveExitLabel(slug, parseInt(wrapId), input.value);
 
   // Оновлюємо превью тексту без перемальовки всього posEl
-  const wrap    = document.getElementById(`fbLabelWrap${wrapId}`);
-  const row     = wrap?.previousElementSibling;
+  const wrap = document.getElementById(`fbLabelWrap${wrapId}`);
+  const row  = wrap?.previousElementSibling;
   if (!row?.classList.contains('fb-exit-label-row')) return;
 
   const textSpan = row.querySelector('.fb-exit-label-text');
@@ -389,7 +388,7 @@ function _handleLabelChange(input, slug) {
     editBtn.setAttribute('aria-label', 'Редагувати');
     editBtn.removeAttribute('style');
   } else {
-    editBtn.className = 'fb-add-desc-btn';
+    editBtn.className   = 'fb-add-desc-btn';
     editBtn.textContent = 'додати опис';
   }
 
@@ -417,9 +416,9 @@ function _toggleLabelInput(itemIdx) {
 }
 
 function _handleAddExit(dir, slug, afterRender) {
-  const newIdx      = Object.keys(fbState.current).length;
-  const sameDir     = Object.values(fbState.current).filter(s => s.dir === dir && !s.isNew);
-  const { w, d }    = sameDir.length
+  const newIdx   = Object.keys(fbState.current).length;
+  const sameDir  = Object.values(fbState.current).filter(s => s.dir === dir && !s.isNew);
+  const { w, d } = sameDir.length
     ? getOppositeDoors(sameDir[0].wMain, sameDir[0].dMain)
     : { w: 1, d: 1 };
 

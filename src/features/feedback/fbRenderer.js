@@ -3,19 +3,17 @@
 // Правило: жодних addEventListener тут. Лише генерація розмітки.
 // DOM-запис — лише один: posEl.innerHTML = ... в кінці renderFeedbackPositions.
 
-import { state as appState }     from '@core/state.js';
-import { getLocalEdits }         from '@data/localEdits.js';
-import { hasLocalEdits }         from '@data/localEdits.js';
-import { fbState, initFeedbackState } from './fbState.js';
-import { Icons }                                       from '../../ui/icons.js';
-import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS }  from '@core/constants.js';
+import { state as appState }                      from '@core/state.js';
+import { getLocalEdits, hasLocalEdits }           from '@data/localEdits.js';
+import { fbState, initFeedbackState }             from './fbState.js';
+import { Icons }                                  from '@ui/icons.js';
+import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '@core/constants.js';
 
 // ── Константи ────────────────────────────────────────────────
 
-const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
-const INFO_SVG  = Icons.info;
-const UNDO_SVG  = Icons.undo;
-const PENCIL    = Icons.pencil;
+const INFO_SVG = Icons.info;
+const UNDO_SVG = Icons.undo;
+const PENCIL   = Icons.pencil;
 
 // ── Атомарні генератори ──────────────────────────────────────
 
@@ -62,9 +60,8 @@ function exitLabelHtml(idx, rawExit) {
  * @returns {string} HTML одного рядка позиції (відкритий або закритий)
  */
 function positionItemHtml(item, st, lineColor) {
-  const { i }      = item;
-  const isClosed   = !!st.isClosed;
-  const divider    = ''; // додає caller між items
+  const { i }    = item;
+  const isClosed = !!st.isClosed;
 
   const closedBlock = `
     <div class="fb-closed-note-wrap">
@@ -137,9 +134,9 @@ function positionItemHtml(item, st, lineColor) {
 
   const classes = [
     'fb-item-inner',
-    st.hasExtra  ? 'fb-pos-multi has-extra-doors' : '',
-    st.hasThird  ? 'has-three-doors'               : '',
-    isClosed     ? 'fb-pos-closed'                 : '',
+    st.hasExtra ? 'fb-pos-multi has-extra-doors' : '',
+    st.hasThird ? 'has-three-doors'               : '',
+    isClosed    ? 'fb-pos-closed'                 : '',
   ].filter(Boolean).join(' ');
 
   return `${exitLabelHtml(i, fbState.labels[i] ?? '')}
@@ -203,8 +200,8 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
   if (fbState.slug !== slug) initFeedbackState(slug);
 
   try {
-    const s          = appState.stationsData[slug];
-    const lineColor  = LINE_COLOR[s?.line] ?? 'var(--text-muted)';
+    const s         = appState.stationsData[slug];
+    const lineColor = LINE_COLOR[s?.line] ?? 'var(--text-muted)';
 
     // Оновлюємо заголовок шторки
     const titleEl     = document.getElementById('fbStationTitle');

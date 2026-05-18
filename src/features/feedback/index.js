@@ -1,9 +1,8 @@
 // ══ FEEDBACK — ПУБЛІЧНЕ API ══
 // Єдина точка входу для зовнішніх модулів.
-// Містить MetroApp-сумісний фасад для поетапної міграції.
 
-import { bus }                                   from '../../core/eventBus.js';
-import { state as appState }                     from '../../core/state.js';
+import { bus }                                   from '@core/eventBus.js';
+import { state as appState }                     from '@core/state.js';
 import { fbState, resetFbState, computeIsDirty } from './fbState.js';
 import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
@@ -13,14 +12,20 @@ export { renderFeedbackPositions }               from './fbRenderer.js';
 
 bus.on('sheet:open-feedback', openFeedbackSheet);
 
-let _sheetEl         = null;   // кешований DOM-вузол
-let _sheetBound      = false;  // чи вже підписані listeners
+// ── Синхронізація прапора для core/unsavedCheck (Dependency Rule: core не імпортує features) ──
+bus.on('feedback:dirty-changed', ({ isDirty }) => { appState.hasUnsavedFeedback = isDirty; });
+
+// ── Fire-and-forget submit із unsavedCheck (без прямого імпорту fbApi у core) ──
+bus.on('feedback:submit-silent', () => submitFeedback(true));
+
+let _sheetEl    = null;   // кешований DOM-вузол
+let _sheetBound = false;  // чи вже підписані listeners
 
 // ── Ядро: відкрити / закрити ────────────────────────────────
 
 export function openFeedbackSheet() {
   try {
-    _ensureSheetDOM();            // створює + bind listeners (один раз)
+    _ensureSheetDOM();            // створює DOM + одразу bind listeners (один раз)
     _resetSheetUI();              // скидає поля, прибирає старі дані
     _openSheetDOM();              // клас .sheet-open + overlay
   } catch (err) {
@@ -31,22 +36,21 @@ export function openFeedbackSheet() {
 export function closeFeedbackSheet() {
   if (!hasUnsavedFeedback()) { _forceClose(); return; }
 
-  const slug = document.getElementById('fbStation')?.value || '';
-  const name = (slug ? appState.stationsData?.[slug]?.name : '') || '';
-  const q    = name
-    ? `Зберегти зміни для станції <span style="white-space:nowrap">${name}?</span>`
+  const fbSlug      = document.getElementById('fbStation')?.value || '';
+  const stationName = (fbSlug ? appState.stationsData?.[fbSlug]?.name : '') || '';
+  const question    = stationName
+    ? `Зберегти зміни для станції <span style="white-space:nowrap;font-variant:small-caps;letter-spacing:0.04em;">${stationName}?</span>`
     : 'Зберегти зміни?';
 
-  // Використовуємо bus замість MetroApp.showCustomConfirm
   bus.emit('ui:confirm', {
-    message:  q,
-    onYes:    () => { submitFeedback(true); _forceClose(); },
+    message:  question,
+    onYes:    () => { submitFeedback(true); },
     onNo:     () => { resetFbState(); _forceClose(); },
     onCancel: () => {},
   });
 }
 
-export function hasUnsavedFeedback() {
+function hasUnsavedFeedback() {
   return fbState.isDirty;
 }
 
@@ -60,6 +64,8 @@ function _ensureSheetDOM() {
   const tpl = document.getElementById('tpl-feedback-sheet');
   _sheetEl.appendChild(tpl.content.cloneNode(true));
   document.body.appendChild(_sheetEl);
+  // Q-4 fix: bind одразу після createElement — _resetSheetUI відповідає лише за скидання полів
+  _bindOnce();
 }
 
 function _bindOnce() {
@@ -73,9 +79,8 @@ function _bindOnce() {
 }
 
 function _resetSheetUI() {
-  _bindOnce();  // гарантовано після createElement
-  document.getElementById('fbStation').value   = '';
-  document.getElementById('fbLine').value      = '';
+  document.getElementById('fbStation').value       = '';
+  document.getElementById('fbLine').value          = '';
   document.getElementById('fbPositions').innerHTML = '';
   document.getElementById('fbResult').innerHTML    = '';
   const changeBtn      = document.getElementById('fbChangeStation');
@@ -96,6 +101,5 @@ function _openSheetDOM() {
 
 function _forceClose() {
   resetFbState();
-  // Анімація через bus — не через MetroApp напряму
   bus.emit('sheet:close', { sheetEl: _sheetEl });
 }

@@ -103,7 +103,7 @@ export function openSettingsSheet() {
         const isMainOn    = e.target.checked;
         const collapsible = document.getElementById('settingsCheckinCollapsible');
         collapsible?.classList.toggle('is-hidden', !isMainOn);
-        Storage.set(STORAGE_KEYS.CHECKIN_MODE, isMainOn);
+        Storage.set(STORAGE_KEYS.CHECKIN_MODE, String(isMainOn));
         updateCheckinDock();
 
         const hatchToggle = document.getElementById('settingsCheckinHatchToggle');

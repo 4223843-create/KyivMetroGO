@@ -140,9 +140,6 @@ function _renderItem(s, isExitOnly, exitHint) {
 }
 
 /**
- * Знаходження slug за назвою станції (враховуючи аліаси)
- */
-/**
  * Відкриття шторки пошуку
  */
 export function openSearchSheet() {

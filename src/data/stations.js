@@ -222,7 +222,6 @@ export function checkAppReady() {
 
   requestAnimationFrame(() => {
     document.getElementById('mapViewport')?.classList.remove('is-loading');
-    // TODO Блок Д: замінити на bus.emit('map:sync-checkins')
     bus.emit('map:sync-checkins');
   });
 }
@@ -257,19 +256,13 @@ export async function reloadStationsData(forceFresh = false) {
     handleStartupStation(hydrated);
   }
 
-  const favSheet = document.getElementById('favSheet');
-  const favBody  = document.getElementById('favBody');
-  if (favSheet?.classList.contains('sheet-open') && favBody?.querySelector('.fav-empty-text')) {
-    // TODO Блок Г: замінити на bus.emit('fav:render-on-load')
-    bus.emit('fav:render-on-load');
-  }
+  bus.emit('fav:render-on-load');
 
   return hydrated;
 }
 
 function handleStartupStation(data) {
   if (startupSlug && data[startupSlug]) {
-    // TODO Блок Е: замінити на bus.emit('station:open', { slug: startupSlug })
     requestAnimationFrame(() => bus.emit('station:open', { slug: startupSlug }));
   }
 }

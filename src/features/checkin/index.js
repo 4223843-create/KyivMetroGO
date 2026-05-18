@@ -131,11 +131,11 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
 // ══ РЕНДЕР КІЛЕЦЬ ГІЛОК ══════════════════════════════════════
 
 function renderLineRings(lineStats) {
+  const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
   const rings = LINE_ORDER.map(line => {
     const s        = lineStats[line];
     const color    = LINE_COLOR[line] || 'var(--text-muted)';
     const name     = LINE_NAMES[line];
-    const byExits  = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
     const pct      = byExits
       ? (s.totalExits    > 0 ? s.visitedExits    / s.totalExits    : 0)
       : (s.totalStations > 0 ? s.visitedStations / s.totalStations : 0);

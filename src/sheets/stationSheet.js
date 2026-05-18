@@ -40,9 +40,6 @@ const _directionsHtmlCache = new Map(); // slug → html
 // Стабільний між відкриттями (назви напрямків незмінні).
 const _navLinkCache = new Map();
 
-// [OPT-P4] Статичний список всіх шторок — кешуємо при ініціалізації модуля
-const _allSheets = [...document.querySelectorAll('.station-sheet')];
-
 // ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
 
 // [OPT-P1] При оновленні даних — інвалідуємо кеш HTML поточної станції
@@ -167,8 +164,12 @@ function actualOpenStation(slug) {
 
   _updateFavBtn(slug, color);
 
-  // [OPT-P4] Кешований список шторок — без querySelectorAll по документу
-  _allSheets.forEach(el => { if (el.id !== 'stationSheet') el.classList.remove('sheet-open'); });
+  // Закриваємо всі допоміжні шторки (feedback, settings, checkin тощо).
+  // querySelectorAll — єдиний коректний спосіб: ці шторки створюються lazily
+  // після ініціалізації модуля і не потрапляють у статичний кеш.
+  document.querySelectorAll('.station-sheet').forEach(el => {
+    if (el.id !== 'stationSheet') el.classList.remove('sheet-open');
+  });
   if (!sheet.classList.contains('sheet-open')) {
     sheet.classList.add('sheet-open');
     sheetOverlay?.classList.add('overlay-visible');

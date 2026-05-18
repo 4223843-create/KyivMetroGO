@@ -72,9 +72,11 @@ export const Storage = {
 };
 
 // ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ ══
+// Один раз при ініціалізації модуля — не алокуємо масив на кожен storage-івент
+const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
+
 window.addEventListener('storage', (e) => {
-  // Якщо змінена властивість належить до наших STORAGE_KEYS
-  if (Object.values(STORAGE_KEYS).includes(e.key)) {
+  if (_VALID_KEYS.has(e.key)) {
     if (e.newValue === null) {
       memoryCache.delete(e.key);
     } else {
