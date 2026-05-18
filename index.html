@@ -17,16 +17,34 @@
       html:not([data-theme="dark"]), 
       html:not([data-theme="dark"]) body { background: #e5e5ea; } 
     }
-    /* Оскільки лоадер тепер окремо, ми керуємо його видимістю напряму через клас */
+
+
+
+    
+    /* Лоадер має висіти НАД картою, а не штовхати її */
     .loader-container {
-      display: block; /* Увімкнений за замовчуванням */
+      position: fixed;
+      inset: 0; /* Розтягуємо на весь екран (top:0; left:0; right:0; bottom:0) */
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000000; /* Закриваємо карту фоном, поки вона крива */
     }
+    
+    /* Підтримуємо світлу тему для фону лоадера */
+    html[data-theme="light"] .loader-container { background: #e5e5ea; }
+    @media (prefers-color-scheme: light) { 
+      html:not([data-theme="dark"]) .loader-container { background: #e5e5ea; } 
+    }
+
     .loader-container.hidden {
-      display: none; /* Цей клас ми додамо з JS, коли треба буде сховати */
+      display: none;
     }
+    
     .loader-container svg {
-      width: 100%;
-      height: 100%;
+      width: 120px; /* Фіксуємо розмір, бо інакше флекс розтягне його на весь екран */
+      height: 120px;
     }
     /* Базовий колір пелюсток SVG — JS одразу перезаписує, але до старту анімації */
     .loader-container .st4 { fill: #1a1a1a; }
