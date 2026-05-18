@@ -13,7 +13,7 @@ import { state }                  from '../core/state.js';
 import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
-import { renderFeedbackPositions } from './feedback/index.js';
+import { renderFeedbackPositions } from './feedback/fbRenderer.js';
 
 // ── Активація / деактивація ──────────────────────────
 export function isDevMode() {

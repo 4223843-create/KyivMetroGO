@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA }      from 'vite-plugin-pwa';
 import path             from 'path';
 
-const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+const buildDate = Date.now().toString();
 
 export default defineConfig({
   base:      './',

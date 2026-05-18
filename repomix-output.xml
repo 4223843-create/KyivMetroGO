@@ -131,27 +131,6 @@ export const bus = {
 // 'station:open'            { slug: string }
 </file>
 
-<file path="src/core/state.js">
-// ══ МУТАБЕЛЬНИЙ СТАН ДОДАТКУ ══
-// Тільки те, що змінюється під час роботи.
-// Константи — в core/constants.js.
-// MetroApp-namespace — в main.js (одноразово при старті).
-
-export const state = {
-  stationsData:          null,   // { [slug]: StationObject }
-  currentStationSlug:    null,   // slug відкритої зараз картки
-  isMapReady:            false,  // SVG карта вставлена і відцентрована
-  isZonesReady:          false,  // зони кліків на карті готові
-  activeLineFilter:      new Set(), // активний фільтр у пошуку
-  emptyFavColorIdx:      0,      // ротація кольору у пустому стані Вибраного
-  hasUnsavedFeedback:    false,  // встановлюється features/feedback — читається core/unsavedCheck
-};
-
-// Slug із URL ?station=… — зчитується один раз при старті
-export const startupSlug = new URLSearchParams(window.location.search).get('station');
-if (startupSlug) window.history.replaceState({}, document.title, window.location.pathname);
-</file>
-
 <file path="src/data/photoStorage.js">
 // ══ PHOTO STORAGE ══
 // Відповідальність: зберігання фотографій позицій у IndexedDB.
@@ -678,421 +657,6 @@ window.addEventListener('storage', e => {
     catch { _exitFavCache = []; }
     bus.emit('fav:externally-updated', { key: e.key });
   }
-});
-</file>
-
-<file path="src/features/checkin/index.js">
-// ══ FEATURE: CHECK-IN — UI-ШАР ══
-// Відповідальність: рендеринг та взаємодія UI для check-in.
-// Бізнес-логіка — у domain/checkin.js.
-//
-// Публічне API:
-//   updateCheckinDock()  → оновлює іконку dock
-//   openCheckinSheet()   → відкриває журнал check-in
-//
-// Ре-експорти з domain (для зворотної сумісності зі settings.js):
-//   isCheckinMode, getCheckins, invalidateCheckinsCache
-//
-// Bus-підписки:
-//   'checkin:attach-buttons' → attachCheckinButtons(sheetEl, slug, color)
-//   'checkin:updated'        → updateCheckinDock() + bus.emit('map:sync-checkins')
-
-import { state }              from '../../core/state.js';
-import { STORAGE_KEYS, Storage } from '../../core/storage.js';
-import { bus }                from '../../core/eventBus.js';
-import { Icons }              from '../../ui/icons.js';
-import { LINE_COLOR }         from '../../core/constants.js';
-import { animateSheetClose }  from '../../ui/animations.js';
-import { initKinematicSwipe } from '../../ui/swipe.js';
-import { pushSheetHistory }   from '../../ui/system.js';
-
-import {
-  getCheckins,
-  isCheckinMode,
-  invalidateCheckinsCache,
-  isCheckedIn,
-  toggleCheckin,
-  formatCheckinTime,
-  stationWord,
-  exitWord,
-  buildLineStats,
-  LINE_NAMES,
-  LINE_ORDER,
-} from '../../domain/checkin.js';
-
-// ── Ре-експорти для settings.js ──────────────────────────────
-export { isCheckinMode, getCheckins, invalidateCheckinsCache };
-
-// ══ UI-СТАН ══════════════════════════════════════════════════
-
-let ciSortMode    = 'date';
-let ciViewMode    = 'visited';
-let selectedLines = new Set();
-
-// ══ ЗНАЧОК ПИНУ (SVG) ════════════════════════════════════════
-
-const CHECKIN_PIN_SVG_OFF = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`;
-
-const _pinSvgCache = new Map();
-function checkinPinSvg(checked, lineColor) {
-  if (!checked) return CHECKIN_PIN_SVG_OFF;
-  if (_pinSvgCache.has(lineColor)) return _pinSvgCache.get(lineColor);
-  const svg = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="${lineColor}" stroke="${lineColor}" stroke-width="0.5"/>
-  </svg>`;
-  _pinSvgCache.set(lineColor, svg);
-  return svg;
-}
-
-// ══ DOCK-ІКОНКА ══════════════════════════════════════════════
-
-let _checkinCount = null;
-
-function getCheckinCount() {
-  if (_checkinCount !== null) return _checkinCount;
-  _checkinCount = Object.keys(getCheckins()).length;
-  return _checkinCount;
-}
-
-/**
- * Оновлює видимість та іконку кнопки check-in у dock-панелі.
- */
-export function updateCheckinDock() {
-  const btn = document.getElementById('checkinBtn');
-  if (!btn) return;
-  btn.hidden    = !isCheckinMode();
-  _checkinCount = null;
-  btn.innerHTML = getCheckinCount() > 0
-    ? Icons.dockPinFilled
-    : Icons.dockPinEmpty;
-}
-
-// ══ ПРИКРІПЛЕННЯ КНОПОК CHECK-IN ═════════════════════════════
-
-/**
- * Додає pin-кнопки до рядків позицій у відкритій шторці станції.
- * Викликається через bus.on('checkin:attach-buttons').
- */
-function attachCheckinButtons(sheetEl, slug, lineColor) {
-  if (!isCheckinMode()) return;
-  const body = sheetEl.id === 'sheetBody'
-    ? sheetEl
-    : sheetEl.querySelector('#sheetBody') || document.getElementById('sheetBody');
-  if (!body) return;
-
-  body.querySelectorAll('.position-row').forEach(row => {
-    const pills = row.querySelectorAll('.pos-pill');
-    if (!pills.length) return;
-    const wagon = pills[0]?.querySelector('.pos-pill-num')?.textContent?.trim();
-    const doors = pills[1]?.querySelector('.pos-pill-num')?.textContent?.trim();
-    if (!wagon || !doors) return;
-
-    const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
-    const labelEl  = dirBlock
-      ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text'))
-      : null;
-    const dir = labelEl?.textContent?.trim() || '';
-
-    const checked = isCheckedIn(slug, dir, wagon, doors);
-    const btn     = document.createElement('button');
-    btn.type      = 'button';
-    btn.className = `checkin-btn row-checkin-btn${checked ? ' is-checked' : ''}`;
-    btn.innerHTML = checkinPinSvg(checked, checked ? lineColor : null);
-    btn.style.color = checked ? lineColor : '';
-    row.appendChild(btn);
-
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const nowChecked = toggleCheckin(slug, dir, wagon, doors, lineColor);
-      btn.classList.toggle('is-checked', nowChecked);
-      btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
-      btn.style.color = nowChecked ? lineColor : '';
-      _checkinCount   = null;
-    });
-  });
-}
-
-// ══ РЕНДЕР КІЛЕЦЬ ГІЛОК ══════════════════════════════════════
-
-function renderLineRings(lineStats) {
-  const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
-  const rings = LINE_ORDER.map(line => {
-    const s        = lineStats[line];
-    const color    = LINE_COLOR[line] || 'var(--text-muted)';
-    const name     = LINE_NAMES[line];
-    const pct      = byExits
-      ? (s.totalExits    > 0 ? s.visitedExits    / s.totalExits    : 0)
-      : (s.totalStations > 0 ? s.visitedStations / s.totalStations : 0);
-    const R        = 26;
-    const SW       = 5;
-    const C        = +(2 * Math.PI * R).toFixed(3);
-    const fill     = +(C * pct).toFixed(3);
-    const stLabel  = `${s.visitedStations}/${s.totalStations}`;
-    const isActive = selectedLines.has(line);
-
-    return `<button class="ci-line-ring-card${isActive ? ' ci-ring-active' : ''}" data-line="${line}" aria-label="${name} гілка: ${stLabel} станцій">
-      <svg class="ci-ring-svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
-        <circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--border)" stroke-width="${SW}"/>
-        <circle cx="32" cy="32" r="${R}" fill="none"
-          stroke="${color}" stroke-width="${SW}"
-          stroke-linecap="round"
-          stroke-dasharray="${fill} ${C}"
-          transform="rotate(-90 32 32)"/>
-      </svg>
-      <span class="ci-ring-label" style="color:${color}">${name}</span>
-      <span class="ci-ring-sub">${stLabel} ст.</span>
-    </button>`;
-  }).join('');
-
-  return `<div class="ci-line-rings-row">${rings}</div>`;
-}
-
-// ══ ВІДКРИТТЯ ШТОРКИ ЖУРНАЛУ ══════════════════════════════════
-
-/**
- * Відкриває шторку журналу check-in.
- */
-export function openCheckinSheet() {
-  pushSheetHistory();
-  let checkinSheet   = document.getElementById('checkinSheet');
-  const sheetOverlay = document.getElementById('sheetOverlay');
-
-  const closeHandler = () => {
-    const s = document.getElementById('checkinSheet');
-    animateSheetClose(s, () => {
-      s?.classList.remove('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-      if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-        sheetOverlay.classList.remove('overlay-visible');
-    });
-  };
-
-  const renderCheckinContent = () => {
-    const s       = document.getElementById('checkinSheet');
-    const all     = getCheckins();
-    const entries = Object.values(all);
-    let bodyHtml  = '';
-    let listHtml  = '';
-    const badgeStyle = 'color: var(--text-muted) !important; opacity: 1 !important; font-size: var(--fs-md) !important; font-weight: var(--fw-normal) !important;';
-
-    if (!entries.length) {
-      const colors = ['var(--line-blue)', 'var(--line-red)', 'var(--line-green)'];
-      if (typeof state.emptyFavColorIdx !== 'number') state.emptyFavColorIdx = 0;
-      const color  = colors[state.emptyFavColorIdx % colors.length];
-      state.emptyFavColorIdx++;
-
-      const coloredPin = Icons.dockPinFilled
-        .replace(/currentColor/g, color)
-        .replace('translateY(-3px)', 'translateY(0)')
-        .replace('width="26" height="26"', 'width="20" height="20"')
-        .replace('opacity="0.5"', '');
-      const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-3px;">${coloredPin}</span>`;
-
-      listHtml = `
-        <div class="fav-empty-state" style="margin-top: 40px;">
-          <p class="fav-empty-text-lg">
-            Натисніть ${pinInline} щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий
-          </p>
-        </div>`;
-
-      ciViewMode    = 'visited';
-      ciSortMode    = 'date';
-      selectedLines = new Set();
-    } else {
-      const uniqueStations     = new Set(entries.map(e => e.slug)).size;
-      const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
-      const totalExitsAll      = state.stationsData
-        ? Object.values(state.stationsData).reduce(
-            (sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0
-          )
-        : 0;
-      const totalStationsAll = state.stationsData ? Object.keys(state.stationsData).length : 0;
-      const byExits          = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
-
-      let coverageValue = 0;
-      let coverageText  = '0%';
-      const covNum   = byExits ? uniqueExitsVisited : uniqueStations;
-      const covDenom = byExits ? totalExitsAll      : totalStationsAll;
-
-      if (covDenom > 0 && covNum > 0) {
-        const raw = Math.floor((covNum / covDenom) * 100);
-        if (covNum === covDenom) { coverageText = '100%';    coverageValue = 100; }
-        else if (raw === 0)      { coverageText = '< 1%';    coverageValue = 1;   }
-        else if (raw === 100)    { coverageText = '> 99%';   coverageValue = 99;  }
-        else                     { coverageText = `${raw}%`; coverageValue = raw; }
-      }
-
-      bodyHtml = `
-        <div class="ci-stats-bar">
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${stationWord(uniqueStations)}</span></div>
-          <div class="ci-stat-sep"></div>
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${exitWord(uniqueExitsVisited)}</span></div>
-          <div class="ci-stat-sep"></div>
-          <div class="ci-stat"><span class="ci-stat-num">${coverageText}</span><span class="ci-stat-lbl">охоплення</span></div>
-        </div>
-        <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverageValue}%"></div></div>
-        ${renderLineRings(buildLineStats(entries))}
-        ${selectedLines.size > 0 ? `
-        <div class="ci-sort-bar">
-          <button class="ci-sort-btn${ciSortMode === 'date' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
-          <button class="ci-sort-btn${ciSortMode === 'alpha' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
-          <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
-        </div>` : ''}
-      `;
-
-      if (selectedLines.size > 0) {
-        const lineEntries = entries.filter(e => {
-          const st = state.stationsData?.[e.slug];
-          return st && selectedLines.has(st.line);
-        });
-
-        if (ciViewMode === 'unvisited') {
-          const visitedKeys       = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
-          const unvisitedStations = Object.entries(state.stationsData || {})
-            .map(([slug, st]) => {
-              const unvisited = st.positions?.filter(
-                p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)
-              ) || [];
-              return {
-                slug,
-                name:           st.name,
-                line:           st.line,
-                unvisitedCount: unvisited.length,
-                total:          st.positions?.filter(p => !p.closed).length || 0,
-              };
-            })
-            .filter(s => s.unvisitedCount > 0 && selectedLines.has(s.line))
-            .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-
-          listHtml = unvisitedStations.map(s => {
-            const color = LINE_COLOR[s.line] || 'var(--text-muted)';
-            return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
-              <div class="checkin-card-top">
-                <span class="checkin-station-name-text">${s.name}</span>
-                <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
-              </div>
-            </button>`;
-          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
-
-        } else {
-          const byStation    = {};
-          lineEntries.forEach(e => {
-            if (!byStation[e.slug]) byStation[e.slug] = [];
-            byStation[e.slug].push(e);
-          });
-          let stationEntries = Object.entries(byStation);
-
-          if (ciSortMode === 'date') {
-            stationEntries.sort(([, a], [, b]) =>
-              Math.max(...b.map(e => e.ts)) - Math.max(...a.map(e => e.ts))
-            );
-          } else {
-            stationEntries.sort(([sA], [sB]) =>
-              (state.stationsData?.[sA]?.name || '').localeCompare(
-                state.stationsData?.[sB]?.name || '', 'uk'
-              )
-            );
-          }
-
-          listHtml = stationEntries.map(([slug, items]) => {
-            const st              = state.stationsData?.[slug];
-            const color           = items[0].color || (st ? LINE_COLOR[st.line] : 'var(--text-muted)');
-            const totalExits      = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
-            const visitedExitsCnt = new Set(items.map(e => `${e.wagon}|${e.doors}`)).size;
-            const lastTs          = Math.max(...items.map(e => e.ts));
-
-            return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-accent:${color}">
-              <div class="checkin-card-top">
-                <span class="checkin-station-name-text">${st?.name || slug}</span>
-                <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
-              </div>
-              <div class="checkin-card-bottom" style="margin-top:4px;">
-                <span class="checkin-count-badge" style="${badgeStyle}">${visitedExitsCnt} / ${totalExits}</span>
-              </div>
-            </button>`;
-          }).join('');
-        }
-      }
-    }
-
-    s.innerHTML = `
-      <div class="sheet-handle-bar">
-        <div class="sheet-handle"></div>
-        <span class="sheet-sheet-title">Check-in</span>
-        <button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button>
-      </div>
-      <div class="sheet-body" id="checkinBody">${bodyHtml}${listHtml}</div>`;
-
-    s.querySelector('#checkinClose').addEventListener('click', closeHandler);
-
-    s.querySelectorAll('.ci-sort-btn[data-sort]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        ciViewMode = 'visited';
-        ciSortMode = btn.dataset.sort;
-        renderCheckinContent();
-      });
-    });
-
-    const unvisitedBtn = s.querySelector('.ci-unvisited-btn');
-    if (unvisitedBtn) {
-      unvisitedBtn.addEventListener('click', () => {
-        ciViewMode = 'unvisited';
-        renderCheckinContent();
-      });
-    }
-
-    s.querySelector('.ci-line-rings-row')?.addEventListener('click', e => {
-      const card = e.target.closest('.ci-line-ring-card');
-      if (!card) return;
-      const line = card.dataset.line;
-      if (selectedLines.has(line)) selectedLines.delete(line);
-      else selectedLines.add(line);
-      renderCheckinContent();
-    });
-
-    s.querySelectorAll('.checkin-station-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const sl = card.dataset.slug;
-        if (sl) { closeHandler(); setTimeout(() => bus.emit('station:open', { slug: sl }), 380); }
-      });
-    });
-  };
-
-  if (!checkinSheet) {
-    checkinSheet            = document.createElement('div');
-    checkinSheet.id         = 'checkinSheet';
-    checkinSheet.className  = 'station-sheet checkin-journal-sheet';
-    document.body.appendChild(checkinSheet);
-  }
-
-  renderCheckinContent();
-
-  if (!checkinSheet._swipeBound) {
-    checkinSheet._swipeBound = true;
-    initKinematicSwipe(
-      checkinSheet,
-      () => document.getElementById('checkinBody'),
-      closeHandler,
-    );
-  }
-
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  checkinSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-  sheetOverlay.classList.add('overlay-visible');
-}
-
-// ══ BUS-ПІДПИСКИ ══════════════════════════════════════════════
-
-// Замінює: MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {...}
-bus.on('checkin:attach-buttons', ({ sheetEl, slug, color }) => {
-  attachCheckinButtons(sheetEl, slug, color);
-});
-
-// Після toggleCheckin (domain/checkin) → оновлюємо dock та синхронізуємо карту.
-// Замінює прямі виклики updateCheckinDock() + MetroApp.syncMapWithCheckins?.() у toggleCheckin.
-bus.on('checkin:updated', () => {
-  _checkinCount = null;
-  updateCheckinDock();
-  bus.emit('map:sync-checkins');
 });
 </file>
 
@@ -1987,6 +1551,27 @@ export function fuzzyMatchToken(query, token) {
 }
 </file>
 
+<file path="src/core/state.js">
+// ══ МУТАБЕЛЬНИЙ СТАН ДОДАТКУ ══
+// Тільки те, що змінюється під час роботи.
+// Константи — в core/constants.js.
+// MetroApp-namespace — в main.js (одноразово при старті).
+
+export const state = {
+  stationsData:          null,   // { [slug]: StationObject }
+  currentStationSlug:    null,   // slug відкритої зараз картки
+  isMapReady:            false,  // SVG карта вставлена і відцентрована
+  isZonesReady:          false,  // зони кліків на карті готові
+  activeLineFilter:      new Set(), // активний фільтр у пошуку
+  emptyFavColorIdx:      0,      // ротація кольору у пустому стані Вибраного
+  hasUnsavedFeedback:    false,  // встановлюється features/feedback — читається core/unsavedCheck
+};
+
+// Slug із URL ?station=… — зчитується один раз при старті
+export const startupSlug = new URLSearchParams(window.location.search).get('station');
+if (startupSlug) window.history.replaceState({}, document.title, window.location.pathname);
+</file>
+
 <file path="src/core/timing.js">
 // ══ КОНСТАНТИ ТАЙМІНГІВ АНІМАЦІЙ ══
 // Усі затримки анімацій зібрані тут.
@@ -2007,6 +1592,1211 @@ export const TIMING = {
   LONG_PRESS:     600,
   DOUBLE_TAP:     500,
 };
+</file>
+
+<file path="src/data/positions.js">
+export function traversePositions(station, callback) {
+  if (!station?.directions) return;
+  let posIdx = 0;
+
+  for (let dirIdx = 0; dirIdx < station.directions.length; dirIdx++) {
+    const dir = station.directions[dirIdx];
+    for (let exitIdx = 0; exitIdx < dir.exits.length; exitIdx++) {
+      const exit = dir.exits[exitIdx];
+      const positions = exit.positions ?? [];
+      for (let i = 0; i < positions.length; i++) {
+        callback({ dir, exit, position: positions[i], dirIdx, exitIdx, posIdx });
+        posIdx++;
+      }
+    }
+  }
+}
+
+export function mapPositions(station, mapper) {
+  const results = [];
+  traversePositions(station, ctx => {
+    const result = mapper(ctx);
+    if (result !== undefined) results.push(result);
+  });
+  return results;
+}
+</file>
+
+<file path="src/features/checkin/index.js">
+// ══ FEATURE: CHECK-IN — UI-ШАР ══
+// Відповідальність: рендеринг та взаємодія UI для check-in.
+// Бізнес-логіка — у domain/checkin.js.
+//
+// Публічне API:
+//   updateCheckinDock()  → оновлює іконку dock
+//   openCheckinSheet()   → відкриває журнал check-in
+//
+// Ре-експорти з domain (для зворотної сумісності зі settings.js):
+//   isCheckinMode, getCheckins, invalidateCheckinsCache
+//
+// Bus-підписки:
+//   'checkin:attach-buttons' → attachCheckinButtons(sheetEl, slug, color)
+//   'checkin:updated'        → updateCheckinDock() + bus.emit('map:sync-checkins')
+
+import { state }              from '../../core/state.js';
+import { STORAGE_KEYS, Storage } from '../../core/storage.js';
+import { bus }                from '../../core/eventBus.js';
+import { Icons }              from '../../ui/icons.js';
+import { LINE_COLOR }         from '../../core/constants.js';
+import { animateSheetClose }  from '../../ui/animations.js';
+import { initKinematicSwipe } from '../../ui/swipe.js';
+import { pushSheetHistory }   from '../../ui/system.js';
+
+import {
+  getCheckins,
+  isCheckinMode,
+  invalidateCheckinsCache,
+  isCheckedIn,
+  toggleCheckin,
+  formatCheckinTime,
+  stationWord,
+  exitWord,
+  buildLineStats,
+  LINE_NAMES,
+  LINE_ORDER,
+} from '../../domain/checkin.js';
+
+// ── Ре-експорти для settings.js ──────────────────────────────
+export { isCheckinMode, getCheckins, invalidateCheckinsCache };
+
+// ══ UI-СТАН ══════════════════════════════════════════════════
+
+let ciSortMode    = 'date';
+let ciViewMode    = 'visited';
+let selectedLines = new Set();
+
+// ══ ЗНАЧОК ПИНУ (SVG) ════════════════════════════════════════
+
+const CHECKIN_PIN_SVG_OFF = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`;
+
+const _pinSvgCache = new Map();
+function checkinPinSvg(checked, lineColor) {
+  if (!checked) return CHECKIN_PIN_SVG_OFF;
+  if (_pinSvgCache.has(lineColor)) return _pinSvgCache.get(lineColor);
+  const svg = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="${lineColor}" stroke="${lineColor}" stroke-width="0.5"/>
+  </svg>`;
+  _pinSvgCache.set(lineColor, svg);
+  return svg;
+}
+
+// ══ DOCK-ІКОНКА ══════════════════════════════════════════════
+
+let _checkinCount = null;
+
+function getCheckinCount() {
+  if (_checkinCount !== null) return _checkinCount;
+  _checkinCount = Object.keys(getCheckins()).length;
+  return _checkinCount;
+}
+
+/**
+ * Оновлює видимість та іконку кнопки check-in у dock-панелі.
+ */
+export function updateCheckinDock() {
+  const btn = document.getElementById('checkinBtn');
+  if (!btn) return;
+  btn.hidden    = !isCheckinMode();
+  _checkinCount = null;
+  btn.innerHTML = getCheckinCount() > 0
+    ? Icons.dockPinFilled
+    : Icons.dockPinEmpty;
+}
+
+// ══ ПРИКРІПЛЕННЯ КНОПОК CHECK-IN ═════════════════════════════
+
+/**
+ * Додає pin-кнопки до рядків позицій у відкритій шторці станції.
+ * Викликається через bus.on('checkin:attach-buttons').
+ */
+function attachCheckinButtons(sheetEl, slug, lineColor) {
+  if (!isCheckinMode()) return;
+  const body = sheetEl.id === 'sheetBody'
+    ? sheetEl
+    : sheetEl.querySelector('#sheetBody') || document.getElementById('sheetBody');
+  if (!body) return;
+
+  body.querySelectorAll('.position-row').forEach(row => {
+    const pills = row.querySelectorAll('.pos-pill');
+    if (!pills.length) return;
+    const wagon = pills[0]?.querySelector('.pos-pill-num')?.textContent?.trim();
+    const doors = pills[1]?.querySelector('.pos-pill-num')?.textContent?.trim();
+    if (!wagon || !doors) return;
+
+    const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
+    const labelEl  = dirBlock
+      ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text'))
+      : null;
+    const dir = labelEl?.textContent?.trim() || '';
+
+    const checked = isCheckedIn(slug, dir, wagon, doors);
+    const btn     = document.createElement('button');
+    btn.type      = 'button';
+    btn.className = `checkin-btn row-checkin-btn${checked ? ' is-checked' : ''}`;
+    btn.innerHTML = checkinPinSvg(checked, checked ? lineColor : null);
+    btn.style.color = checked ? lineColor : '';
+    row.appendChild(btn);
+
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const nowChecked = toggleCheckin(slug, dir, wagon, doors, lineColor);
+      btn.classList.toggle('is-checked', nowChecked);
+      btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
+      btn.style.color = nowChecked ? lineColor : '';
+      _checkinCount   = null;
+    });
+  });
+}
+
+// ══ РЕНДЕР КІЛЕЦЬ ГІЛОК ══════════════════════════════════════
+
+function renderLineRings(lineStats) {
+  const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
+  const rings = LINE_ORDER.map(line => {
+    const s        = lineStats[line];
+    const color    = LINE_COLOR[line] || 'var(--text-muted)';
+    const name     = LINE_NAMES[line];
+    const pct      = byExits
+      ? (s.totalExits    > 0 ? s.visitedExits    / s.totalExits    : 0)
+      : (s.totalStations > 0 ? s.visitedStations / s.totalStations : 0);
+    const R        = 26;
+    const SW       = 5;
+    const C        = +(2 * Math.PI * R).toFixed(3);
+    const fill     = +(C * pct).toFixed(3);
+    const stLabel  = `${s.visitedStations}/${s.totalStations}`;
+    const isActive = selectedLines.has(line);
+
+    return `<button class="ci-line-ring-card${isActive ? ' ci-ring-active' : ''}" data-line="${line}" aria-label="${name} гілка: ${stLabel} станцій">
+      <svg class="ci-ring-svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+        <circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--border)" stroke-width="${SW}"/>
+        <circle cx="32" cy="32" r="${R}" fill="none"
+          stroke="${color}" stroke-width="${SW}"
+          stroke-linecap="round"
+          stroke-dasharray="${fill} ${C}"
+          transform="rotate(-90 32 32)"/>
+      </svg>
+      <span class="ci-ring-label" style="color:${color}">${name}</span>
+      <span class="ci-ring-sub">${stLabel} ст.</span>
+    </button>`;
+  }).join('');
+
+  return `<div class="ci-line-rings-row">${rings}</div>`;
+}
+
+// ══ ВІДКРИТТЯ ШТОРКИ ЖУРНАЛУ ══════════════════════════════════
+
+/**
+ * Відкриває шторку журналу check-in.
+ */
+export function openCheckinSheet() {
+  pushSheetHistory();
+  let checkinSheet   = document.getElementById('checkinSheet');
+  const sheetOverlay = document.getElementById('sheetOverlay');
+
+  const closeHandler = () => {
+    const s = document.getElementById('checkinSheet');
+    animateSheetClose(s, () => {
+      s?.classList.remove('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
+      if (!document.querySelectorAll('.station-sheet.sheet-open').length)
+        sheetOverlay.classList.remove('overlay-visible');
+    });
+  };
+
+  const renderCheckinContent = () => {
+    const s       = document.getElementById('checkinSheet');
+    const all     = getCheckins();
+    const entries = Object.values(all);
+    let bodyHtml  = '';
+    let listHtml  = '';
+    const badgeStyle = 'color: var(--text-muted) !important; opacity: 1 !important; font-size: var(--fs-md) !important; font-weight: var(--fw-normal) !important;';
+
+    if (!entries.length) {
+      const colors = ['var(--line-blue)', 'var(--line-red)', 'var(--line-green)'];
+      if (typeof state.emptyFavColorIdx !== 'number') state.emptyFavColorIdx = 0;
+      const color  = colors[state.emptyFavColorIdx % colors.length];
+      state.emptyFavColorIdx++;
+
+      const coloredPin = Icons.dockPinFilled
+        .replace(/currentColor/g, color)
+        .replace('translateY(-3px)', 'translateY(0)')
+        .replace('width="26" height="26"', 'width="20" height="20"')
+        .replace('opacity="0.5"', '');
+      const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-3px;">${coloredPin}</span>`;
+
+      listHtml = `
+        <div class="fav-empty-state" style="margin-top: 40px;">
+          <p class="fav-empty-text-lg">
+            Натисніть ${pinInline} щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий
+          </p>
+        </div>`;
+
+      ciViewMode    = 'visited';
+      ciSortMode    = 'date';
+      selectedLines = new Set();
+    } else {
+      const uniqueStations     = new Set(entries.map(e => e.slug)).size;
+      const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
+      const totalExitsAll      = state.stationsData
+        ? Object.values(state.stationsData).reduce(
+            (sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0
+          )
+        : 0;
+      const totalStationsAll = state.stationsData ? Object.keys(state.stationsData).length : 0;
+      const byExits          = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
+
+      let coverageValue = 0;
+      let coverageText  = '0%';
+      const covNum   = byExits ? uniqueExitsVisited : uniqueStations;
+      const covDenom = byExits ? totalExitsAll      : totalStationsAll;
+
+      if (covDenom > 0 && covNum > 0) {
+        const raw = Math.floor((covNum / covDenom) * 100);
+        if (covNum === covDenom) { coverageText = '100%';    coverageValue = 100; }
+        else if (raw === 0)      { coverageText = '< 1%';    coverageValue = 1;   }
+        else if (raw === 100)    { coverageText = '> 99%';   coverageValue = 99;  }
+        else                     { coverageText = `${raw}%`; coverageValue = raw; }
+      }
+
+      bodyHtml = `
+        <div class="ci-stats-bar">
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${stationWord(uniqueStations)}</span></div>
+          <div class="ci-stat-sep"></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${exitWord(uniqueExitsVisited)}</span></div>
+          <div class="ci-stat-sep"></div>
+          <div class="ci-stat"><span class="ci-stat-num">${coverageText}</span><span class="ci-stat-lbl">охоплення</span></div>
+        </div>
+        <div class="ci-coverage-track"><div class="ci-coverage-fill" style="width:${coverageValue}%"></div></div>
+        ${renderLineRings(buildLineStats(entries))}
+        ${selectedLines.size > 0 ? `
+        <div class="ci-sort-bar">
+          <button class="ci-sort-btn${ciSortMode === 'date' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
+          <button class="ci-sort-btn${ciSortMode === 'alpha' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
+          <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
+        </div>` : ''}
+      `;
+
+      if (selectedLines.size > 0) {
+        const lineEntries = entries.filter(e => {
+          const st = state.stationsData?.[e.slug];
+          return st && selectedLines.has(st.line);
+        });
+
+        if (ciViewMode === 'unvisited') {
+          const visitedKeys       = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
+          const unvisitedStations = Object.entries(state.stationsData || {})
+            .map(([slug, st]) => {
+              const unvisited = st.positions?.filter(
+                p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)
+              ) || [];
+              return {
+                slug,
+                name:           st.name,
+                line:           st.line,
+                unvisitedCount: unvisited.length,
+                total:          st.positions?.filter(p => !p.closed).length || 0,
+              };
+            })
+            .filter(s => s.unvisitedCount > 0 && selectedLines.has(s.line))
+            .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+
+          listHtml = unvisitedStations.map(s => {
+            const color = LINE_COLOR[s.line] || 'var(--text-muted)';
+            return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
+              <div class="checkin-card-top">
+                <span class="checkin-station-name-text">${s.name}</span>
+                <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
+              </div>
+            </button>`;
+          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
+
+        } else {
+          const byStation    = {};
+          lineEntries.forEach(e => {
+            if (!byStation[e.slug]) byStation[e.slug] = [];
+            byStation[e.slug].push(e);
+          });
+          let stationEntries = Object.entries(byStation);
+
+          if (ciSortMode === 'date') {
+            stationEntries.sort(([, a], [, b]) =>
+              Math.max(...b.map(e => e.ts)) - Math.max(...a.map(e => e.ts))
+            );
+          } else {
+            stationEntries.sort(([sA], [sB]) =>
+              (state.stationsData?.[sA]?.name || '').localeCompare(
+                state.stationsData?.[sB]?.name || '', 'uk'
+              )
+            );
+          }
+
+          listHtml = stationEntries.map(([slug, items]) => {
+            const st              = state.stationsData?.[slug];
+            const color           = items[0].color || (st ? LINE_COLOR[st.line] : 'var(--text-muted)');
+            const totalExits      = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
+            const visitedExitsCnt = new Set(items.map(e => `${e.wagon}|${e.doors}`)).size;
+            const lastTs          = Math.max(...items.map(e => e.ts));
+
+            return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-accent:${color}">
+              <div class="checkin-card-top">
+                <span class="checkin-station-name-text">${st?.name || slug}</span>
+                <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
+              </div>
+              <div class="checkin-card-bottom" style="margin-top:4px;">
+                <span class="checkin-count-badge" style="${badgeStyle}">${visitedExitsCnt} / ${totalExits}</span>
+              </div>
+            </button>`;
+          }).join('');
+        }
+      }
+    }
+
+    s.innerHTML = `
+      <div class="sheet-handle-bar">
+        <div class="sheet-handle"></div>
+        <span class="sheet-sheet-title">Check-in</span>
+        <button class="sheet-close-btn" id="checkinClose" aria-label="Закрити">✕</button>
+      </div>
+      <div class="sheet-body" id="checkinBody">${bodyHtml}${listHtml}</div>`;
+
+    s.querySelector('#checkinClose').addEventListener('click', closeHandler);
+
+    s.querySelectorAll('.ci-sort-btn[data-sort]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        ciViewMode = 'visited';
+        ciSortMode = btn.dataset.sort;
+        renderCheckinContent();
+      });
+    });
+
+    const unvisitedBtn = s.querySelector('.ci-unvisited-btn');
+    if (unvisitedBtn) {
+      unvisitedBtn.addEventListener('click', () => {
+        ciViewMode = 'unvisited';
+        renderCheckinContent();
+      });
+    }
+
+    s.querySelector('.ci-line-rings-row')?.addEventListener('click', e => {
+      const card = e.target.closest('.ci-line-ring-card');
+      if (!card) return;
+      const line = card.dataset.line;
+      if (selectedLines.has(line)) selectedLines.delete(line);
+      else selectedLines.add(line);
+      renderCheckinContent();
+    });
+
+    s.querySelectorAll('.checkin-station-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const sl = card.dataset.slug;
+        if (sl) { closeHandler(); setTimeout(() => bus.emit('station:open', { slug: sl }), 380); }
+      });
+    });
+  };
+
+  if (!checkinSheet) {
+    checkinSheet            = document.createElement('div');
+    checkinSheet.id         = 'checkinSheet';
+    checkinSheet.className  = 'station-sheet checkin-journal-sheet';
+    document.body.appendChild(checkinSheet);
+  }
+
+  renderCheckinContent();
+
+  if (!checkinSheet._swipeBound) {
+    checkinSheet._swipeBound = true;
+    initKinematicSwipe(
+      checkinSheet,
+      () => document.getElementById('checkinBody'),
+      closeHandler,
+    );
+  }
+
+  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
+  checkinSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
+  sheetOverlay.classList.add('overlay-visible');
+}
+
+// ══ BUS-ПІДПИСКИ ══════════════════════════════════════════════
+
+// Замінює: MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {...}
+bus.on('checkin:attach-buttons', ({ sheetEl, slug, color }) => {
+  attachCheckinButtons(sheetEl, slug, color);
+});
+
+// Після toggleCheckin (domain/checkin) → оновлюємо dock та синхронізуємо карту.
+// Замінює прямі виклики updateCheckinDock() + MetroApp.syncMapWithCheckins?.() у toggleCheckin.
+bus.on('checkin:updated', () => {
+  _checkinCount = null;
+  updateCheckinDock();
+  bus.emit('map:sync-checkins');
+});
+</file>
+
+<file path="src/infra/offline.js">
+// ══ ОФЛАЙН-БАНЕР ══
+
+const banner = document.createElement('div');
+banner.id        = 'offlineBanner';
+banner.className = 'offline-banner';
+banner.setAttribute('role', 'status');
+banner.setAttribute('aria-live', 'polite');
+banner.textContent = 'Офлайн — відображаються кешовані дані';
+banner.hidden = navigator.onLine;
+document.body.appendChild(banner);
+
+window.addEventListener('offline', () => { banner.hidden = false; });
+window.addEventListener('online',  () => { banner.hidden = true;  });
+</file>
+
+<file path="src/infra/serviceWorker.js">
+// ══ РЕЄСТРАЦІЯ SERVICE WORKER ══
+
+export function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./sw.js', { scope: './' })
+      .catch(err => console.error('[PWA] service worker registration failed', err));
+  });
+}
+</file>
+
+<file path="src/infra/swUpdate.js">
+// ══ TOAST «НОВА ВЕРСІЯ ДОСТУПНА» ══
+
+function showUpdateToast() {
+  if (document.getElementById('swUpdateToast')) return;
+
+  const toast = document.createElement('div');
+  toast.id        = 'swUpdateToast';
+  toast.className = 'sw-update-toast';
+  toast.innerHTML = `
+    <span class="sw-update-text">Доступна нова версія</span>
+    <button class="sw-update-btn"     id="swUpdateBtn">Оновити</button>
+    <button class="sw-update-dismiss" id="swUpdateDismiss" aria-label="Закрити">✕</button>`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('sw-toast-visible'));
+
+  document.getElementById('swUpdateBtn').addEventListener('click', () => location.reload());
+  document.getElementById('swUpdateDismiss').addEventListener('click', () => {
+    toast.classList.remove('sw-toast-visible');
+    setTimeout(() => toast.remove(), 300);
+  });
+}
+
+// ── Тост для оновлення даних станцій ──────────────────────────
+// Показується коли SW виявляє нову версію stations.json у мережі.
+function showDataUpdateToast(version) {
+  const existingId = 'swDataUpdateToast';
+  if (document.getElementById(existingId)) return;
+
+  const toast = document.createElement('div');
+  toast.id        = existingId;
+  toast.className = 'sw-update-toast';
+  const verLabel  = version ? ` (${version})` : '';
+  toast.innerHTML = `
+    <span class="sw-update-text">Оновлено дані станцій${verLabel}</span>
+    <button class="sw-update-btn"     id="swDataUpdateBtn">Перезавантажити</button>
+    <button class="sw-update-dismiss" id="swDataUpdateDismiss" aria-label="Закрити">✕</button>`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('sw-toast-visible'));
+
+  document.getElementById('swDataUpdateBtn').addEventListener('click', () => location.reload());
+  document.getElementById('swDataUpdateDismiss').addEventListener('click', () => {
+    toast.classList.remove('sw-toast-visible');
+    setTimeout(() => toast.remove(), 300);
+  });
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', showUpdateToast);
+
+  // Слухаємо повідомлення від SW — зокрема STATIONS_UPDATED.
+  navigator.serviceWorker.addEventListener('message', event => {
+    try {
+      if (event.data?.type === 'STATIONS_UPDATED') {
+        showDataUpdateToast(event.data.version);
+      }
+    } catch {
+      // Ігноруємо нерозпізнані повідомлення.
+    }
+  });
+}
+</file>
+
+<file path="src/sheets/stationEvents.js">
+// ══ STATION SHEET — EVENT DELEGATION ══
+// Один набір listeners на sheetBody, живе весь час сесії.
+// WeakMap<Element, GestureState> — auto-GC при innerHTML-заміні.
+// Правило: жодного querySelector поза handlers, жодного addEventListener на row-елементи.
+
+import { state }                  from '../core/state.js';
+import { TIMING }                 from '../core/timing.js';
+import { STORAGE_KEYS, Storage }  from '../core/storage.js';
+import { bus }                    from '../core/eventBus.js';
+import { slugByName }             from '../data/stations.js';
+import { applyExitLabels }        from '../data/localEdits.js';
+import {
+  isFav, getExitFavs, isExitFav,
+  toggleExitFav, replaceExitFav,
+} from '../features/favorites/index.js';
+import { dismissHintWithDoors } from '../ui/animations.js';
+import { Icons }                from '../ui/icons.js';
+import { applyFavPillStyles }     from './renderStation.js';
+import { heartSvg }               from '../ui/components.js';
+
+// ── Gesture state (auto-GC разом з DOM-елементами) ──────────
+/**
+ * @typedef {{ longPressId: ReturnType<typeof setTimeout>|null,
+ *             tapCount: number,
+ *             tapId: ReturnType<typeof setTimeout>|null }} GestureState
+ */
+/** @type {WeakMap<Element, GestureState>} */
+const _gesture = new WeakMap();
+
+function _getGS(el) {
+  if (!_gesture.has(el)) _gesture.set(el, { longPressId: null, tapCount: 0, tapId: null });
+  return _gesture.get(el);
+}
+
+function _cancelLongPress(el) {
+  const gs = _gesture.get(el);
+  if (!gs) return;
+  clearTimeout(gs.longPressId);
+  gs.longPressId = null;
+}
+
+// ── Toast ────────────────────────────────────────────────────
+function _showExitFavToast(row) {
+  let existing = row.querySelector('.exit-fav-toast');
+  if (existing) {
+    existing.classList.remove('fav-note-open');
+    setTimeout(() => existing?.remove(), TIMING.TOAST_FADE);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'exit-fav-toast';
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.innerHTML =
+    '<span class="exit-fav-toast-text">вихід&nbsp;додано<br>до&nbsp;' +
+    '<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span></span>';
+  row.prepend(toast);
+  requestAnimationFrame(() => toast.classList.add('fav-note-open'));
+  setTimeout(() => {
+    toast.classList.remove('fav-note-open');
+    setTimeout(() => toast.remove(), TIMING.TOAST_FADE);
+  }, TIMING.TOAST_SHOW);
+}
+
+// ── Replace-confirm inline card ──────────────────────────────
+function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoors, lineColor) {
+  document.querySelectorAll('.exit-replace-confirm').forEach(el => {
+    el.classList.remove('exit-replace-open');
+    setTimeout(() => el.remove(), 280);
+  });
+
+  const confirmEl = document.createElement('div');
+  confirmEl.className = 'exit-replace-confirm';
+  confirmEl.innerHTML =
+    `<p class="exit-replace-text">Ви вже додали до&nbsp;` +
+    `<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span>` +
+    ` інший вихід з&nbsp;цієї станції. Замінити на цей?</p>` +
+    `<div class="exit-replace-btns">` +
+    `<button class="exit-replace-btn confirm-btn-save">Замінити</button>` +
+    `<button class="exit-replace-btn confirm-btn-discard">Скасувати</button>` +
+    `</div>`;
+  row.after(confirmEl);
+  requestAnimationFrame(() => confirmEl.classList.add('exit-replace-open'));
+
+  const close = () => {
+    confirmEl.classList.remove('exit-replace-open');
+    setTimeout(() => confirmEl.remove(), 280);
+  };
+  // Ці два listeners — не витік: вони живуть рівно стільки, скільки confirmEl
+  confirmEl.querySelector('.confirm-btn-save').addEventListener('click', e => {
+    e.stopPropagation();
+    replaceExitFav(slug, dirLabel, existing.wagon, existing.doors, newWagon, newDoors);
+    close();
+    bus.emit('station:refresh');
+  });
+  confirmEl.querySelector('.confirm-btn-discard').addEventListener('click', e => {
+    e.stopPropagation();
+    close();
+  });
+}
+
+// ── Ядро: toggle exit fav ─────────────────────────────────────
+function _triggerExitFav(favTarget, slug, lineColor) {
+  const wagon    = favTarget.dataset.wagon;
+  const doors    = favTarget.dataset.doors;
+  if (!wagon || !doors) return;
+
+  const row      = favTarget.closest('.position-row');
+  const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
+  const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
+  const dirLabel = labelEl?.textContent.trim() ?? '';
+
+  const result = toggleExitFav(slug, dirLabel, wagon, doors);
+
+  if (result.status === 'replace') {
+    _showExitReplaceConfirm(row, result.existing, slug, dirLabel, wagon, doors, lineColor);
+    return;
+  }
+
+  const added = result.status === 'added';
+  if (row) applyFavPillStyles(row, lineColor, added);
+  if (added) {
+    _showExitFavToast(row);
+    _maybeShowCheckinHint(lineColor);
+    _maybeDismissOnboarding(lineColor);
+  }
+
+  // Оновлюємо серце в шапці
+  const favBtnBar = document.querySelector(`.fav-btn-bar[data-slug="${slug}"]`);
+  if (favBtnBar) {
+    const nowFav = isFav(slug);
+    favBtnBar.innerHTML = heartSvg(nowFav, slug, lineColor);
+    favBtnBar.classList.toggle('fav-active', nowFav);
+  }
+}
+
+function _maybeDismissOnboarding(lineColor) {
+  const hint = document.getElementById('onboardingHint');
+  if (hint) dismissHintWithDoors(hint, () => _maybeShowCheckinHint(lineColor));
+  else      _maybeShowCheckinHint(lineColor);
+}
+
+function _maybeShowCheckinHint(lineColor) {
+  if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
+  if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
+  const sheetBodyEl = document.getElementById('sheetBody');
+  if (!sheetBodyEl || document.getElementById('checkinHint')) return;
+  Storage.set(STORAGE_KEYS.CHECKIN_HINT_SEEN, 'true');
+  const hint = document.createElement('div');
+  hint.id        = 'checkinHint';
+  hint.className = 'onboarding-hint';
+  hint.innerHTML =
+    `<span class="hint-icon-wrap" style="color:${lineColor}">${Icons.info}</span>` +
+    `Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід&nbsp;зі&nbsp;станції як&nbsp;відвіданий`;
+  sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
+}
+
+// ── Головний bind — викликається ОДИН РАЗ ────────────────────
+/**
+ * @param {HTMLElement} sheetBody
+ * @param {() => { slug: string, lineColor: string }} getCtx
+ *   Getter повертає актуальний slug та колір на момент події.
+ *   Це критично: не передаємо значення, бо вони змінюються між відкриттями.
+ */
+export function bindSheetGestures(sheetBody, getCtx) {
+
+  // ── touchstart: початок long-press ──────────────────────────
+  sheetBody.addEventListener('touchstart', e => {
+    const favTarget = e.target.closest('.fav-tap-target');
+    if (!favTarget) return;
+
+    const gs = _getGS(favTarget);
+    clearTimeout(gs.longPressId);
+
+    gs.longPressId = setTimeout(() => {
+      gs.longPressId = null;
+      const { slug, lineColor } = getCtx();
+      _triggerExitFav(favTarget, slug, lineColor);
+    }, TIMING.LONG_PRESS);
+
+  }, { passive: true });
+
+  // ── touchmove: скасувати long-press (не блокуємо скрол) ─────
+  sheetBody.addEventListener('touchmove', e => {
+    // Скасовуємо для всіх активних .fav-tap-target в зоні дотику
+    // e.target може бути дочірнім елементом — тому .closest()
+    const favTarget = e.target.closest('.fav-tap-target');
+    if (favTarget) _cancelLongPress(favTarget);
+  }, { passive: true });
+
+  // ── touchend: скасувати, якщо не спрацював ──────────────────
+  sheetBody.addEventListener('touchend', e => {
+    const favTarget = e.target.closest('.fav-tap-target');
+    if (favTarget) _cancelLongPress(favTarget);
+  }, { passive: true });
+
+  // ── click: double-tap fav + pencil + nav-link ────────────────
+  sheetBody.addEventListener('click', e => {
+    const { slug, lineColor } = getCtx();
+
+    // 1. Pencil (відредагована позиція → відкрити feedback)
+    const pencil = e.target.closest('.pos-edited-mark');
+    if (pencil) {
+      e.stopPropagation();
+      const editSlug = pencil.dataset.slug;
+      if (!editSlug) return;
+      bus.emit('sheet:open-feedback-for', { slug: editSlug });
+      return;
+    }
+
+    // 2. Скасувати exit-replace confirm
+    if (e.target.closest('.exit-replace-confirm')) return;
+
+    // 3. Nav-label → відкрити іншу станцію
+    const navLabel = e.target.closest('.nav-link');
+    if (navLabel) {
+      const target = slugByName(navLabel.dataset.name || '');
+      if (target && target !== slug) bus.emit('station:open', { slug: target });
+      return;
+    }
+
+    // 4. Double-tap на .fav-tap-target
+    const favTarget = e.target.closest('.fav-tap-target');
+    if (!favTarget) return;
+    // Ігноруємо кліки по службових елементах всередині target
+    if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
+
+    const gs = _getGS(favTarget);
+    gs.tapCount++;
+    clearTimeout(gs.tapId);
+    gs.tapId = setTimeout(() => { gs.tapCount = 0; }, TIMING.DOUBLE_TAP);
+
+    if (gs.tapCount >= 2) {
+      gs.tapCount = 0;
+      clearTimeout(gs.tapId);
+      _triggerExitFav(favTarget, slug, lineColor);
+    }
+  });
+}
+
+// ── Початкове зафарбовування улюблених при відкритті картки ──
+/**
+ * Проходиться по всіх .fav-tap-target у sheetBody
+ * і підфарбовує ті, що є у exitFavs.
+ * Викликається після кожного innerHTML = (без повторного bind).
+ *
+ * @param {HTMLElement} sheetBody
+ * @param {string} slug
+ * @param {string} lineColor
+ */
+export function applyInitialFavStyles(sheetBody, slug, lineColor) {
+  sheetBody.querySelectorAll('.fav-tap-target').forEach(favTarget => {
+    const wagon    = favTarget.dataset.wagon;
+    const doors    = favTarget.dataset.doors;
+    if (!wagon || !doors) return;
+
+    const row      = favTarget.closest('.position-row');
+    const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
+    const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
+    const dirLabel = labelEl?.textContent.trim() ?? '';
+
+    if (row && isExitFav(slug, dirLabel, wagon, doors)) {
+      applyFavPillStyles(row, lineColor, true);
+    }
+  });
+}
+</file>
+
+<file path="src/ui/animations.js">
+// ══ АНІМАЦІЇ ══
+// Анімація «двері ліфта» і розсування підказок.
+
+import { TIMING } from '../core/timing.js';
+
+/**
+ * Базова анімація «двері ліфта» — клонує елемент і розсуває клони.
+ * Використовується як animateSheetClose, так і showCustomConfirm.
+ *
+ * @param {HTMLElement} el       - елемент, що «розрізається»
+ * @param {DOMRect}     rect     - його getBoundingClientRect()
+ * @param {Function}    callback - викликається через DOOR_CALLBACK мс
+ * @param {HTMLElement} parent   - куди додати клони (body або overlay)
+ */
+export function runDoorAnimation(el, rect, callback, parent = document.body) {
+  const baseStyle = [
+    'position:fixed',
+    `top:${rect.top}px`, `left:${rect.left}px`,
+    `width:${rect.width}px`, `height:${rect.height}px`,
+    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
+    'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
+  ].join(';');
+
+  const L = el.cloneNode(true);
+  const R = el.cloneNode(true);
+  L.classList.remove('sheet-open'); L.removeAttribute('id');
+  R.classList.remove('sheet-open'); R.removeAttribute('id');
+  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
+  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
+  parent.appendChild(L);
+  parent.appendChild(R);
+
+  void L.offsetWidth; // force reflow
+  L.style.transform = 'translateX(-50%)'; L.style.opacity = '0';
+  R.style.transform = 'translateX(50%)';  R.style.opacity = '0';
+
+  if (callback) setTimeout(callback, TIMING.DOOR_CALLBACK);
+  setTimeout(() => { L.remove(); R.remove(); }, TIMING.DOOR_CLEANUP);
+}
+
+/**
+ * Закриття шторки через анімацію «двері ліфта».
+ */
+export function animateSheetClose(sheetEl, callback) {
+  if (!sheetEl || !sheetEl.classList.contains('sheet-open')) { callback?.(); return; }
+  const rect = sheetEl.getBoundingClientRect();
+  if (rect.height < 10) { callback?.(); return; }
+
+  sheetEl.style.transition = 'none';
+  sheetEl.style.visibility = 'hidden';
+
+  runDoorAnimation(sheetEl, rect, callback, document.body);
+
+  setTimeout(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      sheetEl.style.transition = '';
+      sheetEl.style.visibility = '';
+    }));
+  }, TIMING.DOOR_CLEANUP);
+}
+
+/**
+ * Розсування підказки (hints у картці станції).
+ * Схожа механіка, але інші тайминги і parent = document.body.
+ */
+export function dismissHintWithDoors(el, onDone) {
+  if (!el || !document.body.contains(el)) { onDone?.(); return; }
+  const rect = el.getBoundingClientRect();
+  if (rect.height < 4) { el.remove(); onDone?.(); return; }
+
+  const baseStyle = [
+    'position:fixed',
+    `top:${rect.top}px`, `left:${rect.left}px`,
+    `width:${rect.width}px`, `height:${rect.height}px`,
+    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
+    'transition:transform 0.55s cubic-bezier(0.32,0.72,0,1),opacity 0.4s ease',
+  ].join(';');
+
+  const L = el.cloneNode(true); L.removeAttribute('id');
+  const R = el.cloneNode(true); R.removeAttribute('id');
+  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0)';
+  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%)';
+  document.body.appendChild(L);
+  document.body.appendChild(R);
+
+  el.style.visibility = 'hidden';
+  void L.offsetWidth;
+  L.style.transform = 'translateX(-52%)'; L.style.opacity = '0';
+  R.style.transform = 'translateX(52%)';  R.style.opacity = '0';
+
+  setTimeout(() => { el.remove(); onDone?.(); }, TIMING.HINT_CALLBACK);
+  setTimeout(() => { L.remove(); R.remove(); }, TIMING.HINT_CLEANUP);
+}
+</file>
+
+<file path="src/ui/components.js">
+// ══ UI-КОМПОНЕНТИ ══
+// Чисті функції: string in → HTML string out. Нуль побічних ефектів.
+
+import { Icons } from './icons.js';
+
+/**
+ * Пілюля «вагон / двері» у картці станції.
+ */
+export function pill(label, value, color) {
+  return `<div class="pos-pill">
+    <div class="pos-pill-label">${label}</div>
+    <div class="pos-pill-num" style="color:${color}">${value}</div>
+  </div>`;
+}
+
+/**
+ * SVG-серце для кнопки Вибраного.
+ */
+export function heartSvg(isFav, _slug, lineColor) {
+  const base = 'width="18" height="18" viewBox="-1 -1 19 19" xmlns="http://www.w3.org/2000/svg"';
+  if (!isFav) {
+    return `<svg ${base} fill="none" stroke="currentColor" stroke-width="1.3"><path d="${Icons.heartPath}"/></svg>`;
+  }
+  return `<svg ${base} fill="${lineColor}"><path d="${Icons.heartPath}"/></svg>`;
+}
+</file>
+
+<file path="src/ui/icons.js">
+// ══ ІКОНКИ ══
+// Чистий ES-модуль: export const Icons = {...}
+
+export const Icons = {
+  pencil: `<svg aria-hidden="true" focusable="false" viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
+
+  undo: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`,
+
+  info: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg>`,
+
+  search: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+
+  heartPath: `M12.5 0.658c-1.739 0-3.251 0.992-4 2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343 0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924 9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598 7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091 0-2.481-2.019-4.5-4.5-4.5z`,
+
+  heartOutlinePath: `M12.5 0.658c-1.739 0-3.251 0.992-4 2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343 0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924 9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598 7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091 0-2.481-2.019-4.5-4.5-4.5zM15.889 5.98l-0.113 0.37c-0.809 3.246-5.946 7.727-7.276 8.843-1.282-1.083-6.122-5.337-7.285-8.872l-0.1-0.316c-0.077-0.311-0.115-0.588-0.115-0.847 0-1.93 1.57-3.5 3.5-3.5s3.5 1.571 3.5 3.5v0.252h1v-0.252c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5c0 0.258-0.038 0.527-0.111 0.822z`,
+
+  dockHeartEmpty: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5 1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
+
+  dockHeartFilled: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5 1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
+
+  dockPinEmpty: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);" opacity="0.5"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="var(--icon-color)" stroke="var(--icon-color)" stroke-width="0.5"/></svg>`,
+
+  dockPinFilled: `<svg viewBox="0 -1.5 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);" opacity="0.5"><path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
+};
+</file>
+
+<file path="src/ui/theme.js">
+import { STORAGE_KEYS, Storage } from '@core/storage.js';
+
+const root = document.documentElement;
+
+export function applyTheme(preference, save = true) {
+  let pref = preference;
+
+  if (!pref) {
+    pref = Storage.get(STORAGE_KEYS.THEME) || 'system';
+    save = false;
+  }
+
+  const actualTheme = pref === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : pref;
+
+  const css = document.createElement('style');
+  css.textContent = '*, *::before, *::after { transition: none !important; }';
+  document.head.appendChild(css);
+
+  root.setAttribute('data-theme', actualTheme);
+
+  if (save) {
+    Storage.set(STORAGE_KEYS.THEME, pref);
+  }
+
+  // Оновлюємо сегментований контрол
+  document.querySelectorAll('#settingsThemeSeg .settings-seg-btn').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.themeVal === pref);
+  });
+
+  requestAnimationFrame(() => requestAnimationFrame(() => css.remove()));
+}
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  const pref = Storage.get(STORAGE_KEYS.THEME) || 'system';
+  if (pref === 'system') applyTheme('system', false);
+});
+</file>
+
+<file path="thanks.html">
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Дякуємо! - KyivMetroGO</title>
+  
+  <style>
+    :root {
+      --line-red: #c8523a;
+      --line-blue: #5b9bd5;
+      --line-green: #5aaa6a;
+      --text: #ffffff;
+      --text-muted: #ababab;
+      --bg: #000000;
+      --bg-card: #2c2c2e;
+      --btn-bg: #1c1c1e;
+    }
+
+    [data-theme="light"] {
+      --text: #000000;
+      --text-muted: #8e8e93;
+      --bg: #e5e5ea;
+      --bg-card: #ffffff;
+      --btn-bg: #ffffff;
+    }
+    
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --text: #000000;
+        --text-muted: #8e8e93;
+        --bg: #e5e5ea;
+        --bg-card: #ffffff;
+        --btn-bg: #ffffff;
+      }
+    }
+
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      text-align: center;
+    }
+    .salute-container {
+      width: 160px; height: 160px; margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 24px; font-weight: 600; margin: 0 0 10px 0; font-variant: small-caps; letter-spacing: 0.04em;
+    }
+    p {
+      font-size: 15px; color: var(--text-muted); max-width: 340px; margin: 0 0 40px 0; line-height: 1.45;
+    }
+    strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .back-btn {
+      text-decoration: none; font-size: 16px; font-weight: 600;
+      color: var(--text); background: var(--btn-bg);
+      padding: 14px 28px; border-radius: 12px; transition: opacity 0.2s;
+    }
+    .back-btn:active { opacity: 0.7; }
+  </style>
+
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('metro_theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    } catch (e) { }
+  </script>
+</head>
+<body>
+
+  <div class="salute-container">
+    <svg id="saluteSvg" viewBox="-4 -4 44.3 45.1" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; overflow: visible;">
+      <g transform="translate(-162.85484,-126.18087)">
+        <g transform="translate(32.460036,2.9988233)">
+          <g class="eggPetals" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
+            <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
+            <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
+            <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
+            <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 -8,-2 -8,-4.9 z" />
+            <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z" />
+            <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z" />
+            <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z" />
+            <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 -3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
+            <path class="st4" d="m 227.95,217.46 c 2.1,-0.9 4.2,-1.3 4.8,1.4 0.5,2.5 -0.6,5.3 -1.7,6 -1.5,0.3 -4.1,-1 -5.5,-3 -1.4,-2.4 0.3,-3.6 2.4,-4.4 z" />
+            <path class="st4" d="m 212.05,255.66 c -0.9,-2.1 -1.3,-4.2 1.4,-4.7 2.5,-0.5 5.4,0.6 6,1.7 0.3,1.5 -1,4.1 -3.1,5.4 -2.2,1.4 -3.5,-0.3 -4.3,-2.4 z" />
+            <path class="st4" d="m 250.75,271.96 c 2.1,-0.9 3.9,-2.1 2.4,-4.4 -1.4,-2.1 -4.2,-3.3 -5.5,-3 -1.3,0.8 -2.2,3.6 -1.7,6 0.6,2.7 2.7,2.3 4.8,1.4 z" />
+            <path class="st4" d="m 212.05,233.26 c 0.9,-2.1 2.1,-3.9 4.4,-2.4 2.2,1.4 3.4,4.2 3.1,5.4 -0.8,1.3 -3.6,2.2 -6,1.7 -2.8,-0.6 -2.4,-2.6 -1.5,-4.7 z" />
+            <path class="st4" d="m 228.35,271.46 c -2.1,-0.9 -3.9,-2.1 -2.4,-4.4 1.4,-2.1 4.2,-3.3 5.5,-3 1.3,0.8 2.2,3.6 1.7,6 -0.6,2.7 -2.7,2.3 -4.8,1.4 z" />
+            <path class="st4" d="m 250.55,217.46 c 2.1,0.9 3.9,2.1 2.4,4.4 -1.4,2.1 -4.2,3.3 -5.5,3 -1.3,-0.8 -2.2,-3.6 -1.7,-6 0.6,-2.7 2.7,-2.3 4.8,-1.4 z" />
+            <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z" />
+            <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z" />
+          </g>
+          <path class="eggCenter" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" style="fill: var(--line-red)"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <h1 id="thanksTitle">Дякуємо за підтримку!</h1>
+  <p id="thanksText">Вже задонатили на Сили оборони, і хочете допомогти KyivMetroGO?<br><br>Щоб опублікувати додаток в App Store, треба сплатити ліцензію Apple Developer, яка коштує <strong>$99 на рік</strong>.</p>
+  
+  <a href="index.html" class="back-btn">Повернутись до карти</a>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('type') === 'beta') {
+      document.getElementById('thanksTitle').innerText = 'Дякуємо! Напишемо.';
+      document.getElementById('thanksText').innerHTML = 'Електронну адресу збережено.<br><br>За правилами Google Play, перед публікацією ми маємо провести закрите тестування. Для нього потрібно <strong>20 тестувальників</strong>, які користуватимуться додатком <strong>14 днів поспіль</strong>. Ми надішлемо вам запрошення, щойно назбираємо доста охочих!';
+    }
+
+    const rs = getComputedStyle(document.documentElement);
+    
+    const getColor = (prop, fallback) => {
+      const val = rs.getPropertyValue(prop).trim();
+      return val ? val : fallback;
+    };
+
+    const THEME_COLORS = { 
+      red:   getColor('--line-red', '#c8523a'), 
+      blue:  getColor('--line-blue', '#5b9bd5'), 
+      green: getColor('--line-green', '#5aaa6a'), 
+      base:  getColor('--bg-card', '#2c2c2e')
+    };
+
+    const hexToRgb = hex => { const n = parseInt(hex.replace('#',''), 16); return [(n>>16)&255, (n>>8)&255, n&255]; };
+    const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+    const mixColors = (c, b, t) => { const [r1,g1,b1]=hexToRgb(c); const [r2,g2,b2]=hexToRgb(b); return `rgb(${lerp(r2,r1,t)},${lerp(g2,g1,t)},${lerp(b2,b1,t)})`; };
+
+    const svg = document.getElementById('saluteSvg');
+    const petalsUnsorted = Array.from(svg.querySelectorAll('.st4'));
+    const center = svg.querySelector('.eggCenter');
+    const cb = center.getBoundingClientRect();
+    const cx = cb.left + cb.width/2, cy = cb.top + cb.height/2;
+
+    const petals = petalsUnsorted.map(p => {
+      const b = p.getBoundingClientRect();
+      const a = Math.atan2(b.top+b.height/2 - cy, b.left+b.width/2 - cx) * 180 / Math.PI;
+      return { el: p, a: (a+90+360)%360 };
+    }).sort((a,b) => a.a - b.a).map(p => p.el);
+
+    petals.forEach(p => { p.style.fill = THEME_COLORS.base; p.style.transition = "fill 0.25s ease"; });
+
+    const schemes = [
+      { c: THEME_COLORS.red, p: [THEME_COLORS.blue, THEME_COLORS.green] },
+      { c: THEME_COLORS.blue, p: [THEME_COLORS.red, THEME_COLORS.green] },
+      { c: THEME_COLORS.green, p: [THEME_COLORS.red, THEME_COLORS.blue] }
+    ];
+    const s = schemes[Math.floor(Math.random() * schemes.length)];
+
+    const runPetals = () => {
+      const i = Math.floor(Math.random() * petals.length);
+      petals[i].style.fill = mixColors(s.p[i%2], THEME_COLORS.base, 0.85);
+      setTimeout(() => { petals[i].style.fill = THEME_COLORS.base; }, 400);
+      setTimeout(runPetals, 150 + Math.random() * 200);
+    };
+    const runCenter = () => {
+      const ph = (Date.now()/1000)%1.2;
+      center.style.fill = mixColors(s.c, THEME_COLORS.base, 0.35 + Math.abs(Math.sin(ph*Math.PI))*0.65);
+      requestAnimationFrame(runCenter);
+    };
+
+    runPetals(); runCenter();
+  </script>
+</body>
+</html>
+</file>
+
+<file path="src/core/constants.js">
+// ══ СТАТИЧНІ КОНСТАНТИ ДОДАТКУ ══
+// Значення, що ніколи не змінюються під час роботи.
+//
+// P2-E fix: NAME_TO_SLUG та SLUG_BY_LOWER видалено звідси.
+// Вони були порожніми об'єктами, які заповнювались через MetroApp —
+// що порушувало ESM-інкапсуляцію і плутало споживачів (отримували порожній об'єкт).
+// Тепер вони є приватними змінними всередині data/stations.js
+// і доступні виключно через slugByName() та getSlugByLower().
+
+export const LINE_COLOR = {
+  red:   '#c8523a',
+  blue:  '#5b9bd5',
+  green: '#5aaa6a',
+};
+
+export const FAV_DISPLAY_NAMES = {
+  'B.Ploshcha_Ukrainskikh_heroiv': 'Пл. Українських Героїв',
+};
+
+export const DIR_SHORT_NAMES = {
+  'контрактова площа':      'Контрактова',
+  'поштова площа':          'Поштова',
+  'майдан незалежності':    'Майдан',
+  'політехнічний інститут': 'Політехнічний',
+  'золоті ворота':          'Золоті',
+};
+
+export const STATIONS_WITH_POTENTIAL_EXITS = new Set([
+  'R.Zhytomyrska',
+  'G.Osokorky',
+  'G.Chervonyi_khutir',
+]);
 </file>
 
 <file path="src/core/unsavedCheck.js">
@@ -2050,32 +2840,207 @@ export function withUnsavedCheck(proceed) {
 }
 </file>
 
-<file path="src/data/positions.js">
-export function traversePositions(station, callback) {
-  if (!station?.directions) return;
-  let posIdx = 0;
+<file path="src/data/localEdits.js">
+// ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
+// Відповідальність: читання/запис локальних правок позицій та підписів виходів.
+//
+// Блок Б: підписуємось на bus.on('data:stations-hydrated') і замінюємо
+// MetroApp-фасад (що був у кінці файлу) чистою bus-інтеграцією.
+// applyLocalEdits / applyExitLabels залишаються публічними — їх безпосередньо
+// викликають fbEvents.js, fbApi.js та stationSheet.js (прямий ESM-імпорт).
 
-  for (let dirIdx = 0; dirIdx < station.directions.length; dirIdx++) {
-    const dir = station.directions[dirIdx];
-    for (let exitIdx = 0; exitIdx < dir.exits.length; exitIdx++) {
-      const exit = dir.exits[exitIdx];
-      const positions = exit.positions ?? [];
-      for (let i = 0; i < positions.length; i++) {
-        callback({ dir, exit, position: positions[i], dirIdx, exitIdx, posIdx });
-        posIdx++;
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { bus }                   from '../core/eventBus.js';
+import { traversePositions }     from './positions.js';
+
+// ══ КЕШ ══════════════════════════════════════════════════════
+
+let localEditsCache = null;
+let exitLabelsCache = null;
+
+export function invalidateLocalEditsCache() {
+  localEditsCache = null;
+  exitLabelsCache = null;
+}
+
+// ══ EXIT LABELS ════════════════════════════════════════════════
+
+function getExitLabels() {
+  if (exitLabelsCache) return exitLabelsCache;
+  try {
+    exitLabelsCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_LABELS) || '{}');
+  } catch (e) {
+    console.warn('[localEdits] Помилка парсингу описів виходів:', e);
+    exitLabelsCache = {};
+  }
+  return exitLabelsCache;
+}
+
+/**
+ * Зберігає або видаляє підпис виходу за slug + posIdx.
+ * Якщо label порожній — запис видаляється.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @param {string} label
+ */
+export function saveExitLabel(slug, posIdx, label) {
+  const labels = getExitLabels();
+  if (!labels[slug]) labels[slug] = {};
+  if (label.trim()) {
+    labels[slug][posIdx] = label.trim();
+  } else {
+    delete labels[slug][posIdx];
+    if (!Object.keys(labels[slug]).length) delete labels[slug];
+  }
+  Storage.set(STORAGE_KEYS.EXIT_LABELS, JSON.stringify(labels));
+  exitLabelsCache = null;
+}
+
+/**
+ * Повертає підпис виходу або null якщо немає.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {string|null}
+ */
+export function getExitLabel(slug, posIdx) {
+  return getExitLabels()[slug]?.[posIdx] ?? null;
+}
+
+/**
+ * Застосовує всі збережені підписи виходів до об'єктів stationsData.
+ * Мутує exit.label та exit._labelEdited на місці.
+ * Викликається:
+ *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
+ *   – явно з fbEvents.js та stationSheet.js при ручних змінах.
+ *
+ * @param {Record<string, object>} stationsData
+ */
+export function applyExitLabels(stationsData) {
+  const labels = getExitLabels();
+  for (const [slug, posLabels] of Object.entries(labels)) {
+    if (!stationsData[slug]) continue;
+    traversePositions(stationsData[slug], ({ exit, posIdx }) => {
+      if (posLabels[posIdx] !== undefined) {
+        exit.label        = posLabels[posIdx];
+        exit._labelEdited = true;
+        exit._slug        = slug;
       }
-    }
+    });
   }
 }
 
-export function mapPositions(station, mapper) {
-  const results = [];
-  traversePositions(station, ctx => {
-    const result = mapper(ctx);
-    if (result !== undefined) results.push(result);
-  });
-  return results;
+// ══ LOCAL EDITS ════════════════════════════════════════════════
+
+/**
+ * Повертає об'єкт усіх локальних правок позицій з кешу або Storage.
+ * Структура: { [slug]: { [posIdx]: EditData } }
+ * @returns {Record<string, Record<number, object>>}
+ */
+export function getLocalEdits() {
+  if (localEditsCache) return localEditsCache;
+  try {
+    localEditsCache = JSON.parse(Storage.get(STORAGE_KEYS.LOCAL_EDITS) || '{}');
+  } catch (e) {
+    console.warn('[localEdits] Помилка парсингу локальних змін:', e);
+    localEditsCache = {};
+  }
+  return localEditsCache;
 }
+
+/**
+ * Зберігає локальну правку позиції.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @param {object} data
+ */
+export function saveLocalEdit(slug, posIdx, data) {
+  const edits = getLocalEdits();
+  if (!edits[slug]) edits[slug] = {};
+  edits[slug][posIdx] = data;
+  Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
+  localEditsCache = null;
+}
+
+/** Видаляє всі локальні правки з Storage та кешу. */
+export function clearAllLocalEdits() {
+  localEditsCache = null;
+  Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
+}
+
+/** @returns {boolean} true якщо є хоча б одна локальна правка */
+export function hasLocalEdits() {
+  return Object.keys(getLocalEdits()).length > 0;
+}
+
+/**
+ * Застосовує всі локальні правки до об'єктів stationsData.
+ * Мутує position на місці (wagon, doors, closed тощо).
+ * Для isNew-правок — додає новий exit до відповідного direction.
+ * Викликається:
+ *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
+ *   – явно з fbEvents.js та fbApi.js при ручних змінах у формі фідбеку.
+ *
+ * @param {Record<string, object>} stationsData
+ */
+export function applyLocalEdits(stationsData) {
+  const edits = getLocalEdits();
+
+  for (const [slug, posEdits] of Object.entries(edits)) {
+    if (!stationsData[slug]) continue;
+    const s = stationsData[slug];
+
+    traversePositions(s, ({ position, posIdx }) => {
+      const edit = posEdits[posIdx];
+      if (edit !== undefined && !edit.isNew) {
+        Object.assign(position, edit, { _edited: true, _slug: slug, _posIdx: posIdx });
+      }
+    });
+
+    Object.keys(posEdits).forEach(idx => {
+      const edit = posEdits[idx];
+      if (!edit.isNew) return;
+
+      const targetDir = s.directions.find(d => d.from === edit.dir);
+      if (!targetDir) return;
+
+      const alreadyAdded = targetDir.exits.some(e =>
+        e.positions?.some(p => p._posIdx === parseInt(idx))
+      );
+      if (alreadyAdded) return;
+
+      const newExit = {
+        label:     edit.label || '',
+        positions: [{
+          wagon:    String(edit.wagon),
+          doors:    String(edit.doors),
+          _edited:  true,
+          _slug:    slug,
+          _posIdx:  parseInt(idx),
+        }],
+      };
+      targetDir.exits.push(newExit);
+      s.positions.push({
+        dir:   edit.dir,
+        exit:  newExit.label,
+        wagon: String(edit.wagon),
+        doors: String(edit.doors),
+      });
+    });
+  }
+}
+
+// ══ BUS-ІНТЕГРАЦІЯ ════════════════════════════════════════════
+// Замінює MetroApp-фасад, що був у кінці цього файлу.
+// stations.js::hydrateStations() тепер емітує 'data:stations-hydrated'
+// замість прямих викликів MetroApp.applyLocalEdits / MetroApp.applyExitLabels.
+//
+// EventBus — синхронний: handlers виконуються до повернення bus.emit(),
+// тому правки гарантовано застосовані до того, як hydrateStations поверне дані.
+
+bus.on('data:stations-hydrated', ({ stationsData }) => {
+  applyLocalEdits(stationsData);
+  applyExitLabels(stationsData);
+});
 </file>
 
 <file path="src/features/feedback/fbEvents.js">
@@ -2953,971 +3918,6 @@ function _forceClose() {
 }
 </file>
 
-<file path="src/infra/offline.js">
-// ══ ОФЛАЙН-БАНЕР ══
-
-const banner = document.createElement('div');
-banner.id        = 'offlineBanner';
-banner.className = 'offline-banner';
-banner.setAttribute('role', 'status');
-banner.setAttribute('aria-live', 'polite');
-banner.textContent = 'Офлайн — відображаються кешовані дані';
-banner.hidden = navigator.onLine;
-document.body.appendChild(banner);
-
-window.addEventListener('offline', () => { banner.hidden = false; });
-window.addEventListener('online',  () => { banner.hidden = true;  });
-</file>
-
-<file path="src/infra/serviceWorker.js">
-// ══ РЕЄСТРАЦІЯ SERVICE WORKER ══
-
-export function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
-
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('./sw.js', { scope: './' })
-      .catch(err => console.error('[PWA] service worker registration failed', err));
-  });
-}
-</file>
-
-<file path="src/infra/swUpdate.js">
-// ══ TOAST «НОВА ВЕРСІЯ ДОСТУПНА» ══
-
-function showUpdateToast() {
-  if (document.getElementById('swUpdateToast')) return;
-
-  const toast = document.createElement('div');
-  toast.id        = 'swUpdateToast';
-  toast.className = 'sw-update-toast';
-  toast.innerHTML = `
-    <span class="sw-update-text">Доступна нова версія</span>
-    <button class="sw-update-btn"     id="swUpdateBtn">Оновити</button>
-    <button class="sw-update-dismiss" id="swUpdateDismiss" aria-label="Закрити">✕</button>`;
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('sw-toast-visible'));
-
-  document.getElementById('swUpdateBtn').addEventListener('click', () => location.reload());
-  document.getElementById('swUpdateDismiss').addEventListener('click', () => {
-    toast.classList.remove('sw-toast-visible');
-    setTimeout(() => toast.remove(), 300);
-  });
-}
-
-// ── Тост для оновлення даних станцій ──────────────────────────
-// Показується коли SW виявляє нову версію stations.json у мережі.
-function showDataUpdateToast(version) {
-  const existingId = 'swDataUpdateToast';
-  if (document.getElementById(existingId)) return;
-
-  const toast = document.createElement('div');
-  toast.id        = existingId;
-  toast.className = 'sw-update-toast';
-  const verLabel  = version ? ` (${version})` : '';
-  toast.innerHTML = `
-    <span class="sw-update-text">Оновлено дані станцій${verLabel}</span>
-    <button class="sw-update-btn"     id="swDataUpdateBtn">Перезавантажити</button>
-    <button class="sw-update-dismiss" id="swDataUpdateDismiss" aria-label="Закрити">✕</button>`;
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('sw-toast-visible'));
-
-  document.getElementById('swDataUpdateBtn').addEventListener('click', () => location.reload());
-  document.getElementById('swDataUpdateDismiss').addEventListener('click', () => {
-    toast.classList.remove('sw-toast-visible');
-    setTimeout(() => toast.remove(), 300);
-  });
-}
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('controllerchange', showUpdateToast);
-
-  // Слухаємо повідомлення від SW — зокрема STATIONS_UPDATED.
-  navigator.serviceWorker.addEventListener('message', event => {
-    try {
-      if (event.data?.type === 'STATIONS_UPDATED') {
-        showDataUpdateToast(event.data.version);
-      }
-    } catch {
-      // Ігноруємо нерозпізнані повідомлення.
-    }
-  });
-}
-</file>
-
-<file path="src/sheets/stationEvents.js">
-// ══ STATION SHEET — EVENT DELEGATION ══
-// Один набір listeners на sheetBody, живе весь час сесії.
-// WeakMap<Element, GestureState> — auto-GC при innerHTML-заміні.
-// Правило: жодного querySelector поза handlers, жодного addEventListener на row-елементи.
-
-import { state }                  from '../core/state.js';
-import { TIMING }                 from '../core/timing.js';
-import { STORAGE_KEYS, Storage }  from '../core/storage.js';
-import { bus }                    from '../core/eventBus.js';
-import { slugByName }             from '../data/stations.js';
-import { applyExitLabels }        from '../data/localEdits.js';
-import {
-  isFav, getExitFavs, isExitFav,
-  toggleExitFav, replaceExitFav,
-} from '../features/favorites/index.js';
-import { dismissHintWithDoors } from '../ui/animations.js';
-import { Icons }                from '../ui/icons.js';
-import { applyFavPillStyles }     from './renderStation.js';
-import { heartSvg }               from '../ui/components.js';
-
-// ── Gesture state (auto-GC разом з DOM-елементами) ──────────
-/**
- * @typedef {{ longPressId: ReturnType<typeof setTimeout>|null,
- *             tapCount: number,
- *             tapId: ReturnType<typeof setTimeout>|null }} GestureState
- */
-/** @type {WeakMap<Element, GestureState>} */
-const _gesture = new WeakMap();
-
-function _getGS(el) {
-  if (!_gesture.has(el)) _gesture.set(el, { longPressId: null, tapCount: 0, tapId: null });
-  return _gesture.get(el);
-}
-
-function _cancelLongPress(el) {
-  const gs = _gesture.get(el);
-  if (!gs) return;
-  clearTimeout(gs.longPressId);
-  gs.longPressId = null;
-}
-
-// ── Toast ────────────────────────────────────────────────────
-function _showExitFavToast(row) {
-  let existing = row.querySelector('.exit-fav-toast');
-  if (existing) {
-    existing.classList.remove('fav-note-open');
-    setTimeout(() => existing?.remove(), TIMING.TOAST_FADE);
-  }
-  const toast = document.createElement('div');
-  toast.className = 'exit-fav-toast';
-  toast.setAttribute('role', 'status');
-  toast.setAttribute('aria-live', 'polite');
-  toast.innerHTML =
-    '<span class="exit-fav-toast-text">вихід&nbsp;додано<br>до&nbsp;' +
-    '<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span></span>';
-  row.prepend(toast);
-  requestAnimationFrame(() => toast.classList.add('fav-note-open'));
-  setTimeout(() => {
-    toast.classList.remove('fav-note-open');
-    setTimeout(() => toast.remove(), TIMING.TOAST_FADE);
-  }, TIMING.TOAST_SHOW);
-}
-
-// ── Replace-confirm inline card ──────────────────────────────
-function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoors, lineColor) {
-  document.querySelectorAll('.exit-replace-confirm').forEach(el => {
-    el.classList.remove('exit-replace-open');
-    setTimeout(() => el.remove(), 280);
-  });
-
-  const confirmEl = document.createElement('div');
-  confirmEl.className = 'exit-replace-confirm';
-  confirmEl.innerHTML =
-    `<p class="exit-replace-text">Ви вже додали до&nbsp;` +
-    `<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span>` +
-    ` інший вихід з&nbsp;цієї станції. Замінити на цей?</p>` +
-    `<div class="exit-replace-btns">` +
-    `<button class="exit-replace-btn confirm-btn-save">Замінити</button>` +
-    `<button class="exit-replace-btn confirm-btn-discard">Скасувати</button>` +
-    `</div>`;
-  row.after(confirmEl);
-  requestAnimationFrame(() => confirmEl.classList.add('exit-replace-open'));
-
-  const close = () => {
-    confirmEl.classList.remove('exit-replace-open');
-    setTimeout(() => confirmEl.remove(), 280);
-  };
-  // Ці два listeners — не витік: вони живуть рівно стільки, скільки confirmEl
-  confirmEl.querySelector('.confirm-btn-save').addEventListener('click', e => {
-    e.stopPropagation();
-    replaceExitFav(slug, dirLabel, existing.wagon, existing.doors, newWagon, newDoors);
-    close();
-    bus.emit('station:refresh');
-  });
-  confirmEl.querySelector('.confirm-btn-discard').addEventListener('click', e => {
-    e.stopPropagation();
-    close();
-  });
-}
-
-// ── Ядро: toggle exit fav ─────────────────────────────────────
-function _triggerExitFav(favTarget, slug, lineColor) {
-  const wagon    = favTarget.dataset.wagon;
-  const doors    = favTarget.dataset.doors;
-  if (!wagon || !doors) return;
-
-  const row      = favTarget.closest('.position-row');
-  const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
-  const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
-  const dirLabel = labelEl?.textContent.trim() ?? '';
-
-  const result = toggleExitFav(slug, dirLabel, wagon, doors);
-
-  if (result.status === 'replace') {
-    _showExitReplaceConfirm(row, result.existing, slug, dirLabel, wagon, doors, lineColor);
-    return;
-  }
-
-  const added = result.status === 'added';
-  if (row) applyFavPillStyles(row, lineColor, added);
-  if (added) {
-    _showExitFavToast(row);
-    _maybeShowCheckinHint(lineColor);
-    _maybeDismissOnboarding(lineColor);
-  }
-
-  // Оновлюємо серце в шапці
-  const favBtnBar = document.querySelector(`.fav-btn-bar[data-slug="${slug}"]`);
-  if (favBtnBar) {
-    const nowFav = isFav(slug);
-    favBtnBar.innerHTML = heartSvg(nowFav, slug, lineColor);
-    favBtnBar.classList.toggle('fav-active', nowFav);
-  }
-}
-
-function _maybeDismissOnboarding(lineColor) {
-  const hint = document.getElementById('onboardingHint');
-  if (hint) dismissHintWithDoors(hint, () => _maybeShowCheckinHint(lineColor));
-  else      _maybeShowCheckinHint(lineColor);
-}
-
-function _maybeShowCheckinHint(lineColor) {
-  if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
-  if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
-  const sheetBodyEl = document.getElementById('sheetBody');
-  if (!sheetBodyEl || document.getElementById('checkinHint')) return;
-  Storage.set(STORAGE_KEYS.CHECKIN_HINT_SEEN, 'true');
-  const hint = document.createElement('div');
-  hint.id        = 'checkinHint';
-  hint.className = 'onboarding-hint';
-  hint.innerHTML =
-    `<span class="hint-icon-wrap" style="color:${lineColor}">${Icons.info}</span>` +
-    `Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід&nbsp;зі&nbsp;станції як&nbsp;відвіданий`;
-  sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
-}
-
-// ── Головний bind — викликається ОДИН РАЗ ────────────────────
-/**
- * @param {HTMLElement} sheetBody
- * @param {() => { slug: string, lineColor: string }} getCtx
- *   Getter повертає актуальний slug та колір на момент події.
- *   Це критично: не передаємо значення, бо вони змінюються між відкриттями.
- */
-export function bindSheetGestures(sheetBody, getCtx) {
-
-  // ── touchstart: початок long-press ──────────────────────────
-  sheetBody.addEventListener('touchstart', e => {
-    const favTarget = e.target.closest('.fav-tap-target');
-    if (!favTarget) return;
-
-    const gs = _getGS(favTarget);
-    clearTimeout(gs.longPressId);
-
-    gs.longPressId = setTimeout(() => {
-      gs.longPressId = null;
-      const { slug, lineColor } = getCtx();
-      _triggerExitFav(favTarget, slug, lineColor);
-    }, TIMING.LONG_PRESS);
-
-  }, { passive: true });
-
-  // ── touchmove: скасувати long-press (не блокуємо скрол) ─────
-  sheetBody.addEventListener('touchmove', e => {
-    // Скасовуємо для всіх активних .fav-tap-target в зоні дотику
-    // e.target може бути дочірнім елементом — тому .closest()
-    const favTarget = e.target.closest('.fav-tap-target');
-    if (favTarget) _cancelLongPress(favTarget);
-  }, { passive: true });
-
-  // ── touchend: скасувати, якщо не спрацював ──────────────────
-  sheetBody.addEventListener('touchend', e => {
-    const favTarget = e.target.closest('.fav-tap-target');
-    if (favTarget) _cancelLongPress(favTarget);
-  }, { passive: true });
-
-  // ── click: double-tap fav + pencil + nav-link ────────────────
-  sheetBody.addEventListener('click', e => {
-    const { slug, lineColor } = getCtx();
-
-    // 1. Pencil (відредагована позиція → відкрити feedback)
-    const pencil = e.target.closest('.pos-edited-mark');
-    if (pencil) {
-      e.stopPropagation();
-      const editSlug = pencil.dataset.slug;
-      if (!editSlug) return;
-      bus.emit('sheet:open-feedback-for', { slug: editSlug });
-      return;
-    }
-
-    // 2. Скасувати exit-replace confirm
-    if (e.target.closest('.exit-replace-confirm')) return;
-
-    // 3. Nav-label → відкрити іншу станцію
-    const navLabel = e.target.closest('.nav-link');
-    if (navLabel) {
-      const target = slugByName(navLabel.dataset.name || '');
-      if (target && target !== slug) bus.emit('station:open', { slug: target });
-      return;
-    }
-
-    // 4. Double-tap на .fav-tap-target
-    const favTarget = e.target.closest('.fav-tap-target');
-    if (!favTarget) return;
-    // Ігноруємо кліки по службових елементах всередині target
-    if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
-
-    const gs = _getGS(favTarget);
-    gs.tapCount++;
-    clearTimeout(gs.tapId);
-    gs.tapId = setTimeout(() => { gs.tapCount = 0; }, TIMING.DOUBLE_TAP);
-
-    if (gs.tapCount >= 2) {
-      gs.tapCount = 0;
-      clearTimeout(gs.tapId);
-      _triggerExitFav(favTarget, slug, lineColor);
-    }
-  });
-}
-
-// ── Початкове зафарбовування улюблених при відкритті картки ──
-/**
- * Проходиться по всіх .fav-tap-target у sheetBody
- * і підфарбовує ті, що є у exitFavs.
- * Викликається після кожного innerHTML = (без повторного bind).
- *
- * @param {HTMLElement} sheetBody
- * @param {string} slug
- * @param {string} lineColor
- */
-export function applyInitialFavStyles(sheetBody, slug, lineColor) {
-  sheetBody.querySelectorAll('.fav-tap-target').forEach(favTarget => {
-    const wagon    = favTarget.dataset.wagon;
-    const doors    = favTarget.dataset.doors;
-    if (!wagon || !doors) return;
-
-    const row      = favTarget.closest('.position-row');
-    const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
-    const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
-    const dirLabel = labelEl?.textContent.trim() ?? '';
-
-    if (row && isExitFav(slug, dirLabel, wagon, doors)) {
-      applyFavPillStyles(row, lineColor, true);
-    }
-  });
-}
-</file>
-
-<file path="src/ui/animations.js">
-// ══ АНІМАЦІЇ ══
-// Анімація «двері ліфта» і розсування підказок.
-
-import { TIMING } from '../core/timing.js';
-
-/**
- * Базова анімація «двері ліфта» — клонує елемент і розсуває клони.
- * Використовується як animateSheetClose, так і showCustomConfirm.
- *
- * @param {HTMLElement} el       - елемент, що «розрізається»
- * @param {DOMRect}     rect     - його getBoundingClientRect()
- * @param {Function}    callback - викликається через DOOR_CALLBACK мс
- * @param {HTMLElement} parent   - куди додати клони (body або overlay)
- */
-export function runDoorAnimation(el, rect, callback, parent = document.body) {
-  const baseStyle = [
-    'position:fixed',
-    `top:${rect.top}px`, `left:${rect.left}px`,
-    `width:${rect.width}px`, `height:${rect.height}px`,
-    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
-    'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
-  ].join(';');
-
-  const L = el.cloneNode(true);
-  const R = el.cloneNode(true);
-  L.classList.remove('sheet-open'); L.removeAttribute('id');
-  R.classList.remove('sheet-open'); R.removeAttribute('id');
-  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
-  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
-  parent.appendChild(L);
-  parent.appendChild(R);
-
-  void L.offsetWidth; // force reflow
-  L.style.transform = 'translateX(-50%)'; L.style.opacity = '0';
-  R.style.transform = 'translateX(50%)';  R.style.opacity = '0';
-
-  if (callback) setTimeout(callback, TIMING.DOOR_CALLBACK);
-  setTimeout(() => { L.remove(); R.remove(); }, TIMING.DOOR_CLEANUP);
-}
-
-/**
- * Закриття шторки через анімацію «двері ліфта».
- */
-export function animateSheetClose(sheetEl, callback) {
-  if (!sheetEl || !sheetEl.classList.contains('sheet-open')) { callback?.(); return; }
-  const rect = sheetEl.getBoundingClientRect();
-  if (rect.height < 10) { callback?.(); return; }
-
-  sheetEl.style.transition = 'none';
-  sheetEl.style.visibility = 'hidden';
-
-  runDoorAnimation(sheetEl, rect, callback, document.body);
-
-  setTimeout(() => {
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      sheetEl.style.transition = '';
-      sheetEl.style.visibility = '';
-    }));
-  }, TIMING.DOOR_CLEANUP);
-}
-
-/**
- * Розсування підказки (hints у картці станції).
- * Схожа механіка, але інші тайминги і parent = document.body.
- */
-export function dismissHintWithDoors(el, onDone) {
-  if (!el || !document.body.contains(el)) { onDone?.(); return; }
-  const rect = el.getBoundingClientRect();
-  if (rect.height < 4) { el.remove(); onDone?.(); return; }
-
-  const baseStyle = [
-    'position:fixed',
-    `top:${rect.top}px`, `left:${rect.left}px`,
-    `width:${rect.width}px`, `height:${rect.height}px`,
-    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
-    'transition:transform 0.55s cubic-bezier(0.32,0.72,0,1),opacity 0.4s ease',
-  ].join(';');
-
-  const L = el.cloneNode(true); L.removeAttribute('id');
-  const R = el.cloneNode(true); R.removeAttribute('id');
-  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0)';
-  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%)';
-  document.body.appendChild(L);
-  document.body.appendChild(R);
-
-  el.style.visibility = 'hidden';
-  void L.offsetWidth;
-  L.style.transform = 'translateX(-52%)'; L.style.opacity = '0';
-  R.style.transform = 'translateX(52%)';  R.style.opacity = '0';
-
-  setTimeout(() => { el.remove(); onDone?.(); }, TIMING.HINT_CALLBACK);
-  setTimeout(() => { L.remove(); R.remove(); }, TIMING.HINT_CLEANUP);
-}
-</file>
-
-<file path="src/ui/components.js">
-// ══ UI-КОМПОНЕНТИ ══
-// Чисті функції: string in → HTML string out. Нуль побічних ефектів.
-
-import { Icons } from './icons.js';
-
-/**
- * Пілюля «вагон / двері» у картці станції.
- */
-export function pill(label, value, color) {
-  return `<div class="pos-pill">
-    <div class="pos-pill-label">${label}</div>
-    <div class="pos-pill-num" style="color:${color}">${value}</div>
-  </div>`;
-}
-
-/**
- * SVG-серце для кнопки Вибраного.
- */
-export function heartSvg(isFav, _slug, lineColor) {
-  const base = 'width="18" height="18" viewBox="-1 -1 19 19" xmlns="http://www.w3.org/2000/svg"';
-  if (!isFav) {
-    return `<svg ${base} fill="none" stroke="currentColor" stroke-width="1.3"><path d="${Icons.heartPath}"/></svg>`;
-  }
-  return `<svg ${base} fill="${lineColor}"><path d="${Icons.heartPath}"/></svg>`;
-}
-</file>
-
-<file path="src/ui/icons.js">
-// ══ ІКОНКИ ══
-// Чистий ES-модуль: export const Icons = {...}
-
-export const Icons = {
-  pencil: `<svg aria-hidden="true" focusable="false" viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
-
-  undo: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`,
-
-  info: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/></svg>`,
-
-  search: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
-
-  heartPath: `M12.5 0.658c-1.739 0-3.251 0.992-4 2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343 0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924 9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598 7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091 0-2.481-2.019-4.5-4.5-4.5z`,
-
-  heartOutlinePath: `M12.5 0.658c-1.739 0-3.251 0.992-4 2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343 0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924 9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598 7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091 0-2.481-2.019-4.5-4.5-4.5zM15.889 5.98l-0.113 0.37c-0.809 3.246-5.946 7.727-7.276 8.843-1.282-1.083-6.122-5.337-7.285-8.872l-0.1-0.316c-0.077-0.311-0.115-0.588-0.115-0.847 0-1.93 1.57-3.5 3.5-3.5s3.5 1.571 3.5 3.5v0.252h1v-0.252c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5c0 0.258-0.038 0.527-0.111 0.822z`,
-
-  dockHeartEmpty: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5 1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
-
-  dockHeartFilled: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5 1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
-
-  dockPinEmpty: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);" opacity="0.5"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="var(--icon-color)" stroke="var(--icon-color)" stroke-width="0.5"/></svg>`,
-
-  dockPinFilled: `<svg viewBox="0 -1.5 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);" opacity="0.5"><path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
-};
-</file>
-
-<file path="src/ui/theme.js">
-import { STORAGE_KEYS, Storage } from '@core/storage.js';
-
-const root = document.documentElement;
-
-export function applyTheme(preference, save = true) {
-  let pref = preference;
-
-  if (!pref) {
-    pref = Storage.get(STORAGE_KEYS.THEME) || 'system';
-    save = false;
-  }
-
-  const actualTheme = pref === 'system'
-    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    : pref;
-
-  const css = document.createElement('style');
-  css.textContent = '*, *::before, *::after { transition: none !important; }';
-  document.head.appendChild(css);
-
-  root.setAttribute('data-theme', actualTheme);
-
-  if (save) {
-    Storage.set(STORAGE_KEYS.THEME, pref);
-  }
-
-  // Оновлюємо сегментований контрол
-  document.querySelectorAll('#settingsThemeSeg .settings-seg-btn').forEach(btn => {
-    btn.classList.toggle('is-active', btn.dataset.themeVal === pref);
-  });
-
-  requestAnimationFrame(() => requestAnimationFrame(() => css.remove()));
-}
-
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  const pref = Storage.get(STORAGE_KEYS.THEME) || 'system';
-  if (pref === 'system') applyTheme('system', false);
-});
-</file>
-
-<file path="thanks.html">
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Дякуємо! - KyivMetroGO</title>
-  
-  <style>
-    :root {
-      --line-red: #c8523a;
-      --line-blue: #5b9bd5;
-      --line-green: #5aaa6a;
-      --text: #ffffff;
-      --text-muted: #ababab;
-      --bg: #000000;
-      --bg-card: #2c2c2e;
-      --btn-bg: #1c1c1e;
-    }
-
-    [data-theme="light"] {
-      --text: #000000;
-      --text-muted: #8e8e93;
-      --bg: #e5e5ea;
-      --bg-card: #ffffff;
-      --btn-bg: #ffffff;
-    }
-    
-    @media (prefers-color-scheme: light) {
-      :root:not([data-theme="dark"]) {
-        --text: #000000;
-        --text-muted: #8e8e93;
-        --bg: #e5e5ea;
-        --bg-card: #ffffff;
-        --btn-bg: #ffffff;
-      }
-    }
-
-    html, body {
-      margin: 0; padding: 0; height: 100%;
-      background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      text-align: center;
-    }
-    .salute-container {
-      width: 160px; height: 160px; margin-bottom: 20px;
-    }
-    h1 {
-      font-size: 24px; font-weight: 600; margin: 0 0 10px 0; font-variant: small-caps; letter-spacing: 0.04em;
-    }
-    p {
-      font-size: 15px; color: var(--text-muted); max-width: 340px; margin: 0 0 40px 0; line-height: 1.45;
-    }
-    strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-    .back-btn {
-      text-decoration: none; font-size: 16px; font-weight: 600;
-      color: var(--text); background: var(--btn-bg);
-      padding: 14px 28px; border-radius: 12px; transition: opacity 0.2s;
-    }
-    .back-btn:active { opacity: 0.7; }
-  </style>
-
-  <script>
-    try {
-      const savedTheme = localStorage.getItem('metro_theme');
-      if (savedTheme) {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-      }
-    } catch (e) { }
-  </script>
-</head>
-<body>
-
-  <div class="salute-container">
-    <svg id="saluteSvg" viewBox="-4 -4 44.3 45.1" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; overflow: visible;">
-      <g transform="translate(-162.85484,-126.18087)">
-        <g transform="translate(32.460036,2.9988233)">
-          <g class="eggPetals" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
-            <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
-            <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
-            <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
-            <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 -8,-2 -8,-4.9 z" />
-            <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z" />
-            <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z" />
-            <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z" />
-            <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 -3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
-            <path class="st4" d="m 227.95,217.46 c 2.1,-0.9 4.2,-1.3 4.8,1.4 0.5,2.5 -0.6,5.3 -1.7,6 -1.5,0.3 -4.1,-1 -5.5,-3 -1.4,-2.4 0.3,-3.6 2.4,-4.4 z" />
-            <path class="st4" d="m 212.05,255.66 c -0.9,-2.1 -1.3,-4.2 1.4,-4.7 2.5,-0.5 5.4,0.6 6,1.7 0.3,1.5 -1,4.1 -3.1,5.4 -2.2,1.4 -3.5,-0.3 -4.3,-2.4 z" />
-            <path class="st4" d="m 250.75,271.96 c 2.1,-0.9 3.9,-2.1 2.4,-4.4 -1.4,-2.1 -4.2,-3.3 -5.5,-3 -1.3,0.8 -2.2,3.6 -1.7,6 0.6,2.7 2.7,2.3 4.8,1.4 z" />
-            <path class="st4" d="m 212.05,233.26 c 0.9,-2.1 2.1,-3.9 4.4,-2.4 2.2,1.4 3.4,4.2 3.1,5.4 -0.8,1.3 -3.6,2.2 -6,1.7 -2.8,-0.6 -2.4,-2.6 -1.5,-4.7 z" />
-            <path class="st4" d="m 228.35,271.46 c -2.1,-0.9 -3.9,-2.1 -2.4,-4.4 1.4,-2.1 4.2,-3.3 5.5,-3 1.3,0.8 2.2,3.6 1.7,6 -0.6,2.7 -2.7,2.3 -4.8,1.4 z" />
-            <path class="st4" d="m 250.55,217.46 c 2.1,0.9 3.9,2.1 2.4,4.4 -1.4,2.1 -4.2,3.3 -5.5,3 -1.3,-0.8 -2.2,-3.6 -1.7,-6 0.6,-2.7 2.7,-2.3 4.8,-1.4 z" />
-            <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z" />
-            <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z" />
-          </g>
-          <path class="eggCenter" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" style="fill: var(--line-red)"/>
-        </g>
-      </g>
-    </svg>
-  </div>
-
-  <h1 id="thanksTitle">Дякуємо за підтримку!</h1>
-  <p id="thanksText">Вже задонатили на Сили оборони, і хочете допомогти KyivMetroGO?<br><br>Щоб опублікувати додаток в App Store, треба сплатити ліцензію Apple Developer, яка коштує <strong>$99 на рік</strong>.</p>
-  
-  <a href="index.html" class="back-btn">Повернутись до карти</a>
-
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('type') === 'beta') {
-      document.getElementById('thanksTitle').innerText = 'Дякуємо! Напишемо.';
-      document.getElementById('thanksText').innerHTML = 'Електронну адресу збережено.<br><br>За правилами Google Play, перед публікацією ми маємо провести закрите тестування. Для нього потрібно <strong>20 тестувальників</strong>, які користуватимуться додатком <strong>14 днів поспіль</strong>. Ми надішлемо вам запрошення, щойно назбираємо доста охочих!';
-    }
-
-    const rs = getComputedStyle(document.documentElement);
-    
-    const getColor = (prop, fallback) => {
-      const val = rs.getPropertyValue(prop).trim();
-      return val ? val : fallback;
-    };
-
-    const THEME_COLORS = { 
-      red:   getColor('--line-red', '#c8523a'), 
-      blue:  getColor('--line-blue', '#5b9bd5'), 
-      green: getColor('--line-green', '#5aaa6a'), 
-      base:  getColor('--bg-card', '#2c2c2e')
-    };
-
-    const hexToRgb = hex => { const n = parseInt(hex.replace('#',''), 16); return [(n>>16)&255, (n>>8)&255, n&255]; };
-    const lerp = (a, b, t) => Math.round(a + (b - a) * t);
-    const mixColors = (c, b, t) => { const [r1,g1,b1]=hexToRgb(c); const [r2,g2,b2]=hexToRgb(b); return `rgb(${lerp(r2,r1,t)},${lerp(g2,g1,t)},${lerp(b2,b1,t)})`; };
-
-    const svg = document.getElementById('saluteSvg');
-    const petalsUnsorted = Array.from(svg.querySelectorAll('.st4'));
-    const center = svg.querySelector('.eggCenter');
-    const cb = center.getBoundingClientRect();
-    const cx = cb.left + cb.width/2, cy = cb.top + cb.height/2;
-
-    const petals = petalsUnsorted.map(p => {
-      const b = p.getBoundingClientRect();
-      const a = Math.atan2(b.top+b.height/2 - cy, b.left+b.width/2 - cx) * 180 / Math.PI;
-      return { el: p, a: (a+90+360)%360 };
-    }).sort((a,b) => a.a - b.a).map(p => p.el);
-
-    petals.forEach(p => { p.style.fill = THEME_COLORS.base; p.style.transition = "fill 0.25s ease"; });
-
-    const schemes = [
-      { c: THEME_COLORS.red, p: [THEME_COLORS.blue, THEME_COLORS.green] },
-      { c: THEME_COLORS.blue, p: [THEME_COLORS.red, THEME_COLORS.green] },
-      { c: THEME_COLORS.green, p: [THEME_COLORS.red, THEME_COLORS.blue] }
-    ];
-    const s = schemes[Math.floor(Math.random() * schemes.length)];
-
-    const runPetals = () => {
-      const i = Math.floor(Math.random() * petals.length);
-      petals[i].style.fill = mixColors(s.p[i%2], THEME_COLORS.base, 0.85);
-      setTimeout(() => { petals[i].style.fill = THEME_COLORS.base; }, 400);
-      setTimeout(runPetals, 150 + Math.random() * 200);
-    };
-    const runCenter = () => {
-      const ph = (Date.now()/1000)%1.2;
-      center.style.fill = mixColors(s.c, THEME_COLORS.base, 0.35 + Math.abs(Math.sin(ph*Math.PI))*0.65);
-      requestAnimationFrame(runCenter);
-    };
-
-    runPetals(); runCenter();
-  </script>
-</body>
-</html>
-</file>
-
-<file path="src/core/constants.js">
-// ══ СТАТИЧНІ КОНСТАНТИ ДОДАТКУ ══
-// Значення, що ніколи не змінюються під час роботи.
-//
-// P2-E fix: NAME_TO_SLUG та SLUG_BY_LOWER видалено звідси.
-// Вони були порожніми об'єктами, які заповнювались через MetroApp —
-// що порушувало ESM-інкапсуляцію і плутало споживачів (отримували порожній об'єкт).
-// Тепер вони є приватними змінними всередині data/stations.js
-// і доступні виключно через slugByName() та getSlugByLower().
-
-export const LINE_COLOR = {
-  red:   '#c8523a',
-  blue:  '#5b9bd5',
-  green: '#5aaa6a',
-};
-
-export const FAV_DISPLAY_NAMES = {
-  'B.Ploshcha_Ukrainskikh_heroiv': 'Пл. Українських Героїв',
-};
-
-export const DIR_SHORT_NAMES = {
-  'контрактова площа':      'Контрактова',
-  'поштова площа':          'Поштова',
-  'майдан незалежності':    'Майдан',
-  'політехнічний інститут': 'Політехнічний',
-  'золоті ворота':          'Золоті',
-};
-
-export const STATIONS_WITH_POTENTIAL_EXITS = new Set([
-  'R.Zhytomyrska',
-  'G.Osokorky',
-  'G.Chervonyi_khutir',
-]);
-</file>
-
-<file path="src/data/localEdits.js">
-// ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
-// Відповідальність: читання/запис локальних правок позицій та підписів виходів.
-//
-// Блок Б: підписуємось на bus.on('data:stations-hydrated') і замінюємо
-// MetroApp-фасад (що був у кінці файлу) чистою bus-інтеграцією.
-// applyLocalEdits / applyExitLabels залишаються публічними — їх безпосередньо
-// викликають fbEvents.js, fbApi.js та stationSheet.js (прямий ESM-імпорт).
-
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
-import { bus }                   from '../core/eventBus.js';
-import { traversePositions }     from './positions.js';
-
-// ══ КЕШ ══════════════════════════════════════════════════════
-
-let localEditsCache = null;
-let exitLabelsCache = null;
-
-export function invalidateLocalEditsCache() {
-  localEditsCache = null;
-  exitLabelsCache = null;
-}
-
-// ══ EXIT LABELS ════════════════════════════════════════════════
-
-function getExitLabels() {
-  if (exitLabelsCache) return exitLabelsCache;
-  try {
-    exitLabelsCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_LABELS) || '{}');
-  } catch (e) {
-    console.warn('[localEdits] Помилка парсингу описів виходів:', e);
-    exitLabelsCache = {};
-  }
-  return exitLabelsCache;
-}
-
-/**
- * Зберігає або видаляє підпис виходу за slug + posIdx.
- * Якщо label порожній — запис видаляється.
- * @param {string} slug
- * @param {number} posIdx
- * @param {string} label
- */
-export function saveExitLabel(slug, posIdx, label) {
-  const labels = getExitLabels();
-  if (!labels[slug]) labels[slug] = {};
-  if (label.trim()) {
-    labels[slug][posIdx] = label.trim();
-  } else {
-    delete labels[slug][posIdx];
-    if (!Object.keys(labels[slug]).length) delete labels[slug];
-  }
-  Storage.set(STORAGE_KEYS.EXIT_LABELS, JSON.stringify(labels));
-  exitLabelsCache = null;
-}
-
-/**
- * Повертає підпис виходу або null якщо немає.
- * @param {string} slug
- * @param {number} posIdx
- * @returns {string|null}
- */
-export function getExitLabel(slug, posIdx) {
-  return getExitLabels()[slug]?.[posIdx] ?? null;
-}
-
-/**
- * Застосовує всі збережені підписи виходів до об'єктів stationsData.
- * Мутує exit.label та exit._labelEdited на місці.
- * Викликається:
- *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
- *   – явно з fbEvents.js та stationSheet.js при ручних змінах.
- *
- * @param {Record<string, object>} stationsData
- */
-export function applyExitLabels(stationsData) {
-  const labels = getExitLabels();
-  for (const [slug, posLabels] of Object.entries(labels)) {
-    if (!stationsData[slug]) continue;
-    traversePositions(stationsData[slug], ({ exit, posIdx }) => {
-      if (posLabels[posIdx] !== undefined) {
-        exit.label        = posLabels[posIdx];
-        exit._labelEdited = true;
-        exit._slug        = slug;
-      }
-    });
-  }
-}
-
-// ══ LOCAL EDITS ════════════════════════════════════════════════
-
-/**
- * Повертає об'єкт усіх локальних правок позицій з кешу або Storage.
- * Структура: { [slug]: { [posIdx]: EditData } }
- * @returns {Record<string, Record<number, object>>}
- */
-export function getLocalEdits() {
-  if (localEditsCache) return localEditsCache;
-  try {
-    localEditsCache = JSON.parse(Storage.get(STORAGE_KEYS.LOCAL_EDITS) || '{}');
-  } catch (e) {
-    console.warn('[localEdits] Помилка парсингу локальних змін:', e);
-    localEditsCache = {};
-  }
-  return localEditsCache;
-}
-
-/**
- * Зберігає локальну правку позиції.
- * @param {string} slug
- * @param {number} posIdx
- * @param {object} data
- */
-export function saveLocalEdit(slug, posIdx, data) {
-  const edits = getLocalEdits();
-  if (!edits[slug]) edits[slug] = {};
-  edits[slug][posIdx] = data;
-  Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
-  localEditsCache = null;
-}
-
-/** Видаляє всі локальні правки з Storage та кешу. */
-export function clearAllLocalEdits() {
-  localEditsCache = null;
-  Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
-}
-
-/** @returns {boolean} true якщо є хоча б одна локальна правка */
-export function hasLocalEdits() {
-  return Object.keys(getLocalEdits()).length > 0;
-}
-
-/**
- * Застосовує всі локальні правки до об'єктів stationsData.
- * Мутує position на місці (wagon, doors, closed тощо).
- * Для isNew-правок — додає новий exit до відповідного direction.
- * Викликається:
- *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
- *   – явно з fbEvents.js та fbApi.js при ручних змінах у формі фідбеку.
- *
- * @param {Record<string, object>} stationsData
- */
-export function applyLocalEdits(stationsData) {
-  const edits = getLocalEdits();
-
-  for (const [slug, posEdits] of Object.entries(edits)) {
-    if (!stationsData[slug]) continue;
-    const s = stationsData[slug];
-
-    traversePositions(s, ({ position, posIdx }) => {
-      const edit = posEdits[posIdx];
-      if (edit !== undefined && !edit.isNew) {
-        Object.assign(position, edit, { _edited: true, _slug: slug, _posIdx: posIdx });
-      }
-    });
-
-    Object.keys(posEdits).forEach(idx => {
-      const edit = posEdits[idx];
-      if (!edit.isNew) return;
-
-      const targetDir = s.directions.find(d => d.from === edit.dir);
-      if (!targetDir) return;
-
-      const alreadyAdded = targetDir.exits.some(e =>
-        e.positions?.some(p => p._posIdx === parseInt(idx))
-      );
-      if (alreadyAdded) return;
-
-      const newExit = {
-        label:     edit.label || '',
-        positions: [{
-          wagon:    String(edit.wagon),
-          doors:    String(edit.doors),
-          _edited:  true,
-          _slug:    slug,
-          _posIdx:  parseInt(idx),
-        }],
-      };
-      targetDir.exits.push(newExit);
-      s.positions.push({
-        dir:   edit.dir,
-        exit:  newExit.label,
-        wagon: String(edit.wagon),
-        doors: String(edit.doors),
-      });
-    });
-  }
-}
-
-// ══ BUS-ІНТЕГРАЦІЯ ════════════════════════════════════════════
-// Замінює MetroApp-фасад, що був у кінці цього файлу.
-// stations.js::hydrateStations() тепер емітує 'data:stations-hydrated'
-// замість прямих викликів MetroApp.applyLocalEdits / MetroApp.applyExitLabels.
-//
-// EventBus — синхронний: handlers виконуються до повернення bus.emit(),
-// тому правки гарантовано застосовані до того, як hydrateStations поверне дані.
-
-bus.on('data:stations-hydrated', ({ stationsData }) => {
-  applyLocalEdits(stationsData);
-  applyExitLabels(stationsData);
-});
-</file>
-
 <file path="src/sheets/renderStation.js">
 import { slugByName } from '../data/stations.js';
 import { state }      from '../core/state.js';
@@ -4288,6 +4288,98 @@ window.addEventListener('popstate', () => {
 });
 </file>
 
+<file path="public/sw.js">
+/* eslint-disable no-undef */
+const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'dev';
+const CACHE_NAME = `kyivmetro-${BUILD_DATE}`;
+
+const PRECACHE_ASSETS = (self.__WB_MANIFEST || [])
+  .map(entry => (typeof entry === 'string' ? entry : entry.url))
+  .concat([
+    './index.html',
+    './manifest.json',
+    './ProbaNav2-Medium.woff2',
+  ]);
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_ASSETS)),
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)),
+    )).then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  if (url.pathname.endsWith('stations.json')) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  event.respondWith(staleWhileRevalidate(event.request));
+});
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(request);
+
+      if (cached) {
+        try {
+          const [newData, oldData] = await Promise.all([
+            response.clone().json(),
+            cached.json(),
+          ]);
+
+          if (newData.version && newData.version === oldData.version) {
+            return response;
+          }
+
+          // Версія змінилась — повідомляємо всі вкладки.
+          self.clients.matchAll({ type: 'window', includeUncontrolled: false })
+            .then(clients => clients.forEach(client =>
+              client.postMessage({ type: 'STATIONS_UPDATED', version: newData.version ?? null })
+            ))
+            .catch(() => {});  // не критично
+        } catch {
+          // Ignore invalid JSON and refresh the cached copy below.
+        }
+      }
+
+      cache.put(request, response.clone());
+    }
+
+    return response;
+  } catch {
+    return (await caches.match(request)) || new Response('Офлайн', { status: 503 });
+  }
+}
+
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cachedResponse = await cache.match(request);
+
+  const networkPromise = fetch(request).then(response => {
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  }).catch(() => null);
+
+  if (cachedResponse) return cachedResponse;
+  return await networkPromise || new Response('Офлайн', { status: 503 });
+}
+</file>
+
 <file path="src/core/storage.js">
 // ══ STORAGE KEYS ══
 export const STORAGE_KEYS = {
@@ -4648,96 +4740,202 @@ function handleStartupStation(data) {
 }
 </file>
 
-<file path="public/sw.js">
-/* eslint-disable no-undef */
-const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'dev';
-const CACHE_NAME = `kyivmetro-${BUILD_DATE}`;
+<file path="src/map/mapGestures.js">
+// ══ ЖЕСТИ КАРТИ: PAN + PINCH ZOOM ══
 
-const PRECACHE_ASSETS = (self.__WB_MANIFEST || [])
-  .map(entry => (typeof entry === 'string' ? entry : entry.url))
-  .concat([
-    './index.html',
-    './manifest.json',
-    './ProbaNav2-Medium.woff2',
-  ]);
+import { BASE_MAP_WIDTH, BASE_MAP_HEIGHT } from './mapInit.js';
+import { applyVisitedHatchOverlays } from './mapInteraction.js';
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_ASSETS)),
-  );
-  self.skipWaiting();
-});
+const vp           = document.getElementById('mapViewport');
+const inner        = document.getElementById('mapInner');
+const sheetOverlay = document.getElementById('sheetOverlay');
 
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)),
-    )).then(() => self.clients.claim()),
-  );
-});
+// ── Pan (1 палець) ────────────────────────────────────────────
+let panStartX = 0, panStartY = 0;
+let panStartScrollLeft = 0, panStartScrollTop = 0;
+let isPanActive = false;
 
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+// ── Pinch zoom (2 пальці) ────────────────────────────────────
+let pendingPinch = null, pinchRAFScheduled = false;
+let pinchStartDist = 0, pinchStartWidth = 0, pinchStartHeight = 0;
+let pinchStartScrollLeft = 0, pinchStartScrollTop = 0;
+let pinchVpLeft = 0, pinchVpTop = 0;
+let pinchMarginLeft = 0, pinchMarginTop = 0;
 
-  if (url.pathname.endsWith('stations.json')) {
-    event.respondWith(networkFirst(event.request));
-    return;
+document.addEventListener('touchstart', e => {
+  if (sheetOverlay.classList.contains('overlay-visible')) return;
+
+  if (e.touches.length === 2) {
+    isPanActive = false;
+    const t0 = e.touches[0], t1 = e.touches[1];
+    pinchStartDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+
+    pinchStartWidth      = parseFloat(inner.style.width)  || inner.offsetWidth;
+    pinchStartHeight     = parseFloat(inner.style.height) || inner.offsetHeight;
+    pinchStartScrollLeft = vp.scrollLeft;
+    pinchStartScrollTop  = vp.scrollTop;
+
+    const vpRect = vp.getBoundingClientRect();
+    pinchVpLeft    = vpRect.left;
+    pinchVpTop     = vpRect.top;
+    pinchMarginLeft = parseFloat(inner.style.marginLeft) || 0;
+    pinchMarginTop  = parseFloat(inner.style.marginTop)  || 0;
+    pendingPinch = null;
+
+  } else if (e.touches.length === 1) {
+    isPanActive        = true;
+    panStartX          = e.touches[0].clientX;
+    panStartY          = e.touches[0].clientY;
+    panStartScrollLeft = vp.scrollLeft;
+    panStartScrollTop  = vp.scrollTop;
+  }
+}, { passive: true });
+
+vp.addEventListener('touchmove', e => {
+  if (!isPanActive || e.touches.length !== 1) return;
+  vp.scrollLeft = panStartScrollLeft - (e.touches[0].clientX - panStartX);
+  vp.scrollTop  = panStartScrollTop  - (e.touches[0].clientY - panStartY);
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
+  e.preventDefault();
+  if (!pinchStartDist) return;
+
+  const t0x = e.touches[0].clientX, t0y = e.touches[0].clientY;
+  const t1x = e.touches[1].clientX, t1y = e.touches[1].clientY;
+  const dist = Math.hypot(t0x - t1x, t0y - t1y);
+
+  pendingPinch = { ratio: dist / pinchStartDist, midX: (t0x + t1x) / 2, midY: (t0y + t1y) / 2 };
+
+  if (!pinchRAFScheduled) {
+    pinchRAFScheduled = true;
+    requestAnimationFrame(() => {
+      pinchRAFScheduled = false;
+      if (!pendingPinch) return;
+      const { ratio: r, midX, midY } = pendingPinch;
+      pendingPinch = null;
+
+      const minW = vp.clientWidth;
+      const maxW = Math.round(BASE_MAP_WIDTH * 4.0);
+      let newW   = Math.max(minW, Math.min(maxW, Math.round(pinchStartWidth * r)));
+      const actualRatio = newW / pinchStartWidth;
+      const newH = Math.round(pinchStartHeight * actualRatio);
+
+      const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
+      const padY = Math.max(0, (vp.clientHeight - newH) / 2);
+
+      inner.style.width      = newW + 'px';
+      inner.style.height     = newH + 'px';
+      inner.style.marginLeft = padX + 'px';
+      inner.style.marginTop  = padY + 'px';
+
+      const relX = (midX - pinchVpLeft + pinchStartScrollLeft - pinchMarginLeft) / pinchStartWidth;
+      const relY = (midY - pinchVpTop  + pinchStartScrollTop  - pinchMarginTop)  / pinchStartHeight;
+
+      vp.scrollLeft = Math.round(relX * newW + padX - (midX - pinchVpLeft));
+      vp.scrollTop  = Math.round(relY * newH + padY - (midY - pinchVpTop));
+    });
+  }
+}, { passive: false });
+
+let _hatchTimer = null;
+
+document.addEventListener('touchend', e => {
+  if (e.touches.length < 2) {
+    pinchStartDist    = 0;
+    pendingPinch      = null;
+    pinchRAFScheduled = false;
+    // Перерисовуємо хетч тільки якщо масштаб реально змінився,
+    // і не частіше ніж раз на 300 мс
+    clearTimeout(_hatchTimer);
+    _hatchTimer = setTimeout(() => {
+      applyVisitedHatchOverlays();
+    }, 300);
+  }
+  if (e.touches.length === 1 && !sheetOverlay.classList.contains('overlay-visible')) {
+    isPanActive        = true;
+    panStartX          = e.touches[0].clientX;
+    panStartY          = e.touches[0].clientY;
+    panStartScrollLeft = vp.scrollLeft;
+    panStartScrollTop  = vp.scrollTop;
+  }
+  if (e.touches.length === 0) isPanActive = false;
+}, { passive: true });
+</file>
+
+<file path="src/ui/confirm.js">
+import { bus }           from '../core/eventBus.js';
+import { runDoorAnimation } from './animations.js';
+import { TIMING }           from '../core/timing.js';
+
+/**
+ * Показує модальний діалог підтвердження з анімацією «двері ліфта».
+ *
+ * @param {string}   message   - HTML-текст запитання
+ * @param {Function} onYes     - callback для «Зберегти»
+ * @param {Function} onNo      - callback для «Не зберігати»
+ * @param {Function} onCancel  - callback для «Скасувати» (null = кнопка прихована)
+ * @param {string}   yesText   - текст кнопки «так»
+ * @param {string}   noText    - текст кнопки «ні»
+ * @param {string}   yesClass  - CSS-клас кнопки «так»
+ * @param {string}   noClass   - CSS-клас кнопки «ні»
+ */
+export function showCustomConfirm(
+  message, onYes, onNo, onCancel,
+  yesText  = 'Зберегти',
+  noText   = 'Не зберігати',
+  yesClass = 'confirm-btn-save',
+  noClass  = 'confirm-btn-discard',
+) {
+  const overlay = document.createElement('div');
+  overlay.className = 'global-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="global-confirm-card">
+      <div class="global-confirm-text">${message}</div>
+      <div class="global-confirm-btns-main">
+        <button class="confirm-main-btn ${yesClass}" id="confirmYes">${yesText}</button>
+        ${noText ? `<button class="confirm-main-btn ${noClass}" id="confirmNo">${noText}</button>` : ''}
+      </div>
+      ${onCancel ? `<button class="confirm-text-btn" id="confirmCancel">Скасувати</button>` : ''}
+    </div>`;
+  document.body.appendChild(overlay);
+
+  function animateClose(callback) {
+    const card = overlay.querySelector('.global-confirm-card');
+    if (!card) { overlay.remove(); callback?.(); return; }
+
+    const rect = card.getBoundingClientRect();
+    card.style.display = 'none';
+    overlay.style.transition      = 'background-color 0.35s, backdrop-filter 0.35s';
+    overlay.style.backgroundColor = 'transparent';
+    overlay.style.backdropFilter  = 'blur(0px)';
+
+    runDoorAnimation(card, rect, callback, overlay);
+    setTimeout(() => overlay.remove(), TIMING.DOOR_CLEANUP);
   }
 
-  event.respondWith(staleWhileRevalidate(event.request));
+  overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));
+  overlay.querySelector('#confirmNo').addEventListener('click',  () => animateClose(onNo));
+  overlay.querySelector('#confirmCancel')?.addEventListener('click', () => animateClose(onCancel));
+  overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
+}
+
+// ── Єдиний bus-обробник (P1-B fix: було два, залишаємо один) ──
+// Підтримує розширені параметри (labelYes, labelNo, styleYes, styleNo)
+// для сумісності з bus.emit із settings.js та backup.js.
+bus.on('ui:confirm', (payload) => {
+  showCustomConfirm(
+    payload.message,
+    payload.onYes,
+    payload.onNo    ?? null,
+    payload.onCancel ?? null,
+    payload.labelYes ?? 'Зберегти',
+    payload.labelNo  ?? 'Не зберігати',
+    payload.styleYes ?? 'confirm-btn-save',
+    payload.styleNo  ?? 'confirm-btn-discard',
+  );
 });
-
-async function networkFirst(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      const cached = await cache.match(request);
-
-      if (cached) {
-        try {
-          const [newData, oldData] = await Promise.all([
-            response.clone().json(),
-            cached.json(),
-          ]);
-
-          if (newData.version && newData.version === oldData.version) {
-            return response;
-          }
-
-          // Версія змінилась — повідомляємо всі вкладки.
-          self.clients.matchAll({ type: 'window', includeUncontrolled: false })
-            .then(clients => clients.forEach(client =>
-              client.postMessage({ type: 'STATIONS_UPDATED', version: newData.version ?? null })
-            ))
-            .catch(() => {});  // не критично
-        } catch {
-          // Ignore invalid JSON and refresh the cached copy below.
-        }
-      }
-
-      cache.put(request, response.clone());
-    }
-
-    return response;
-  } catch {
-    return (await caches.match(request)) || new Response('Офлайн', { status: 503 });
-  }
-}
-
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cachedResponse = await cache.match(request);
-
-  const networkPromise = fetch(request).then(response => {
-    if (response.ok) cache.put(request, response.clone());
-    return response;
-  }).catch(() => null);
-
-  if (cachedResponse) return cachedResponse;
-  return await networkPromise || new Response('Офлайн', { status: 503 });
-}
 </file>
 
 <file path="src/features/devmode.js">
@@ -5137,128 +5335,84 @@ function setupDevDataClear(container) {
 }
 </file>
 
-<file path="src/map/mapGestures.js">
-// ══ ЖЕСТИ КАРТИ: PAN + PINCH ZOOM ══
-
-import { BASE_MAP_WIDTH, BASE_MAP_HEIGHT } from './mapInit.js';
+<file path="src/map/mapInit.js">
+import svgText from '../../KyivMetroScheme.svg?raw';
+import { state }                        from '../core/state.js';
+import { renderMapZones, checkAppReady } from '../data/stations.js';
 import { applyVisitedHatchOverlays } from './mapInteraction.js';
 
-const vp           = document.getElementById('mapViewport');
-const inner        = document.getElementById('mapInner');
-const sheetOverlay = document.getElementById('sheetOverlay');
+const vp    = document.getElementById('mapViewport');
+const inner = document.getElementById('mapInner');
 
-// ── Pan (1 палець) ────────────────────────────────────────────
-let panStartX = 0, panStartY = 0;
-let panStartScrollLeft = 0, panStartScrollTop = 0;
-let isPanActive = false;
+export const BASE_MAP_WIDTH  = 1195.84;
+export const BASE_MAP_HEIGHT = 840;
+const CENTER_X = 0.485;
+const CENTER_Y = 0.5;
 
-// ── Pinch zoom (2 пальці) ────────────────────────────────────
-let pendingPinch = null, pinchRAFScheduled = false;
-let pinchStartDist = 0, pinchStartWidth = 0, pinchStartHeight = 0;
-let pinchStartScrollLeft = 0, pinchStartScrollTop = 0;
-let pinchVpLeft = 0, pinchVpTop = 0;
-let pinchMarginLeft = 0, pinchMarginTop = 0;
+setTimeout(() => {
+  vp?.classList.remove('is-loading');
+  document.getElementById('startupLoader')?.classList.add('hidden');
+}, 10_000);
 
-document.addEventListener('touchstart', e => {
-  if (sheetOverlay.classList.contains('overlay-visible')) return;
+export function adjustViewportHeight() {
+  if (!vp) return;
+  const top   = vp.getBoundingClientRect().top;
+  const avail = Math.floor((window.visualViewport?.height ?? window.innerHeight) - top - 8);
+  vp.style.height = Math.max(120, avail) + 'px';
+}
 
-  if (e.touches.length === 2) {
-    isPanActive = false;
-    const t0 = e.touches[0], t1 = e.touches[1];
-    pinchStartDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
-
-    pinchStartWidth      = parseFloat(inner.style.width)  || inner.offsetWidth;
-    pinchStartHeight     = parseFloat(inner.style.height) || inner.offsetHeight;
-    pinchStartScrollLeft = vp.scrollLeft;
-    pinchStartScrollTop  = vp.scrollTop;
-
-    const vpRect = vp.getBoundingClientRect();
-    pinchVpLeft    = vpRect.left;
-    pinchVpTop     = vpRect.top;
-    pinchMarginLeft = parseFloat(inner.style.marginLeft) || 0;
-    pinchMarginTop  = parseFloat(inner.style.marginTop)  || 0;
-    pendingPinch = null;
-
-  } else if (e.touches.length === 1) {
-    isPanActive        = true;
-    panStartX          = e.touches[0].clientX;
-    panStartY          = e.touches[0].clientY;
-    panStartScrollLeft = vp.scrollLeft;
-    panStartScrollTop  = vp.scrollTop;
+export function applyZoomAndCenter() {
+  const svgEl = inner.querySelector('svg');
+  if (svgEl) {
+    svgEl.style.width   = '100%';
+    svgEl.style.height  = '100%';
+    svgEl.style.display = 'block';
   }
-}, { passive: true });
 
-vp.addEventListener('touchmove', e => {
-  if (!isPanActive || e.touches.length !== 1) return;
-  vp.scrollLeft = panStartScrollLeft - (e.touches[0].clientX - panStartX);
-  vp.scrollTop  = panStartScrollTop  - (e.touches[0].clientY - panStartY);
-}, { passive: true });
+  const w      = Math.min(window.innerWidth, document.documentElement.clientWidth);
+  const sf     = w <= 500 ? 4.5 : 1.5;
+  const minZoom = vp.clientWidth / BASE_MAP_WIDTH;
+  const zoom   = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / BASE_MAP_WIDTH));
 
-document.addEventListener('touchmove', e => {
-  if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
-  e.preventDefault();
-  if (!pinchStartDist) return;
+  const newW = Math.round(BASE_MAP_WIDTH  * zoom);
+  const newH = Math.round(BASE_MAP_HEIGHT * zoom);
 
-  const t0x = e.touches[0].clientX, t0y = e.touches[0].clientY;
-  const t1x = e.touches[1].clientX, t1y = e.touches[1].clientY;
-  const dist = Math.hypot(t0x - t1x, t0y - t1y);
+  inner.style.width  = newW + 'px';
+  inner.style.height = newH + 'px';
 
-  pendingPinch = { ratio: dist / pinchStartDist, midX: (t0x + t1x) / 2, midY: (t0y + t1y) / 2 };
+  const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
+  const padY = Math.max(0, (vp.clientHeight - newH) / 2);
+  inner.style.marginLeft = padX + 'px';
+  inner.style.marginTop  = padY + 'px';
 
-  if (!pinchRAFScheduled) {
-    pinchRAFScheduled = true;
-    requestAnimationFrame(() => {
-      pinchRAFScheduled = false;
-      if (!pendingPinch) return;
-      const { ratio: r, midX, midY } = pendingPinch;
-      pendingPinch = null;
+  requestAnimationFrame(() => {
+    vp.scrollLeft = Math.max(0, padX + newW * CENTER_X - vp.clientWidth  / 2);
+    vp.scrollTop  = Math.max(0, padY + newH * CENTER_Y - vp.clientHeight / 2);
+    state.isMapReady = true;
+    checkAppReady();
+    applyVisitedHatchOverlays();
+    
+    // Знімаємо блюр з карти та повністю ховаємо лоадер
+    vp?.classList.remove('is-loading');
+    document.getElementById('startupLoader')?.classList.add('hidden');
+  });
+}
 
-      const minW = vp.clientWidth;
-      const maxW = Math.round(BASE_MAP_WIDTH * 4.0);
-      let newW   = Math.max(minW, Math.min(maxW, Math.round(pinchStartWidth * r)));
-      const actualRatio = newW / pinchStartWidth;
-      const newH = Math.round(pinchStartHeight * actualRatio);
+export function initMap() {
+  inner.innerHTML = svgText;
+  renderMapZones();
+  adjustViewportHeight();
+  applyZoomAndCenter();
+}
 
-      const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
-      const padY = Math.max(0, (vp.clientHeight - newH) / 2);
-
-      inner.style.width      = newW + 'px';
-      inner.style.height     = newH + 'px';
-      inner.style.marginLeft = padX + 'px';
-      inner.style.marginTop  = padY + 'px';
-
-      const relX = (midX - pinchVpLeft + pinchStartScrollLeft - pinchMarginLeft) / pinchStartWidth;
-      const relY = (midY - pinchVpTop  + pinchStartScrollTop  - pinchMarginTop)  / pinchStartHeight;
-
-      vp.scrollLeft = Math.round(relX * newW + padX - (midX - pinchVpLeft));
-      vp.scrollTop  = Math.round(relY * newH + padY - (midY - pinchVpTop));
-    });
-  }
-}, { passive: false });
-
-let _hatchTimer = null;
-
-document.addEventListener('touchend', e => {
-  if (e.touches.length < 2) {
-    pinchStartDist    = 0;
-    pendingPinch      = null;
-    pinchRAFScheduled = false;
-    // Перерисовуємо хетч тільки якщо масштаб реально змінився,
-    // і не частіше ніж раз на 300 мс
-    clearTimeout(_hatchTimer);
-    _hatchTimer = setTimeout(() => {
-      applyVisitedHatchOverlays();
-    }, 300);
-  }
-  if (e.touches.length === 1 && !sheetOverlay.classList.contains('overlay-visible')) {
-    isPanActive        = true;
-    panStartX          = e.touches[0].clientX;
-    panStartY          = e.touches[0].clientY;
-    panStartScrollLeft = vp.scrollLeft;
-    panStartScrollTop  = vp.scrollTop;
-  }
-  if (e.touches.length === 0) isPanActive = false;
-}, { passive: true });
+// ── Resize ────────────────────────────────────────────────────
+let resizeTimer;
+const onResize = () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120);
+};
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
 </file>
 
 <file path="src/sheets/sheetsManager.js">
@@ -5367,80 +5521,6 @@ bus.on('data:reload-stations', async ({ onDone } = {}) => {
   } catch (err) {
     console.error('[sheetsManager] data:reload-stations failed:', err);
   }
-});
-</file>
-
-<file path="src/ui/confirm.js">
-import { bus }           from '../core/eventBus.js';
-import { runDoorAnimation } from './animations.js';
-import { TIMING }           from '../core/timing.js';
-
-/**
- * Показує модальний діалог підтвердження з анімацією «двері ліфта».
- *
- * @param {string}   message   - HTML-текст запитання
- * @param {Function} onYes     - callback для «Зберегти»
- * @param {Function} onNo      - callback для «Не зберігати»
- * @param {Function} onCancel  - callback для «Скасувати» (null = кнопка прихована)
- * @param {string}   yesText   - текст кнопки «так»
- * @param {string}   noText    - текст кнопки «ні»
- * @param {string}   yesClass  - CSS-клас кнопки «так»
- * @param {string}   noClass   - CSS-клас кнопки «ні»
- */
-export function showCustomConfirm(
-  message, onYes, onNo, onCancel,
-  yesText  = 'Зберегти',
-  noText   = 'Не зберігати',
-  yesClass = 'confirm-btn-save',
-  noClass  = 'confirm-btn-discard',
-) {
-  const overlay = document.createElement('div');
-  overlay.className = 'global-confirm-overlay';
-  overlay.innerHTML = `
-    <div class="global-confirm-card">
-      <div class="global-confirm-text">${message}</div>
-      <div class="global-confirm-btns-main">
-        <button class="confirm-main-btn ${yesClass}" id="confirmYes">${yesText}</button>
-        ${noText ? `<button class="confirm-main-btn ${noClass}" id="confirmNo">${noText}</button>` : ''}
-      </div>
-      ${onCancel ? `<button class="confirm-text-btn" id="confirmCancel">Скасувати</button>` : ''}
-    </div>`;
-  document.body.appendChild(overlay);
-
-  function animateClose(callback) {
-    const card = overlay.querySelector('.global-confirm-card');
-    if (!card) { overlay.remove(); callback?.(); return; }
-
-    const rect = card.getBoundingClientRect();
-    card.style.display = 'none';
-    overlay.style.transition      = 'background-color 0.35s, backdrop-filter 0.35s';
-    overlay.style.backgroundColor = 'transparent';
-    overlay.style.backdropFilter  = 'blur(0px)';
-
-    runDoorAnimation(card, rect, callback, overlay);
-    setTimeout(() => overlay.remove(), TIMING.DOOR_CLEANUP);
-  }
-
-  overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));
-  overlay.querySelector('#confirmNo').addEventListener('click',  () => animateClose(onNo));
-  overlay.querySelector('#confirmCancel')?.addEventListener('click', () => animateClose(onCancel));
-  overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
-}
-
-// ── Єдиний bus-обробник (P1-B fix: було два, залишаємо один) ──
-// Підтримує розширені параметри (labelYes, labelNo, styleYes, styleNo)
-// для сумісності з bus.emit із settings.js та backup.js.
-bus.on('ui:confirm', (payload) => {
-  showCustomConfirm(
-    payload.message,
-    payload.onYes,
-    payload.onNo    ?? null,
-    payload.onCancel ?? null,
-    payload.labelYes ?? 'Зберегти',
-    payload.labelNo  ?? 'Не зберігати',
-    payload.styleYes ?? 'confirm-btn-save',
-    payload.styleNo  ?? 'confirm-btn-discard',
-  );
 });
 </file>
 
@@ -5718,86 +5798,6 @@ export function openSearchSheet() {
 }
 </file>
 
-<file path="src/map/mapInit.js">
-import svgText from '../../KyivMetroScheme.svg?raw';
-import { state }                        from '../core/state.js';
-import { renderMapZones, checkAppReady } from '../data/stations.js';
-import { applyVisitedHatchOverlays } from './mapInteraction.js';
-
-const vp    = document.getElementById('mapViewport');
-const inner = document.getElementById('mapInner');
-
-export const BASE_MAP_WIDTH  = 1195.84;
-export const BASE_MAP_HEIGHT = 840;
-const CENTER_X = 0.485;
-const CENTER_Y = 0.5;
-
-setTimeout(() => {
-  vp?.classList.remove('is-loading');
-  document.getElementById('startupLoader')?.classList.add('hidden');
-}, 10_000);
-
-export function adjustViewportHeight() {
-  if (!vp) return;
-  const top   = vp.getBoundingClientRect().top;
-  const avail = Math.floor((window.visualViewport?.height ?? window.innerHeight) - top - 8);
-  vp.style.height = Math.max(120, avail) + 'px';
-}
-
-export function applyZoomAndCenter() {
-  const svgEl = inner.querySelector('svg');
-  if (svgEl) {
-    svgEl.style.width   = '100%';
-    svgEl.style.height  = '100%';
-    svgEl.style.display = 'block';
-  }
-
-  const w      = Math.min(window.innerWidth, document.documentElement.clientWidth);
-  const sf     = w <= 500 ? 4.5 : 1.5;
-  const minZoom = vp.clientWidth / BASE_MAP_WIDTH;
-  const zoom   = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / BASE_MAP_WIDTH));
-
-  const newW = Math.round(BASE_MAP_WIDTH  * zoom);
-  const newH = Math.round(BASE_MAP_HEIGHT * zoom);
-
-  inner.style.width  = newW + 'px';
-  inner.style.height = newH + 'px';
-
-  const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
-  const padY = Math.max(0, (vp.clientHeight - newH) / 2);
-  inner.style.marginLeft = padX + 'px';
-  inner.style.marginTop  = padY + 'px';
-
-  requestAnimationFrame(() => {
-    vp.scrollLeft = Math.max(0, padX + newW * CENTER_X - vp.clientWidth  / 2);
-    vp.scrollTop  = Math.max(0, padY + newH * CENTER_Y - vp.clientHeight / 2);
-    state.isMapReady = true;
-    checkAppReady();
-    applyVisitedHatchOverlays();
-    
-    // Знімаємо блюр з карти та повністю ховаємо лоадер
-    vp?.classList.remove('is-loading');
-    document.getElementById('startupLoader')?.classList.add('hidden');
-  });
-}
-
-export function initMap() {
-  inner.innerHTML = svgText;
-  renderMapZones();
-  adjustViewportHeight();
-  applyZoomAndCenter();
-}
-
-// ── Resize ────────────────────────────────────────────────────
-let resizeTimer;
-const onResize = () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120);
-};
-window.addEventListener('resize', onResize);
-window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
-</file>
-
 <file path="src/map/mapInteraction.js">
 import { state }                  from '../core/state.js';
 import { getCheckins }            from '../domain/checkin.js';
@@ -6068,230 +6068,6 @@ export function syncMapWithCheckins() {
 
 bus.on('map:sync-checkins',       syncMapWithCheckins);
 bus.on('data:stations-hydrated',  invalidateStationZoneCache);
-</file>
-
-<file path="src/sheets/stationSheet.js">
-import { state }                   from '../core/state.js';
-import { STORAGE_KEYS, Storage }   from '../core/storage.js';
-import { heartSvg }                from '../ui/components.js';
-import { Icons }                   from '../ui/icons.js';
-import { LINE_COLOR }              from '../core/constants.js';
-import { animateSheetClose }       from '../ui/animations.js';
-import { slugByName }              from '../data/stations.js';
-import { applyExitLabels }         from '../data/localEdits.js';
-import { isFav, getExitFavs }      from '../features/favorites/index.js';
-import { attachDevModeUI }         from '../features/devmode.js';
-import { bus }                     from '../core/eventBus.js';
-import { withUnsavedCheck }        from '../core/unsavedCheck.js';
-import { renderDirections }        from './renderStation.js';
-import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
-
-// ══ DOM-вузли ══
-const sheet            = document.getElementById('stationSheet');
-const sheetBody        = document.getElementById('sheetBody');
-const sheetOverlay     = document.getElementById('sheetOverlay');
-const stationTitleMain = document.getElementById('stationTitleMain');
-
-// ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
-bindSheetGestures(
-  sheetBody,
-  () => ({
-    slug:      state.currentStationSlug,
-    lineColor: LINE_COLOR[state.stationsData?.[state.currentStationSlug]?.line]
-               ?? 'var(--text-muted)',
-  }),
-);
-
-// ══ КЕШІ (module scope) ══════════════════════════════════════
-
-// [OPT-P1] Кеш HTML рядка renderDirections.
-// Ключ: slug. Інвалідується при station:refresh (дані змінились).
-const _directionsHtmlCache = new Map(); // slug → html
-
-// [OPT-P2] Кеш slug-маппінгу для nav-label елементів.
-// Ключ: slug. Значення: Map<labelName, targetSlug|null>.
-// Стабільний між відкриттями (назви напрямків незмінні).
-const _navLinkCache = new Map();
-
-// ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
-
-// [OPT-P1] При оновленні даних — інвалідуємо кеш HTML поточної станції
-bus.on('station:refresh', () => {
-  _directionsHtmlCache.delete(state.currentStationSlug);
-  refreshCurrentStation();
-});
-
-bus.on('station:open', ({ slug }) => openStation(slug));
-
-bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
-  animateSheetClose(sheet, () => {
-    sheet.classList.remove('sheet-open');
-    bus.emit('sheet:open-feedback');
-    setTimeout(() => {
-      document.querySelector(`.fb-station-item[data-slug="${editSlug}"]`)?.click();
-    }, 50);
-  });
-});
-
-// ── ОПТИМІЗОВАНИЙ applyNavLinks ───────────────────────────────
-
-function applyNavLinks(slug) {
-  const labels = sheetBody.querySelectorAll('.nav-label');
-  let nameToTarget = _navLinkCache.get(slug);
-
-  if (!nameToTarget) {
-    // [OPT-P2] Перший візит: обчислюємо slugByName() і кешуємо результат
-    nameToTarget = new Map();
-    labels.forEach(el => {
-      const name = el.dataset.name || '';
-      if (!nameToTarget.has(name)) {
-        // slugByName() викликається по одному разу на унікальну назву
-        nameToTarget.set(name, slugByName(name) || null);
-      }
-      const target = nameToTarget.get(name);
-      if (target && target !== slug) {
-        el.classList.add('nav-link');
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
-      }
-    });
-    _navLinkCache.set(slug, nameToTarget);
-  } else {
-    // [OPT-P2] Повторний візит: нуль slugByName() — тільки DOM writes
-    labels.forEach(el => {
-      const target = nameToTarget.get(el.dataset.name || '');
-      if (target && target !== slug) {
-        el.classList.add('nav-link');
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
-      }
-    });
-  }
-}
-
-// ── ВІДКРИТТЯ СТАНЦІЇ ─────────────────────────────────────────
-
-export function openStation(slug) {
-  withUnsavedCheck(() => actualOpenStation(slug));
-}
-
-function actualOpenStation(slug) {
-  if (!state.stationsData?.[slug]) return;
-
-  const s     = state.stationsData[slug];
-  const color = LINE_COLOR[s.line] || 'var(--text-muted)';
-
-  // [OPT-P1] Guard: та сама станція вже відкрита — пропускаємо повний re-render
-  if (state.currentStationSlug === slug && sheet.classList.contains('sheet-open')) {
-    // Лише оновлюємо fav-кнопку (стан міг змінитись ззовні)
-    _updateFavBtn(slug, color);
-    return;
-  }
-
-  state.currentStationSlug = slug;
-  bus.emit('fav:dismiss-hint');
-
-  const fav            = isFav(slug);
-  const hideInfoBlocks = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
-  const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
-    ? `<div class="onboarding-hint" id="onboardingHint">` +
-      `<span class="hint-icon-wrap" style="color:${color}">${Icons.info}</span>` +
-      `Натисніть двічі на вагон та двері,<br>щоб зберегти вихід` +
-      `</div>`
-    : '';
-
-  stationTitleMain.textContent = s.name;
-
-  const hasDirections  = s.directions?.length > 0;
-  const allExitsClosed = hasDirections && !s.directions.some(dir =>
-    dir.exits?.some(exit => exit.positions?.some(pos => !pos.closed))
-  );
-
-  if (!hasDirections) {
-    sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>';
-  } else if (allExitsClosed) {
-    sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
-  } else {
-    // [OPT-P1] Читаємо з кешу або рендеримо і зберігаємо
-    let directionsHtml = _directionsHtmlCache.get(slug);
-    if (!directionsHtml) {
-      directionsHtml = renderDirections(s, color);
-      _directionsHtmlCache.set(slug, directionsHtml);
-    }
-    sheetBody.innerHTML = onboardingHtml + directionsHtml;
-  }
-
-  sheetBody.scrollTop = 0;
-  applyNavLinks(slug); // [OPT-P2] кешований slugByName на повторних відкриттях
-
-  if (s.slug === 'R.Khreshchatyk') {
-    sheet.classList.add('sheet-fullscreen', 'sheet-scrollable');
-    sheet.style.maxHeight = '';
-  } else {
-    sheet.style.maxHeight = '';
-    sheet.classList.remove('sheet-fullscreen', 'sheet-scrollable');
-  }
-
-  const handle = sheet.querySelector('.sheet-handle');
-  if (handle) handle.style.background = color;
-
-  _updateFavBtn(slug, color);
-
-  // Закриваємо всі допоміжні шторки (feedback, settings, checkin тощо).
-  // querySelectorAll — єдиний коректний спосіб: ці шторки створюються lazily
-  // після ініціалізації модуля і не потрапляють у статичний кеш.
-  document.querySelectorAll('.station-sheet').forEach(el => {
-    if (el.id !== 'stationSheet') el.classList.remove('sheet-open');
-  });
-  if (!sheet.classList.contains('sheet-open')) {
-    sheet.classList.add('sheet-open');
-    sheetOverlay?.classList.add('overlay-visible');
-  }
-
-  applyInitialFavStyles(sheetBody, slug, color);
-  attachDevModeUI(sheetBody, slug);
-  // [OPT-P3] querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
-  sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
-  bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
-}
-
-function _updateFavBtn(slug, color) {
-  const favBtnBar = sheet.querySelector('.fav-btn-bar');
-  if (!favBtnBar) return;
-  favBtnBar.dataset.slug  = slug;
-  favBtnBar.dataset.color = color;
-  favBtnBar.innerHTML     = heartSvg(isFav(slug), slug, color);
-  favBtnBar.classList.toggle('fav-active', isFav(slug));
-}
-
-// ── ОНОВЛЕННЯ ПОТОЧНОЇ КАРТКИ ─────────────────────────────────
-
-export function refreshCurrentStation() {
-  if (!state.currentStationSlug) return;
-  applyExitLabels(state.stationsData);
-
-  const s = state.stationsData?.[state.currentStationSlug];
-  if (!s || !sheet.classList.contains('sheet-open')) return;
-
-  const slug       = state.currentStationSlug;
-  const color      = LINE_COLOR[s.line] || 'var(--text-muted)';
-  const prevScroll = sheetBody.scrollTop;
-
-  // [OPT-P1] Кеш вже інвалідовано в bus.on('station:refresh') вище
-  stationTitleMain.textContent = s.name;
-  sheetBody.innerHTML = renderDirections(s, color);
-  // Зберігаємо свіжий HTML в кеш для наступного відкриття
-  _directionsHtmlCache.set(slug, sheetBody.innerHTML);
-
-  applyNavLinks(slug);
-  applyInitialFavStyles(sheetBody, slug, color);
-  attachDevModeUI(sheetBody, slug);
-  // [OPT-P3] Всі кнопки, а не тільки перша
-  sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
-  bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
-
-  sheetBody.scrollTop = prevScroll;
-}
 </file>
 
 <file path="src/sheets/aboutSheet.js">
@@ -6684,6 +6460,291 @@ export function openAboutSheet() {
 }
 </file>
 
+<file path="src/sheets/stationSheet.js">
+import { state }                   from '../core/state.js';
+import { STORAGE_KEYS, Storage }   from '../core/storage.js';
+import { heartSvg }                from '../ui/components.js';
+import { Icons }                   from '../ui/icons.js';
+import { LINE_COLOR }              from '../core/constants.js';
+import { animateSheetClose }       from '../ui/animations.js';
+import { slugByName }              from '../data/stations.js';
+import { applyExitLabels }         from '../data/localEdits.js';
+import { isFav, getExitFavs }      from '../features/favorites/index.js';
+import { attachDevModeUI }         from '../features/devmode.js';
+import { bus }                     from '../core/eventBus.js';
+import { withUnsavedCheck }        from '../core/unsavedCheck.js';
+import { renderDirections }        from './renderStation.js';
+import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
+
+// ══ DOM-вузли ══
+const sheet            = document.getElementById('stationSheet');
+const sheetBody        = document.getElementById('sheetBody');
+const sheetOverlay     = document.getElementById('sheetOverlay');
+const stationTitleMain = document.getElementById('stationTitleMain');
+
+// ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
+bindSheetGestures(
+  sheetBody,
+  () => ({
+    slug:      state.currentStationSlug,
+    lineColor: LINE_COLOR[state.stationsData?.[state.currentStationSlug]?.line]
+               ?? 'var(--text-muted)',
+  }),
+);
+
+// ══ КЕШІ (module scope) ══════════════════════════════════════
+
+// [OPT-P1] Кеш HTML рядка renderDirections.
+// Ключ: slug. Інвалідується при station:refresh (дані змінились).
+const _directionsHtmlCache = new Map(); // slug → html
+
+// [OPT-P2] Кеш slug-маппінгу для nav-label елементів.
+// Ключ: slug. Значення: Map<labelName, targetSlug|null>.
+// Стабільний між відкриттями (назви напрямків незмінні).
+const _navLinkCache = new Map();
+
+// ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
+
+// [OPT-P1] При оновленні даних — інвалідуємо кеш HTML поточної станції
+bus.on('station:refresh', () => {
+  _directionsHtmlCache.delete(state.currentStationSlug);
+  refreshCurrentStation();
+});
+
+bus.on('station:open', ({ slug }) => openStation(slug));
+
+bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
+  animateSheetClose(sheet, () => {
+    sheet.classList.remove('sheet-open');
+    bus.emit('sheet:open-feedback');
+    setTimeout(() => {
+      document.querySelector(`.fb-station-item[data-slug="${editSlug}"]`)?.click();
+    }, 50);
+  });
+});
+
+// ── ОПТИМІЗОВАНИЙ applyNavLinks ───────────────────────────────
+
+function applyNavLinks(slug) {
+  const labels = sheetBody.querySelectorAll('.nav-label');
+  let nameToTarget = _navLinkCache.get(slug);
+
+  if (!nameToTarget) {
+    // [OPT-P2] Перший візит: обчислюємо slugByName() і кешуємо результат
+    nameToTarget = new Map();
+    labels.forEach(el => {
+      const name = el.dataset.name || '';
+      if (!nameToTarget.has(name)) {
+        // slugByName() викликається по одному разу на унікальну назву
+        nameToTarget.set(name, slugByName(name) || null);
+      }
+      const target = nameToTarget.get(name);
+      if (target && target !== slug) {
+        el.classList.add('nav-link');
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+      }
+    });
+    _navLinkCache.set(slug, nameToTarget);
+  } else {
+    // [OPT-P2] Повторний візит: нуль slugByName() — тільки DOM writes
+    labels.forEach(el => {
+      const target = nameToTarget.get(el.dataset.name || '');
+      if (target && target !== slug) {
+        el.classList.add('nav-link');
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+      }
+    });
+  }
+}
+
+// ── ВІДКРИТТЯ СТАНЦІЇ ─────────────────────────────────────────
+
+export function openStation(slug) {
+  withUnsavedCheck(() => actualOpenStation(slug));
+}
+
+function actualOpenStation(slug) {
+  if (!state.stationsData?.[slug]) return;
+
+  const s     = state.stationsData[slug];
+  const color = LINE_COLOR[s.line] || 'var(--text-muted)';
+
+  // [OPT-P1] Guard: та сама станція вже відкрита — пропускаємо повний re-render
+  if (state.currentStationSlug === slug && sheet.classList.contains('sheet-open')) {
+    // Лише оновлюємо fav-кнопку (стан міг змінитись ззовні)
+    _updateFavBtn(slug, color);
+    return;
+  }
+
+  state.currentStationSlug = slug;
+  bus.emit('fav:dismiss-hint');
+
+  const fav            = isFav(slug);
+  const hideInfoBlocks = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+  const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
+    ? `<div class="onboarding-hint" id="onboardingHint">` +
+      `<span class="hint-icon-wrap" style="color:${color}">${Icons.info}</span>` +
+      `Натисніть двічі на вагон та двері,<br>щоб зберегти вихід` +
+      `</div>`
+    : '';
+
+  stationTitleMain.textContent = s.name;
+
+  const hasDirections  = s.directions?.length > 0;
+  const allExitsClosed = hasDirections && !s.directions.some(dir =>
+    dir.exits?.some(exit => exit.positions?.some(pos => !pos.closed))
+  );
+
+  if (!hasDirections) {
+    sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>';
+  } else if (allExitsClosed) {
+    sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
+  } else {
+    // [OPT-P1] Читаємо з кешу або рендеримо і зберігаємо
+    let directionsHtml = _directionsHtmlCache.get(slug);
+    if (!directionsHtml) {
+      directionsHtml = renderDirections(s, color);
+      _directionsHtmlCache.set(slug, directionsHtml);
+    }
+    sheetBody.innerHTML = onboardingHtml + directionsHtml;
+  }
+
+  sheetBody.scrollTop = 0;
+  applyNavLinks(slug); // [OPT-P2] кешований slugByName на повторних відкриттях
+
+  if (s.slug === 'R.Khreshchatyk') {
+    sheet.classList.add('sheet-fullscreen', 'sheet-scrollable');
+    sheet.style.maxHeight = '';
+  } else {
+    sheet.style.maxHeight = '';
+    sheet.classList.remove('sheet-fullscreen', 'sheet-scrollable');
+  }
+
+  const handle = sheet.querySelector('.sheet-handle');
+  if (handle) handle.style.background = color;
+
+  _updateFavBtn(slug, color);
+
+  // Закриваємо всі допоміжні шторки (feedback, settings, checkin тощо).
+  // querySelectorAll — єдиний коректний спосіб: ці шторки створюються lazily
+  // після ініціалізації модуля і не потрапляють у статичний кеш.
+  document.querySelectorAll('.station-sheet').forEach(el => {
+    if (el.id !== 'stationSheet') el.classList.remove('sheet-open');
+  });
+  if (!sheet.classList.contains('sheet-open')) {
+    sheet.classList.add('sheet-open');
+    sheetOverlay?.classList.add('overlay-visible');
+  }
+
+  applyInitialFavStyles(sheetBody, slug, color);
+  attachDevModeUI(sheetBody, slug);
+  // [OPT-P3] querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
+  sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
+  bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
+}
+
+function _updateFavBtn(slug, color) {
+  const favBtnBar = sheet.querySelector('.fav-btn-bar');
+  if (!favBtnBar) return;
+  favBtnBar.dataset.slug  = slug;
+  favBtnBar.dataset.color = color;
+  favBtnBar.innerHTML     = heartSvg(isFav(slug), slug, color);
+  favBtnBar.classList.toggle('fav-active', isFav(slug));
+}
+
+// ── ОНОВЛЕННЯ ПОТОЧНОЇ КАРТКИ ─────────────────────────────────
+
+export function refreshCurrentStation() {
+  if (!state.currentStationSlug) return;
+  applyExitLabels(state.stationsData);
+
+  const s = state.stationsData?.[state.currentStationSlug];
+  if (!s || !sheet.classList.contains('sheet-open')) return;
+
+  const slug       = state.currentStationSlug;
+  const color      = LINE_COLOR[s.line] || 'var(--text-muted)';
+  const prevScroll = sheetBody.scrollTop;
+
+  // [OPT-P1] Кеш вже інвалідовано в bus.on('station:refresh') вище
+  stationTitleMain.textContent = s.name;
+  sheetBody.innerHTML = renderDirections(s, color);
+  // Зберігаємо свіжий HTML в кеш для наступного відкриття
+  _directionsHtmlCache.set(slug, sheetBody.innerHTML);
+
+  applyNavLinks(slug);
+  applyInitialFavStyles(sheetBody, slug, color);
+  attachDevModeUI(sheetBody, slug);
+  // [OPT-P3] Всі кнопки, а не тільки перша
+  sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
+  bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
+
+  sheetBody.scrollTop = prevScroll;
+}
+</file>
+
+<file path="vite.config.js">
+import { defineConfig } from 'vite';
+import { VitePWA }      from 'vite-plugin-pwa';
+import path             from 'path';
+
+const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+export default defineConfig({
+  base:      './',
+  root:      '.',
+  publicDir: 'public',
+
+  resolve: {
+    alias: {
+      // Зручні аліаси для імпортів — без відносних шляхів ../../
+      '@core':     path.resolve(__dirname, 'src/core'),
+      '@ui':       path.resolve(__dirname, 'src/ui'),
+      '@data':     path.resolve(__dirname, 'src/data'),
+      '@map':      path.resolve(__dirname, 'src/map'),
+      '@sheets':   path.resolve(__dirname, 'src/sheets'),
+      '@features': path.resolve(__dirname, 'src/features'),
+      '@infra':    path.resolve(__dirname, 'src/infra'),
+    },
+  },
+
+  define: {
+    __BUILD_DATE__: JSON.stringify(buildDate),
+  },
+
+  build: {
+    target:        'es2018',
+    modulePreload: { polyfill: false },
+    outDir:        'dist',
+    rollupOptions: {
+      input: 'index.html',
+      output: {
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash][extname]',
+      },
+    },
+  },
+
+  plugins: [
+    VitePWA({
+      strategies:      'injectManifest',
+      srcDir:          'public',
+      filename:        'sw.js',
+      manifest:        false,
+      injectManifest:  {
+        rollupFormat:   'iife',
+        injectionPoint: 'self.__WB_MANIFEST',
+        globDirectory:  'dist',
+        globPatterns:   ['**/*.{js,css,html}'],
+      },
+      devOptions: { enabled: false },
+    }),
+  ],
+});
+</file>
+
 <file path="src/features/settings.js">
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { LINE_COLOR }              from '../core/constants.js';
@@ -7066,67 +7127,6 @@ export function openSettingsSheet() {
   settingsSheet.classList.add('sheet-open');
   sheetOverlay.classList.add('overlay-visible');
 }
-</file>
-
-<file path="vite.config.js">
-import { defineConfig } from 'vite';
-import { VitePWA }      from 'vite-plugin-pwa';
-import path             from 'path';
-
-const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-
-export default defineConfig({
-  base:      './',
-  root:      '.',
-  publicDir: 'public',
-
-  resolve: {
-    alias: {
-      // Зручні аліаси для імпортів — без відносних шляхів ../../
-      '@core':     path.resolve(__dirname, 'src/core'),
-      '@ui':       path.resolve(__dirname, 'src/ui'),
-      '@data':     path.resolve(__dirname, 'src/data'),
-      '@map':      path.resolve(__dirname, 'src/map'),
-      '@sheets':   path.resolve(__dirname, 'src/sheets'),
-      '@features': path.resolve(__dirname, 'src/features'),
-      '@infra':    path.resolve(__dirname, 'src/infra'),
-    },
-  },
-
-  define: {
-    __BUILD_DATE__: JSON.stringify(buildDate),
-  },
-
-  build: {
-    target:        'es2018',
-    modulePreload: { polyfill: false },
-    outDir:        'dist',
-    rollupOptions: {
-      input: 'index.html',
-      output: {
-        entryFileNames: 'assets/[name].[hash].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash][extname]',
-      },
-    },
-  },
-
-  plugins: [
-    VitePWA({
-      strategies:      'injectManifest',
-      srcDir:          'public',
-      filename:        'sw.js',
-      manifest:        false,
-      injectManifest:  {
-        rollupFormat:   'iife',
-        injectionPoint: 'self.__WB_MANIFEST',
-        globDirectory:  'dist',
-        globPatterns:   ['**/*.{js,css,html}'],
-      },
-      devOptions: { enabled: false },
-    }),
-  ],
-});
 </file>
 
 <file path="src/main.js">
@@ -7856,7 +7856,19 @@ const center = document.getElementById("loaderCenter");
 <script>
   window.MetroApp = window.MetroApp || {};
 </script>
-  <script type="module" src="/src/main.js"></script>
+<script>
+  // Цей радар зловить помилку ДО запуску модулів і покаже її на екрані
+  window.addEventListener('error', function(e) {
+    alert('CRASH: ' + (e.message || e.error));
+    document.getElementById('startupLoader').style.display = 'none';
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    alert('PROMISE CRASH: ' + e.reason);
+    document.getElementById('startupLoader').style.display = 'none';
+  });
+</script>
+
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>
 </file>
