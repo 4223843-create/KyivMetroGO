@@ -9,7 +9,7 @@
         {
           "x": 45.2,
           "y": 71.7
-        }
+        }А
       ],
       "directions": [
         {
@@ -363,7 +363,7 @@
               ]
             },
             {
-              "label": "до Smart Plaza, McDonald's",
+              "label": "до Smart Plaza, Оболонської площі",
               "positions": [
                 {
                   "wagon": "1",
@@ -377,7 +377,7 @@
           "from": "попередня Героїв&nbsp;Дніпра",
           "exits": [
             {
-              "label": "до Smart Plaza, Оболонська площа",
+              "label": "до Smart Plaza, Оболонської площі",
               "positions": [
                 {
                   "wagon": "5",
@@ -807,7 +807,7 @@
           "from": "попередня Виставковий&nbsp;центр",
           "exits": [
             {
-              "label": "",
+              "label": "до Інституту рослин",
               "positions": [
                 {
                   "wagon": "1",
@@ -816,7 +816,7 @@
               ]
             },
             {
-              "label": "",
+              "label": "в бік Інституту раку",
               "positions": [
                 {
                   "wagon": "5",
@@ -1012,7 +1012,7 @@
           "from": "попередня Позняки",
           "exits": [
             {
-              "label": "до ринку „Вирлиця“",
+              "label": "до ринку „Харківський““",
               "positions": [
                 {
                   "wagon": "1",
@@ -1021,7 +1021,7 @@
               ]
             },
             {
-              "label": "до ТЦ Clever, ринку „Харківський“",
+              "label": "до ТЦ Clever",
               "positions": [
                 {
                   "wagon": "5",
@@ -1044,7 +1044,7 @@
               ]
             },
             {
-              "label": "до ТЦ Clever, ринку „Харківський“",
+              "label": "до ринку „Харківський“",
               "positions": [
                 {
                   "wagon": "5",

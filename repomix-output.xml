@@ -4938,6 +4938,195 @@ bus.on('ui:confirm', (payload) => {
 });
 </file>
 
+<file path="src/map/mapInit.js">
+import svgText from '../../KyivMetroScheme.svg?raw';
+import { state }                        from '../core/state.js';
+import { renderMapZones, checkAppReady } from '../data/stations.js';
+import { applyVisitedHatchOverlays } from './mapInteraction.js';
+
+const vp    = document.getElementById('mapViewport');
+const inner = document.getElementById('mapInner');
+
+export const BASE_MAP_WIDTH  = 1195.84;
+export const BASE_MAP_HEIGHT = 840;
+const CENTER_X = 0.485;
+const CENTER_Y = 0.5;
+
+setTimeout(() => {
+  vp?.classList.remove('is-loading');
+  document.getElementById('startupLoader')?.classList.add('hidden');
+}, 10_000);
+
+export function adjustViewportHeight() {
+  if (!vp) return;
+  const top   = vp.getBoundingClientRect().top;
+  const avail = Math.floor((window.visualViewport?.height ?? window.innerHeight) - top - 8);
+  vp.style.height = Math.max(120, avail) + 'px';
+}
+
+export function applyZoomAndCenter() {
+  const svgEl = inner.querySelector('svg');
+  if (svgEl) {
+    svgEl.style.width   = '100%';
+    svgEl.style.height  = '100%';
+    svgEl.style.display = 'block';
+  }
+
+  const w      = Math.min(window.innerWidth, document.documentElement.clientWidth);
+  const sf     = w <= 500 ? 4.5 : 1.5;
+  const minZoom = vp.clientWidth / BASE_MAP_WIDTH;
+  const zoom   = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / BASE_MAP_WIDTH));
+
+  const newW = Math.round(BASE_MAP_WIDTH  * zoom);
+  const newH = Math.round(BASE_MAP_HEIGHT * zoom);
+
+  inner.style.width  = newW + 'px';
+  inner.style.height = newH + 'px';
+
+  const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
+  const padY = Math.max(0, (vp.clientHeight - newH) / 2);
+  inner.style.marginLeft = padX + 'px';
+  inner.style.marginTop  = padY + 'px';
+
+  requestAnimationFrame(() => {
+    vp.scrollLeft = Math.max(0, padX + newW * CENTER_X - vp.clientWidth  / 2);
+    vp.scrollTop  = Math.max(0, padY + newH * CENTER_Y - vp.clientHeight / 2);
+    state.isMapReady = true;
+    checkAppReady();
+    applyVisitedHatchOverlays();
+    
+    // Знімаємо блюр з карти та повністю ховаємо лоадер
+    vp?.classList.remove('is-loading');
+    document.getElementById('startupLoader')?.classList.add('hidden');
+  });
+}
+
+export function initMap() {
+  inner.innerHTML = svgText;
+  renderMapZones();
+  adjustViewportHeight();
+  applyZoomAndCenter();
+}
+
+// ── Resize ────────────────────────────────────────────────────
+let resizeTimer;
+const onResize = () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120);
+};
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
+</file>
+
+<file path="src/sheets/sheetsManager.js">
+import { bus }                from '../core/eventBus.js';
+import { withUnsavedCheck }  from '../core/unsavedCheck.js';
+import { openStation }       from './stationSheet.js';
+import { openAboutSheet }    from './aboutSheet.js';
+import { isFav, toggleFav } from '../features/favorites/index.js';
+import { heartSvg }          from '../ui/components.js';
+import { reloadStationsData, getSlugByLower } from '../data/stations.js';
+import { animateSheetClose }  from '../ui/animations.js';
+import { initKinematicSwipe } from '../ui/swipe.js';
+
+export { openStation, openAboutSheet, withUnsavedCheck };
+
+const sheet        = document.getElementById('stationSheet');
+const sheetBody    = document.getElementById('sheetBody');
+const sheetClose   = document.getElementById('sheetClose');
+const sheetOverlay = document.getElementById('sheetOverlay');
+const dropMenuEl   = document.getElementById('dropMenu');
+
+// ══ ЗАКРИТТЯ ВСІХ ШТОРОК ══
+export function closeAllSheets(force = false) {
+  if (!force) {
+    if (withUnsavedCheck(() => closeAllSheets(true))) return false;
+  }
+
+  const openSheets = [...document.querySelectorAll('.station-sheet.sheet-open')];
+  const dropMenu   = document.getElementById('dropMenu');
+  if (dropMenu) { dropMenu.classList.remove('show'); dropMenu.hidden = true; }
+
+  if (!openSheets.length) {
+    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
+    return;
+  }
+
+  const topSheet = openSheets[openSheets.length - 1];
+  animateSheetClose(topSheet, () => {
+    openSheets.forEach(el => el.classList.remove('sheet-open'));
+    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
+  });
+}
+
+// ══ ОБРОБНИКИ ПОДІЙ ══
+
+if (sheetClose) {
+  sheetClose.addEventListener('click', () => closeAllSheets());
+}
+
+if (sheetOverlay) {
+  sheetOverlay.addEventListener('click', e => {
+    if (e.target !== sheetOverlay) return;
+    if (dropMenuEl?.classList.contains('show')) return;
+
+    sheetOverlay.style.pointerEvents = 'none';
+    const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+    sheetOverlay.style.pointerEvents = '';
+
+    const zone = elUnder?.closest('[id]');
+    if (zone?.id) {
+      const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
+      const slug  = getSlugByLower(rawId);
+      if (slug) { openStation(slug); return; }
+    }
+    closeAllSheets();
+  });
+}
+
+// P1-D fix: nav-label handler видалено — stationEvents.js вже обробляє
+// кліки через делеговану подію і емітує bus.emit('station:open', { slug }).
+
+const mainFavBtn = sheet?.querySelector('.fav-btn-bar');
+if (mainFavBtn) {
+  mainFavBtn.addEventListener('click', e => {
+    const btn  = e.currentTarget;
+    const slug = btn.dataset.slug;
+    if (!slug) return;
+    const nowFav = toggleFav(slug);
+    btn.innerHTML = heartSvg(nowFav, slug, btn.dataset.color || 'var(--text-muted)');
+    btn.classList.toggle('fav-active', nowFav);
+  });
+}
+
+setTimeout(() => {
+  initKinematicSwipe(sheet, sheetBody, () => closeAllSheets());
+}, 0);
+
+// ══ BUS-ПІДПИСКИ ══
+
+// P1-C fix: feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
+bus.on('sheet:close', ({ sheetEl }) => {
+  if (!sheetEl) return;
+  animateSheetClose(sheetEl, () => {
+    sheetEl.classList.remove('sheet-open');
+    if (!document.querySelectorAll('.station-sheet.sheet-open').length) {
+      sheetOverlay?.classList.remove('overlay-visible');
+    }
+  });
+});
+
+// P1-C fix: fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.
+bus.on('data:reload-stations', async ({ onDone } = {}) => {
+  try {
+    await reloadStationsData();
+    onDone?.();
+  } catch (err) {
+    console.error('[sheetsManager] data:reload-stations failed:', err);
+  }
+});
+</file>
+
 <file path="src/features/devmode.js">
 // ═══════════════════════════════════════════════════════
 // РЕЖИМ РОЗРОБНИКА — DEV MODE
@@ -4954,7 +5143,7 @@ import { state }                  from '../core/state.js';
 import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
-import { renderFeedbackPositions } from './feedback/index.js';
+import { renderFeedbackPositions } from './feedback/fbRenderer.js';
 
 // ── Активація / деактивація ──────────────────────────
 export function isDevMode() {
@@ -5335,195 +5524,6 @@ function setupDevDataClear(container) {
 }
 </file>
 
-<file path="src/map/mapInit.js">
-import svgText from '../../KyivMetroScheme.svg?raw';
-import { state }                        from '../core/state.js';
-import { renderMapZones, checkAppReady } from '../data/stations.js';
-import { applyVisitedHatchOverlays } from './mapInteraction.js';
-
-const vp    = document.getElementById('mapViewport');
-const inner = document.getElementById('mapInner');
-
-export const BASE_MAP_WIDTH  = 1195.84;
-export const BASE_MAP_HEIGHT = 840;
-const CENTER_X = 0.485;
-const CENTER_Y = 0.5;
-
-setTimeout(() => {
-  vp?.classList.remove('is-loading');
-  document.getElementById('startupLoader')?.classList.add('hidden');
-}, 10_000);
-
-export function adjustViewportHeight() {
-  if (!vp) return;
-  const top   = vp.getBoundingClientRect().top;
-  const avail = Math.floor((window.visualViewport?.height ?? window.innerHeight) - top - 8);
-  vp.style.height = Math.max(120, avail) + 'px';
-}
-
-export function applyZoomAndCenter() {
-  const svgEl = inner.querySelector('svg');
-  if (svgEl) {
-    svgEl.style.width   = '100%';
-    svgEl.style.height  = '100%';
-    svgEl.style.display = 'block';
-  }
-
-  const w      = Math.min(window.innerWidth, document.documentElement.clientWidth);
-  const sf     = w <= 500 ? 4.5 : 1.5;
-  const minZoom = vp.clientWidth / BASE_MAP_WIDTH;
-  const zoom   = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / BASE_MAP_WIDTH));
-
-  const newW = Math.round(BASE_MAP_WIDTH  * zoom);
-  const newH = Math.round(BASE_MAP_HEIGHT * zoom);
-
-  inner.style.width  = newW + 'px';
-  inner.style.height = newH + 'px';
-
-  const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
-  const padY = Math.max(0, (vp.clientHeight - newH) / 2);
-  inner.style.marginLeft = padX + 'px';
-  inner.style.marginTop  = padY + 'px';
-
-  requestAnimationFrame(() => {
-    vp.scrollLeft = Math.max(0, padX + newW * CENTER_X - vp.clientWidth  / 2);
-    vp.scrollTop  = Math.max(0, padY + newH * CENTER_Y - vp.clientHeight / 2);
-    state.isMapReady = true;
-    checkAppReady();
-    applyVisitedHatchOverlays();
-    
-    // Знімаємо блюр з карти та повністю ховаємо лоадер
-    vp?.classList.remove('is-loading');
-    document.getElementById('startupLoader')?.classList.add('hidden');
-  });
-}
-
-export function initMap() {
-  inner.innerHTML = svgText;
-  renderMapZones();
-  adjustViewportHeight();
-  applyZoomAndCenter();
-}
-
-// ── Resize ────────────────────────────────────────────────────
-let resizeTimer;
-const onResize = () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120);
-};
-window.addEventListener('resize', onResize);
-window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
-</file>
-
-<file path="src/sheets/sheetsManager.js">
-import { bus }                from '../core/eventBus.js';
-import { withUnsavedCheck }  from '../core/unsavedCheck.js';
-import { openStation }       from './stationSheet.js';
-import { openAboutSheet }    from './aboutSheet.js';
-import { isFav, toggleFav } from '../features/favorites/index.js';
-import { heartSvg }          from '../ui/components.js';
-import { reloadStationsData, getSlugByLower } from '../data/stations.js';
-import { animateSheetClose }  from '../ui/animations.js';
-import { initKinematicSwipe } from '../ui/swipe.js';
-
-export { openStation, openAboutSheet, withUnsavedCheck };
-
-const sheet        = document.getElementById('stationSheet');
-const sheetBody    = document.getElementById('sheetBody');
-const sheetClose   = document.getElementById('sheetClose');
-const sheetOverlay = document.getElementById('sheetOverlay');
-const dropMenuEl   = document.getElementById('dropMenu');
-
-// ══ ЗАКРИТТЯ ВСІХ ШТОРОК ══
-export function closeAllSheets(force = false) {
-  if (!force) {
-    if (withUnsavedCheck(() => closeAllSheets(true))) return false;
-  }
-
-  const openSheets = [...document.querySelectorAll('.station-sheet.sheet-open')];
-  const dropMenu   = document.getElementById('dropMenu');
-  if (dropMenu) { dropMenu.classList.remove('show'); dropMenu.hidden = true; }
-
-  if (!openSheets.length) {
-    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
-    return;
-  }
-
-  const topSheet = openSheets[openSheets.length - 1];
-  animateSheetClose(topSheet, () => {
-    openSheets.forEach(el => el.classList.remove('sheet-open'));
-    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
-  });
-}
-
-// ══ ОБРОБНИКИ ПОДІЙ ══
-
-if (sheetClose) {
-  sheetClose.addEventListener('click', () => closeAllSheets());
-}
-
-if (sheetOverlay) {
-  sheetOverlay.addEventListener('click', e => {
-    if (e.target !== sheetOverlay) return;
-    if (dropMenuEl?.classList.contains('show')) return;
-
-    sheetOverlay.style.pointerEvents = 'none';
-    const elUnder = document.elementFromPoint(e.clientX, e.clientY);
-    sheetOverlay.style.pointerEvents = '';
-
-    const zone = elUnder?.closest('[id]');
-    if (zone?.id) {
-      const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
-      const slug  = getSlugByLower(rawId);
-      if (slug) { openStation(slug); return; }
-    }
-    closeAllSheets();
-  });
-}
-
-// P1-D fix: nav-label handler видалено — stationEvents.js вже обробляє
-// кліки через делеговану подію і емітує bus.emit('station:open', { slug }).
-
-const mainFavBtn = sheet?.querySelector('.fav-btn-bar');
-if (mainFavBtn) {
-  mainFavBtn.addEventListener('click', e => {
-    const btn  = e.currentTarget;
-    const slug = btn.dataset.slug;
-    if (!slug) return;
-    const nowFav = toggleFav(slug);
-    btn.innerHTML = heartSvg(nowFav, slug, btn.dataset.color || 'var(--text-muted)');
-    btn.classList.toggle('fav-active', nowFav);
-  });
-}
-
-setTimeout(() => {
-  initKinematicSwipe(sheet, sheetBody, () => closeAllSheets());
-}, 0);
-
-// ══ BUS-ПІДПИСКИ ══
-
-// P1-C fix: feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
-bus.on('sheet:close', ({ sheetEl }) => {
-  if (!sheetEl) return;
-  animateSheetClose(sheetEl, () => {
-    sheetEl.classList.remove('sheet-open');
-    if (!document.querySelectorAll('.station-sheet.sheet-open').length) {
-      sheetOverlay?.classList.remove('overlay-visible');
-    }
-  });
-});
-
-// P1-C fix: fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.
-bus.on('data:reload-stations', async ({ onDone } = {}) => {
-  try {
-    await reloadStationsData();
-    onDone?.();
-  } catch (err) {
-    console.error('[sheetsManager] data:reload-stations failed:', err);
-  }
-});
-</file>
-
 <file path="src/features/search.js">
 import { state } from '../core/state.js';
 import { fuzzyMatchToken } from '../utils/stringMatchers.js';
@@ -5535,6 +5535,8 @@ import { LINE_COLOR } from '../core/constants.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
+  'плуг': 'B.Ploshcha_Ukrainskikh_heroiv',
+  'пуг': 'B.Ploshcha_Ukrainskikh_heroiv',
   'петрівка':            'B.Pochaina',
   'дружби народів':      'G.Zvirynetska',
   'кпі':                 'R.Politekhnychnyi_instytut',
@@ -5590,53 +5592,44 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
 
   const matched = [];
 
-  for (const s of stations) {
-    // [OPT-P2] SEARCH_ALIASES_ENTRIES — module-level constant, без алокацій в циклі
+for (const s of stations) {
     const isAlias = SEARCH_ALIASES_ENTRIES.some(([alias, slug]) =>
       slug === s.slug && (alias.startsWith(rawQuery) || alias.includes(rawQuery))
     );
 
-    const isWord = queryWords.every(qWord =>
+    // ПРОСТА ЛОГІКА: кожне слово з пошуку має збігатися з початком хоча б одного слова в індексі станції
+    const isNameMatch = isAlias || queryWords.every(qWord =>
       s._searchIndex.some(idx => idx.startsWith(qWord))
     );
-
-    // [OPT-P3] Lazy write-once cache на об'єкті станції.
-    // _searchIndex незмінний після hydrateStations, тому обчислюємо один раз.
-    if (s._abbrev === undefined) {
-      s._abbrev     = s._searchIndex.map(w => w[0]).join('');
-      s._abbrevLong = s._searchIndex.length > 1
-        ? s._searchIndex[0].substring(0, 2) + s._searchIndex.slice(1).map(w => w[0]).join('')
-        : '';
-    }
-
-    const isAbbrev     = s._abbrev.startsWith(rawQuery);
-    const isAbbrevLong = s._abbrevLong.startsWith(rawQuery);
-    const isSubstr     = s._searchIndex.join('').includes(queryNoSpaces);
-    const isFuzzyName  = rawQuery.length >= 4 && queryWords.every(qWord =>
-      s._searchIndex.some(tok => fuzzyMatchToken(qWord, tok))
-    );
-
-    const isNameMatch = isAlias || isWord || isAbbrev || isAbbrevLong || isSubstr || isFuzzyName;
 
     if (isNameMatch) {
       matched.push({ s, isExitOnly: false, exitHint: null });
       continue;
     }
 
+    // Пошук по виходах (якщо треба) залишаємо як є
     if (s._exitIndex?.length) {
-      const hitTok = s._exitIndex.find(tok =>
-        tok.startsWith(rawQuery) || (rawQuery.length >= 4 && fuzzyMatchToken(rawQuery, tok))
-      );
+      const hitTok = s._exitIndex.find(tok => tok.startsWith(rawQuery));
       if (hitTok) {
         matched.push({ s, isExitOnly: true, exitHint: _findExitLabel(s, hitTok) });
       }
     }
   }
 
-  // [OPT-P4] Мертвий null-check видалено (state.stationsData вже перевірено вгорі)
-
   matched.sort((a, b) => {
+    // 1. Виходи завжди нижче за станції
     if (a.isExitOnly !== b.isExitOnly) return a.isExitOnly ? 1 : -1;
+
+    // 2. ПРІОРИТЕТ ПЕРШОГО СЛОВА
+    // _searchIndex[0] - це завжди перше слово оригінальної назви
+    const qFirst = queryWords[0] || '';
+    const aFirstWordMatch = a.s._searchIndex[0].startsWith(qFirst);
+    const bFirstWordMatch = b.s._searchIndex[0].startsWith(qFirst);
+
+    if (aFirstWordMatch && !bFirstWordMatch) return -1; // 'a' вище
+    if (!aFirstWordMatch && bFirstWordMatch) return 1;  // 'b' вище
+
+    // 3. Алфавітне сортування для всіх інших (однакових за пріоритетом)
     return a.s.name.localeCompare(b.s.name, 'uk');
   });
 
@@ -6684,67 +6677,6 @@ export function refreshCurrentStation() {
 }
 </file>
 
-<file path="vite.config.js">
-import { defineConfig } from 'vite';
-import { VitePWA }      from 'vite-plugin-pwa';
-import path             from 'path';
-
-const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-
-export default defineConfig({
-  base:      './',
-  root:      '.',
-  publicDir: 'public',
-
-  resolve: {
-    alias: {
-      // Зручні аліаси для імпортів — без відносних шляхів ../../
-      '@core':     path.resolve(__dirname, 'src/core'),
-      '@ui':       path.resolve(__dirname, 'src/ui'),
-      '@data':     path.resolve(__dirname, 'src/data'),
-      '@map':      path.resolve(__dirname, 'src/map'),
-      '@sheets':   path.resolve(__dirname, 'src/sheets'),
-      '@features': path.resolve(__dirname, 'src/features'),
-      '@infra':    path.resolve(__dirname, 'src/infra'),
-    },
-  },
-
-  define: {
-    __BUILD_DATE__: JSON.stringify(buildDate),
-  },
-
-  build: {
-    target:        'es2018',
-    modulePreload: { polyfill: false },
-    outDir:        'dist',
-    rollupOptions: {
-      input: 'index.html',
-      output: {
-        entryFileNames: 'assets/[name].[hash].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash][extname]',
-      },
-    },
-  },
-
-  plugins: [
-    VitePWA({
-      strategies:      'injectManifest',
-      srcDir:          'public',
-      filename:        'sw.js',
-      manifest:        false,
-      injectManifest:  {
-        rollupFormat:   'iife',
-        injectionPoint: 'self.__WB_MANIFEST',
-        globDirectory:  'dist',
-        globPatterns:   ['**/*.{js,css,html}'],
-      },
-      devOptions: { enabled: false },
-    }),
-  ],
-});
-</file>
-
 <file path="src/features/settings.js">
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { LINE_COLOR }              from '../core/constants.js';
@@ -6834,14 +6766,13 @@ export function openSettingsSheet() {
       });
     }
 
-    // ── Зміни локально ──
-    const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
-    if (localFbToggle) {
-      localFbToggle.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
-      localFbToggle.addEventListener('change', e =>
-        Storage.set(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK, e.target.checked)
-      );
-    }
+const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
+if (localFbToggle) {
+  localFbToggle.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+  localFbToggle.addEventListener('change', e =>
+    Storage.set(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK, String(e.target.checked))
+  );
+}
 
     // ── Check-in головний ──
     const checkinToggle = document.getElementById('settingsCheckinToggle');
@@ -6854,11 +6785,14 @@ export function openSettingsSheet() {
         Storage.set(STORAGE_KEYS.CHECKIN_MODE, String(isMainOn));
         updateCheckinDock();
 
-        const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
-        if (isMainOn && hatchToggle) {
-          Storage.set(STORAGE_KEYS.CHECKIN_HATCH, 'true');
-          hatchToggle.checked = true;
-        }
+const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
+if (hatchToggle) {
+  hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
+  hatchToggle.addEventListener('change', e => {
+    Storage.set(STORAGE_KEYS.CHECKIN_HATCH, String(e.target.checked));
+    bus.emit('map:sync-checkins');
+  });
+}
 
         const currentSlug = document.getElementById('stationSheet').classList.contains('sheet-open')
           ? (state.currentStationSlug ?? null)
@@ -6902,12 +6836,12 @@ export function openSettingsSheet() {
 
     // ── Приховати інформаційні блоки ──
     const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
-    if (hideInfoToggle) {
-      hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
-      hideInfoToggle.addEventListener('change', e =>
-        Storage.set(STORAGE_KEYS.HIDE_INFO_BLOCKS, e.target.checked)
-      );
-    }
+if (hideInfoToggle) {
+  hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+  hideInfoToggle.addEventListener('change', e =>
+    Storage.set(STORAGE_KEYS.HIDE_INFO_BLOCKS, String(e.target.checked))
+  );
+}
 
     // ── Очистити Вибране ──
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {
@@ -7129,93 +7063,150 @@ export function openSettingsSheet() {
 }
 </file>
 
-<file path="src/main.js">
-// ══ STORAGE KEYS ══
-export const STORAGE_KEYS = {
-  THEME:          'metro_theme',
-  FAVS:           'metro_favs',
-  EXIT_FAVS:      'metro_exit_favs',
-  EXIT_LABELS:    'metro_exit_labels',
-  LOCAL_EDITS:    'metro_local_edits',
-  FAV_ROWS_ORDER: 'metro_fav_rows_order',
-  CHECKINS:       'metro_checkins',
-  CHECKIN_MODE:       'metro_checkin_mode',
-  CHECKIN_BY_STATION: 'metro_checkin_by_station',
-  START_ON_FAV:   'metro_start_on_fav',
-  LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
-  CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
-  HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
-  FAV_ONLY_STREAK:     'metro_fav_only_streak',
-  // Режим розробника
-  DEV_MODE:     'metro_dev_mode',
-  DEV_LOG:      'metro_dev_log',
-  DEV_VERIFIED: 'metro_dev_verified',
-  DEV_NOTES:    'metro_dev_notes',
-  LOGO_STATE:     'metro_logo_state',
-  LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
-  CHECKIN_HATCH:  'metro_checkin_hatch',
-};
+<file path="vite.config.js">
+import { defineConfig } from 'vite';
+import { VitePWA }      from 'vite-plugin-pwa';
+import path             from 'path';
 
-// Внутрішній кеш для синхронного доступу
-const memoryCache = new Map();
+const buildDate = Date.now().toString();
 
-// ══ STORAGE ADAPTER ══
-// Адаптовано для плавного переходу на Capacitor Preferences API
-export const Storage = {
-  // 1. Асинхронна ініціалізація (викликатимемо один раз при старті)
-  async init() {
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: const keys = (await Preferences.keys()).keys;
-    const keys = Object.values(STORAGE_KEYS);    
-    for (const key of keys) {
-      // ТУТ У МАЙБУТНЬОМУ БУДЕ: const { value } = await Preferences.get({ key });
-      const value = localStorage.getItem(key);
-      if (value !== null) {
-        memoryCache.set(key, value);
-      }
-    }
+export default defineConfig({
+  base:      './',
+  root:      '.',
+  publicDir: 'public',
+
+  resolve: {
+    alias: {
+      // Зручні аліаси для імпортів — без відносних шляхів ../../
+      '@core':     path.resolve(__dirname, 'src/core'),
+      '@ui':       path.resolve(__dirname, 'src/ui'),
+      '@data':     path.resolve(__dirname, 'src/data'),
+      '@map':      path.resolve(__dirname, 'src/map'),
+      '@sheets':   path.resolve(__dirname, 'src/sheets'),
+      '@features': path.resolve(__dirname, 'src/features'),
+      '@infra':    path.resolve(__dirname, 'src/infra'),
+    },
   },
 
-  // 2. Синхронне читання (код працює як раніше!)
-  get(key) {
-    return memoryCache.get(key) ?? null;
+  define: {
+    __BUILD_DATE__: JSON.stringify(buildDate),
   },
 
-  // 3. Збереження (оновлює кеш миттєво, а в базу пише асинхронно)
-  set(key, value) {
-    const valStr = String(value);
-    memoryCache.set(key, valStr);
-    
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: Preferences.set({ key, value: valStr });
-    // Загортаємо в Promise.resolve для імітації фонової роботи
-    Promise.resolve().then(() => {
-      localStorage.setItem(key, valStr);
-    });
+  build: {
+    target:        'es2018',
+    modulePreload: { polyfill: false },
+    outDir:        'dist',
+    rollupOptions: {
+      input: 'index.html',
+      output: {
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash][extname]',
+      },
+    },
   },
 
-  // 4. Видалення
-  remove(key) {
-    memoryCache.delete(key);
-    
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: Preferences.remove({ key });
-    Promise.resolve().then(() => {
-      localStorage.removeItem(key);
-    });
-  },
-};
-
-// ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ ══
-// Один раз при ініціалізації модуля — не алокуємо масив на кожен storage-івент
-const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
-
-window.addEventListener('storage', (e) => {
-  if (_VALID_KEYS.has(e.key)) {
-    if (e.newValue === null) {
-      memoryCache.delete(e.key);
-    } else {
-      memoryCache.set(e.key, e.newValue);
-    }
-  }
+  plugins: [
+    VitePWA({
+      strategies:      'injectManifest',
+      srcDir:          'public',
+      filename:        'sw.js',
+      manifest:        false,
+      injectManifest:  {
+        rollupFormat:   'iife',
+        injectionPoint: 'self.__WB_MANIFEST',
+        globDirectory:  'dist',
+        globPatterns:   ['**/*.{js,css,html}'],
+      },
+      devOptions: { enabled: false },
+    }),
+  ],
 });
+</file>
+
+<file path="src/main.js">
+// ══ ГОЛОВНА ТОЧКА ВХОДУ (MAIN) ══
+
+import { STORAGE_KEYS, Storage }          from './core/storage.js';
+import { applyTheme }                     from './ui/theme.js';
+import { configureEdgeToEdge }            from './ui/system.js';
+import { initMap }                        from './map/mapInit.js';
+import { reloadStationsData }             from './data/stations.js';
+import { updateFavDock, openFavSheet }    from './features/favorites/index.js';
+import { updateCheckinDock }              from './features/checkin/index.js';
+import { openSearchSheet }                from './features/search.js';
+import { registerServiceWorker }          from './infra/serviceWorker.js';
+
+// Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
+import './map/mapGestures.js';
+import './map/mapInteraction.js';
+import './infra/offline.js';
+import './infra/swUpdate.js';
+import './features/feedback/index.js';
+import './features/checkin/index.js';
+import './features/favorites/index.js';
+import './data/localEdits.js';
+import './sheets/sheetsManager.js';
+import './app.js';
+
+// Хелпер для гарантованого приховування заставки
+function releaseStartupLoader() {
+  document.getElementById('mapViewport')?.classList.remove('is-loading');
+  document.getElementById('startupLoader')?.classList.add('hidden');
+}
+
+// Глобальне перехоплення раптових помилок
+window.addEventListener('error', e => { 
+  console.error('[startup] uncaught error', e.error || e.message); 
+  releaseStartupLoader(); 
+});
+window.addEventListener('unhandledrejection', e => { 
+  console.error('[startup] unhandled rejection', e.reason); 
+  releaseStartupLoader(); 
+});
+
+// ── ЯДРО ЗАПУСКУ ДОДАТКУ ─────────────────────────────────────
+async function bootstrap() {
+  try {
+    // 1. Ініціалізуємо синхронний кеш сховища
+    await Storage.init();
+
+    // 2. Налаштовуємо тему оформлення
+    const savedTheme = Storage.get(STORAGE_KEYS.THEME)
+      || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(savedTheme);
+
+    // 3. Ініціалізуємо карту та повноекранний режим для Capacitor
+    initMap();
+    await configureEdgeToEdge();
+    
+    // 4. Завантажуємо дані станцій (це запустить гідратацію та localEdits)
+    await reloadStationsData();
+
+    // 5. Оновлюємо стан нижніх док-кнопок
+    updateCheckinDock();
+    updateFavDock();
+
+    // 6. Обробка прямих диплінків (наприклад, ?action=search)
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+
+    if      (action === 'search') openSearchSheet();
+    else if (action === 'fav')    openFavSheet();
+    else if (Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true') openFavSheet();
+
+    if (action) window.history.replaceState({}, document.title, window.location.pathname);
+
+  } catch (err) {
+    alert('BOOTSTRAP CRASH: ' + err.message);
+    console.error('[startup] bootstrap failed', err);
+    releaseStartupLoader();
+  }
+}
+
+// Запуск!
+bootstrap();
+registerServiceWorker();
 </file>
 
 <file path="index.html">
@@ -9881,7 +9872,6 @@ margin: 0 0 4px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 45%;
   flex-shrink: 1;
 }
 

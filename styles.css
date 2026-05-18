@@ -87,9 +87,8 @@ body#map-page .map-viewport {
   --bg-card:    #e0e0e6;
   --bg-pill:    #cacace;
   --text:       #1c1c1e;
-  --hatch-color: #c1c1c6;
+  --hatch-color: #1c1c1e;
   
-  /* Оригінальні кольори з твого файлу */
   --text-muted: #2c2c2e;
   --icon-color: #2c2c2e;
   
@@ -98,12 +97,10 @@ body#map-page .map-viewport {
 
 }
 
-/* ══ КОРЕКЦІЯ ДЛЯ СВІТЛОЇ ТЕМИ ══ */
 [data-theme="light"] .about-input-group {
   background: var(--bg-pill) !important;
 }
 
-/* Текст пошти робимо ТЕМНИМ (--text у світлій темі — чорний) */
 [data-theme="light"] .about-input-group .about-beta-input {
   color: var(--text) !important;
 }
@@ -112,13 +109,11 @@ body#map-page .map-viewport {
   color: var(--text);
 }
 
-/* Mono залишається ТЕМНИМ (--text-muted у світлій темі — це темно-сірий) */
 [data-theme="light"] .about-btn-mono-fixed {
   background: var(--text-muted) !important;
   color: var(--bg) !important; /* Текст стає світлим кольором фону */
 }
 
-/* Корекція іконок у світлій темі (робимо їх темними) */
 [data-theme="light"] .about-support-platform-icon {
   color: var(--text-muted); 
   opacity: 0.85;
@@ -144,12 +139,6 @@ button { font-family: inherit; }
 
 
 
-
-
-
-
-
-/* ══ НИЖНІЙ ЦЕНТРАЛЬНИЙ ДОК ══ */
 .bottom-nav-dock {
   position: fixed;
   bottom: calc(14px + env(safe-area-inset-bottom));
@@ -2005,7 +1994,6 @@ margin: 0 0 4px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 45%;
   flex-shrink: 1;
 }
 
@@ -2305,7 +2293,7 @@ svg [role="button"]:focus:not(:focus-visible) {
 
 .row-checkin-btn {
   position: absolute;
-  right: 26px;
+  right: 30.5px;
   top: 50%;
   transform: translateY(-50%);
   width: 36px;

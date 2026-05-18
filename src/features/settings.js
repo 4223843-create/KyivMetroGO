@@ -86,14 +86,13 @@ export function openSettingsSheet() {
       });
     }
 
-    // ── Зміни локально ──
-    const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
-    if (localFbToggle) {
-      localFbToggle.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
-      localFbToggle.addEventListener('change', e =>
-        Storage.set(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK, e.target.checked)
-      );
-    }
+const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
+if (localFbToggle) {
+  localFbToggle.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+  localFbToggle.addEventListener('change', e =>
+    Storage.set(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK, String(e.target.checked))
+  );
+}
 
     // ── Check-in головний ──
     const checkinToggle = document.getElementById('settingsCheckinToggle');
@@ -105,13 +104,6 @@ export function openSettingsSheet() {
         collapsible?.classList.toggle('is-hidden', !isMainOn);
         Storage.set(STORAGE_KEYS.CHECKIN_MODE, String(isMainOn));
         updateCheckinDock();
-
-        const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
-        if (isMainOn && hatchToggle) {
-          Storage.set(STORAGE_KEYS.CHECKIN_HATCH, 'true');
-          hatchToggle.checked = true;
-        }
-
         const currentSlug = document.getElementById('stationSheet').classList.contains('sheet-open')
           ? (state.currentStationSlug ?? null)
           : null;
@@ -128,14 +120,14 @@ export function openSettingsSheet() {
     }
 
     // ── Check-in штриховка ──
-    const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
-    if (hatchToggle) {
-      hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
-      hatchToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.CHECKIN_HATCH, e.target.checked);
-        bus.emit('map:sync-checkins');
-      });
-    }
+const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
+if (hatchToggle) {
+  hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
+  hatchToggle.addEventListener('change', e => {
+    Storage.set(STORAGE_KEYS.CHECKIN_HATCH, String(e.target.checked)); // <-- Тепер тут є String()
+    bus.emit('map:sync-checkins');
+  });
+}
 
     // ── Check-in по виходах ──
     const statSeg = document.getElementById('settingsCheckinStatSeg');
@@ -154,12 +146,12 @@ export function openSettingsSheet() {
 
     // ── Приховати інформаційні блоки ──
     const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
-    if (hideInfoToggle) {
-      hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
-      hideInfoToggle.addEventListener('change', e =>
-        Storage.set(STORAGE_KEYS.HIDE_INFO_BLOCKS, e.target.checked)
-      );
-    }
+if (hideInfoToggle) {
+  hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+  hideInfoToggle.addEventListener('change', e =>
+    Storage.set(STORAGE_KEYS.HIDE_INFO_BLOCKS, String(e.target.checked))
+  );
+}
 
     // ── Очистити Вибране ──
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {

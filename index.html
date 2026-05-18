@@ -633,9 +633,6 @@ const center = document.getElementById("loaderCenter");
   })();
 </script>
 <script>
-  window.MetroApp = window.MetroApp || {};
-</script>
-<script>
   // Цей радар зловить помилку ДО запуску модулів і покаже її на екрані
   window.addEventListener('error', function(e) {
     alert('CRASH: ' + (e.message || e.error));

@@ -8,6 +8,8 @@ import { LINE_COLOR } from '../core/constants.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
+  'плуг': 'B.Ploshcha_Ukrainskikh_heroiv',
+  'пуг': 'B.Ploshcha_Ukrainskikh_heroiv',
   'петрівка':            'B.Pochaina',
   'дружби народів':      'G.Zvirynetska',
   'кпі':                 'R.Politekhnychnyi_instytut',
@@ -63,53 +65,44 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
 
   const matched = [];
 
-  for (const s of stations) {
-    // [OPT-P2] SEARCH_ALIASES_ENTRIES — module-level constant, без алокацій в циклі
+for (const s of stations) {
     const isAlias = SEARCH_ALIASES_ENTRIES.some(([alias, slug]) =>
       slug === s.slug && (alias.startsWith(rawQuery) || alias.includes(rawQuery))
     );
 
-    const isWord = queryWords.every(qWord =>
+    // ПРОСТА ЛОГІКА: кожне слово з пошуку має збігатися з початком хоча б одного слова в індексі станції
+    const isNameMatch = isAlias || queryWords.every(qWord =>
       s._searchIndex.some(idx => idx.startsWith(qWord))
     );
-
-    // [OPT-P3] Lazy write-once cache на об'єкті станції.
-    // _searchIndex незмінний після hydrateStations, тому обчислюємо один раз.
-    if (s._abbrev === undefined) {
-      s._abbrev     = s._searchIndex.map(w => w[0]).join('');
-      s._abbrevLong = s._searchIndex.length > 1
-        ? s._searchIndex[0].substring(0, 2) + s._searchIndex.slice(1).map(w => w[0]).join('')
-        : '';
-    }
-
-    const isAbbrev     = s._abbrev.startsWith(rawQuery);
-    const isAbbrevLong = s._abbrevLong.startsWith(rawQuery);
-    const isSubstr     = s._searchIndex.join('').includes(queryNoSpaces);
-    const isFuzzyName  = rawQuery.length >= 4 && queryWords.every(qWord =>
-      s._searchIndex.some(tok => fuzzyMatchToken(qWord, tok))
-    );
-
-    const isNameMatch = isAlias || isWord || isAbbrev || isAbbrevLong || isSubstr || isFuzzyName;
 
     if (isNameMatch) {
       matched.push({ s, isExitOnly: false, exitHint: null });
       continue;
     }
 
+    // Пошук по виходах (якщо треба) залишаємо як є
     if (s._exitIndex?.length) {
-      const hitTok = s._exitIndex.find(tok =>
-        tok.startsWith(rawQuery) || (rawQuery.length >= 4 && fuzzyMatchToken(rawQuery, tok))
-      );
+      const hitTok = s._exitIndex.find(tok => tok.startsWith(rawQuery));
       if (hitTok) {
         matched.push({ s, isExitOnly: true, exitHint: _findExitLabel(s, hitTok) });
       }
     }
   }
 
-  // [OPT-P4] Мертвий null-check видалено (state.stationsData вже перевірено вгорі)
-
   matched.sort((a, b) => {
+    // 1. Виходи завжди нижче за станції
     if (a.isExitOnly !== b.isExitOnly) return a.isExitOnly ? 1 : -1;
+
+    // 2. ПРІОРИТЕТ ПЕРШОГО СЛОВА
+    // _searchIndex[0] - це завжди перше слово оригінальної назви
+    const qFirst = queryWords[0] || '';
+    const aFirstWordMatch = a.s._searchIndex[0].startsWith(qFirst);
+    const bFirstWordMatch = b.s._searchIndex[0].startsWith(qFirst);
+
+    if (aFirstWordMatch && !bFirstWordMatch) return -1; // 'a' вище
+    if (!aFirstWordMatch && bFirstWordMatch) return 1;  // 'b' вище
+
+    // 3. Алфавітне сортування для всіх інших (однакових за пріоритетом)
     return a.s.name.localeCompare(b.s.name, 'uk');
   });
 
