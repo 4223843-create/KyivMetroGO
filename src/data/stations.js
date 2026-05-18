@@ -1,15 +1,3 @@
-// ══ STATIONS DATA ══
-// Відповідальність: завантаження, парсинг та гідратація даних станцій.
-//
-// Архітектурне правило (Блок Б):
-//   hydrateStations() більше не знає про MetroApp-шар.
-//   Після побудови stationsData емітується bus-подія 'data:stations-hydrated'.
-//   data/localEdits.js підписується і застосовує localEdits + exitLabels синхронно
-//   (EventBus викликає handlers одразу, до повернення emit()).
-//
-// Решта MetroApp-викликів (syncMapWithCheckins, renderFavOnLoad, openStation,
-// facades reloadStationsData/slugByName) прибираються у Блоках Д, Г та Е.
-
 import { state, startupSlug } from '../core/state.js';
 import { bus }                from '../core/eventBus.js';
 import { traversePositions }  from './positions.js';

@@ -32,7 +32,6 @@ const memoryCache = new Map();
 export const Storage = {
   // 1. Асинхронна ініціалізація (викликатимемо один раз при старті)
   async init() {
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: const keys = (await Preferences.keys()).keys;
     const keys = Object.values(STORAGE_KEYS);    
     for (const key of keys) {
       // ТУТ У МАЙБУТНЬОМУ БУДЕ: const { value } = await Preferences.get({ key });
@@ -53,7 +52,6 @@ export const Storage = {
     const valStr = String(value);
     memoryCache.set(key, valStr);
     
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: Preferences.set({ key, value: valStr });
     // Загортаємо в Promise.resolve для імітації фонової роботи
     Promise.resolve().then(() => {
       localStorage.setItem(key, valStr);

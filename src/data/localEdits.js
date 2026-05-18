@@ -1,11 +1,3 @@
-// ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
-// Відповідальність: читання/запис локальних правок позицій та підписів виходів.
-//
-// Блок Б: підписуємось на bus.on('data:stations-hydrated') і замінюємо
-// MetroApp-фасад (що був у кінці файлу) чистою bus-інтеграцією.
-// applyLocalEdits / applyExitLabels залишаються публічними — їх безпосередньо
-// викликають fbEvents.js, fbApi.js та stationSheet.js (прямий ESM-імпорт).
-
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
 import { traversePositions }     from './positions.js';

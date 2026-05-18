@@ -4,7 +4,7 @@
 // DOM-запис — лише один: posEl.innerHTML = ... в кінці renderFeedbackPositions.
 
 import { state as appState }                      from '@core/state.js';
-import { getLocalEdits, hasLocalEdits }           from '@data/localEdits.js';
+import { hasLocalEdits } from '@data/localEdits.js';
 import { fbState, initFeedbackState }             from './fbState.js';
 import { Icons }                                  from '@ui/icons.js';
 import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '@core/constants.js';
