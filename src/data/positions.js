@@ -1,3 +1,23 @@
+// ══ ОБХІД ПОЗИЦІЙ СТАНЦІЇ ══
+// Утиліти для ітерації по вкладеній структурі:
+//   station → directions[] → exits[] → positions[]
+// Забезпечують єдиний монотонний posIdx для всіх споживачів
+// (fbState, localEdits, applyExitLabels).
+
+/**
+ * Обходить усі positions станції у порядку directions → exits → positions.
+ * Передає в callback об'єкт з усіма рівнями вкладеності та глобальним posIdx.
+ *
+ * @param {object} station — об'єкт станції зі stationsData
+ * @param {(ctx: {
+ *   dir:     object,
+ *   exit:    object,
+ *   position: object,
+ *   dirIdx:  number,
+ *   exitIdx: number,
+ *   posIdx:  number,
+ * }) => void} callback
+ */
 export function traversePositions(station, callback) {
   if (!station?.directions) return;
   let posIdx = 0;
@@ -15,6 +35,15 @@ export function traversePositions(station, callback) {
   }
 }
 
+/**
+ * Проходить по всіх positions станції та повертає масив результатів mapper().
+ * undefined з mapper пропускаються.
+ *
+ * @template T
+ * @param {object}   station
+ * @param {Function} mapper  — отримує той самий ctx, що й traversePositions
+ * @returns {T[]}
+ */
 export function mapPositions(station, mapper) {
   const results = [];
   traversePositions(station, ctx => {

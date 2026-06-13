@@ -3,23 +3,16 @@
 // Правило: жодних addEventListener тут. Лише генерація розмітки.
 // DOM-запис — лише один: posEl.innerHTML = ... в кінці renderFeedbackPositions.
 
-import { state as appState }                      from '@core/state.js';
-import { hasLocalEdits } from '@data/localEdits.js';
+import { state as appState }                      from '../../core/state.js';
+import { hasLocalEdits }                          from '../../data/localEdits.js';
 import { fbState, initFeedbackState }             from './fbState.js';
-import { Icons }                                  from '@ui/icons.js';
-import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '@core/constants.js';
-
-// ── Константи ────────────────────────────────────────────────
+import { Icons }                                  from '../../ui/icons.js';
+import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '../../core/constants.js';
 
 const INFO_SVG = Icons.info;
 const UNDO_SVG = Icons.undo;
 const PENCIL   = Icons.pencil;
 
-// ── Атомарні генератори ──────────────────────────────────────
-
-/**
- * @returns {string} HTML-розмітка одного stepper-поля
- */
 function stepperHtml(id, value, min, max, label) {
   return `<div class="fb-input-wrap">
     <span class="fb-input-label">${label}</span>
@@ -35,9 +28,6 @@ function stepperHtml(id, value, min, max, label) {
   </div>`;
 }
 
-/**
- * @returns {string} HTML блоку label-рядка для одного виходу
- */
 function exitLabelHtml(idx, rawExit) {
   const escaped = rawExit.replace(/"/g, '&quot;');
   const editOrAdd = rawExit
@@ -56,9 +46,6 @@ function exitLabelHtml(idx, rawExit) {
   </div>`;
 }
 
-/**
- * @returns {string} HTML одного рядка позиції (відкритий або закритий)
- */
 function positionItemHtml(item, st, lineColor) {
   const { i }    = item;
   const isClosed = !!st.isClosed;
@@ -145,9 +132,6 @@ function positionItemHtml(item, st, lineColor) {
     </div>`;
 }
 
-/**
- * @returns {string} HTML однієї групи виходів (напрям + items + кнопка «додати»)
- */
 function dirGroupHtml(g, slug, lineColor) {
   const dirLabel = g.dir === '__long_transfer__'
     ? 'Довгий перехід на Майдан Незалежності'
@@ -176,16 +160,6 @@ function dirGroupHtml(g, slug, lineColor) {
   </div>`;
 }
 
-// ── Головна функція рендеру ──────────────────────────────────
-
-/**
- * Єдина точка, що пише у DOM.
- * Читає fbState + appState, генерує HTML, робить один innerHTML =.
- * Після запису — викликає onAfterRender (зазвичай markFeedbackDirty).
- *
- * @param {string|null} slug
- * @param {{ onAfterRender?: () => void }} [opts]
- */
 export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
   const posEl   = document.getElementById('fbPositions');
   const sendBtn = document.getElementById('fbSend');
@@ -203,7 +177,6 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
     const s         = appState.stationsData[slug];
     const lineColor = LINE_COLOR[s?.line] ?? 'var(--text-muted)';
 
-    // Оновлюємо заголовок шторки
     const titleEl     = document.getElementById('fbStationTitle');
     const mainTitleEl = document.getElementById('fbSheetTitle');
     if (titleEl && mainTitleEl) {
@@ -212,7 +185,6 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
       mainTitleEl.hidden  = true;
     }
 
-    // Збираємо групи напрямів
     const groupsMap = new Map();
 
     s?.positions?.forEach((p, i) => {
@@ -221,7 +193,6 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
       groupsMap.get(dir).items.push({ p, i });
     });
 
-    // Додаємо нові (isNew) виходи з fbState
     Object.keys(fbState.current).forEach(idx => {
       const st = fbState.current[idx];
       if (!st.isNew) return;
@@ -233,7 +204,6 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
       });
     });
 
-    // Один запис у DOM
     posEl.innerHTML = [...groupsMap.values()]
       .map(g => dirGroupHtml(g, slug, lineColor))
       .join('');
@@ -250,12 +220,6 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
   onAfterRender?.();
 }
 
-/**
- * Рендерить кнопку «Скинути локальні зміни».
- * Окрема функція — бо її потрібно перемалювати після submit/restore.
- *
- * @param {{ onReset: () => void }} callbacks
- */
 export function renderResetBtn({ onReset } = {}) {
   const wrap = document.getElementById('fbResetWrap');
   if (!wrap) return;
@@ -268,14 +232,6 @@ export function renderResetBtn({ onReset } = {}) {
   document.getElementById('fbReset')?.addEventListener('click', () => onReset?.());
 }
 
-/**
- * Рендерить список станцій у шторці вибору станції.
- * Чиста функція: state → innerHTML рядок.
- *
- * @param {string} activeLine  — '' означає «всі»
- * @param {string} activeSlug  — поточно обраний slug (для підсвітки)
- * @returns {string} HTML для вставки у #fbStationList
- */
 export function stationListHtml(activeLine, activeSlug = '') {
   return Object.entries(appState.stationsData ?? {})
     .map(([sl, st]) => ({ slug: sl, ...st }))

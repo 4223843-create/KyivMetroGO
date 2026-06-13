@@ -16,8 +16,6 @@
 // Bus-підписки:
 //   'fav:updated'           → updateFavDock()
 //   'fav:externally-updated'→ updateFavDock() + re-render якщо шторка відкрита
-//   'fav:render-on-load'    → замінює MetroApp.renderFavOnLoad
-//   'fav:dismiss-hint'      → замінює MetroApp.dismissFavOnlyHint
 
 import Sortable            from 'sortablejs';
 import { state }           from '../../core/state.js';
@@ -286,14 +284,12 @@ bus.on('fav:externally-updated', ({ key }) => {
   }
 });
 
-// Замінює: MetroApp.renderFavOnLoad = () => {...}
 bus.on('fav:render-on-load', () => {
   const favs = getFavs();
   if (!favs.length) favBody.innerHTML = getEmptyFavHtml();
   else renderFavList(favs);
 });
 
-// Замінює: MetroApp.dismissFavOnlyHint = function() {...}
 bus.on('fav:dismiss-hint', _dismissFavOnlyHint);
 
 // ══ ІНІЦІАЛІЗАЦІЯ ═════════════════════════════════════════════

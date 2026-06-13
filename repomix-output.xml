@@ -42,6 +42,7 @@ The content is organized as follows:
 
 <directory_structure>
 index.html
+public/privacy.html
 public/sw.js
 src/app.js
 src/core/constants.js
@@ -96,22 +97,829 @@ vite.config.js
 <files>
 This section contains the contents of the repository's files.
 
+<file path="public/privacy.html">
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Політика конфіденційності · KyivMetroGO</title>
+  <meta name="description" content="KyivMetroGO Privacy Policy — Політика конфіденційності" />
+  <style>
+    :root {
+      --bg:          #0e0e0f;
+      --surface:     #18181b;
+      --border:      #2a2a2e;
+      --accent:      #c8523a;
+      --accent-soft: rgba(200, 82, 58, 0.12);
+      --text:        #e8e6e3;
+      --text-muted:  #8a8784;
+      --text-faint:  #4a4846;
+      --metro-red:   #e63946;
+      --metro-blue:  #5b9bd5;
+      --metro-green: #5aaa6a;
+      --radius:      10px;
+      --font-body:   'Georgia', 'Times New Roman', serif;
+      --font-ui:     system-ui, -apple-system, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.75;
+      min-height: 100dvh;
+    }
+
+    /* ── Шапка ─── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 28px 24px 24px;
+    }
+
+    .header-inner {
+      max-width: 740px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo svg { width: 24px; height: 24px; }
+
+    .header-text { flex: 1; min-width: 0; }
+
+    .app-name {
+      font-family: var(--font-ui);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--text);
+    }
+
+    .app-subtitle {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ── Навігація між мовами ─── */
+    .lang-switch {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .lang-switch a {
+      padding: 5px 10px;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+
+    .lang-switch a:hover,
+    .lang-switch a.active {
+      color: var(--text);
+      border-color: var(--border);
+      background: var(--surface);
+    }
+
+    /* ── Лінії метро — декор ─── */
+    .metro-lines {
+      height: 3px;
+      background: linear-gradient(
+        90deg,
+        var(--metro-red)   0%,
+        var(--metro-red)   33.3%,
+        var(--metro-blue)  33.3%,
+        var(--metro-blue)  66.6%,
+        var(--metro-green) 66.6%,
+        var(--metro-green) 100%
+      );
+      opacity: 0.7;
+    }
+
+    /* ── Головний вміст ─── */
+    main {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── Блок-секція (одна мова) ─── */
+    .policy-section {
+      padding-top: 48px;
+    }
+
+    .policy-section + .policy-section {
+      border-top: 1px solid var(--border);
+    }
+
+    .section-lang-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid rgba(200, 82, 58, 0.25);
+      padding: 3px 9px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: var(--font-ui);
+      font-size: clamp(22px, 5vw, 30px);
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .policy-meta {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    /* ── Картка «Важливо» ─── */
+    .highlight-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 36px;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .highlight-card strong {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    /* ── Типографіка тексту ─── */
+    h2 {
+      font-family: var(--font-ui);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 36px 0 10px;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      font-size: 15.5px;
+      color: #ccc9c5;
+      margin-bottom: 14px;
+    }
+
+    ul {
+      margin: 10px 0 16px 0;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    ul li {
+      font-size: 15.5px;
+      color: #ccc9c5;
+      padding: 5px 0 5px 22px;
+      position: relative;
+    }
+
+    ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--text-faint);
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    code {
+      font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 13px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: #b0ada9;
+    }
+
+    /* ── Блок розкриття даних (канали зворотного зв'язку) ─── */
+    .channel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 14px 0 18px;
+    }
+
+    .channel-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .channel-name {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .channel-sends {
+      font-family: var(--font-ui);
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .channel-sends code {
+      font-size: 12px;
+    }
+
+    /* ── Роздільник між мовами ─── */
+    .lang-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 52px 0 0;
+      color: var(--text-faint);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .lang-divider::before,
+    .lang-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Підвал ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px;
+      text-align: center;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+
+    /* ── Адаптивність ─── */
+    @media (max-width: 480px) {
+      header { padding: 20px 16px; }
+      main   { padding: 0 16px 60px; }
+      footer { padding: 20px 16px; }
+    }
+
+    /* ── Контактна форма ─── */
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+      background: var(--surface);
+      padding: 20px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      font-family: var(--font-ui);
+    }
+
+    .contact-form label {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .contact-form .optional-note {
+      font-size: 12px;
+      color: var(--text-faint);
+      font-style: italic;
+    }
+
+    .contact-form input,
+    .contact-form textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 11px 13px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 15px;
+      transition: border-color 0.15s ease;
+    }
+
+    .contact-form textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .contact-form input:focus,
+    .contact-form textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .contact-form input::placeholder,
+    .contact-form textarea::placeholder {
+      color: var(--text-faint);
+    }
+
+    .contact-form button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      font-family: inherit;
+      transition: opacity 0.2s;
+    }
+
+    .contact-form button:hover { opacity: 0.85; }
+    .contact-form button:active { opacity: 0.7; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round">
+        <path d="M12 2L4 7v10l8 5 8-5V7z"/>
+        <path d="M12 2v20M4 7l8 5 8-5"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <div class="app-name">KyivMetroGO</div>
+      <div class="app-subtitle">Навігація по станціям київського метро</div>
+    </div>
+    <nav class="lang-switch" aria-label="Мова">
+      <a href="#uk" class="active">УКР</a>
+      <a href="#en">ENG</a>
+    </nav>
+  </div>
+</header>
+
+<div class="metro-lines" role="presentation"></div>
+
+<main>
+
+  <!-- ══ УКРАЇНСЬКА ВЕРСІЯ ══════════════════════════════════════ -->
+  <section class="policy-section" id="uk" lang="uk">
+
+    <div class="section-lang-badge" aria-hidden="true">Українська</div>
+
+    <h1>Політика конфіденційності</h1>
+    <p class="policy-meta">Дата набрання чинності: 22 травня 2026 р. &nbsp;·&nbsp; Додаток: KyivMetroGO</p>
+
+    <div class="highlight-card">
+      <strong>Коротко</strong>
+      KyivMetroGO не збирає, не зберігає і не передає жодних персональних даних.
+      Ми не відстежуємо поведінку користувачів, не використовуємо рекламні SDK та
+      аналітику. Ваше використання додатку є повністю анонімним.
+    </div>
+
+    <h2>1. Загальна інформація</h2>
+    <p>
+      KyivMetroGO («Додаток») — це офлайн-навігатор по Київському метрополітену.
+      Додаток допомагає визначити оптимальне розташування у вагоні та потрібний вихід
+      на кожній станції. Ця Політика конфіденційності пояснює, яка інформація
+      обробляється при використанні Додатку.
+    </p>
+
+    <h2>2. Які дані ми збираємо</h2>
+    <p>
+      <strong>Ми не збираємо жодних персональних даних.</strong>
+    </p>
+    <p>Зокрема, KyivMetroGO <em>не</em> збирає і не має доступу до:</p>
+    <ul>
+      <li>імені або будь-яких ідентифікаційних даних;</li>
+      <li>геолокації або даних про пересування;</li>
+      <li>ідентифікаторів пристрою, IP-адреси або рекламних ідентифікаторів;</li>
+      <li>даних про використання додатку або аналітики поведінки;</li>
+      <li>файлів cookie або трекінг-пікселів;</li>
+      <li>будь-яких біометричних, фінансових або медичних даних.</li>
+    </ul>
+    <p>
+      <strong>Єдиний виняток щодо email:</strong> необов'язкове поле для email-адреси
+      присутнє у контактній формі Розділу 9 цієї сторінки. Ця адреса надається
+      виключно за бажанням користувача для отримання відповіді і не зберігається нами
+      після обробки Formspree. Детальніше — у Розділі 4.
+    </p>
+
+    <h2>3. Локальне сховище</h2>
+    <p>
+      Всі дані, які ви генеруєте у Додатку, зберігаються
+      <strong>виключно на вашому пристрої</strong>. Вони не передаються на жодні сервери
+      та не залишають пристрій без вашої явної дії (функція «Експорт резервної копії»).
+    </p>
+    <p>Конкретно, Додаток зберігає у системному сховищі Android (SharedPreferences):</p>
+    <ul>
+      <li>список обраних станцій та їхній порядок сортування;</li>
+      <li>обрані виходи та користувацькі підписи до виходів;</li>
+      <li>журнал відміток входу на станцію (check-in);</li>
+      <li>локальні корекції даних позицій (зміни, не надіслані або надіслані анонімно);</li>
+      <li>персональні налаштування: тема, режим відображення, параметри check-in.</li>
+    </ul>
+    <p>
+      У <strong>режимі розробника</strong> (прихована функція для тестування даних) Додаток
+      також може зберігати фотографії позицій у локальній базі IndexedDB
+      (<code>MetroPhotoDB</code>) на вашому пристрої. Ці дані жодним чином не
+      передаються зовні.
+    </p>
+
+    <h2>4. Канали зворотного зв'язку та треті сторони</h2>
+    <p>
+      Додаток містить три необов'язкові канали зворотного зв'язку, кожен з яких
+      обробляється сервісом <a href="https://formspree.io" target="_blank" rel="noopener">Formspree</a>.
+      Ми застосовуємо принцип мінімізації даних: кожна форма надсилає
+      <strong>найменший можливий обсяг інформації</strong>, необхідний для розуміння
+      повідомлення.
+    </p>
+
+    <div class="channel-list" role="list">
+      <div class="channel-item" role="listitem">
+        <div class="channel-name">① Корекція даних станції</div>
+        <div class="channel-sends">
+          Надсилає: <code>station</code> — назва станції,
+          <code>changes</code> — текст змін позицій (напрямок, вагон, двері).<br>
+          Не надсилає: slug, лінію метро, ідентифікатори пристрою, мітки часу.
+        </div>
+      </div>
+      <div class="channel-item" role="listitem">
+        <div class="channel-name">② Звіт про помилку в додатку</div>
+        <div class="channel-sends">
+          Надсилає: <code>message</code> — текст повідомлення про помилку.<br>
+          Не надсилає: назву екрану, мітку часу, версію ОС, ідентифікатори.
+        </div>
+      </div>
+      <div class="channel-item" role="listitem">
+        <div class="channel-name">③ Контактна форма (ця сторінка, Розділ 9)</div>
+        <div class="channel-sends">
+          Надсилає: <code>message</code> — текст запиту;
+          <code>email</code> — email-адреса (<em>необов'язково, лише для відповіді</em>).<br>
+          Не надсилає: нічого іншого.
+        </div>
+      </div>
+    </div>
+
+    <p>
+      <strong>Метадані запиту (IP-адреса та User-Agent).</strong>
+      Як і будь-який веб-сервіс, Formspree технічно отримує IP-адресу та ідентифікатор
+      браузера/застосунку (User-Agent) з кожного HTTP-запиту. Ми не передаємо ці дані
+      Formspree навмисно — вони є стандартними метаданими мережевого протоколу.
+      Formspree обробляє їх відповідно до своєї
+      <a href="https://formspree.io/legal/privacy-policy/" target="_blank" rel="noopener">Політики конфіденційності</a>.
+      Ми не маємо доступу до цих технічних записів та не використовуємо їх.
+    </p>
+
+    <h2>5. Доступ до інтернету</h2>
+    <p>
+      Додаток запитує дозвіл <code>android.permission.INTERNET</code> виключно для:
+    </p>
+    <ul>
+      <li>надсилання необов'язкових форм зворотного зв'язку через Formspree (Розділ 4);</li>
+      <li>автоматичного оновлення бази даних станцій у фоні (за наявності зв'язку).</li>
+    </ul>
+    <p>
+      <strong>Оновлення бази станцій та GitHub.</strong>
+      Нативна версія Додатку (Android) завантажує оновлення файлу
+      <code>stations.json</code> з сервера GitHub
+      (<code>raw.githubusercontent.com</code>). Це є виключно технічними даними про
+      станції метро — жодна інформація про користувача не передається. Проте GitHub,
+      як і будь-який HTTP-сервер, отримує IP-адресу пристрою у складі стандартних
+      метаданих мережевого запиту та обробляє її відповідно до
+      <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Загальної заяви про конфіденційність GitHub</a>.
+    </p>
+
+    <h2>6. Сторонні SDK та аналітика</h2>
+    <p>
+      Додаток <strong>не містить</strong> жодних рекламних SDK, трекерів,
+      аналітичних бібліотек (Google Analytics, Firebase, Amplitude, Crashlytics тощо)
+      або SDK соціальних мереж.
+    </p>
+
+    <h2>7. Дані дітей</h2>
+    <p>
+      KyivMetroGO не збирає даних жодних осіб, включаючи дітей віком до 13 років.
+      Реєстрація облікового запису відсутня. Додаток безпечний для використання дітьми.
+    </p>
+
+    <h2>8. Зміни до цієї Політики</h2>
+    <p>
+      У разі будь-яких змін до Політики конфіденційності ми оновимо цю сторінку
+      та дату набрання чинності вгорі. Для суттєвих змін ми намагатимемось повідомляти
+      користувачів через оновлення у Google Play Store. Продовження використання Додатку
+      після оновлення Політики означає ознайомлення зі змінами.
+    </p>
+
+    <h2>9. Контакти</h2>
+    <p>
+      Якщо у вас виникли питання щодо цієї Політики або щодо ваших даних —
+      скористайтеся формою нижче або зверніться через функцію зворотного зв'язку
+      безпосередньо в Додатку.
+    </p>
+
+    <form class="contact-form" action="https://formspree.io/f/xbdbopwr" method="POST">
+      <label for="email">
+        Ваш Email
+        <span class="optional-note">(необов'язково — лише якщо хочете отримати відповідь)</span>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          placeholder="email@example.com"
+          autocomplete="email"
+        >
+      </label>
+
+      <label for="message">
+        Повідомлення
+        <textarea
+          id="message"
+          name="message"
+          required
+          placeholder="Напишіть ваше питання щодо конфіденційності..."
+        ></textarea>
+      </label>
+
+      <button type="submit">Відправити повідомлення</button>
+    </form>
+
+  </section>
+
+  <div class="lang-divider">English version below</div>
+
+  <!-- ══ ENGLISH VERSION ════════════════════════════════════════ -->
+  <section class="policy-section" id="en" lang="en">
+
+    <div class="section-lang-badge" aria-hidden="true">English</div>
+
+    <h1>Privacy Policy</h1>
+    <p class="policy-meta">Effective date: May 22, 2026 &nbsp;·&nbsp; App: KyivMetroGO</p>
+
+    <div class="highlight-card">
+      <strong>In short</strong>
+      KyivMetroGO does not collect, store, or share any personal data.
+      We do not track user behaviour, use advertising SDKs, or run analytics.
+      Your use of the app is completely anonymous.
+    </div>
+
+    <h2>1. Overview</h2>
+    <p>
+      KyivMetroGO ("the App") is an offline navigation tool for the Kyiv Metro.
+      It helps users identify the optimal wagon position and the nearest exit
+      at each station. This Privacy Policy explains what information, if any,
+      is processed when you use the App.
+    </p>
+
+    <h2>2. Data We Collect</h2>
+    <p>
+      <strong>We do not collect any personal data.</strong>
+    </p>
+    <p>Specifically, KyivMetroGO does <em>not</em> collect or access:</p>
+    <ul>
+      <li>name or any identifying information;</li>
+      <li>location data or movement history;</li>
+      <li>device identifiers, IP addresses, or advertising IDs;</li>
+      <li>usage analytics or behavioural tracking data;</li>
+      <li>cookies or tracking pixels;</li>
+      <li>biometric, financial, or medical data of any kind.</li>
+    </ul>
+    <p>
+      <strong>One exception regarding email:</strong> an optional email field exists in
+      the contact form in Section 9 of this page. This address is provided solely at the
+      user's discretion for the purpose of receiving a reply, and is not stored by us
+      beyond Formspree's processing. See Section 4 for details.
+    </p>
+
+    <h2>3. Local Storage</h2>
+    <p>
+      All data you generate within the App is stored
+      <strong>exclusively on your device</strong>. It is never transmitted to any server
+      and never leaves your device without your explicit action
+      (the "Export Backup" feature).
+    </p>
+    <p>Specifically, the App stores the following in Android's system storage (SharedPreferences):</p>
+    <ul>
+      <li>your saved station list ("Favourites") and its sort order;</li>
+      <li>saved exits and custom exit labels;</li>
+      <li>station check-in history;</li>
+      <li>local position corrections (changes saved locally, whether submitted anonymously or not);</li>
+      <li>personal settings: theme, display mode, check-in preferences.</li>
+    </ul>
+    <p>
+      In <strong>Developer Mode</strong> (a hidden feature for data verification),
+      the App may also store position photos in a local IndexedDB database
+      (<code>MetroPhotoDB</code>) on your device. This data is never transmitted externally.
+    </p>
+
+    <h2>4. Feedback Channels &amp; Third Parties</h2>
+    <p>
+      The App includes three optional feedback channels, each processed by
+      <a href="https://formspree.io" target="_blank" rel="noopener">Formspree</a>.
+      We apply a strict data minimisation principle: each form transmits
+      <strong>only the minimum information</strong> necessary to understand the message.
+    </p>
+
+    <div class="channel-list" role="list">
+      <div class="channel-item" role="listitem">
+        <div class="channel-name">① Station data correction</div>
+        <div class="channel-sends">
+          Sends: <code>station</code> — station name,
+          <code>changes</code> — text describing position changes (direction, wagon, doors).<br>
+          Does not send: slug, metro line, device identifiers, timestamps.
+        </div>
+      </div>
+      <div class="channel-item" role="listitem">
+        <div class="channel-name">② Bug report (About screen)</div>
+        <div class="channel-sends">
+          Sends: <code>message</code> — the bug report text.<br>
+          Does not send: screen name, timestamp, OS version, identifiers.
+        </div>
+      </div>
+      <div class="channel-item" role="listitem">
+        <div class="channel-name">③ Contact form (this page, Section 9)</div>
+        <div class="channel-sends">
+          Sends: <code>message</code> — the enquiry text;
+          <code>email</code> — email address (<em>optional, for reply purposes only</em>).<br>
+          Does not send: anything else.
+        </div>
+      </div>
+    </div>
+
+    <p>
+      <strong>Request metadata (IP address &amp; User-Agent).</strong>
+      Like any web service, Formspree technically receives the device's IP address and
+      browser/app identifier (User-Agent) as part of each standard HTTP request.
+      We do not intentionally pass these to Formspree — they are inherent network
+      protocol metadata. Formspree processes them in accordance with its own
+      <a href="https://formspree.io/legal/privacy-policy/" target="_blank" rel="noopener">Privacy Policy</a>.
+      We do not have access to these technical records and do not use them.
+    </p>
+
+    <h2>5. Internet Access</h2>
+    <p>
+      The App requests the <code>android.permission.INTERNET</code> permission solely for:
+    </p>
+    <ul>
+      <li>submitting the optional feedback forms via Formspree (Section 4);</li>
+      <li>automatically fetching updated station data in the background (when connected).</li>
+    </ul>
+    <p>
+      <strong>Station data updates &amp; GitHub.</strong>
+      The native Android version of the App downloads updates to the
+      <code>stations.json</code> file from a GitHub server
+      (<code>raw.githubusercontent.com</code>). This file contains only technical
+      metro station data — no user information is transmitted. However, GitHub, like any
+      HTTP server, receives the device's IP address as part of standard network request
+      metadata and processes it in accordance with the
+      <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub General Privacy Statement</a>.
+    </p>
+
+    <h2>6. Third-Party SDKs and Analytics</h2>
+    <p>
+      The App does <strong>not include</strong> any advertising SDKs, trackers,
+      analytics libraries (Google Analytics, Firebase, Amplitude, Crashlytics, etc.),
+      or social media SDKs.
+    </p>
+
+    <h2>7. Children's Data</h2>
+    <p>
+      KyivMetroGO does not collect data from any users, including children under 13.
+      No account registration is required. The App is safe for use by children.
+    </p>
+
+    <h2>8. Changes to This Policy</h2>
+    <p>
+      If we make any changes to this Privacy Policy, we will update this page and the
+      effective date above. For material changes, we will endeavour to notify users
+      through a Google Play Store update. Your continued use of the App after a Policy
+      update constitutes your acknowledgement of those changes.
+    </p>
+
+    <h2>9. Contact</h2>
+    <p>
+      If you have any questions about this Policy or your data, please use the form below
+      or contact us through the feedback feature directly within the App.
+    </p>
+
+    <form class="contact-form" action="https://formspree.io/f/xbdbopwr" method="POST">
+      <label for="en-email">
+        Your Email
+        <span class="optional-note">(optional — only if you would like a reply)</span>
+        <input
+          type="email"
+          id="en-email"
+          name="email"
+          placeholder="email@example.com"
+          autocomplete="email"
+        >
+      </label>
+
+      <label for="en-message">
+        Message
+        <textarea
+          id="en-message"
+          name="message"
+          required
+          placeholder="Type your privacy question here..."
+        ></textarea>
+      </label>
+
+      <button type="submit">Send Message</button>
+    </form>
+
+  </section>
+
+</main>
+
+<footer>
+  &copy; 2026 KyivMetroGO &nbsp;·&nbsp;
+  <a href="#uk">Українська</a> &nbsp;/&nbsp; <a href="#en">English</a>
+</footer>
+
+</body>
+</html>
+</file>
+
 <file path="src/core/eventBus.js">
 // ══ МІНІМАЛЬНИЙ EVENT BUS ══
-// Використовується для розв'язки модулів без глобального MetroApp.
-// Підписники реєструються через bus.on(), повідомлення через bus.emit().
-// bus.on() повертає функцію-відписник — зберігай її для cleanup.
+// Синхронна шина подій: handlers викликаються в порядку реєстрації,
+// до повернення bus.emit(). Слабкий зв'язок між модулями без прямих імпортів.
+// bus.on() повертає функцію-відписник — зберігай її для cleanup у тривалих sheet-handlers.
 
 const _listeners = new Map();
 
 export const bus = {
+  /**
+   * Підписується на подію. Повертає функцію-відписник.
+   * @param {string}   event — назва події
+   * @param {Function} fn    — обробник; отримує payload з emit()
+   * @returns {() => void}   — виклик скасовує підписку
+   */
   on(event, fn) {
     if (!_listeners.has(event)) _listeners.set(event, new Set());
     _listeners.get(event).add(fn);
-    // Повертає unsubscribe
     return () => _listeners.get(event)?.delete(fn);
   },
 
+  /**
+   * Синхронно викликає всі обробники події.
+   * Помилки в окремих handlers перехоплюються і логуються без зупинки решти.
+   * @param {string} event
+   * @param {*}      [payload]
+   */
   emit(event, payload) {
     _listeners.get(event)?.forEach(fn => {
       try { fn(payload); }
@@ -119,6 +927,11 @@ export const bus = {
     });
   },
 
+  /**
+   * Видаляє конкретний обробник події.
+   * @param {string}   event
+   * @param {Function} fn
+   */
   off(event, fn) {
     _listeners.get(event)?.delete(fn);
   },
@@ -134,15 +947,6 @@ export const bus = {
 <file path="src/data/photoStorage.js">
 // ══ PHOTO STORAGE ══
 // Відповідальність: зберігання фотографій позицій у IndexedDB.
-// Абстракція спроєктована під Capacitor-міграцію:
-// при переході на нативну ФС — міняємо тільки цей файл,
-// devmode.js не чіпаємо взагалі.
-//
-// Capacitor-план:
-//   save(id, dataUrl) → Filesystem.writeFile({ path: `photos/${id}.jpg`, ... })
-//   load(id)         → Filesystem.readFile(...)  → повертає dataUrl
-//   remove(id)       → Filesystem.deleteFile(...)
-//   clear()          → Filesystem.readdir() + deleteFile для кожного
 
 const DB_NAME    = 'MetroPhotoDB';
 const STORE_NAME = 'photos';
@@ -232,7 +1036,7 @@ export const PhotoStorage = { savePhoto, loadPhoto, removePhoto, clearAllPhotos 
 // ══ DOMAIN: CHECK-IN — ЧИСТА БІЗНЕС-ЛОГІКА ══
 // Відповідальність: управління даними відвідань (check-in),
 // відмінювання іменників, статистика по гілках.
-// ПРАВИЛО: жодного DOM, жодного MetroApp, жодних UI-функцій.
+// ПРАВИЛО: жодного DOM, жодних UI-функцій.
 // Крос-модульні сигнали — виключно через EventBus.
 //
 // Публічне API:
@@ -478,6 +1282,22 @@ export function buildLineStats(entries) {
 </file>
 
 <file path="src/domain/favorites.js">
+// ══ DOMAIN: ОБРАНЕ — ЧИСТА БІЗНЕС-ЛОГІКА ══
+// Відповідальність: зберігання та управління Обраними станціями та виходами.
+// ПРАВИЛО: жодного DOM, жодних UI-функцій.
+// Крос-модульні сигнали — виключно через EventBus.
+//
+// Публічне API:
+//   getFavs()                                    → string[]
+//   saveFavs(arr)                                → void
+//   isFav(slug)                                  → boolean
+//   toggleFav(slug)                              → boolean
+//   getExitFavs()                                → ExitFav[]
+//   exitFavId(slug, dir, wagon, doors)           → string
+//   isExitFav(slug, dir, wagon, doors)           → boolean
+//   toggleExitFav(slug, dir, wagon, doors)       → ToggleResult
+//   replaceExitFav(slug, dir, oldW, oldD, newW, newD) → { status: 'replaced' }
+
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
 
@@ -679,8 +1499,6 @@ window.addEventListener('storage', e => {
 // Bus-підписки:
 //   'fav:updated'           → updateFavDock()
 //   'fav:externally-updated'→ updateFavDock() + re-render якщо шторка відкрита
-//   'fav:render-on-load'    → замінює MetroApp.renderFavOnLoad
-//   'fav:dismiss-hint'      → замінює MetroApp.dismissFavOnlyHint
 
 import Sortable            from 'sortablejs';
 import { state }           from '../../core/state.js';
@@ -949,14 +1767,12 @@ bus.on('fav:externally-updated', ({ key }) => {
   }
 });
 
-// Замінює: MetroApp.renderFavOnLoad = () => {...}
 bus.on('fav:render-on-load', () => {
   const favs = getFavs();
   if (!favs.length) favBody.innerHTML = getEmptyFavHtml();
   else renderFavList(favs);
 });
 
-// Замінює: MetroApp.dismissFavOnlyHint = function() {...}
 bus.on('fav:dismiss-hint', _dismissFavOnlyHint);
 
 // ══ ІНІЦІАЛІЗАЦІЯ ═════════════════════════════════════════════
@@ -970,19 +1786,18 @@ setTimeout(() => initKinematicSwipe(favSheet, favBody, closeFavSheet), 0);
 // Відповідальність: зберегти зміни локально + відправити на Formspree.
 // Не знає про DOM. Спілкується з іншими модулями через bus.
 
-import { STORAGE_KEYS, Storage }    from '@core/storage.js';
-import { state as appState }        from '@core/state.js';
-import { bus }                      from '@core/eventBus.js';
-import { isDevMode, appendDevLog }  from '@features/devmode.js';
+import { STORAGE_KEYS, Storage }    from '../../core/storage.js';
+import { state as appState }        from '../../core/state.js';
+import { bus }                      from '../../core/eventBus.js';
+import { isDevMode, appendDevLog }  from '../devmode.js';
 import {
   saveLocalEdit, getLocalEdits, clearAllLocalEdits,
   invalidateLocalEditsCache, applyLocalEdits, saveExitLabel,
-} from '@data/localEdits.js';
+} from '../../data/localEdits.js';
 import { fbState, resetFbState }    from './fbState.js';
 import { extractFinalValues, buildChangeText } from './fbUtils.js';
 
 const FORMSPREE_URL = 'https://formspree.io/f/xrejbjww';
-const LINE_NAMES    = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
 let _isSubmitting   = false;
 
 /**
@@ -1090,6 +1905,14 @@ export async function submitFeedback(background = false) {
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
+  // Блокуємо кнопку та очищаємо попередній результат на час відправки
+  if (!background) {
+    const sendBtn  = document.getElementById('fbSend');
+    const resultEl = document.getElementById('fbResult');
+    if (sendBtn)  { sendBtn.disabled = true; sendBtn.textContent = 'Відправка…'; }
+    if (resultEl)   resultEl.innerHTML = '';
+  }
+
   try {
     const formspreeLines = [
       ...posChanges.map(c => buildChangeText(c.p, c.nw ?? c.p.wagon, c.nd ?? c.p.doors, !!c.closed)),
@@ -1100,7 +1923,7 @@ export async function submitFeedback(background = false) {
     const response = await fetch(FORMSPREE_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeLines.join('\n') }),
+      body:    JSON.stringify({ station: s.name, changes: formspreeLines.join('\n') }),
       signal:  controller.signal,
     });
     clearTimeout(timeoutId);
@@ -1120,11 +1943,11 @@ export async function submitFeedback(background = false) {
 
 <file path="src/features/feedback/fbState.js">
 // ══ СТАН ФОРМИ ФІДБЕКУ ══
-// Правило: цей модуль не знає ні про DOM, ні про MetroApp, ні про Storage.
+// Правило: цей модуль не знає ні про DOM, ні про Storage.
 // Він є єдиним джерелом правди для feedback-форми.
 
-import { state as appState }           from '@core/state.js';
-import { getLocalEdits, getExitLabel } from '@data/localEdits.js';
+import { state as appState }           from '../../core/state.js';
+import { getLocalEdits, getExitLabel } from '../../data/localEdits.js';
 import { parseDoorValues }             from './fbUtils.js';
 
 /** @typedef {{ wMain:number, dMain:number, wEx:any, dEx:any, wEx2:any, dEx2:any, hasExtra:boolean, hasThird:boolean, isClosed:boolean, isNew?:boolean, dir?:string }} FbEntryState */
@@ -1150,7 +1973,6 @@ export function resetFbState() {
 }
 
 /**
- * Чиста функція: обчислює isDirty без мутації стану і без DOM.
  * @param {string[]} changedLabelKeys — масив ключів inputs із data-changed="true"
  */
 export function computeIsDirty(changedLabelKeys = []) {
@@ -1171,7 +1993,6 @@ export function computeIsDirty(changedLabelKeys = []) {
   return changedLabelKeys.length > 0;
 }
 
-/** Синхронізує current[idx] з тим, що є в DOM. Єдине місце, де state ←← DOM. */
 export function syncCurrentFromDOM(idx) {
   const cur = fbState.current[idx];
   if (!cur) return;
@@ -1183,9 +2004,7 @@ export function syncCurrentFromDOM(idx) {
   cur.wEx2  = rd(`fbW_ex2_${idx}`);
   cur.dEx2  = rd(`fbD_ex2_${idx}`);
 }
-/** * Ініціалізує стан форми для конкретної станції, 
- * враховуючи як оригінальні дані, так і локальні зміни.
- */
+
 export function initFeedbackState(slug) {
   resetFbState();
   fbState.slug = slug;
@@ -1201,7 +2020,6 @@ export function initFeedbackState(slug) {
 
     fbState.original[i] = { ...parsed, isClosed: !!edits[i]?.closed };
     
-    // Робимо глибоку копію об'єкта
     fbState.current[i] = structuredClone(fbState.original[i]);
     
     fbState.labels[i] = getExitLabel(slug, i) ?? (p.exit ? p.exit.trim() : '');
@@ -1213,6 +2031,15 @@ export function initFeedbackState(slug) {
 // ══ УТИЛІТИ ФІДБЕКУ ══
 // Чисті функції без побічних ефектів. Легко тестувати окремо.
 
+/**
+ * Повертає список сусідніх дверей відносно поточної позиції.
+ * Сусіди — це двері d±1 у тому самому вагоні,
+ * або перша/остання двері наступного/попереднього вагона на стику.
+ *
+ * @param {number} w — номер вагона (1–5)
+ * @param {number} d — номер дверей (1–4)
+ * @returns {{ w:number, d:number }[]}
+ */
 export function getAdjacentDoors(w, d) {
   const adj = [];
   if (d > 1) adj.push({ w, d: d - 1 });
@@ -1222,10 +2049,30 @@ export function getAdjacentDoors(w, d) {
   return adj;
 }
 
+/**
+ * Повертає протилежну позицію у поїзді (дзеркально по осі вагонів і дверей).
+ * Використовується для автозаповнення «нового виходу» у формі фідбеку.
+ *
+ * @param {number|string} w
+ * @param {number|string} d
+ * @returns {{ w:number, d:number }}
+ */
 export function getOppositeDoors(w, d) {
   return { w: 6 - parseInt(w), d: 5 - parseInt(d) };
 }
 
+/**
+ * Розбирає сирі рядкові значення вагона/дверей у структуровану форму.
+ * Підтримує три формати:
+ *   - "1" / "2"   → одиночна позиція
+ *   - "1,2" / "2,1" → дві окремі позиції (різні вагони або двері)
+ *   - "1-3"        → діапазон дверей (1..3, до 3 позицій)
+ *
+ * @param {string} rawW — сирий рядок вагона
+ * @param {string} rawD — сирий рядок дверей
+ * @returns {{ wMain:number, dMain:number, wEx:number|string, dEx:number|string,
+ *             wEx2:number|string, dEx2:number|string, hasExtra:boolean, hasThird:boolean }}
+ */
 export function parseDoorValues(rawW, rawD) {
   const rD = String(rawD), rW = String(rawW);
   let wMain = parseInt(rW) || 1, dMain = parseInt(rD) || 1;
@@ -1245,6 +2092,14 @@ export function parseDoorValues(rawW, rawD) {
   return { wMain, dMain, wEx, dEx, wEx2, dEx2, hasExtra, hasThird };
 }
 
+/**
+ * Обчислює фінальні рядкові значення вагона та дверей зі стану fbState.
+ * Повертає null якщо вихід закритий (isClosed).
+ * Нормалізує: одиночна позиція → "1"/"2", діапазон → "1-3", пара → "1, 2"/"3, 4".
+ *
+ * @param {{ wMain:number, dMain:number, wEx:*, dEx:*, wEx2:*, dEx2:*, isClosed:boolean }} stateObj
+ * @returns {{ finalW:string, finalD:string }|null}
+ */
 export function extractFinalValues(stateObj) {
   if (!stateObj || stateObj.isClosed) return null;
   let finalW = String(stateObj.wMain), finalD = String(stateObj.dMain);
@@ -1270,6 +2125,15 @@ export function extractFinalValues(stateObj) {
   return { finalW, finalD };
 }
 
+/**
+ * Формує текстовий рядок зміни для відображення у dev-логу та Formspree.
+ *
+ * @param {{ dir:string, exit:string, wagon:string, doors:string }} p — оригінальна позиція
+ * @param {string}  nw     — нове значення вагона
+ * @param {string}  nd     — нове значення дверей
+ * @param {boolean} closed — true якщо вихід позначено як закритий
+ * @returns {string}
+ */
 export function buildChangeText(p, nw, nd, closed) {
   const loc = [p.dir, p.exit].filter(Boolean).join(' · ');
   if (closed) return `${loc}: ВИХІД ЗАКРИТО`;
@@ -1283,15 +2147,23 @@ export function buildChangeText(p, nw, nd, closed) {
 <file path="src/services/backup.js">
 // ══ BACKUP SERVICE ══
 // Відповідальність: серіалізація / десеріалізація даних користувача.
-// Правило: жодного MetroApp, жодного bus, жодного UI.
+// Правило: жодного bus, жодного UI.
 //          Повертає дані та Promise<ImportResult> — caller вирішує, що показати.
+//
+// Платформна логіка:
+//   - Нативний Android/iOS → exportData через Filesystem+Share, pickAndValidate через FilePicker
+//   - Веб / PWA (iPhone)   → exportData через Blob+<a>, pickAndValidate через <input type=file>
 
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { Capacitor }                       from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share }                           from '@capacitor/share';
+import { FilePicker }                      from '@capawesome/capacitor-file-picker';
+import { STORAGE_KEYS, Storage }           from '../core/storage.js';
 
 // ── Константи ─────────────────────────────────────────────────
 
 const APP_PREFIX   = 'metro_';
-const BACKUP_TOKEN = STORAGE_KEYS.FAVS; // маркер валідного бекапу
+const BACKUP_TOKEN = STORAGE_KEYS.FAVS;
 
 /**
  * Ключі, які належать користувачу (не налаштуванням).
@@ -1319,26 +2191,30 @@ export const USER_DATA_KEYS = [
 // ── Хелпери ───────────────────────────────────────────────────
 
 /**
- * Зчитує всі metro_* ключі з localStorage.
- * Не читає через Storage.get(), щоб гарантовано захопити всі ключі,
- * включно з тими, що не оголошені в STORAGE_KEYS (legacy або майбутні).
+ * Зчитує всі metro_* ключі з in-memory кешу Storage.
+ * Коректно читає дані незалежно від платформи (Preferences / localStorage fallback).
  *
  * @returns {Record<string, string>}
  */
 function _readAllAppData() {
   const result = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(APP_PREFIX)) {
-      result[key] = localStorage.getItem(key);
-    }
+  for (const key of Object.values(STORAGE_KEYS)) {
+    const value = Storage.get(key);
+    if (value !== null) result[key] = value;
   }
   return result;
 }
 
 /**
+ * Генерує ім'я файлу бекапу з поточною датою.
+ * @returns {string}
+ */
+function _backupFilename() {
+  return `KyivMetroGO_backup_${new Date().toISOString().slice(0, 10)}.json`;
+}
+
+/**
  * Перевіряє, чи об'єкт є валідним бекапом KyivMetroGO.
- * Мінімальна умова: наявність хоча б одного з відомих ключів.
  *
  * @param {unknown} data
  * @returns {{ valid: boolean, reason?: string }}
@@ -1357,23 +2233,127 @@ function _validate(data) {
 }
 
 /**
- * Записує данні в localStorage, пропускаючи службові маркери dev-логу.
- * Ключі-роздільники (═══...) ігноруються.
- *
- * @param {Record<string, unknown>} data
+ * Парсить і валідує рядок JSON бекапу.
+ * @param {string} text
+ * @returns {ImportResult}
  */
-function _restoreToStorage(data) {
-  // Очищаємо тільки metro_* ключі, не чіпаємо сторонні (напр. Formspree token)
-  for (let i = localStorage.length - 1; i >= 0; i--) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(APP_PREFIX)) localStorage.removeItem(key);
+function _parseAndValidate(text) {
+  try {
+    const parsed     = JSON.parse(text);
+    const validation = _validate(parsed);
+    if (!validation.valid) return { status: 'invalid', reason: validation.reason };
+    return { status: 'success', data: parsed };
+  } catch {
+    return { status: 'invalid', reason: 'Файл містить некоректний JSON.' };
   }
-  for (const [key, value] of Object.entries(data)) {
-    if (!key.startsWith(APP_PREFIX))    continue;  // ігнор сторонніх
-    if (key.startsWith('═'))            continue;  // ігнор роздільників
-    if (typeof value !== 'string')      continue;  // ігнор _dev_change_log (масив)
-    localStorage.setItem(key, value);
-  }
+}
+
+// ── Реалізації експорту ───────────────────────────────────────
+
+/**
+ * Нативний експорт: записує файл у кеш і відкриває системний шеринг.
+ * @param {string} json
+ * @param {string} filename
+ */
+async function _exportNative(json, filename) {
+  await Filesystem.writeFile({
+    path:      filename,
+    data:      json,
+    directory: Directory.Cache,
+    encoding:  Encoding.UTF8,
+  });
+  const { uri } = await Filesystem.getUri({
+    directory: Directory.Cache,
+    path:      filename,
+  });
+  await Share.share({
+    title:       'KyivMetroGO — резервна копія',
+    url:         uri,
+    dialogTitle: 'Зберегти резервну копію',
+  });
+}
+
+/**
+ * Веб-експорт: Blob + <a download>.
+ * @param {string} json
+ * @param {string} filename
+ */
+function _exportWeb(json, filename) {
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url, download: filename, style: 'display:none',
+  });
+  document.body.appendChild(a);
+  a.click();
+  Promise.resolve().then(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
+// ── Реалізації імпорту ────────────────────────────────────────
+
+/**
+ * Веб-пікер: <input type="file"> з подвійним fallback для скасування.
+ * focus (десктоп) + visibilitychange (Android WebView).
+ * @returns {Promise<ImportResult>}
+ */
+function _pickWeb() {
+  return new Promise(resolve => {
+    const input = Object.assign(document.createElement('input'), {
+      type: 'file', accept: '.json', style: 'display:none',
+    });
+    document.body.appendChild(input);
+
+    let settled = false;
+    const settle = result => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(result);
+    };
+
+    const cleanup = () => {
+      if (input.parentNode) document.body.removeChild(input);
+      window.removeEventListener('focus',            onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+
+    // Fallback А — десктоп і більшість браузерів
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!input.files?.length) settle({ status: 'cancelled' });
+      }, 400);
+    };
+
+    // Fallback Б — Android WebView: додаток повертається у фокус через visibilitychange
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          if (!input.files?.length) settle({ status: 'cancelled' });
+        }, 500);
+      }
+    };
+
+    window.addEventListener('focus',            onFocus,   { once: true });
+    document.addEventListener('visibilitychange', onVisible, { once: true });
+
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (!file) { settle({ status: 'cancelled' }); return; }
+
+      const reader = new FileReader();
+      reader.onerror = () => settle({ status: 'error', error: reader.error });
+      reader.onload  = ev => settle(_parseAndValidate(ev.target.result));
+      reader.readAsText(file);
+    });
+
+    // Нативна подія скасування (сучасні браузери)
+    input.addEventListener('cancel', () => settle({ status: 'cancelled' }));
+
+    input.click();
+  });
 }
 
 // ── Публічне API ──────────────────────────────────────────────
@@ -1392,15 +2372,16 @@ export function hasUserData() {
 }
 
 /**
- * Генерує та завантажує JSON-файл резервної копії.
- * Синхронний — Blob і URL.createObjectURL не потребують await.
+ * Генерує та зберігає JSON-файл резервної копії.
+ * Нативний: Filesystem + Share. Веб: Blob + <a download>.
  *
  * @param {{ devLog?: Array<object>|null }} [opts]
+ * @returns {Promise<void>}
  */
-export function exportData({ devLog = null } = {}) {
+export async function exportData({ devLog = null } = {}) {
   const allData = _readAllAppData();
 
-  // Dev-лог додається як нефільтрований масив в окремий ключ
+  // Dev-лог — окремий нефільтрований ключ (не рядок → _restoreToStorage ігнорує)
   if (devLog && devLog.length > 0) {
     allData['═══════════════════════════════════════════════════'] =
       '══ ЛОГ ЗМІН — РЕЖИМ РОЗРОБНИКА ══';
@@ -1417,86 +2398,73 @@ export function exportData({ devLog = null } = {}) {
   }
 
   const json     = JSON.stringify(allData, null, 2);
-  const blob     = new Blob([json], { type: 'application/json' });
-  const url      = URL.createObjectURL(blob);
-  const filename = `KyivMetroGO_backup_${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = _backupFilename();
 
-  const a = Object.assign(document.createElement('a'), {
-    href: url, download: filename, style: 'display:none',
-  });
-  document.body.appendChild(a);
-  a.click();
-  // Мікротаск: прибираємо після того, як браузер ініціював завантаження
-  Promise.resolve().then(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+  if (Capacitor.isNativePlatform()) {
+    await _exportNative(json, filename);
+  } else {
+    _exportWeb(json, filename);
+  }
 }
 
+// ── Нативний пікер ────────────────────────────────────────────
+
 /**
- * Відкриває файловий діалог, читає файл, валідує, повертає результат.
+ * Нативний пікер через @capawesome/capacitor-file-picker.
+ * Використовує системний Intent.ACTION_GET_CONTENT (Android) або UIDocumentPickerViewController (iOS).
+ * Скасування — явне: FilePicker повертає порожній files[], жодних таймерів.
+ * readData:true → file.data є base64, безпечно для маленьких JSON-файлів.
+ *
+ * @returns {Promise<ImportResult>}
+ */
+async function _pickNative() {
+  const result = await FilePicker.pickFiles({
+    types:    ['application/json'],
+    limit:    1,
+    readData: true,
+  });
+
+  // Порожній масив = користувач закрив пікер без вибору
+  if (!result.files.length) return { status: 'cancelled' };
+
+  const file = result.files[0];
+
+  // file.data — base64-рядок; atob() декодує в UTF-8 текст
+  let text;
+  try {
+    text = atob(file.data);
+  } catch {
+    return { status: 'invalid', reason: 'Не вдалося прочитати вміст файлу.' };
+  }
+
+  return _parseAndValidate(text);
+}
+
+// ── Публічне API ──────────────────────────────────────────────
+
+/**
+ * Відкриває файловий діалог, читає, валідує — повертає ImportResult.
  * НЕ перезаписує Storage — caller вирішує, що робити з результатом.
+ *
+ * Нативний Android/iOS → FilePicker (системний Intent, надійне скасування).
+ * Веб / PWA (iPhone)   → <input type="file"> з подвійним fallback.
  *
  * @returns {Promise<ImportResult>}
  */
 export function pickAndValidateBackup() {
-  return new Promise(resolve => {
-    const input = Object.assign(document.createElement('input'), {
-      type: 'file', accept: '.json', style: 'display:none',
-    });
-    document.body.appendChild(input);
-
-    // Cleanup helper
-    const cleanup = () => {
-      if (input.parentNode) document.body.removeChild(input);
-    };
-
-    // Якщо користувач закрив діалог без вибору файлу
-    // 'cancel' подія є лише в нових браузерах — fallback через focus + таймер
-    const onWindowFocus = () => {
-      setTimeout(() => {
-        if (!input.files?.length) { cleanup(); resolve({ status: 'cancelled' }); }
-      }, 400);
-    };
-    window.addEventListener('focus', onWindowFocus, { once: true });
-
-    input.addEventListener('change', () => {
-      window.removeEventListener('focus', onWindowFocus);
-      const file = input.files?.[0];
-      cleanup();
-      if (!file) { resolve({ status: 'cancelled' }); return; }
-
-      const reader = new FileReader();
-      reader.onerror = () => resolve({ status: 'error', error: reader.error });
-      reader.onload  = ev => {
-        try {
-          const parsed     = JSON.parse(ev.target.result);
-          const validation = _validate(parsed);
-          if (!validation.valid) {
-            resolve({ status: 'invalid', reason: validation.reason });
-            return;
-          }
-          // Повертаємо розібрані дані — caller зробить підтвердження і потім restore
-          resolve({ status: 'success', data: parsed });
-        } catch {
-          resolve({ status: 'invalid', reason: 'Файл містить некоректний JSON.' });
-        }
-      };
-      reader.readAsText(file);
-    });
-
-    input.click();
-  });
+  return Capacitor.isNativePlatform() ? _pickNative() : _pickWeb();
 }
 
 /**
  * Відновлює дані з валідованого об'єкту бекапу та перезавантажує сторінку.
  * Викликається лише після підтвердження користувачем.
+ * Гарантує завершення запису до reload().
  *
  * @param {Record<string, string>} data — результат успішного pickAndValidateBackup
+ * @returns {Promise<void>}
  */
-export function restoreAndReload(data) {
-  _restoreToStorage(data);
+export async function restoreAndReload(data) {
+  await Storage.restoreFromBackup(data);
   window.location.reload();
 }
 
@@ -1555,7 +2523,6 @@ export function fuzzyMatchToken(query, token) {
 // ══ МУТАБЕЛЬНИЙ СТАН ДОДАТКУ ══
 // Тільки те, що змінюється під час роботи.
 // Константи — в core/constants.js.
-// MetroApp-namespace — в main.js (одноразово при старті).
 
 export const state = {
   stationsData:          null,   // { [slug]: StationObject }
@@ -1595,6 +2562,26 @@ export const TIMING = {
 </file>
 
 <file path="src/data/positions.js">
+// ══ ОБХІД ПОЗИЦІЙ СТАНЦІЇ ══
+// Утиліти для ітерації по вкладеній структурі:
+//   station → directions[] → exits[] → positions[]
+// Забезпечують єдиний монотонний posIdx для всіх споживачів
+// (fbState, localEdits, applyExitLabels).
+
+/**
+ * Обходить усі positions станції у порядку directions → exits → positions.
+ * Передає в callback об'єкт з усіма рівнями вкладеності та глобальним posIdx.
+ *
+ * @param {object} station — об'єкт станції зі stationsData
+ * @param {(ctx: {
+ *   dir:     object,
+ *   exit:    object,
+ *   position: object,
+ *   dirIdx:  number,
+ *   exitIdx: number,
+ *   posIdx:  number,
+ * }) => void} callback
+ */
 export function traversePositions(station, callback) {
   if (!station?.directions) return;
   let posIdx = 0;
@@ -1612,6 +2599,15 @@ export function traversePositions(station, callback) {
   }
 }
 
+/**
+ * Проходить по всіх positions станції та повертає масив результатів mapper().
+ * undefined з mapper пропускаються.
+ *
+ * @template T
+ * @param {object}   station
+ * @param {Function} mapper  — отримує той самий ctx, що й traversePositions
+ * @returns {T[]}
+ */
 export function mapPositions(station, mapper) {
   const results = [];
   traversePositions(station, ctx => {
@@ -1646,6 +2642,7 @@ import { LINE_COLOR }         from '../../core/constants.js';
 import { animateSheetClose }  from '../../ui/animations.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
 import { pushSheetHistory }   from '../../ui/system.js';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 import {
   getCheckins,
@@ -1744,6 +2741,10 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
 
     btn.addEventListener('click', e => {
       e.stopPropagation();
+
+      // Легкий тактильний «клік» при натисканні на шпильку чекіна
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+
       const nowChecked = toggleCheckin(slug, dir, wagon, doors, lineColor);
       btn.classList.toggle('is-checked', nowChecked);
       btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
@@ -2023,13 +3024,11 @@ export function openCheckinSheet() {
 
 // ══ BUS-ПІДПИСКИ ══════════════════════════════════════════════
 
-// Замінює: MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {...}
 bus.on('checkin:attach-buttons', ({ sheetEl, slug, color }) => {
   attachCheckinButtons(sheetEl, slug, color);
 });
 
 // Після toggleCheckin (domain/checkin) → оновлюємо dock та синхронізуємо карту.
-// Замінює прямі виклики updateCheckinDock() + MetroApp.syncMapWithCheckins?.() у toggleCheckin.
 bus.on('checkin:updated', () => {
   _checkinCount = null;
   updateCheckinDock();
@@ -2128,6 +3127,11 @@ if ('serviceWorker' in navigator) {
     }
   });
 }
+
+// ── Нативна платформа: SW інертний, тому stations.js емітує подію через bus ──
+// Дзеркало SW-логіки: той самий тост, той самий UX — незалежно від платформи.
+import { bus } from '../core/eventBus.js';
+bus.on('stations:updated', ({ version }) => showDataUpdateToast(version));
 </file>
 
 <file path="src/sheets/stationEvents.js">
@@ -2150,6 +3154,7 @@ import { dismissHintWithDoors } from '../ui/animations.js';
 import { Icons }                from '../ui/icons.js';
 import { applyFavPillStyles }     from './renderStation.js';
 import { heartSvg }               from '../ui/components.js';
+import { Haptics, NotificationType } from '@capacitor/haptics';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -2231,6 +3236,12 @@ function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoo
   });
 }
 
+
+
+
+
+
+
 // ── Ядро: toggle exit fav ─────────────────────────────────────
 function _triggerExitFav(favTarget, slug, lineColor) {
   const wagon    = favTarget.dataset.wagon;
@@ -2251,13 +3262,18 @@ function _triggerExitFav(favTarget, slug, lineColor) {
 
   const added = result.status === 'added';
   if (row) applyFavPillStyles(row, lineColor, added);
+  
   if (added) {
     _showExitFavToast(row);
+
+    // Соковитий подвійний нативний вібровідгук «Успіх»
+    Haptics.notification({ type: NotificationType.Success }).catch(() => {});
+
     _maybeShowCheckinHint(lineColor);
     _maybeDismissOnboarding(lineColor);
   }
 
-  // Оновлюємо серце в шапці
+  // Оновлюємо серце в шапці (тепер цей блок чітко всередині функції)
   const favBtnBar = document.querySelector(`.fav-btn-bar[data-slug="${slug}"]`);
   if (favBtnBar) {
     const nowFav = isFav(slug);
@@ -2524,7 +3540,8 @@ export function heartSvg(isFav, _slug, lineColor) {
 
 <file path="src/ui/icons.js">
 // ══ ІКОНКИ ══
-// Чистий ES-модуль: export const Icons = {...}
+// Єдине сховище SVG-рядків. Чистий ES-модуль без залежностей.
+// Використовуй через Icons.назва — не вбудовуй SVG безпосередньо у код.
 
 export const Icons = {
   pencil: `<svg aria-hidden="true" focusable="false" viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
@@ -2550,10 +3567,21 @@ export const Icons = {
 </file>
 
 <file path="src/ui/theme.js">
-import { STORAGE_KEYS, Storage } from '@core/storage.js';
+// ══ УПРАВЛІННЯ ТЕМОЮ ОФОРМЛЕННЯ ══
+// Підтримує три варіанти: 'light', 'dark', 'system'.
+// Перемикання без перехідної анімації (transition: none на час зміни атрибута).
+
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
 
 const root = document.documentElement;
 
+/**
+ * Застосовує тему оформлення та опціонально зберігає вибір у Storage.
+ * Перемикання відбувається миттєво (без CSS-переходу) через тимчасовий <style>.
+ *
+ * @param {'light'|'dark'|'system'|string} preference — значення теми
+ * @param {boolean} [save=true] — чи зберігати у Storage
+ */
 export function applyTheme(preference, save = true) {
   let pref = preference;
 
@@ -2571,12 +3599,11 @@ export function applyTheme(preference, save = true) {
   document.head.appendChild(css);
 
   root.setAttribute('data-theme', actualTheme);
-
+  root.style.colorScheme = actualTheme;
   if (save) {
     Storage.set(STORAGE_KEYS.THEME, pref);
   }
 
-  // Оновлюємо сегментований контрол
   document.querySelectorAll('#settingsThemeSeg .settings-seg-btn').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.themeVal === pref);
   });
@@ -2767,12 +3794,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 <file path="src/core/constants.js">
 // ══ СТАТИЧНІ КОНСТАНТИ ДОДАТКУ ══
 // Значення, що ніколи не змінюються під час роботи.
-//
-// P2-E fix: NAME_TO_SLUG та SLUG_BY_LOWER видалено звідси.
-// Вони були порожніми об'єктами, які заповнювались через MetroApp —
-// що порушувало ESM-інкапсуляцію і плутало споживачів (отримували порожній об'єкт).
-// Тепер вони є приватними змінними всередині data/stations.js
-// і доступні виключно через slugByName() та getSlugByLower().
+// Змінювані дані — у core/state.js.
 
 export const LINE_COLOR = {
   red:   '#c8523a',
@@ -2840,227 +3862,24 @@ export function withUnsavedCheck(proceed) {
 }
 </file>
 
-<file path="src/data/localEdits.js">
-// ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
-// Відповідальність: читання/запис локальних правок позицій та підписів виходів.
-//
-// Блок Б: підписуємось на bus.on('data:stations-hydrated') і замінюємо
-// MetroApp-фасад (що був у кінці файлу) чистою bus-інтеграцією.
-// applyLocalEdits / applyExitLabels залишаються публічними — їх безпосередньо
-// викликають fbEvents.js, fbApi.js та stationSheet.js (прямий ESM-імпорт).
-
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
-import { bus }                   from '../core/eventBus.js';
-import { traversePositions }     from './positions.js';
-
-// ══ КЕШ ══════════════════════════════════════════════════════
-
-let localEditsCache = null;
-let exitLabelsCache = null;
-
-export function invalidateLocalEditsCache() {
-  localEditsCache = null;
-  exitLabelsCache = null;
-}
-
-// ══ EXIT LABELS ════════════════════════════════════════════════
-
-function getExitLabels() {
-  if (exitLabelsCache) return exitLabelsCache;
-  try {
-    exitLabelsCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_LABELS) || '{}');
-  } catch (e) {
-    console.warn('[localEdits] Помилка парсингу описів виходів:', e);
-    exitLabelsCache = {};
-  }
-  return exitLabelsCache;
-}
-
-/**
- * Зберігає або видаляє підпис виходу за slug + posIdx.
- * Якщо label порожній — запис видаляється.
- * @param {string} slug
- * @param {number} posIdx
- * @param {string} label
- */
-export function saveExitLabel(slug, posIdx, label) {
-  const labels = getExitLabels();
-  if (!labels[slug]) labels[slug] = {};
-  if (label.trim()) {
-    labels[slug][posIdx] = label.trim();
-  } else {
-    delete labels[slug][posIdx];
-    if (!Object.keys(labels[slug]).length) delete labels[slug];
-  }
-  Storage.set(STORAGE_KEYS.EXIT_LABELS, JSON.stringify(labels));
-  exitLabelsCache = null;
-}
-
-/**
- * Повертає підпис виходу або null якщо немає.
- * @param {string} slug
- * @param {number} posIdx
- * @returns {string|null}
- */
-export function getExitLabel(slug, posIdx) {
-  return getExitLabels()[slug]?.[posIdx] ?? null;
-}
-
-/**
- * Застосовує всі збережені підписи виходів до об'єктів stationsData.
- * Мутує exit.label та exit._labelEdited на місці.
- * Викликається:
- *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
- *   – явно з fbEvents.js та stationSheet.js при ручних змінах.
- *
- * @param {Record<string, object>} stationsData
- */
-export function applyExitLabels(stationsData) {
-  const labels = getExitLabels();
-  for (const [slug, posLabels] of Object.entries(labels)) {
-    if (!stationsData[slug]) continue;
-    traversePositions(stationsData[slug], ({ exit, posIdx }) => {
-      if (posLabels[posIdx] !== undefined) {
-        exit.label        = posLabels[posIdx];
-        exit._labelEdited = true;
-        exit._slug        = slug;
-      }
-    });
-  }
-}
-
-// ══ LOCAL EDITS ════════════════════════════════════════════════
-
-/**
- * Повертає об'єкт усіх локальних правок позицій з кешу або Storage.
- * Структура: { [slug]: { [posIdx]: EditData } }
- * @returns {Record<string, Record<number, object>>}
- */
-export function getLocalEdits() {
-  if (localEditsCache) return localEditsCache;
-  try {
-    localEditsCache = JSON.parse(Storage.get(STORAGE_KEYS.LOCAL_EDITS) || '{}');
-  } catch (e) {
-    console.warn('[localEdits] Помилка парсингу локальних змін:', e);
-    localEditsCache = {};
-  }
-  return localEditsCache;
-}
-
-/**
- * Зберігає локальну правку позиції.
- * @param {string} slug
- * @param {number} posIdx
- * @param {object} data
- */
-export function saveLocalEdit(slug, posIdx, data) {
-  const edits = getLocalEdits();
-  if (!edits[slug]) edits[slug] = {};
-  edits[slug][posIdx] = data;
-  Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
-  localEditsCache = null;
-}
-
-/** Видаляє всі локальні правки з Storage та кешу. */
-export function clearAllLocalEdits() {
-  localEditsCache = null;
-  Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
-}
-
-/** @returns {boolean} true якщо є хоча б одна локальна правка */
-export function hasLocalEdits() {
-  return Object.keys(getLocalEdits()).length > 0;
-}
-
-/**
- * Застосовує всі локальні правки до об'єктів stationsData.
- * Мутує position на місці (wagon, doors, closed тощо).
- * Для isNew-правок — додає новий exit до відповідного direction.
- * Викликається:
- *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
- *   – явно з fbEvents.js та fbApi.js при ручних змінах у формі фідбеку.
- *
- * @param {Record<string, object>} stationsData
- */
-export function applyLocalEdits(stationsData) {
-  const edits = getLocalEdits();
-
-  for (const [slug, posEdits] of Object.entries(edits)) {
-    if (!stationsData[slug]) continue;
-    const s = stationsData[slug];
-
-    traversePositions(s, ({ position, posIdx }) => {
-      const edit = posEdits[posIdx];
-      if (edit !== undefined && !edit.isNew) {
-        Object.assign(position, edit, { _edited: true, _slug: slug, _posIdx: posIdx });
-      }
-    });
-
-    Object.keys(posEdits).forEach(idx => {
-      const edit = posEdits[idx];
-      if (!edit.isNew) return;
-
-      const targetDir = s.directions.find(d => d.from === edit.dir);
-      if (!targetDir) return;
-
-      const alreadyAdded = targetDir.exits.some(e =>
-        e.positions?.some(p => p._posIdx === parseInt(idx))
-      );
-      if (alreadyAdded) return;
-
-      const newExit = {
-        label:     edit.label || '',
-        positions: [{
-          wagon:    String(edit.wagon),
-          doors:    String(edit.doors),
-          _edited:  true,
-          _slug:    slug,
-          _posIdx:  parseInt(idx),
-        }],
-      };
-      targetDir.exits.push(newExit);
-      s.positions.push({
-        dir:   edit.dir,
-        exit:  newExit.label,
-        wagon: String(edit.wagon),
-        doors: String(edit.doors),
-      });
-    });
-  }
-}
-
-// ══ BUS-ІНТЕГРАЦІЯ ════════════════════════════════════════════
-// Замінює MetroApp-фасад, що був у кінці цього файлу.
-// stations.js::hydrateStations() тепер емітує 'data:stations-hydrated'
-// замість прямих викликів MetroApp.applyLocalEdits / MetroApp.applyExitLabels.
-//
-// EventBus — синхронний: handlers виконуються до повернення bus.emit(),
-// тому правки гарантовано застосовані до того, як hydrateStations поверне дані.
-
-bus.on('data:stations-hydrated', ({ stationsData }) => {
-  applyLocalEdits(stationsData);
-  applyExitLabels(stationsData);
-});
-</file>
-
 <file path="src/features/feedback/fbEvents.js">
 // ══ FEEDBACK EVENTS ══
 // Відповідальність: event delegation + sheet lifecycle.
 // Правило: не генерує HTML, не робить fetch.
 //          Читає DOM → оновлює fbState → викликає callbacks.
 
-import { state as appState }         from '@core/state.js';
-import { bus }                       from '@core/eventBus.js';
-import { STORAGE_KEYS, Storage }     from '@core/storage.js';
+import { state as appState }         from '../../core/state.js';
+import { bus }                       from '../../core/eventBus.js';
+import { STORAGE_KEYS, Storage }     from '../../core/storage.js';
 import { getLocalEdits, saveExitLabel,
          clearAllLocalEdits, invalidateLocalEditsCache,
-         applyLocalEdits, applyExitLabels }  from '@data/localEdits.js';
+         applyLocalEdits, applyExitLabels }  from '../../data/localEdits.js';
 import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
 import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
 import { renderFeedbackPositions, renderResetBtn,
          stationListHtml }                              from './fbRenderer.js';
-import { initKinematicSwipe } from '@ui/swipe.js';
-import { Icons }              from '@ui/icons.js';
+import { initKinematicSwipe } from '../../ui/swipe.js';
+import { Icons }              from '../../ui/icons.js';
 
 // ── Внутрішні DOM-хелпери ────────────────────────────────────
 
@@ -3104,8 +3923,8 @@ export function markFeedbackDirty() {
  * Викликається ОДИН РАЗ після createElement.
  *
  * @param {HTMLElement} sheet
- * @param {{\n *   onClose:  () => void,
- *   onSubmit: () => void,
+ * @param {{\n * onClose:  () => void,
+ * onSubmit: () => void,
  * }} callbacks
  */
 export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
@@ -3291,7 +4110,6 @@ function _handleRestore(idx, slug, afterRender) {
 }
 
 function _handleCloseExit(idx, slug, afterRender) {
-  // Новий (isNew) вихід — просто видаляємо
   if (fbState.current[idx]?.isNew) {
     delete fbState.current[idx];
     delete fbState.labels[idx];
@@ -3308,7 +4126,6 @@ function _handleCloseExit(idx, slug, afterRender) {
     return;
   }
 
-  // Якщо відкрита зона «extra doors» — спочатку стягуємо ex→main
   const exWrap = document.getElementById(`fbExtraWrap${idx}`);
   if (exWrap && !exWrap.classList.contains('is-hidden')) {
     document.getElementById(`fbW${idx}`).textContent = document.getElementById(`fbW_ex${idx}`).textContent;
@@ -3323,7 +4140,6 @@ function _handleCloseExit(idx, slug, afterRender) {
     return;
   }
 
-  // Позначаємо вихід як закритий
   const p = appState.stationsData[fbState.slug]?.positions[idx];
   if (!p) return;
   saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
@@ -3373,7 +4189,6 @@ function _handleStep(btn) {
   const idx     = parseInt(id.replace(/[^0-9]/g, ''));
 
   if (isExtra) {
-    // Рух по сусідніх дверях відносно головних
     const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
     const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
     const adj   = getAdjacentDoors(mainW, mainD);
@@ -3394,7 +4209,6 @@ function _handleStep(btn) {
     document.getElementById(`fbW_ex${idx}`).textContent = curW;
     document.getElementById(`fbD_ex${idx}`).textContent = curD;
 
-    // Третій вхід — автопозиція
     const ex2W  = document.getElementById(`fbW_ex2_${idx}`);
     const ex2D  = document.getElementById(`fbD_ex2_${idx}`);
     const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
@@ -3418,7 +4232,6 @@ function _handleLabelChange(input, slug) {
   const wrapId = input.id.replace('fbLabelInput', '');
   if (slug && wrapId !== '') saveExitLabel(slug, parseInt(wrapId), input.value);
 
-  // Оновлюємо превью тексту без перемальовки всього posEl
   const wrap = document.getElementById(`fbLabelWrap${wrapId}`);
   const row  = wrap?.previousElementSibling;
   if (!row?.classList.contains('fb-exit-label-row')) return;
@@ -3448,7 +4261,6 @@ function _toggleLabelInput(itemIdx) {
   if (!wrap || !input) return;
 
   const isOpen = wrap.classList.contains('label-input-open');
-  // Закрити всі інші
   document.querySelectorAll('.fb-exit-label-input-wrap.label-input-open').forEach(w => {
     if (w !== wrap) w.classList.remove('label-input-open');
   });
@@ -3475,7 +4287,6 @@ function _handleAddExit(dir, slug, afterRender) {
   fbState.labels[newIdx] = '';
 
   renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
-  // Одразу відкриваємо поле вводу опису нового виходу
   setTimeout(() =>
     document.querySelector(`.fb-add-desc-btn[data-item-idx="${newIdx}"]`)?.click(), 100);
 }
@@ -3499,7 +4310,6 @@ function _handleReset(afterRender) {
     message: 'Скинути всі локальні зміни та повернутись до стандартних даних?',
     onYes: async () => {
       clearAllLocalEdits();
-      // reloadStationsData — викликає index.js через bus, щоб не імпортувати тут
       bus.emit('data:reload-stations', {
         onDone: () => {
           document.getElementById('fbResetWrap').innerHTML =
@@ -3514,344 +4324,66 @@ function _handleReset(afterRender) {
 }
 </file>
 
-<file path="src/features/feedback/fbRenderer.js">
-// ══ FEEDBACK RENDERER ══
-// Відповідальність: state → HTML-рядок.
-// Правило: жодних addEventListener тут. Лише генерація розмітки.
-// DOM-запис — лише один: posEl.innerHTML = ... в кінці renderFeedbackPositions.
-
-import { state as appState }                      from '@core/state.js';
-import { getLocalEdits, hasLocalEdits }           from '@data/localEdits.js';
-import { fbState, initFeedbackState }             from './fbState.js';
-import { Icons }                                  from '@ui/icons.js';
-import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '@core/constants.js';
-
-// ── Константи ────────────────────────────────────────────────
-
-const INFO_SVG = Icons.info;
-const UNDO_SVG = Icons.undo;
-const PENCIL   = Icons.pencil;
-
-// ── Атомарні генератори ──────────────────────────────────────
-
-/**
- * @returns {string} HTML-розмітка одного stepper-поля
- */
-function stepperHtml(id, value, min, max, label) {
-  return `<div class="fb-input-wrap">
-    <span class="fb-input-label">${label}</span>
-    <div class="fb-stepper">
-      <button type="button" class="fb-step fb-step-down"
-        aria-label="Зменшити ${label}"
-        data-id="${id}" data-min="${min}" data-max="${max}">−</button>
-      <span class="fb-step-val" id="${id}" aria-live="polite">${value}</span>
-      <button type="button" class="fb-step fb-step-up"
-        aria-label="Збільшити ${label}"
-        data-id="${id}" data-min="${min}" data-max="${max}">+</button>
-    </div>
-  </div>`;
-}
-
-/**
- * @returns {string} HTML блоку label-рядка для одного виходу
- */
-function exitLabelHtml(idx, rawExit) {
-  const escaped = rawExit.replace(/"/g, '&quot;');
-  const editOrAdd = rawExit
-    ? `<button type="button" class="fb-exit-label-edit-btn" data-item-idx="${idx}" aria-label="Редагувати">${PENCIL}</button>`
-    : `<button type="button" class="fb-add-desc-btn" data-item-idx="${idx}">додати опис</button>`;
-
-  return `<div class="fb-exit-label-row">
-    <div class="fb-exit-label-row-inner">
-      <span class="fb-exit-label-text">${rawExit}</span>
-      ${editOrAdd}
-    </div>
-  </div>
-  <div class="fb-exit-label-input-wrap" id="fbLabelWrap${idx}">
-    <input type="text" class="fb-exit-label-input"
-      id="fbLabelInput${idx}" value="${escaped}" maxlength="60">
-  </div>`;
-}
-
-/**
- * @returns {string} HTML одного рядка позиції (відкритий або закритий)
- */
-function positionItemHtml(item, st, lineColor) {
-  const { i }    = item;
-  const isClosed = !!st.isClosed;
-
-  const closedBlock = `
-    <div class="fb-closed-note-wrap">
-      <span class="fb-closed-note">Вихід позначено як недоступний</span>
-      <button type="button" class="fb-restore-exit"
-        data-idx="${i}" aria-label="Відновити вихід">${UNDO_SVG}</button>
-    </div>`;
-
-  const openBlock = `
-    <div class="fb-pos-wrap">
-      <div class="fb-side-actions-left">
-        <button type="button" class="fb-add-doors-info"
-          style="color:${lineColor}" data-idx="${i}">${INFO_SVG}</button>
-      </div>
-      <div class="fb-pos-inputs">
-        ${stepperHtml(`fbW${i}`, st.wMain, 1, 5, 'вагон')}
-        ${stepperHtml(`fbD${i}`, st.dMain, 1, 4, 'двері')}
-      </div>
-      <div class="fb-side-actions">
-        <button type="button" class="fb-close-exit"
-          style="color:${lineColor}" data-idx="${i}">✕</button>
-      </div>
-    </div>
-
-    <div class="fb-extra-door-wrap ${st.hasExtra ? '' : 'is-hidden'}" id="fbExtraWrap${i}">
-      <div class="fb-pos-wrap" style="margin-top:4px">
-        <div class="fb-side-actions-left"></div>
-        <div class="fb-pos-inputs">
-          ${stepperHtml(`fbW_ex${i}`, st.wEx, 1, 5, 'вагон')}
-          ${stepperHtml(`fbD_ex${i}`, st.dEx, 1, 4, 'двері')}
-        </div>
-        <div class="fb-side-actions">
-          <button type="button" class="fb-cancel-extra-btn"
-            style="color:${lineColor}" data-idx="${i}">✕</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="fb-extra-door-wrap ${st.hasThird ? '' : 'is-hidden'}" id="fbExtraWrap2_${i}">
-      <div class="fb-pos-wrap" style="margin-top:4px">
-        <div class="fb-side-actions-left"></div>
-        <div class="fb-pos-inputs">
-          ${stepperHtml(`fbW_ex2_${i}`, st.wEx2, 1, 5, 'вагон')}
-          ${stepperHtml(`fbD_ex2_${i}`, st.dEx2, 1, 4, 'двері')}
-        </div>
-        <div class="fb-side-actions">
-          <button type="button" class="fb-cancel-third-btn"
-            style="color:${lineColor}" data-idx="${i}">✕</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="fb-add-doors-row ${st.hasExtra ? 'is-hidden' : ''}" id="fbAddDoorsRow${i}">
-      <button type="button" class="fb-add-doors-link"
-        id="fbAddBtn${i}" data-idx="${i}"
-        data-can-have-third="${st.hasThird ? '1' : '0'}">+1</button>
-    </div>
-
-    <div class="fb-add-doors-hint" id="fbHint${i}">
-      <div class="fb-add-doors-hint-inner">
-        <div class="hint-1-door">
-          <p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері</p>
-          <p><span style="color:var(--line-red)">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p>
-        </div>
-        <div class="hint-2-doors">
-          <p><span style="color:var(--line-blue)">✕</span> скасовує додавання других дверей.</p>
-        </div>
-      </div>
-    </div>`;
-
-  const classes = [
-    'fb-item-inner',
-    st.hasExtra ? 'fb-pos-multi has-extra-doors' : '',
-    st.hasThird ? 'has-three-doors'               : '',
-    isClosed    ? 'fb-pos-closed'                 : '',
-  ].filter(Boolean).join(' ');
-
-  return `${exitLabelHtml(i, fbState.labels[i] ?? '')}
-    <div class="${classes}" data-idx="${i}" id="fbItemInner${i}">
-      ${isClosed ? closedBlock : openBlock}
-    </div>`;
-}
-
-/**
- * @returns {string} HTML однієї групи виходів (напрям + items + кнопка «додати»)
- */
-function dirGroupHtml(g, slug, lineColor) {
-  const dirLabel = g.dir === '__long_transfer__'
-    ? 'Довгий перехід на Майдан Незалежності'
-    : g.dir;
-
-  const itemsHtml = g.items.map((item, index) => {
-    const st      = fbState.current[item.i] ?? { wMain: 1, dMain: 1, isClosed: false };
-    const divider = index < g.items.length - 1 ? '<div class="fb-item-divider"></div>' : '';
-    return positionItemHtml(item, st, lineColor) + divider;
-  }).join('');
-
-  const canAddMore  = STATIONS_WITH_POTENTIAL_EXITS.has(slug);
-  const hasNewAlrdy = Object.values(fbState.current).some(s => s.isNew && s.dir === g.dir);
-  const addBtnHtml  = (canAddMore && !hasNewAlrdy)
-    ? `<div class="fb-add-exit-row">
-         <button type="button" class="fb-add-exit-btn" data-dir="${g.dir}">
-           + Додати ще один вихід
-         </button>
-       </div>`
-    : '';
-
-  return `<div class="fb-pos-row">
-    <div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>
-    ${itemsHtml}
-    ${addBtnHtml}
-  </div>`;
-}
-
-// ── Головна функція рендеру ──────────────────────────────────
-
-/**
- * Єдина точка, що пише у DOM.
- * Читає fbState + appState, генерує HTML, робить один innerHTML =.
- * Після запису — викликає onAfterRender (зазвичай markFeedbackDirty).
- *
- * @param {string|null} slug
- * @param {{ onAfterRender?: () => void }} [opts]
- */
-export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
-  const posEl   = document.getElementById('fbPositions');
-  const sendBtn = document.getElementById('fbSend');
-  if (!posEl || !sendBtn) return;
-
-  if (!slug) {
-    posEl.innerHTML  = '';
-    sendBtn.disabled = true;
-    return;
-  }
-
-  if (fbState.slug !== slug) initFeedbackState(slug);
-
-  try {
-    const s         = appState.stationsData[slug];
-    const lineColor = LINE_COLOR[s?.line] ?? 'var(--text-muted)';
-
-    // Оновлюємо заголовок шторки
-    const titleEl     = document.getElementById('fbStationTitle');
-    const mainTitleEl = document.getElementById('fbSheetTitle');
-    if (titleEl && mainTitleEl) {
-      titleEl.textContent = s.name;
-      titleEl.hidden      = false;
-      mainTitleEl.hidden  = true;
-    }
-
-    // Збираємо групи напрямів
-    const groupsMap = new Map();
-
-    s?.positions?.forEach((p, i) => {
-      const dir = p.dir || '';
-      if (!groupsMap.has(dir)) groupsMap.set(dir, { dir, items: [] });
-      groupsMap.get(dir).items.push({ p, i });
-    });
-
-    // Додаємо нові (isNew) виходи з fbState
-    Object.keys(fbState.current).forEach(idx => {
-      const st = fbState.current[idx];
-      if (!st.isNew) return;
-      const dir = st.dir || '';
-      if (!groupsMap.has(dir)) groupsMap.set(dir, { dir, items: [] });
-      groupsMap.get(dir).items.push({
-        p: { dir, exit: fbState.labels[idx] || '', wagon: st.wMain, doors: st.dMain },
-        i: parseInt(idx),
-      });
-    });
-
-    // Один запис у DOM
-    posEl.innerHTML = [...groupsMap.values()]
-      .map(g => dirGroupHtml(g, slug, lineColor))
-      .join('');
-
-  } catch (err) {
-    posEl.innerHTML = `
-      <div style="color:var(--line-red);padding:16px;text-align:center;
-                  font-size:14px;background:var(--bg-card);border-radius:12px;">
-        Помилка рендеру:<br>${err.message}
-      </div>`;
-    console.error('[fbRenderer] Render error:', err);
-  }
-
-  onAfterRender?.();
-}
-
-/**
- * Рендерить кнопку «Скинути локальні зміни».
- * Окрема функція — бо її потрібно перемалювати після submit/restore.
- *
- * @param {{ onReset: () => void }} callbacks
- */
-export function renderResetBtn({ onReset } = {}) {
-  const wrap = document.getElementById('fbResetWrap');
-  if (!wrap) return;
-
-  const show = hasLocalEdits() && !fbState.slug;
-  wrap.innerHTML = show
-    ? '<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>'
-    : '';
-
-  document.getElementById('fbReset')?.addEventListener('click', () => onReset?.());
-}
-
-/**
- * Рендерить список станцій у шторці вибору станції.
- * Чиста функція: state → innerHTML рядок.
- *
- * @param {string} activeLine  — '' означає «всі»
- * @param {string} activeSlug  — поточно обраний slug (для підсвітки)
- * @returns {string} HTML для вставки у #fbStationList
- */
-export function stationListHtml(activeLine, activeSlug = '') {
-  return Object.entries(appState.stationsData ?? {})
-    .map(([sl, st]) => ({ slug: sl, ...st }))
-    .filter(st => activeLine === '' || st.line === activeLine)
-    .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
-    .map(st => {
-      const color  = LINE_COLOR[st.line] ?? '#888';
-      const active = st.slug === activeSlug ? ' fb-station-active' : '';
-      return `<div class="search-item fb-station-item${active}" data-slug="${st.slug}">
-        <div class="search-item-line" style="background-color:${color}"></div>
-        <div>${st.name}</div>
-      </div>`;
-    })
-    .join('');
-}
-</file>
-
 <file path="src/features/feedback/index.js">
 // ══ FEEDBACK — ПУБЛІЧНЕ API ══
 // Єдина точка входу для зовнішніх модулів.
 
-import { bus }                                   from '@core/eventBus.js';
-import { state as appState }                     from '@core/state.js';
-import { fbState, resetFbState, computeIsDirty } from './fbState.js';
+import { bus }                                   from '../../core/eventBus.js';
+import { state as appState }                     from '../../core/state.js';
+import { fbState, resetFbState }                 from './fbState.js';
 import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
 
-// РЕЕКСПОРТ: передаємо функцію далі назовні (для devmode.js)
 export { renderFeedbackPositions }               from './fbRenderer.js';
 
 bus.on('sheet:open-feedback', openFeedbackSheet);
-
-// ── Синхронізація прапора для core/unsavedCheck (Dependency Rule: core не імпортує features) ──
 bus.on('feedback:dirty-changed', ({ isDirty }) => { appState.hasUnsavedFeedback = isDirty; });
-
-// ── Fire-and-forget submit із unsavedCheck (без прямого імпорту fbApi у core) ──
 bus.on('feedback:submit-silent', () => submitFeedback(true));
 
-let _sheetEl    = null;   // кешований DOM-вузол
-let _sheetBound = false;  // чи вже підписані listeners
+bus.on('feedback:submit-ui', ({ status, background }) => {
+  if (background) return;
 
-// ── Ядро: відкрити / закрити ────────────────────────────────
+  const resultEl = document.getElementById('fbResult');
+  const sendBtn  = document.getElementById('fbSend');
+  if (!resultEl) return;
+
+  if (sendBtn) {
+    sendBtn.disabled    = false;
+    sendBtn.textContent = 'Застосувати';
+  }
+
+  if (status === 'success') {
+    resultEl.innerHTML =
+      '<p class="fb-note fb-success">✓ Дякуємо! Зміни надіслано та збережено локально.</p>';
+  } else if (status === 'network-error') {
+    resultEl.innerHTML =
+      '<p class="fb-note fb-warn">Немає з\'єднання з інтернетом — зміни збережено локально ' +
+      'і будуть надіслані при наступному запуску з мережею.</p>';
+  } else if (status === 'local-only') {
+    resultEl.innerHTML =
+      '<p class="fb-note fb-success">✓ Зміни збережено локально.</p>';
+  }
+});
+
+let _sheetEl    = null;   
+let _sheetBound = false;  
 
 export function openFeedbackSheet() {
   try {
-    _ensureSheetDOM();            // створює DOM + одразу bind listeners (один раз)
-    _resetSheetUI();              // скидає поля, прибирає старі дані
-    _openSheetDOM();              // клас .sheet-open + overlay
+    _ensureSheetDOM();            
+    _resetSheetUI();              
+    _openSheetDOM();              
   } catch (err) {
     console.error('[FeedbackSheet] openFeedbackSheet failed:', err);
   }
 }
 
 export function closeFeedbackSheet() {
-  if (!hasUnsavedFeedback()) { _forceClose(); return; }
+  if (!fbState.isDirty) { _forceClose(); return; }
 
   const fbSlug      = document.getElementById('fbStation')?.value || '';
   const stationName = (fbSlug ? appState.stationsData?.[fbSlug]?.name : '') || '';
-  const question    = stationName
+  const question = stationName
     ? `Зберегти зміни для станції <span style="white-space:nowrap;font-variant:small-caps;letter-spacing:0.04em;">${stationName}?</span>`
     : 'Зберегти зміни?';
 
@@ -3863,12 +4395,6 @@ export function closeFeedbackSheet() {
   });
 }
 
-function hasUnsavedFeedback() {
-  return fbState.isDirty;
-}
-
-// ── Внутрішні хелпери ───────────────────────────────────────
-
 function _ensureSheetDOM() {
   if (_sheetEl) return;
   _sheetEl = document.createElement('div');
@@ -3877,7 +4403,6 @@ function _ensureSheetDOM() {
   const tpl = document.getElementById('tpl-feedback-sheet');
   _sheetEl.appendChild(tpl.content.cloneNode(true));
   document.body.appendChild(_sheetEl);
-  // Q-4 fix: bind одразу після createElement — _resetSheetUI відповідає лише за скидання полів
   _bindOnce();
 }
 
@@ -3902,7 +4427,6 @@ function _resetSheetUI() {
   if (changeBtn)      changeBtn.hidden      = true;
   if (lineFilterWrap) lineFilterWrap.hidden = false;
   if (sendBtn) { sendBtn.textContent = 'Застосувати'; sendBtn.disabled = true; sendBtn.style.color = ''; }
-  // Клік по «Всі лінії» — показати список станцій
   document.querySelector('#fbLineFilter .search-line-btn[data-line=""]')?.click();
 }
 
@@ -4196,19 +4720,42 @@ export function initKinematicSwipe(sheet, bodyOrGetter, closeCallback) {
 </file>
 
 <file path="src/ui/system.js">
-export async function configureEdgeToEdge() {
-  if (!window.Capacitor?.Plugins?.StatusBar) return;
+// ══ СИСТЕМНІ UI-УТИЛІТИ ══
+// Відповідальність: налаштування Edge-to-edge для мобільних пристроїв через Capacitor.
 
-  const { StatusBar, Style } = window.Capacitor.Plugins;
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
+
+/**
+ * Налаштовує edge-to-edge режим для мобільного додатку.
+ * Робить статус-бар повністю прозорим (оверлеєм), щоб макет карти
+ * та шторки плавно затікали під системну панель годинника.
+ * @returns {Promise<void>}
+ */
+export async function configureEdgeToEdge() {
+  // 1. Якщо це звичайний браузер (не Android/iOS) — просто виходимо, 
+  // щоб не викликати помилку "plugin is not implemented on web"
+  if (!Capacitor.isNativePlatform()) {
+    return; 
+  }
+
+  // 2. Якщо це нативний пристрій — налаштовуємо StatusBar
   try {
+    // Вмикаємо прозорий оверлей для Android/iOS
     await StatusBar.setOverlaysWebView({ overlay: true });
+    
+    // Встановлюємо початковий стиль іконок залежно від системної теми
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
-  } catch (e) {
-    console.warn('[KyivMetroGO] StatusBar plugin error:', e);
+  } catch (err) {
+    console.warn('[KyivMetroGO] StatusBar plugin error:', err);
   }
 }
 
+/**
+ * Додає стан у History API перед відкриттям шторки.
+ * Дозволяє кнопці «назад» на Android закривати шторку замість виходу з додатку.
+ */
 export function pushSheetHistory() {
   if (!history.state?.isSheetOpen) {
     history.pushState({ isSheetOpen: true }, '');
@@ -4218,7 +4765,12 @@ export function pushSheetHistory() {
 
 <file path="src/app.js">
 // ══ UI-ПРИВ'ЯЗКИ ДОДАТКУ ══
+// Відповідальність: підключення DOM-кнопок до функцій-обробників.
 // Тільки addEventListener. Нуль мережевих запитів, нуль ініціалізації даних.
+// Виконується як side-effect при імпорті в main.js.
+
+import { Capacitor } from '@capacitor/core';
+import { App }       from '@capacitor/app';
 
 import { openFavSheet }    from './features/favorites/index.js';
 import { openCheckinSheet } from './features/checkin/index.js';
@@ -4280,12 +4832,483 @@ if (menuBtn && dropMenu) {
   });
 }
 
-// ── Android back button ────────────────────────────────────────
-window.addEventListener('popstate', () => {
-  if (document.querySelectorAll('.station-sheet.sheet-open').length > 0) {
-    closeAllSheets(true);
+// ── Кнопка «Назад» ────────────────────────────────────────────
+// Нативний Android: апаратна кнопка через @capacitor/app.
+//   Пріоритет: закрити відкриту шторку → вийти з додатку.
+//   canGoBack враховує pushSheetHistory() — тому перевіряємо шторки першими,
+//   а не покладаємось на canGoBack як основний сигнал.
+//
+// Веб / PWA: браузерна кнопка «Назад» або свайп → popstate.
+//   На нативному popstate НЕ реєструємо: Capacitor може тригерити обидві події
+//   одночасно, що призводить до подвійного виклику closeAllSheets.
+
+if (Capacitor.isNativePlatform()) {
+  App.addListener('backButton', ({ canGoBack }) => {
+    const hasOpenSheet = document.querySelectorAll('.station-sheet.sheet-open').length > 0;
+    if (hasOpenSheet) {
+      closeAllSheets(true);
+    } else if (canGoBack) {
+      window.history.back();
+    } else {
+      App.exitApp();
+    }
+  });
+} else {
+  window.addEventListener('popstate', () => {
+    if (document.querySelectorAll('.station-sheet.sheet-open').length > 0) {
+      closeAllSheets(true);
+    }
+  });
+}
+</file>
+
+<file path="src/data/localEdits.js">
+// ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
+// Відповідальність: читання/запис локальних правок позицій та підписів виходів.
+//
+// applyLocalEdits / applyExitLabels залишаються публічними — їх безпосередньо
+// викликають fbEvents.js, fbApi.js та stationSheet.js (прямий ESM-імпорт).
+
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { bus }                   from '../core/eventBus.js';
+import { traversePositions }     from './positions.js';
+
+// ══ КЕШ ══════════════════════════════════════════════════════
+
+let localEditsCache = null;
+let exitLabelsCache = null;
+
+export function invalidateLocalEditsCache() {
+  localEditsCache = null;
+  exitLabelsCache = null;
+}
+
+// ══ EXIT LABELS ════════════════════════════════════════════════
+
+function getExitLabels() {
+  if (exitLabelsCache) return exitLabelsCache;
+  try {
+    exitLabelsCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_LABELS) || '{}');
+  } catch (e) {
+    console.warn('[localEdits] Помилка парсингу описів виходів:', e);
+    exitLabelsCache = {};
   }
+  return exitLabelsCache;
+}
+
+/**
+ * Зберігає або видаляє підпис виходу за slug + posIdx.
+ * Якщо label порожній — запис видаляється.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @param {string} label
+ */
+export function saveExitLabel(slug, posIdx, label) {
+  const labels = getExitLabels();
+  if (!labels[slug]) labels[slug] = {};
+  if (label.trim()) {
+    labels[slug][posIdx] = label.trim();
+  } else {
+    delete labels[slug][posIdx];
+    if (!Object.keys(labels[slug]).length) delete labels[slug];
+  }
+  Storage.set(STORAGE_KEYS.EXIT_LABELS, JSON.stringify(labels));
+  exitLabelsCache = null;
+}
+
+/**
+ * Повертає підпис виходу або null якщо немає.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {string|null}
+ */
+export function getExitLabel(slug, posIdx) {
+  return getExitLabels()[slug]?.[posIdx] ?? null;
+}
+
+/**
+ * Застосовує всі збережені підписи виходів до об'єктів stationsData.
+ * Мутує exit.label та exit._labelEdited на місці.
+ * Викликається:
+ *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
+ *   – явно з fbEvents.js та stationSheet.js при ручних змінах.
+ *
+ * @param {Record<string, object>} stationsData
+ */
+export function applyExitLabels(stationsData) {
+  const labels = getExitLabels();
+  for (const [slug, posLabels] of Object.entries(labels)) {
+    if (!stationsData[slug]) continue;
+    traversePositions(stationsData[slug], ({ exit, posIdx }) => {
+      if (posLabels[posIdx] !== undefined) {
+        exit.label        = posLabels[posIdx];
+        exit._labelEdited = true;
+        exit._slug        = slug;
+      }
+    });
+  }
+}
+
+// ══ LOCAL EDITS ════════════════════════════════════════════════
+
+/**
+ * Повертає об'єкт усіх локальних правок позицій з кешу або Storage.
+ * Структура: { [slug]: { [posIdx]: EditData } }
+ * @returns {Record<string, Record<number, object>>}
+ */
+export function getLocalEdits() {
+  if (localEditsCache) return localEditsCache;
+  try {
+    localEditsCache = JSON.parse(Storage.get(STORAGE_KEYS.LOCAL_EDITS) || '{}');
+  } catch (e) {
+    console.warn('[localEdits] Помилка парсингу локальних змін:', e);
+    localEditsCache = {};
+  }
+  return localEditsCache;
+}
+
+/**
+ * Зберігає локальну правку позиції.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @param {object} data
+ */
+export function saveLocalEdit(slug, posIdx, data) {
+  const edits = getLocalEdits();
+  if (!edits[slug]) edits[slug] = {};
+  edits[slug][posIdx] = data;
+  Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
+  localEditsCache = null;
+}
+
+/** Видаляє всі локальні правки з Storage та кешу. */
+export function clearAllLocalEdits() {
+  localEditsCache = null;
+  Storage.remove(STORAGE_KEYS.LOCAL_EDITS);
+}
+
+/** @returns {boolean} true якщо є хоча б одна локальна правка */
+export function hasLocalEdits() {
+  return Object.keys(getLocalEdits()).length > 0;
+}
+
+/**
+ * Застосовує всі локальні правки до об'єктів stationsData.
+ * Мутує position на місці (wagon, doors, closed тощо).
+ * Для isNew-правок — додає новий exit до відповідного direction.
+ * Викликається:
+ *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
+ *   – явно з fbEvents.js та fbApi.js при ручних змінах у формі фідбеку.
+ *
+ * @param {Record<string, object>} stationsData
+ */
+export function applyLocalEdits(stationsData) {
+  const edits = getLocalEdits();
+
+  for (const [slug, posEdits] of Object.entries(edits)) {
+    if (!stationsData[slug]) continue;
+    const s = stationsData[slug];
+
+    traversePositions(s, ({ position, posIdx }) => {
+      const edit = posEdits[posIdx];
+      if (edit !== undefined && !edit.isNew) {
+        Object.assign(position, edit, { _edited: true, _slug: slug, _posIdx: posIdx });
+      }
+    });
+
+    Object.keys(posEdits).forEach(idx => {
+      const edit = posEdits[idx];
+      if (!edit.isNew) return;
+
+      const targetDir = s.directions.find(d => d.from === edit.dir);
+      if (!targetDir) return;
+
+      const alreadyAdded = targetDir.exits.some(e =>
+        e.positions?.some(p => p._posIdx === parseInt(idx))
+      );
+      if (alreadyAdded) return;
+
+      const newExit = {
+        label:     edit.label || '',
+        positions: [{
+          wagon:    String(edit.wagon),
+          doors:    String(edit.doors),
+          _edited:  true,
+          _slug:    slug,
+          _posIdx:  parseInt(idx),
+        }],
+      };
+      targetDir.exits.push(newExit);
+      s.positions.push({
+        dir:   edit.dir,
+        exit:  newExit.label,
+        wagon: String(edit.wagon),
+        doors: String(edit.doors),
+      });
+    });
+  }
+}
+
+// ══ BUS-ІНТЕГРАЦІЯ ════════════════════════════════════════════
+// EventBus — синхронний: handlers виконуються до повернення bus.emit(),
+// тому правки гарантовано застосовані до того, як hydrateStations поверне дані.
+
+bus.on('data:stations-hydrated', ({ stationsData }) => {
+  applyLocalEdits(stationsData);
+  applyExitLabels(stationsData);
 });
+</file>
+
+<file path="src/features/feedback/fbRenderer.js">
+// ══ FEEDBACK RENDERER ══
+// Відповідальність: state → HTML-рядок.
+// Правило: жодних addEventListener тут. Лише генерація розмітки.
+// DOM-запис — лише один: posEl.innerHTML = ... в кінці renderFeedbackPositions.
+
+import { state as appState }                      from '../../core/state.js';
+import { hasLocalEdits }                          from '../../data/localEdits.js';
+import { fbState, initFeedbackState }             from './fbState.js';
+import { Icons }                                  from '../../ui/icons.js';
+import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '../../core/constants.js';
+
+const INFO_SVG = Icons.info;
+const UNDO_SVG = Icons.undo;
+const PENCIL   = Icons.pencil;
+
+function stepperHtml(id, value, min, max, label) {
+  return `<div class="fb-input-wrap">
+    <span class="fb-input-label">${label}</span>
+    <div class="fb-stepper">
+      <button type="button" class="fb-step fb-step-down"
+        aria-label="Зменшити ${label}"
+        data-id="${id}" data-min="${min}" data-max="${max}">−</button>
+      <span class="fb-step-val" id="${id}" aria-live="polite">${value}</span>
+      <button type="button" class="fb-step fb-step-up"
+        aria-label="Збільшити ${label}"
+        data-id="${id}" data-min="${min}" data-max="${max}">+</button>
+    </div>
+  </div>`;
+}
+
+function exitLabelHtml(idx, rawExit) {
+  const escaped = rawExit.replace(/"/g, '&quot;');
+  const editOrAdd = rawExit
+    ? `<button type="button" class="fb-exit-label-edit-btn" data-item-idx="${idx}" aria-label="Редагувати">${PENCIL}</button>`
+    : `<button type="button" class="fb-add-desc-btn" data-item-idx="${idx}">додати опис</button>`;
+
+  return `<div class="fb-exit-label-row">
+    <div class="fb-exit-label-row-inner">
+      <span class="fb-exit-label-text">${rawExit}</span>
+      ${editOrAdd}
+    </div>
+  </div>
+  <div class="fb-exit-label-input-wrap" id="fbLabelWrap${idx}">
+    <input type="text" class="fb-exit-label-input"
+      id="fbLabelInput${idx}" value="${escaped}" maxlength="60">
+  </div>`;
+}
+
+function positionItemHtml(item, st, lineColor) {
+  const { i }    = item;
+  const isClosed = !!st.isClosed;
+
+  const closedBlock = `
+    <div class="fb-closed-note-wrap">
+      <span class="fb-closed-note">Вихід позначено як недоступний</span>
+      <button type="button" class="fb-restore-exit"
+        data-idx="${i}" aria-label="Відновити вихід">${UNDO_SVG}</button>
+    </div>`;
+
+  const openBlock = `
+    <div class="fb-pos-wrap">
+      <div class="fb-side-actions-left">
+        <button type="button" class="fb-add-doors-info"
+          style="color:${lineColor}" data-idx="${i}">${INFO_SVG}</button>
+      </div>
+      <div class="fb-pos-inputs">
+        ${stepperHtml(`fbW${i}`, st.wMain, 1, 5, 'вагон')}
+        ${stepperHtml(`fbD${i}`, st.dMain, 1, 4, 'двері')}
+      </div>
+      <div class="fb-side-actions">
+        <button type="button" class="fb-close-exit"
+          style="color:${lineColor}" data-idx="${i}">✕</button>
+      </div>
+    </div>
+
+    <div class="fb-extra-door-wrap ${st.hasExtra ? '' : 'is-hidden'}" id="fbExtraWrap${i}">
+      <div class="fb-pos-wrap" style="margin-top:4px">
+        <div class="fb-side-actions-left"></div>
+        <div class="fb-pos-inputs">
+          ${stepperHtml(`fbW_ex${i}`, st.wEx, 1, 5, 'вагон')}
+          ${stepperHtml(`fbD_ex${i}`, st.dEx, 1, 4, 'двері')}
+        </div>
+        <div class="fb-side-actions">
+          <button type="button" class="fb-cancel-extra-btn"
+            style="color:${lineColor}" data-idx="${i}">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fb-extra-door-wrap ${st.hasThird ? '' : 'is-hidden'}" id="fbExtraWrap2_${i}">
+      <div class="fb-pos-wrap" style="margin-top:4px">
+        <div class="fb-side-actions-left"></div>
+        <div class="fb-pos-inputs">
+          ${stepperHtml(`fbW_ex2_${i}`, st.wEx2, 1, 5, 'вагон')}
+          ${stepperHtml(`fbD_ex2_${i}`, st.dEx2, 1, 4, 'двері')}
+        </div>
+        <div class="fb-side-actions">
+          <button type="button" class="fb-cancel-third-btn"
+            style="color:${lineColor}" data-idx="${i}">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fb-add-doors-row ${st.hasExtra ? 'is-hidden' : ''}" id="fbAddDoorsRow${i}">
+      <button type="button" class="fb-add-doors-link"
+        id="fbAddBtn${i}" data-idx="${i}"
+        data-can-have-third="${st.hasThird ? '1' : '0'}">+1</button>
+    </div>
+
+    <div class="fb-add-doors-hint" id="fbHint${i}">
+      <div class="fb-add-doors-hint-inner">
+        <div class="hint-1-door">
+          <p>+1 — другі зручні двері для виходу. Можна&nbsp;обрати тільки&nbsp;сусідні&nbsp;двері</p>
+          <p><span style="color:var(--line-red)">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p>
+        </div>
+        <div class="hint-2-doors">
+          <p><span style="color:var(--line-blue)">✕</span> скасовує додавання других дверей.</p>
+        </div>
+      </div>
+    </div>`;
+
+  const classes = [
+    'fb-item-inner',
+    st.hasExtra ? 'fb-pos-multi has-extra-doors' : '',
+    st.hasThird ? 'has-three-doors'               : '',
+    isClosed    ? 'fb-pos-closed'                 : '',
+  ].filter(Boolean).join(' ');
+
+  return `${exitLabelHtml(i, fbState.labels[i] ?? '')}
+    <div class="${classes}" data-idx="${i}" id="fbItemInner${i}">
+      ${isClosed ? closedBlock : openBlock}
+    </div>`;
+}
+
+function dirGroupHtml(g, slug, lineColor) {
+  const dirLabel = g.dir === '__long_transfer__'
+    ? 'Довгий перехід на Майдан Незалежності'
+    : g.dir;
+
+  const itemsHtml = g.items.map((item, index) => {
+    const st      = fbState.current[item.i] ?? { wMain: 1, dMain: 1, isClosed: false };
+    const divider = index < g.items.length - 1 ? '<div class="fb-item-divider"></div>' : '';
+    return positionItemHtml(item, st, lineColor) + divider;
+  }).join('');
+
+  const canAddMore  = STATIONS_WITH_POTENTIAL_EXITS.has(slug);
+  const hasNewAlrdy = Object.values(fbState.current).some(s => s.isNew && s.dir === g.dir);
+  const addBtnHtml  = (canAddMore && !hasNewAlrdy)
+    ? `<div class="fb-add-exit-row">
+         <button type="button" class="fb-add-exit-btn" data-dir="${g.dir}">
+           + Додати ще один вихід
+         </button>
+       </div>`
+    : '';
+
+  return `<div class="fb-pos-row">
+    <div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>
+    ${itemsHtml}
+    ${addBtnHtml}
+  </div>`;
+}
+
+export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
+  const posEl   = document.getElementById('fbPositions');
+  const sendBtn = document.getElementById('fbSend');
+  if (!posEl || !sendBtn) return;
+
+  if (!slug) {
+    posEl.innerHTML  = '';
+    sendBtn.disabled = true;
+    return;
+  }
+
+  if (fbState.slug !== slug) initFeedbackState(slug);
+
+  try {
+    const s         = appState.stationsData[slug];
+    const lineColor = LINE_COLOR[s?.line] ?? 'var(--text-muted)';
+
+    const titleEl     = document.getElementById('fbStationTitle');
+    const mainTitleEl = document.getElementById('fbSheetTitle');
+    if (titleEl && mainTitleEl) {
+      titleEl.textContent = s.name;
+      titleEl.hidden      = false;
+      mainTitleEl.hidden  = true;
+    }
+
+    const groupsMap = new Map();
+
+    s?.positions?.forEach((p, i) => {
+      const dir = p.dir || '';
+      if (!groupsMap.has(dir)) groupsMap.set(dir, { dir, items: [] });
+      groupsMap.get(dir).items.push({ p, i });
+    });
+
+    Object.keys(fbState.current).forEach(idx => {
+      const st = fbState.current[idx];
+      if (!st.isNew) return;
+      const dir = st.dir || '';
+      if (!groupsMap.has(dir)) groupsMap.set(dir, { dir, items: [] });
+      groupsMap.get(dir).items.push({
+        p: { dir, exit: fbState.labels[idx] || '', wagon: st.wMain, doors: st.dMain },
+        i: parseInt(idx),
+      });
+    });
+
+    posEl.innerHTML = [...groupsMap.values()]
+      .map(g => dirGroupHtml(g, slug, lineColor))
+      .join('');
+
+  } catch (err) {
+    posEl.innerHTML = `
+      <div style="color:var(--line-red);padding:16px;text-align:center;
+                  font-size:14px;background:var(--bg-card);border-radius:12px;">
+        Помилка рендеру:<br>${err.message}
+      </div>`;
+    console.error('[fbRenderer] Render error:', err);
+  }
+
+  onAfterRender?.();
+}
+
+export function renderResetBtn({ onReset } = {}) {
+  const wrap = document.getElementById('fbResetWrap');
+  if (!wrap) return;
+
+  const show = hasLocalEdits() && !fbState.slug;
+  wrap.innerHTML = show
+    ? '<button id="fbReset" class="fb-reset-btn">Скинути локальні зміни</button>'
+    : '';
+
+  document.getElementById('fbReset')?.addEventListener('click', () => onReset?.());
+}
+
+export function stationListHtml(activeLine, activeSlug = '') {
+  return Object.entries(appState.stationsData ?? {})
+    .map(([sl, st]) => ({ slug: sl, ...st }))
+    .filter(st => activeLine === '' || st.line === activeLine)
+    .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
+    .map(st => {
+      const color  = LINE_COLOR[st.line] ?? '#888';
+      const active = st.slug === activeSlug ? ' fb-station-active' : '';
+      return `<div class="search-item fb-station-item${active}" data-slug="${st.slug}">
+        <div class="search-item-line" style="background-color:${color}"></div>
+        <div>${st.name}</div>
+      </div>`;
+    })
+    .join('');
+}
 </file>
 
 <file path="public/sw.js">
@@ -4380,8 +5403,237 @@ async function staleWhileRevalidate(request) {
 }
 </file>
 
+<file path="src/map/mapGestures.js">
+// ══ ЖЕСТИ КАРТИ: PAN + PINCH ZOOM (OPTIMIZED VIA rAF) ══
+
+import { BASE_MAP_WIDTH, BASE_MAP_HEIGHT } from './mapInit.js';
+import { applyVisitedHatchOverlays } from './mapInteraction.js';
+
+const vp           = document.getElementById('mapViewport');
+const inner        = document.getElementById('mapInner');
+const sheetOverlay = document.getElementById('sheetOverlay');
+
+// ── Pan (1 палець) ────────────────────────────────────────────
+let panStartX = 0, panStartY = 0;
+let panStartScrollLeft = 0, panStartScrollTop = 0;
+let isPanActive = false;
+let pendingPan = null, panRAFScheduled = false;
+
+// ── Pinch zoom (2 пальці) ────────────────────────────────────
+let pendingPinch = null, pinchRAFScheduled = false;
+let pinchStartDist = 0, pinchStartWidth = 0, pinchStartHeight = 0;
+let pinchStartScrollLeft = 0, pinchStartScrollTop = 0;
+let pinchVpLeft = 0, pinchVpTop = 0;
+let pinchMarginLeft = 0, pinchMarginTop = 0;
+
+document.addEventListener('touchstart', e => {
+  if (sheetOverlay.classList.contains('overlay-visible')) return;
+
+  if (e.touches.length === 2) {
+    isPanActive = false;
+    const t0 = e.touches[0], t1 = e.touches[1];
+    pinchStartDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+
+    pinchStartWidth      = parseFloat(inner.style.width)  || inner.offsetWidth;
+    pinchStartHeight     = parseFloat(inner.style.height) || inner.offsetHeight;
+    pinchStartScrollLeft = vp.scrollLeft;
+    pinchStartScrollTop  = vp.scrollTop;
+
+    const vpRect = vp.getBoundingClientRect();
+    pinchVpLeft    = vpRect.left;
+    pinchVpTop     = vpRect.top;
+    pinchMarginLeft = parseFloat(inner.style.marginLeft) || 0;
+    pinchMarginTop  = parseFloat(inner.style.marginTop)  || 0;
+    pendingPinch = null;
+
+  } else if (e.touches.length === 1) {
+    isPanActive        = true;
+    panStartX          = e.touches[0].clientX;
+    panStartY          = e.touches[0].clientY;
+    panStartScrollLeft = vp.scrollLeft;
+    panStartScrollTop  = vp.scrollTop;
+    pendingPan         = null;
+  }
+}, { passive: true });
+
+vp.addEventListener('touchmove', e => {
+  if (!isPanActive || e.touches.length !== 1) return;
+
+  // Зберігаємо останні координати без негайної мутації макету
+  pendingPan = {
+    clientX: e.touches[0].clientX,
+    clientY: e.touches[0].clientY
+  };
+
+  if (!panRAFScheduled) {
+    panRAFScheduled = true;
+    requestAnimationFrame(() => {
+      panRAFScheduled = false;
+      if (!pendingPan) return;
+      
+      vp.scrollLeft = panStartScrollLeft - (pendingPan.clientX - panStartX);
+      vp.scrollTop  = panStartScrollTop  - (pendingPan.clientY - panStartY);
+      pendingPan = null;
+    });
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
+  e.preventDefault();
+  if (!pinchStartDist) return;
+
+  const t0x = e.touches[0].clientX, t0y = e.touches[0].clientY;
+  const t1x = e.touches[1].clientX, t1y = e.touches[1].clientY;
+  const dist = Math.hypot(t0x - t1x, t0y - t1y);
+
+  pendingPinch = { ratio: dist / pinchStartDist, midX: (t0x + t1x) / 2, midY: (t0y + t1y) / 2 };
+
+  if (!pinchRAFScheduled) {
+    pinchRAFScheduled = true;
+    requestAnimationFrame(() => {
+      pinchRAFScheduled = false;
+      if (!pendingPinch) return;
+      const { ratio: r, midX, midY } = pendingPinch;
+      pendingPinch = null;
+
+      const minW = vp.clientWidth;
+      const maxW = Math.round(BASE_MAP_WIDTH * 4.0);
+      let newW   = Math.max(minW, Math.min(maxW, Math.round(pinchStartWidth * r)));
+      const actualRatio = newW / pinchStartWidth;
+      const newH = Math.round(pinchStartHeight * actualRatio);
+
+      const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
+      const padY = Math.max(0, (vp.clientHeight - newH) / 2);
+
+      inner.style.width      = newW + 'px';
+      inner.style.height     = newH + 'px';
+      inner.style.marginLeft = padX + 'px';
+      inner.style.marginTop  = padY + 'px';
+
+      const relX = (midX - pinchVpLeft + pinchStartScrollLeft - pinchMarginLeft) / pinchStartWidth;
+      const relY = (midY - pinchVpTop  + pinchStartScrollTop  - pinchMarginTop)  / pinchStartHeight;
+
+      vp.scrollLeft = Math.round(relX * newW + padX - (midX - pinchVpLeft));
+      vp.scrollTop  = Math.round(relY * newH + padY - (midY - pinchVpTop));
+    });
+  }
+}, { passive: false });
+
+let _hatchTimer = null;
+
+document.addEventListener('touchend', e => {
+  if (e.touches.length < 2) {
+    pinchStartDist    = 0;
+    pendingPinch      = null;
+    pinchRAFScheduled = false;
+    
+    clearTimeout(_hatchTimer);
+    _hatchTimer = setTimeout(() => {
+      applyVisitedHatchOverlays();
+    }, 300);
+  }
+  if (e.touches.length === 1 && !sheetOverlay.classList.contains('overlay-visible')) {
+    isPanActive        = true;
+    panStartX          = e.touches[0].clientX;
+    panStartY          = e.touches[0].clientY;
+    panStartScrollLeft = vp.scrollLeft;
+    panStartScrollTop  = vp.scrollTop;
+  }
+  if (e.touches.length === 0) {
+    isPanActive = false;
+    panRAFScheduled = false;
+    pendingPan = null;
+  }
+}, { passive: true });
+</file>
+
+<file path="src/ui/confirm.js">
+// ══ МОДАЛЬНИЙ ДІАЛОГ ПІДТВЕРДЖЕННЯ ══
+// Відповідальність: показ кастомного confirm-вікна з анімацією «двері ліфта».
+// Запускається або напряму через showCustomConfirm(), або через bus.on('ui:confirm').
+
+import { bus }           from '../core/eventBus.js';
+import { runDoorAnimation } from './animations.js';
+import { TIMING }           from '../core/timing.js';
+
+/**
+ * Показує модальний діалог підтвердження з анімацією «двері ліфта».
+ *
+ * @param {string}   message   - HTML-текст запитання
+ * @param {Function} onYes     - callback для «Зберегти»
+ * @param {Function} onNo      - callback для «Не зберігати»
+ * @param {Function} onCancel  - callback для «Скасувати» (null = кнопка прихована)
+ * @param {string}   yesText   - текст кнопки «так»
+ * @param {string}   noText    - текст кнопки «ні»
+ * @param {string}   yesClass  - CSS-клас кнопки «так»
+ * @param {string}   noClass   - CSS-клас кнопки «ні»
+ */
+export function showCustomConfirm(
+  message, onYes, onNo, onCancel,
+  yesText  = 'Зберегти',
+  noText   = 'Не зберігати',
+  yesClass = 'confirm-btn-save',
+  noClass  = 'confirm-btn-discard',
+) {
+  const overlay = document.createElement('div');
+  overlay.className = 'global-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="global-confirm-card">
+      <div class="global-confirm-text">${message}</div>
+      <div class="global-confirm-btns-main">
+        <button class="confirm-main-btn ${yesClass}" id="confirmYes">${yesText}</button>
+        ${noText ? `<button class="confirm-main-btn ${noClass}" id="confirmNo">${noText}</button>` : ''}
+      </div>
+      ${onCancel ? `<button class="confirm-text-btn" id="confirmCancel">Скасувати</button>` : ''}
+    </div>`;
+  document.body.appendChild(overlay);
+
+  function animateClose(callback) {
+    const card = overlay.querySelector('.global-confirm-card');
+    if (!card) { overlay.remove(); callback?.(); return; }
+
+    const rect = card.getBoundingClientRect();
+    card.style.display = 'none';
+    overlay.style.transition      = 'background-color 0.35s, backdrop-filter 0.35s';
+    overlay.style.backgroundColor = 'transparent';
+    overlay.style.backdropFilter  = 'blur(0px)';
+
+    runDoorAnimation(card, rect, callback, overlay);
+    setTimeout(() => overlay.remove(), TIMING.DOOR_CLEANUP);
+  }
+
+  overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));
+  overlay.querySelector('#confirmNo').addEventListener('click',  () => animateClose(onNo));
+  overlay.querySelector('#confirmCancel')?.addEventListener('click', () => animateClose(onCancel));
+  overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
+}
+
+// ── Єдиний bus-обробник ──
+// Підтримує розширені параметри (labelYes, labelNo, styleYes, styleNo)
+// для сумісності з bus.emit із settings.js та backup.js.
+bus.on('ui:confirm', (payload) => {
+  showCustomConfirm(
+    payload.message,
+    payload.onYes,
+    payload.onNo    ?? null,
+    payload.onCancel ?? null,
+    payload.labelYes ?? 'Зберегти',
+    payload.labelNo  ?? 'Не зберігати',
+    payload.styleYes ?? 'confirm-btn-save',
+    payload.styleNo  ?? 'confirm-btn-discard',
+  );
+});
+</file>
+
 <file path="src/core/storage.js">
-// ══ STORAGE KEYS ══
+// ══ СХОВИЩЕ ДАНИХ ДОДАТКУ (НАТИВНЕ) ══
+// Відповідальність: збереження даних користувача через Capacitor Preferences.
+// Дані зберігаються надійно у системних сховищах iOS (UserDefaults) та Android (SharedPreferences).
+// Читання синхронне з in-memory кешу, запис — асинхронний у фоні.
+
+import { Preferences } from '@capacitor/preferences';
+
 export const STORAGE_KEYS = {
   THEME:          'metro_theme',
   FAVS:           'metro_favs',
@@ -4397,7 +5649,6 @@ export const STORAGE_KEYS = {
   CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
   HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
   FAV_ONLY_STREAK:     'metro_fav_only_streak',
-  // Режим розробника
   DEV_MODE:     'metro_dev_mode',
   DEV_LOG:      'metro_dev_log',
   DEV_VERIFIED: 'metro_dev_verified',
@@ -4407,84 +5658,136 @@ export const STORAGE_KEYS = {
   CHECKIN_HATCH:  'metro_checkin_hatch',
 };
 
-// Внутрішній кеш для синхронного доступу
 const memoryCache = new Map();
 
-// ══ STORAGE ADAPTER ══
-// Адаптовано для плавного переходу на Capacitor Preferences API
 export const Storage = {
-  // 1. Асинхронна ініціалізація (викликатимемо один раз при старті)
+  /**
+   * Наповнює in-memory кеш усіма відомими ключами з нативного сховища.
+   * Використовує Promise.all для паралельного та швидкого завантаження.
+   * @returns {Promise<void>}
+   */
   async init() {
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: const keys = (await Preferences.keys()).keys;
-    const keys = Object.values(STORAGE_KEYS);    
-    for (const key of keys) {
-      // ТУТ У МАЙБУТНЬОМУ БУДЕ: const { value } = await Preferences.get({ key });
-      const value = localStorage.getItem(key);
-      if (value !== null) {
-        memoryCache.set(key, value);
+    const keys = Object.values(STORAGE_KEYS);
+    
+    // Паралельно запитуємо всі ключі з нативного сховища
+    const promises = keys.map(key => Preferences.get({ key }));
+    const results = await Promise.all(promises);
+
+    results.forEach((res, index) => {
+      if (res.value !== null) {
+        memoryCache.set(keys[index], res.value);
       }
-    }
+    });
   },
 
-  // 2. Синхронне читання (код працює як раніше!)
+  /**
+   * Синхронне читання з кешу оперативної пам'яті.
+   * @param {string} key
+   * @returns {string|null}
+   */
   get(key) {
     return memoryCache.get(key) ?? null;
   },
 
-  // 3. Збереження (оновлює кеш миттєво, а в базу пише асинхронно)
+  /**
+   * Записує значення в оперативну пам'ять миттєво,
+   * а в нативне сховище — асинхронно у фоні.
+   * @param {string} key
+   * @param {string} value
+   */
   set(key, value) {
     const valStr = String(value);
     memoryCache.set(key, valStr);
     
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: Preferences.set({ key, value: valStr });
-    // Загортаємо в Promise.resolve для імітації фонової роботи
-    Promise.resolve().then(() => {
-      localStorage.setItem(key, valStr);
+    // Фоновий нативний запис, який не блокує головний потік UI
+    Promise.resolve().then(async () => {
+      await Preferences.set({ key, value: valStr });
     });
   },
 
-  // 4. Видалення
+  /**
+   * Видаляє ключ з кешу та нативного сховища.
+   * @param {string} key
+   */
   remove(key) {
     memoryCache.delete(key);
     
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: Preferences.remove({ key });
-    Promise.resolve().then(() => {
-      localStorage.removeItem(key);
+    Promise.resolve().then(async () => {
+      await Preferences.remove({ key });
     });
+  },
+
+  /**
+   * Відновлює дані з бекап-об'єкта.
+   * На відміну від set(), виконує гарантований await — безпечно перед reload().
+   * Очищає всі відомі ключі, потім паралельно записує нові значення.
+   *
+   * @param {Record<string, string>} data — розібраний і валідований бекап
+   * @returns {Promise<void>}
+   */
+  async restoreFromBackup(data) {
+    const APP_PREFIX = 'metro_';
+
+    // 1. Очистити кеш і Preferences для всіх відомих ключів
+    const clearOps = Object.values(STORAGE_KEYS).map(key => {
+      memoryCache.delete(key);
+      return Preferences.remove({ key });
+    });
+    await Promise.all(clearOps);
+
+    // 2. Записати нові значення — тільки metro_* рядки, без службових роздільників
+    const setOps = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (!key.startsWith(APP_PREFIX)) continue;
+      if (key.startsWith('═'))         continue;  // роздільники dev-логу
+      if (typeof value !== 'string')   continue;  // _dev_change_log — масив
+      memoryCache.set(key, value);
+      setOps.push(Preferences.set({ key, value }));
+    }
+    await Promise.all(setOps);
   },
 };
 
-// ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ ══
-// Один раз при ініціалізації модуля — не алокуємо масив на кожен storage-івент
-const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
+// ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ (ДЛЯ ВЕБ-ВЕРСІЇ) ══
+// На нативному Android Storage event між вкладками ніколи не тригериться
+// (WebView — єдиний процес, вкладок немає). Реєструємо тільки на вебі.
+import { Capacitor } from '@capacitor/core';
 
-window.addEventListener('storage', (e) => {
-  if (_VALID_KEYS.has(e.key)) {
-    if (e.newValue === null) {
-      memoryCache.delete(e.key);
-    } else {
-      memoryCache.set(e.key, e.newValue);
+if (!Capacitor.isNativePlatform()) {
+  const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
+
+  window.addEventListener('storage', (e) => {
+    if (_VALID_KEYS.has(e.key)) {
+      if (e.newValue === null) {
+        memoryCache.delete(e.key);
+      } else {
+        memoryCache.set(e.key, e.newValue);
+      }
     }
-  }
-});
+  });
+}
 </file>
 
 <file path="src/data/stations.js">
-// ══ STATIONS DATA ══
-// Відповідальність: завантаження, парсинг та гідратація даних станцій.
-//
-// Архітектурне правило (Блок Б):
-//   hydrateStations() більше не знає про MetroApp-шар.
-//   Після побудови stationsData емітується bus-подія 'data:stations-hydrated'.
-//   data/localEdits.js підписується і застосовує localEdits + exitLabels синхронно
-//   (EventBus викликає handlers одразу, до повернення emit()).
-//
-// Решта MetroApp-викликів (syncMapWithCheckins, renderFavOnLoad, openStation,
-// facades reloadStationsData/slugByName) прибираються у Блоках Д, Г та Е.
+import { Capacitor }                      from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 import { state, startupSlug } from '../core/state.js';
 import { bus }                from '../core/eventBus.js';
 import { traversePositions }  from './positions.js';
+
+// ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
+// SW обробляє stations.json для веб/PWA (networkFirst + version-check + postMessage).
+// На нативній платформі SW інертний — реалізуємо ту саму логіку вручну:
+//   1. fetch(REMOTE_STATIONS_URL) з таймаутом
+//   2. Filesystem.Cache як проміжний кеш
+//   3. http://localhost/stations.json (bundled в APK) як фінальний fallback
+//
+// Замініть REMOTE_STATIONS_URL на реальний домен перед релізом.
+
+const REMOTE_STATIONS_URL = 'https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/public/stations.json';
+const NATIVE_CACHE_PATH   = 'stations_cache.json';
+const FETCH_TIMEOUT_MS    = 8000;
 
 // ══ ПРИВАТНІ СЛОВНИКИ (closure) ══════════════════════════════
 // Заповнюються у hydrateStations(), читаються через slugByName() / getSlugByLower().
@@ -4588,11 +5891,9 @@ export function getSlugByLower(lowerSlug) {
  * @returns {Record<string, object>} state.stationsData
  */
 export function hydrateStations(data) {
-  // Очищаємо поточний стан
   if (!state.stationsData) state.stationsData = {};
   Object.keys(state.stationsData).forEach(key => delete state.stationsData[key]);
 
-  // Очищаємо приватні словники
   Object.keys(_nameToSlug).forEach(k  => delete _nameToSlug[k]);
   Object.keys(_slugByLower).forEach(k => delete _slugByLower[k]);
 
@@ -4647,8 +5948,6 @@ export function hydrateStations(data) {
     state.stationsData[station.slug] = station;
   });
 
-  // Блок Б: замість прямих викликів MetroApp.applyLocalEdits / MetroApp.applyExitLabels
-  // та присвоєння MetroApp.currentStationsData — емітуємо подію.
   // data/localEdits.js підписаний через bus.on('data:stations-hydrated') і виконує
   // applyLocalEdits + applyExitLabels синхронно перед поверненням цієї функції.
   bus.emit('data:stations-hydrated', { stationsData: state.stationsData });
@@ -4660,7 +5959,6 @@ export function hydrateStations(data) {
 
 /**
  * Прив'язує SVG-зони на карті до slug-ів станцій.
- * Використовує приватний _slugByLower замість MetroApp.SLUG_BY_LOWER.
  */
 export function renderMapZones() {
   if (state.isZonesReady) return;
@@ -4698,29 +5996,178 @@ export function checkAppReady() {
   });
 }
 
-// ══ ЗАВАНТАЖЕННЯ ══════════════════════════════════════════════
+// ══ НАТИВНЕ ЗАВАНТАЖЕННЯ (три рівні надійності) ═══════════════
 
+/**
+ * Зчитує закешовану версію stations.json з Filesystem.Cache.
+ * Повертає { data, version } або null якщо кеш відсутній / пошкоджений.
+ *
+ * @returns {Promise<{ data: object, version: number|string|null }|null>}
+ */
+async function _readFilesystemCache() {
+  try {
+    const cached = await Filesystem.readFile({
+      path:      NATIVE_CACHE_PATH,
+      directory: Directory.Cache,
+      encoding:  Encoding.UTF8,
+    });
+    const data = JSON.parse(cached.data);
+    return { data, version: data.version ?? null };
+  } catch {
+    return null; // кеш відсутній або JSON пошкоджений
+  }
+}
+
+/**
+ * Зберігає свіжі дані stations.json у Filesystem.Cache.
+ * Помилка запису не є критичною — додаток продовжить роботу з мережевими даними.
+ *
+ * @param {object} data — розібраний об'єкт stations.json
+ */
+async function _writeFilesystemCache(data) {
+  try {
+    await Filesystem.writeFile({
+      path:      NATIVE_CACHE_PATH,
+      data:      JSON.stringify(data),
+      directory: Directory.Cache,
+      encoding:  Encoding.UTF8,
+    });
+  } catch {
+    // Не критично: наступний запуск спробує знову.
+  }
+}
+
+/**
+ * Завантажує stations.json для нативної платформи.
+ * Три рівні надійності:
+ *   1. Мережа (REMOTE_STATIONS_URL) з таймаутом → Filesystem.Cache (запис)
+ *   2. Filesystem.Cache (читання) — якщо мережа недоступна
+ *   3. Bundled APK (http://localhost/stations.json) — якщо кеш теж порожній
+ *
+ * При виявленні нової версії емітує 'stations:updated' — swUpdate.js покаже тост.
+ *
+ * @param {boolean} forceFresh — ігнорувати кеш, завжди йти в мережу
+ * @returns {Promise<object>} розібраний stations.json
+ */
+async function _fetchStationsNative(forceFresh = false) {
+  // ── Рівень 1: мережа ─────────────────────────────────────────
+  try {
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    const response = await fetch(REMOTE_STATIONS_URL, {
+      signal: controller.signal,
+      cache:  forceFresh ? 'no-store' : 'default',
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('json')) {
+        throw new Error(`Unexpected content-type: ${contentType}`);
+      }
+
+      const freshData = await response.json();
+
+      // Порівнюємо версію з кешем — щоб повідомити користувача про оновлення.
+      if (!forceFresh) {
+        const cached = await _readFilesystemCache();
+        if (
+          freshData.version != null &&
+          cached?.version   != null &&
+          freshData.version !== cached.version
+        ) {
+          // Дзеркало SW-логіки: там postMessage({ type: 'STATIONS_UPDATED' }),
+          // тут — bus.emit, який swUpdate.js перехоплює через підписку.
+          bus.emit('stations:updated', { version: freshData.version });
+        }
+      }
+
+      // Зберігаємо в кеш асинхронно — не блокуємо гідратацію.
+      _writeFilesystemCache(freshData);
+
+      return freshData;
+    }
+  } catch (networkError) {
+    // AbortError (таймаут) або відсутність мережі — переходимо до рівня 2.
+    if (networkError.name !== 'AbortError') {
+      console.warn('[stations] network fetch failed:', networkError.message);
+    }
+  }
+
+  // ── Рівень 2: Filesystem.Cache ────────────────────────────────
+  if (!forceFresh) {
+    const cached = await _readFilesystemCache();
+    if (cached) {
+      console.info('[stations] loaded from Filesystem cache');
+      return cached.data;
+    }
+  }
+
+  // ── Рівень 3: bundled APK (http://localhost/stations.json) ────
+  console.info('[stations] falling back to bundled APK copy');
+  const bundledUrl      = getStationsUrl();
+  const bundledResponse = await fetch(bundledUrl);
+
+  if (!bundledResponse.ok) {
+    throw new Error(
+      `stations.json bundled fetch failed: ${bundledResponse.status} (${bundledUrl.href})`,
+    );
+  }
+  return bundledResponse.json();
+}
+
+// ══ ЗАВАНТАЖЕННЯ (публічне) ════════════════════════════════════
+
+/**
+ * Завантажує та гідратує stations.json.
+ * На нативній платформі — _fetchStationsNative() (мережа→кеш→bundled).
+ * На веб/PWA — прямий fetch; SW самостійно обробляє networkFirst та кешування.
+ *
+ * @param {boolean} [forceFresh=false] — примусово оновити дані (ігнорувати кеш/SW)
+ * @returns {Promise<Record<string, object>>} state.stationsData після гідратації
+ */
 export async function reloadStationsData(forceFresh = false) {
-  const stationsUrl = getStationsUrl();
-  const response    = await fetch(
-    stationsUrl,
-    forceFresh ? { cache: 'no-store' } : undefined,
-  );
+  let data;
 
-  if (!response.ok) {
+  if (Capacitor.isNativePlatform()) {
+    data = await _fetchStationsNative(forceFresh);
+  } else {
+    // Веб/PWA: SW перехоплює цей fetch і виконує networkFirst для stations.json.
+    const stationsUrl = getStationsUrl();
+    const response    = await fetch(
+      stationsUrl,
+      forceFresh ? { cache: 'no-store' } : undefined,
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
+      );
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('json')) {
+      throw new Error(
+        `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
+      );
+    }
+
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      throw new Error(
+        `stations.json contains invalid JSON (${stationsUrl.href}): ${parseError.message}`,
+      );
+    }
+  }
+
+  if (!data || !Array.isArray(data.stations) || data.stations.length === 0) {
     throw new Error(
-      `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
+      'stations.json has unexpected structure: missing or empty "stations" array',
     );
   }
 
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('json')) {
-    throw new Error(
-      `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
-    );
-  }
-
-  const data     = await response.json();
   const hydrated = hydrateStations(data);
 
   if (!forceFresh) {
@@ -4740,209 +6187,16 @@ function handleStartupStation(data) {
 }
 </file>
 
-<file path="src/map/mapGestures.js">
-// ══ ЖЕСТИ КАРТИ: PAN + PINCH ZOOM ══
-
-import { BASE_MAP_WIDTH, BASE_MAP_HEIGHT } from './mapInit.js';
-import { applyVisitedHatchOverlays } from './mapInteraction.js';
-
-const vp           = document.getElementById('mapViewport');
-const inner        = document.getElementById('mapInner');
-const sheetOverlay = document.getElementById('sheetOverlay');
-
-// ── Pan (1 палець) ────────────────────────────────────────────
-let panStartX = 0, panStartY = 0;
-let panStartScrollLeft = 0, panStartScrollTop = 0;
-let isPanActive = false;
-
-// ── Pinch zoom (2 пальці) ────────────────────────────────────
-let pendingPinch = null, pinchRAFScheduled = false;
-let pinchStartDist = 0, pinchStartWidth = 0, pinchStartHeight = 0;
-let pinchStartScrollLeft = 0, pinchStartScrollTop = 0;
-let pinchVpLeft = 0, pinchVpTop = 0;
-let pinchMarginLeft = 0, pinchMarginTop = 0;
-
-document.addEventListener('touchstart', e => {
-  if (sheetOverlay.classList.contains('overlay-visible')) return;
-
-  if (e.touches.length === 2) {
-    isPanActive = false;
-    const t0 = e.touches[0], t1 = e.touches[1];
-    pinchStartDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
-
-    pinchStartWidth      = parseFloat(inner.style.width)  || inner.offsetWidth;
-    pinchStartHeight     = parseFloat(inner.style.height) || inner.offsetHeight;
-    pinchStartScrollLeft = vp.scrollLeft;
-    pinchStartScrollTop  = vp.scrollTop;
-
-    const vpRect = vp.getBoundingClientRect();
-    pinchVpLeft    = vpRect.left;
-    pinchVpTop     = vpRect.top;
-    pinchMarginLeft = parseFloat(inner.style.marginLeft) || 0;
-    pinchMarginTop  = parseFloat(inner.style.marginTop)  || 0;
-    pendingPinch = null;
-
-  } else if (e.touches.length === 1) {
-    isPanActive        = true;
-    panStartX          = e.touches[0].clientX;
-    panStartY          = e.touches[0].clientY;
-    panStartScrollLeft = vp.scrollLeft;
-    panStartScrollTop  = vp.scrollTop;
-  }
-}, { passive: true });
-
-vp.addEventListener('touchmove', e => {
-  if (!isPanActive || e.touches.length !== 1) return;
-  vp.scrollLeft = panStartScrollLeft - (e.touches[0].clientX - panStartX);
-  vp.scrollTop  = panStartScrollTop  - (e.touches[0].clientY - panStartY);
-}, { passive: true });
-
-document.addEventListener('touchmove', e => {
-  if (e.touches.length !== 2 || sheetOverlay.classList.contains('overlay-visible')) return;
-  e.preventDefault();
-  if (!pinchStartDist) return;
-
-  const t0x = e.touches[0].clientX, t0y = e.touches[0].clientY;
-  const t1x = e.touches[1].clientX, t1y = e.touches[1].clientY;
-  const dist = Math.hypot(t0x - t1x, t0y - t1y);
-
-  pendingPinch = { ratio: dist / pinchStartDist, midX: (t0x + t1x) / 2, midY: (t0y + t1y) / 2 };
-
-  if (!pinchRAFScheduled) {
-    pinchRAFScheduled = true;
-    requestAnimationFrame(() => {
-      pinchRAFScheduled = false;
-      if (!pendingPinch) return;
-      const { ratio: r, midX, midY } = pendingPinch;
-      pendingPinch = null;
-
-      const minW = vp.clientWidth;
-      const maxW = Math.round(BASE_MAP_WIDTH * 4.0);
-      let newW   = Math.max(minW, Math.min(maxW, Math.round(pinchStartWidth * r)));
-      const actualRatio = newW / pinchStartWidth;
-      const newH = Math.round(pinchStartHeight * actualRatio);
-
-      const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
-      const padY = Math.max(0, (vp.clientHeight - newH) / 2);
-
-      inner.style.width      = newW + 'px';
-      inner.style.height     = newH + 'px';
-      inner.style.marginLeft = padX + 'px';
-      inner.style.marginTop  = padY + 'px';
-
-      const relX = (midX - pinchVpLeft + pinchStartScrollLeft - pinchMarginLeft) / pinchStartWidth;
-      const relY = (midY - pinchVpTop  + pinchStartScrollTop  - pinchMarginTop)  / pinchStartHeight;
-
-      vp.scrollLeft = Math.round(relX * newW + padX - (midX - pinchVpLeft));
-      vp.scrollTop  = Math.round(relY * newH + padY - (midY - pinchVpTop));
-    });
-  }
-}, { passive: false });
-
-let _hatchTimer = null;
-
-document.addEventListener('touchend', e => {
-  if (e.touches.length < 2) {
-    pinchStartDist    = 0;
-    pendingPinch      = null;
-    pinchRAFScheduled = false;
-    // Перерисовуємо хетч тільки якщо масштаб реально змінився,
-    // і не частіше ніж раз на 300 мс
-    clearTimeout(_hatchTimer);
-    _hatchTimer = setTimeout(() => {
-      applyVisitedHatchOverlays();
-    }, 300);
-  }
-  if (e.touches.length === 1 && !sheetOverlay.classList.contains('overlay-visible')) {
-    isPanActive        = true;
-    panStartX          = e.touches[0].clientX;
-    panStartY          = e.touches[0].clientY;
-    panStartScrollLeft = vp.scrollLeft;
-    panStartScrollTop  = vp.scrollTop;
-  }
-  if (e.touches.length === 0) isPanActive = false;
-}, { passive: true });
-</file>
-
-<file path="src/ui/confirm.js">
-import { bus }           from '../core/eventBus.js';
-import { runDoorAnimation } from './animations.js';
-import { TIMING }           from '../core/timing.js';
-
-/**
- * Показує модальний діалог підтвердження з анімацією «двері ліфта».
- *
- * @param {string}   message   - HTML-текст запитання
- * @param {Function} onYes     - callback для «Зберегти»
- * @param {Function} onNo      - callback для «Не зберігати»
- * @param {Function} onCancel  - callback для «Скасувати» (null = кнопка прихована)
- * @param {string}   yesText   - текст кнопки «так»
- * @param {string}   noText    - текст кнопки «ні»
- * @param {string}   yesClass  - CSS-клас кнопки «так»
- * @param {string}   noClass   - CSS-клас кнопки «ні»
- */
-export function showCustomConfirm(
-  message, onYes, onNo, onCancel,
-  yesText  = 'Зберегти',
-  noText   = 'Не зберігати',
-  yesClass = 'confirm-btn-save',
-  noClass  = 'confirm-btn-discard',
-) {
-  const overlay = document.createElement('div');
-  overlay.className = 'global-confirm-overlay';
-  overlay.innerHTML = `
-    <div class="global-confirm-card">
-      <div class="global-confirm-text">${message}</div>
-      <div class="global-confirm-btns-main">
-        <button class="confirm-main-btn ${yesClass}" id="confirmYes">${yesText}</button>
-        ${noText ? `<button class="confirm-main-btn ${noClass}" id="confirmNo">${noText}</button>` : ''}
-      </div>
-      ${onCancel ? `<button class="confirm-text-btn" id="confirmCancel">Скасувати</button>` : ''}
-    </div>`;
-  document.body.appendChild(overlay);
-
-  function animateClose(callback) {
-    const card = overlay.querySelector('.global-confirm-card');
-    if (!card) { overlay.remove(); callback?.(); return; }
-
-    const rect = card.getBoundingClientRect();
-    card.style.display = 'none';
-    overlay.style.transition      = 'background-color 0.35s, backdrop-filter 0.35s';
-    overlay.style.backgroundColor = 'transparent';
-    overlay.style.backdropFilter  = 'blur(0px)';
-
-    runDoorAnimation(card, rect, callback, overlay);
-    setTimeout(() => overlay.remove(), TIMING.DOOR_CLEANUP);
-  }
-
-  overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));
-  overlay.querySelector('#confirmNo').addEventListener('click',  () => animateClose(onNo));
-  overlay.querySelector('#confirmCancel')?.addEventListener('click', () => animateClose(onCancel));
-  overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
-}
-
-// ── Єдиний bus-обробник (P1-B fix: було два, залишаємо один) ──
-// Підтримує розширені параметри (labelYes, labelNo, styleYes, styleNo)
-// для сумісності з bus.emit із settings.js та backup.js.
-bus.on('ui:confirm', (payload) => {
-  showCustomConfirm(
-    payload.message,
-    payload.onYes,
-    payload.onNo    ?? null,
-    payload.onCancel ?? null,
-    payload.labelYes ?? 'Зберегти',
-    payload.labelNo  ?? 'Не зберігати',
-    payload.styleYes ?? 'confirm-btn-save',
-    payload.styleNo  ?? 'confirm-btn-discard',
-  );
-});
-</file>
-
 <file path="src/map/mapInit.js">
 import svgText from '../../KyivMetroScheme.svg?raw';
 import { state }                        from '../core/state.js';
 import { renderMapZones, checkAppReady } from '../data/stations.js';
 import { applyVisitedHatchOverlays } from './mapInteraction.js';
+
+// ══ ІНІЦІАЛІЗАЦІЯ КАРТИ ══
+// Відповідальність: вставка SVG, розрахунок масштабу та центрування,
+// адаптація висоти viewport під реальний розмір екрана (враховує адресний рядок браузера).
+
 
 const vp    = document.getElementById('mapViewport');
 const inner = document.getElementById('mapInner');
@@ -4957,6 +6211,11 @@ setTimeout(() => {
   document.getElementById('startupLoader')?.classList.add('hidden');
 }, 10_000);
 
+/**
+ * Встановлює висоту mapViewport рівно до нижнього краю екрана.
+ * Враховує візуальний viewport (window.visualViewport) для коректної роботи
+ * в мобільних браузерах з динамічною адресною панеллю.
+ */
 export function adjustViewportHeight() {
   if (!vp) return;
   const top   = vp.getBoundingClientRect().top;
@@ -4964,6 +6223,11 @@ export function adjustViewportHeight() {
   vp.style.height = Math.max(120, avail) + 'px';
 }
 
+/**
+ * Вираховує початковий масштаб карти та вирівнює видимість по центру схеми.
+ * На вузьких екранах (≤500px) застосовує коефіцієнт 4.5 замість 1.5
+ * щоб схема одразу виглядала читабельно без ручного масштабування.
+ */
 export function applyZoomAndCenter() {
   const svgEl = inner.querySelector('svg');
   if (svgEl) {
@@ -4995,14 +6259,41 @@ export function applyZoomAndCenter() {
     checkAppReady();
     applyVisitedHatchOverlays();
     
-    // Знімаємо блюр з карти та повністю ховаємо лоадер
     vp?.classList.remove('is-loading');
     document.getElementById('startupLoader')?.classList.add('hidden');
   });
 }
 
+/**
+ * Вставляє SVG-схему метро в DOM та запускає початковий рендер.
+ * Викликається один раз з main.js під час bootstrap.
+ */
+/**
+ * Вставляє SVG-схему метро в DOM та запускає початковий рендер.
+ * Викликається один раз з main.js під час bootstrap.
+ */
 export function initMap() {
   inner.innerHTML = svgText;
+
+  const svgEl = inner.querySelector('svg');
+  if (svgEl) {
+    const styleTag = document.getElementById('mapHacksStyle') || document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleTag.id = 'mapHacksStyle';
+    
+    styleTag.textContent = `
+      /* УЛЬТИМАТИВНИЙ ХАК ПРОТИ ПРИМУСОВОЇ ІНВЕРСІЇ CHROMIUM */
+      #mapInner path[aria-label] {
+        fill: #000000 !important;
+        
+        /* Якщо Хром насильно вибілить літери для "контрасту", 
+           цей фільтр схопить уже готовий білий рендер і розчавить його яскравість до 0.
+           Результат: залізобетонний чорний колір у будь-якій темі! */
+        filter: brightness(0) !important;
+      }
+    `;
+    svgEl.appendChild(styleTag);
+  }
+
   renderMapZones();
   adjustViewportHeight();
   applyZoomAndCenter();
@@ -5019,6 +6310,11 @@ window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
 </file>
 
 <file path="src/sheets/sheetsManager.js">
+// ══ SHEETS MANAGER ══
+// Відповідальність: управління відкриттям/закриттям шторок,
+// overlay, swipe-жести основної шторки, делегування bus-подій.
+// Єдина точка входу для навігації між шторками ззовні (openStation, openAboutSheet).
+
 import { bus }                from '../core/eventBus.js';
 import { withUnsavedCheck }  from '../core/unsavedCheck.js';
 import { openStation }       from './stationSheet.js';
@@ -5028,6 +6324,7 @@ import { heartSvg }          from '../ui/components.js';
 import { reloadStationsData, getSlugByLower } from '../data/stations.js';
 import { animateSheetClose }  from '../ui/animations.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export { openStation, openAboutSheet, withUnsavedCheck };
 
@@ -5038,6 +6335,11 @@ const sheetOverlay = document.getElementById('sheetOverlay');
 const dropMenuEl   = document.getElementById('dropMenu');
 
 // ══ ЗАКРИТТЯ ВСІХ ШТОРОК ══
+/**
+ * Закриває всі відкриті шторки (або тільки верхню).
+ * Якщо force=false — спочатку перевіряє незбережений фідбек.
+ * @param {boolean} [force=false]
+ */
 export function closeAllSheets(force = false) {
   if (!force) {
     if (withUnsavedCheck(() => closeAllSheets(true))) return false;
@@ -5084,15 +6386,16 @@ if (sheetOverlay) {
   });
 }
 
-// P1-D fix: nav-label handler видалено — stationEvents.js вже обробляє
-// кліки через делеговану подію і емітує bus.emit('station:open', { slug }).
-
 const mainFavBtn = sheet?.querySelector('.fav-btn-bar');
 if (mainFavBtn) {
   mainFavBtn.addEventListener('click', e => {
     const btn  = e.currentTarget;
     const slug = btn.dataset.slug;
     if (!slug) return;
+
+    // Додаємо вібровідгук саме сюди: після перевірки, перед збереженням
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+
     const nowFav = toggleFav(slug);
     btn.innerHTML = heartSvg(nowFav, slug, btn.dataset.color || 'var(--text-muted)');
     btn.classList.toggle('fav-active', nowFav);
@@ -5105,7 +6408,7 @@ setTimeout(() => {
 
 // ══ BUS-ПІДПИСКИ ══
 
-// P1-C fix: feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
+// feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
 bus.on('sheet:close', ({ sheetEl }) => {
   if (!sheetEl) return;
   animateSheetClose(sheetEl, () => {
@@ -5116,7 +6419,7 @@ bus.on('sheet:close', ({ sheetEl }) => {
   });
 });
 
-// P1-C fix: fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.
+// fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.
 bus.on('data:reload-stations', async ({ onDone } = {}) => {
   try {
     await reloadStationsData();
@@ -5128,9 +6431,24 @@ bus.on('data:reload-stations', async ({ onDone } = {}) => {
 </file>
 
 <file path="src/features/devmode.js">
-// ═══════════════════════════════════════════════════════
-// РЕЖИМ РОЗРОБНИКА — DEV MODE
-// ═══════════════════════════════════════════════════════
+// ══ FEATURE: РЕЖИМ РОЗРОБНИКА (DEV MODE) ══
+// Відповідальність: перегляд і верифікація даних позицій безпосередньо у UI станції.
+// Активується прихованим жестом (5 тапів на футері About-шторки).
+//
+// Публічне API:
+//   isDevMode()                          → boolean
+//   toggleDevMode()                      → boolean
+//   getDevLog()                          → LogEntry[]
+//   appendDevLog(entry)                  → void
+//   isVerified(slug, posIdx)             → boolean
+//   toggleDevVerified(slug, posIdx)      → boolean
+//   getDevNote(slug, posIdx)             → string
+//   setDevNote(slug, posIdx, text)       → void
+//   attachDevModeUI(container, slug)     → void
+//   showDevModeToast(active)             → void
+//   updateDevModeIndicator(sheet, active)→ void
+//   setupDevModeTapCounter(aboutSheet)   → void
+
 
 const DEV_CHECK_SVG = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M14.83 4.89l1.34.94-5.81 8.38H9.02L5.78 9.67l1.34-1.25 2.57 2.4z"/></svg>`;
 
@@ -5146,10 +6464,12 @@ import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
 
 // ── Активація / деактивація ──────────────────────────
+/** Повертає true якщо режим розробника активний. */
 export function isDevMode() {
   return Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
 }
 
+/** Перемикає режим розробника. Повертає новий стан. */
 export function toggleDevMode() {
   const next = !isDevMode();
   Storage.set(STORAGE_KEYS.DEV_MODE, String(next));
@@ -5157,11 +6477,16 @@ export function toggleDevMode() {
 }
 
 // ── Лог змін ────────────────────────────────────────
+/** @returns {object[]} масив записів про всі зміни позицій у dev-режимі */
 export function getDevLog() {
   try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_LOG) || '[]'); }
   catch(e) { return []; }
 }
 
+/**
+ * Додає запис до dev-лога.
+ * @param {{ station:string, slug:string, dir:string, exit:string, posIdx:number, field:string, from:*, to:* }} entry
+ */
 export function appendDevLog(entry) {
   const log = getDevLog();
   log.push({ ts: Date.now(), ...entry });
@@ -5169,6 +6494,11 @@ export function appendDevLog(entry) {
 }
 
 // ── Верифіковані позиції ─────────────────────────────
+/**
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {boolean} true якщо позицію верифіковано в dev-режимі
+ */
 export function isVerified(slug, posIdx) {
   try {
     const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
@@ -5176,6 +6506,12 @@ export function isVerified(slug, posIdx) {
   } catch(e) { return false; }
 }
 
+/**
+ * Перемикає прапор верифікації позиції.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {boolean} новий стан верифікації
+ */
 export function toggleDevVerified(slug, posIdx) {
   try {
     const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
@@ -5192,6 +6528,12 @@ export function toggleDevVerified(slug, posIdx) {
 }
 
 // ── Нотатки ──────────────────────────────────────────
+/**
+ * Повертає нотатку розробника для позиції або порожній рядок.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {string}
+ */
 export function getDevNote(slug, posIdx) {
   try {
     const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
@@ -5199,6 +6541,13 @@ export function getDevNote(slug, posIdx) {
   } catch(e) { return ''; }
 }
 
+/**
+ * Зберігає або видаляє нотатку розробника для позиції.
+ * Порожній text — видаляє запис.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @param {string} text
+ */
 export function setDevNote(slug, posIdx, text) {
   try {
     const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
@@ -5213,6 +6562,12 @@ export function setDevNote(slug, posIdx, text) {
 }
 
 // ── UI: кнопки в картці станції ──────────────────────
+/**
+ * Вставляє кнопки dev-режиму (верифікація, нотатка, фото) у картку станції.
+ * Нічого не робить якщо isDevMode() === false.
+ * @param {HTMLElement} container — зазвичай sheetBody
+ * @param {string}      slug
+ */
 export function attachDevModeUI(container, slug) {
   if (!isDevMode()) return;
   const lineColor = LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)';
@@ -5423,6 +6778,10 @@ function showDevPhotoFullscreen(src) {
 }
 
 // ── UI: тост активації ────────────────────────────────
+/**
+ * Показує тимчасовий тост про стан dev-режиму.
+ * @param {boolean} active
+ */
 export function showDevModeToast(active) {
   document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
   const toast = document.createElement('div');
@@ -5438,6 +6797,11 @@ export function showDevModeToast(active) {
 
 const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
 
+/**
+ * Оновлює SVG-іконку dev-режиму у About-шторці.
+ * @param {HTMLElement} aboutSheet
+ * @param {boolean}     active
+ */
 export function updateDevModeIndicator(aboutSheet, active) {
   const container = aboutSheet.querySelector('#aboutDevBtnContainer');
   if (!container) return;
@@ -5449,6 +6813,11 @@ export function updateDevModeIndicator(aboutSheet, active) {
 }
 
 // ── Лічильник тапів на футері ─────────────────────────
+/**
+ * Ініціалізує лічильник прихованих тапів на футері About-шторки.
+ * 5 тапів поспіль — перемикають dev-режим.
+ * @param {HTMLElement} aboutSheet
+ */
 export function setupDevModeTapCounter(aboutSheet) {
   let tapCount = 0;
   let tapTimer = null;
@@ -5524,7 +6893,307 @@ function setupDevDataClear(container) {
 }
 </file>
 
+<file path="src/map/mapInteraction.js">
+// ══ ВЗАЄМОДІЯ З КАРТОЮ ══
+// Відповідальність: обробка кліків на SVG-зони станцій,
+// накладання та зняття heatmap-штрихування для відвіданих виходів (check-in).
+
+import { state }                  from '../core/state.js';
+import { getCheckins }            from '../domain/checkin.js';
+import { bus }                    from '../core/eventBus.js';
+import { STORAGE_KEYS, Storage }  from '../core/storage.js';
+import { getSlugByLower }         from '../data/stations.js';
+
+const inner = document.getElementById('mapInner');
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
+const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
+const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
+const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
+const HATCH_STEP_PX  = 8;
+
+/**
+ * Обробляє клік або Enter/Space на SVG-зоні карти.
+ * Знаходить slug за id елемента і емітує 'station:open'.
+ * @param {MouseEvent|KeyboardEvent} e
+ */
+export function handleMapInteraction(e) {
+  if (!state.stationsData) return;
+  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+
+  const zone = e.target.closest('[id]');
+  if (!zone?.id) return;
+
+  const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
+  const slug  = getSlugByLower(rawId);
+  if (slug) { e.preventDefault(); bus.emit('station:open', { slug }); }
+}
+
+inner?.addEventListener('click',   handleMapInteraction);
+inner?.addEventListener('keydown', handleMapInteraction);
+
+function removeVisitedHatchOverlays(root = inner) {
+  root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
+}
+
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
+const _hatchLineCache = new WeakMap();
+
+// Кеш зон станцій (будується один раз після renderMapZones)
+let _stationZoneEls = null;
+function _getStationZoneEls() {
+  // Повертаємо кеш, ТІЛЬКИ якщо він не порожній
+  if (_stationZoneEls && _stationZoneEls.length > 0) return _stationZoneEls;
+  
+  const els = [...inner.querySelectorAll('[id]')].filter(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    return !!getSlugByLower(rawId);
+  });
+  
+  // Кешуємо тільки тоді, коли станції реально знайшлися на карті
+  if (els.length > 0) {
+    _stationZoneEls = els;
+  }
+  
+  return els;
+}
+
+/** Скидає кеш зон станцій (викликати після повторного renderMapZones). */
+export function invalidateStationZoneCache() { _stationZoneEls = null; }
+
+let _clipIdCounter = 0;
+
+let _hatchRafId = null;
+
+/**
+ * Планує накладання heatmap-штрихування на відвідані зони карти.
+ * Дедублюється через requestAnimationFrame — безпечно викликати кілька разів поспіль.
+ * @param {Element} [root] — за замовчуванням mapInner
+ */
+export function applyVisitedHatchOverlays(root = inner) {
+  if (!root) return;
+  if (_hatchRafId !== null) return;
+  _hatchRafId = requestAnimationFrame(() => {
+    _hatchRafId = null;
+    _doApplyHatch(root);
+  });
+}
+
+function _doApplyHatch(root) {
+  removeVisitedHatchOverlays(root);
+
+  const isHatchEnabled = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
+  if (!isHatchEnabled) return;
+
+  const targets = [...root.querySelectorAll('.is-visited-partial, .is-visited-full')]
+    .filter(el => el.closest('.is-visited-partial, .is-visited-full') === el);
+
+  if (!targets.length) return;
+
+  const globalScale = _getGlobalSvgScale();
+
+  targets.forEach(target => {
+    const shapes = _getValidGeometry(target);
+    if (!shapes.length) return;
+
+    const isFull = target.classList.contains('is-visited-full');
+
+    const overlay = document.createElementNS(SVG_NS, 'g');
+    overlay.classList.add(HATCH_OVERLAY_CLASS, isFull ? 'ci-hatch-full' : 'ci-hatch-partial');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.setAttribute('focusable', 'false');
+    overlay.dataset.hatchFor = target.id || '';
+
+    shapes.forEach(shape => _appendShapeHatch(shape, overlay, isFull, globalScale));
+    if (!overlay.childElementCount) return;
+
+    if (target instanceof SVGGElement) {
+      target.appendChild(overlay);
+    } else {
+      target.parentNode?.insertBefore(overlay, target.nextSibling);
+    }
+  });
+}
+
+function _getGlobalSvgScale() {
+  const ref = inner.querySelector('path, polygon, rect');
+  if (!ref) return 1;
+  const ctm   = ref.getScreenCTM?.();
+  const scale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
+  return (Number.isFinite(scale) && scale > 0) ? scale : 1;
+}
+
+const _geometryCache = new WeakMap();
+
+function _getValidGeometry(target) {
+  if (_geometryCache.has(target)) return _geometryCache.get(target);
+
+  const geometry = target.matches(HATCH_GEOMETRY_SELECTOR)
+    ? [target]
+    : [...target.querySelectorAll(HATCH_GEOMETRY_SELECTOR)];
+
+  // getBBox() тільки при першому зверненні до target — кешуємо через WeakMap
+  const valid = geometry.filter(shape => {
+    if (shape.closest(`.${HATCH_OVERLAY_CLASS}`)) return false;
+    try { const b = shape.getBBox(); return b.width > 0 && b.height > 0; }
+    catch { return false; }
+  });
+
+  // Запобіжник: не кешуємо порожній результат (якщо SVG ще не відмалювався)
+  if (valid.length > 0) {
+    _geometryCache.set(target, valid);
+  }
+  
+  return valid;
+}
+
+function _appendShapeHatch(shape, overlay, isFull, globalScale) {
+  const cached = _hatchLineCache.get(shape);
+  let lines, strokeWidth;
+
+  if (cached && cached.isFull === isFull && Math.abs(cached.scale - globalScale) / globalScale < 0.02) {
+    // Cache hit: нуль getBBox(), нуль layout flush
+    ({ lines, strokeWidth } = cached);
+  } else {
+    // Cache miss: рахуємо один раз (один getBBox всередині buildHatchLines)
+    ({ lines, strokeWidth } = buildHatchLines(shape, isFull, globalScale));
+    _hatchLineCache.set(shape, { isFull, scale: globalScale, lines, strokeWidth });
+  }
+
+  if (!lines.length) return;
+
+  const shapeOverlay = document.createElementNS(SVG_NS, 'g');
+  const transform    = shape.getAttribute('transform');
+  if (transform) shapeOverlay.setAttribute('transform', transform);
+
+  // Монотонний лічильник замість Math.random()
+  const clipId   = `ci-clip-${_clipIdCounter++}`;
+  const defs     = document.createElementNS(SVG_NS, 'defs');
+  const clipPath = document.createElementNS(SVG_NS, 'clipPath');
+  clipPath.setAttribute('id', clipId);
+  const clipGeometry = shape.cloneNode(false);
+  clipGeometry.removeAttribute('id');
+  clipGeometry.removeAttribute('class');
+  clipGeometry.setAttribute('stroke-width', '1');
+  clipGeometry.setAttribute('stroke', 'black');
+  clipPath.appendChild(clipGeometry);
+  defs.appendChild(clipPath);
+  shapeOverlay.appendChild(defs);
+
+  const clippedGroup = document.createElementNS(SVG_NS, 'g');
+  clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
+  shapeOverlay.appendChild(clippedGroup);
+  overlay.appendChild(shapeOverlay);
+
+  lines.forEach(d => {
+    const line = document.createElementNS(SVG_NS, 'path');
+    line.classList.add(HATCH_LINE_CLASS);
+    line.setAttribute('d', d);
+    line.setAttribute('stroke-width', String(strokeWidth));
+    clippedGroup.appendChild(line);
+  });
+}
+
+// Оновлена сигнатура: приймає globalScale, щоб не викликати getScreenCTM()
+function buildHatchLines(sourceShape, isFull, scale) {
+  const box  = sourceShape.getBBox(); // єдиний getBBox() на shape
+  // scale передається ззовні — не потрібен getScreenCTM() тут
+  const step = HATCH_STEP_PX / scale;
+  const pad  = step * 2;
+
+  const minX = box.x - pad, maxX = box.x + box.width  + pad;
+  const minY = box.y - pad, maxY = box.y + box.height + pad;
+
+  const cStep    = step * Math.SQRT2;
+  const cMin_raw = isFull ? (minX + minY) : (minX - maxY);
+  const cMax     = isFull ? (maxX + maxY) : (maxX - minY);
+  const cMin     = Math.floor(cMin_raw / cStep) * cStep;
+
+  const lines = [];
+  for (let c = cMin; c <= cMax; c += cStep) {
+    const x1 = minX, x2 = maxX;
+    const y1 = isFull ? (c - x1) : (x1 - c);
+    const y2 = isFull ? (c - x2) : (x2 - c);
+    lines.push(`M ${round(x1)} ${round(y1)} L ${round(x2)} ${round(y2)}`);
+  }
+  return { lines, strokeWidth: round(step * 0.35) };
+}
+
+/**
+ * Оновлює CSS-класи зон карти (.is-visited-full / .is-visited-partial) відповідно
+ * до поточного стану check-in. Викликається при 'map:sync-checkins'.
+ */
+export function syncMapWithCheckins() {
+  if (!inner || !state.stationsData) return;
+
+  const checkins = getCheckins();
+  const visitedExitsBySlug = {};
+
+  for (const entry of Object.values(checkins)) {
+    if (!entry.slug) continue;
+    if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
+    visitedExitsBySlug[entry.slug].add(`${entry.wagon}|${entry.doors}`);
+  }
+
+  // Set для O(1) lookup замість O(V) array.some()
+  const visitedNameSet = new Set(
+    Object.keys(visitedExitsBySlug)
+      .map(slug => state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase())
+      .filter(Boolean)
+  );
+
+  removeVisitedHatchOverlays();
+
+  inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
+    .forEach(el => el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full'));
+
+  // Кешований список лише зон станцій (не всього SVG)
+  _getStationZoneEls().forEach(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    const slug  = getSlugByLower(rawId);
+    if (!slug || !visitedExitsBySlug[slug]) return;
+
+    const stData         = state.stationsData[slug];
+    const totalOpenExits = stData?.positions?.length
+      ? stData.positions.filter(p => !p.closed).length
+      : 1;
+
+    el.classList.add(visitedExitsBySlug[slug].size >= totalOpenExits
+      ? 'is-visited-full'
+      : 'is-visited-partial');
+  });
+
+  inner.querySelectorAll('text').forEach(txt => {
+    const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
+    if (cleanText.length <= 2) return;
+    // O(1) Set.has() замість O(V) array.some() з substring-matching
+    // Повна відповідність достатня: SVG text збігається з нормалізованою назвою
+    if (visitedNameSet.has(cleanText)) {
+      txt.classList.add('station-checked-in');
+      txt.querySelectorAll('tspan').forEach(t => t.classList.add('station-checked-in'));
+    }
+  });
+
+  applyVisitedHatchOverlays();
+}
+
+bus.on('map:sync-checkins',       syncMapWithCheckins);
+bus.on('data:stations-hydrated',  invalidateStationZoneCache);
+</file>
+
 <file path="src/features/search.js">
+// ══ FEATURE: ПОШУК СТАНЦІЙ — UI-ШАР ══
+// Відповідальність: рендеринг результатів пошуку та управління шторкою.
+// Нечіткий пошук з підтримкою транслітерації, акронімів та аліасів.
+//
+// Публічне API:
+//   renderSearchResults(query, container, lineFilter) → void
+//   invalidateSearchCache()                          → void
+//   openSearchSheet()                                → void
+
 import { state } from '../core/state.js';
 import { fuzzyMatchToken } from '../utils/stringMatchers.js';
 import { pushSheetHistory }   from '../ui/system.js';
@@ -5542,19 +7211,28 @@ const SEARCH_ALIASES = {
   'кпі':                 'R.Politekhnychnyi_instytut',
 };
 
-// [OPT-P2] Підняти в module scope — не алокуємо масив в циклі по станціях
+// Підняти в module scope — не алокуємо масив в циклі по станціях
 const SEARCH_ALIASES_ENTRIES = Object.entries(SEARCH_ALIASES);
 
-// [OPT-P5] Кеш HTML для порожнього запиту без лінійних фільтрів
+// Кеш HTML для порожнього запиту без лінійних фільтрів
 // Інвалідується при зміні stationsData (нове посилання після reloadStationsData)
 let _emptyQueryHtml    = null;
 let _emptyQueryDataRef = null;
 
+/** Скидає кеш HTML порожнього запиту (викликається після reloadStationsData). */
 export function invalidateSearchCache() {
   _emptyQueryHtml    = null;
   _emptyQueryDataRef = null;
 }
 
+/**
+ * Відмальовує результати пошуку у container.innerHTML.
+ * При порожньому query без фільтра повертає кешований HTML.
+ *
+ * @param {string}  query       — нормалізований рядок запиту
+ * @param {Element} container   — DOM-вузол для вставки результатів
+ * @param {Set<string>} lineFilter — активні лінії (порожній Set = всі)
+ */
 export function renderSearchResults(query, container, lineFilter = new Set()) {
   if (!state.stationsData) {
     container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються…</p>';
@@ -5570,7 +7248,7 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
   // ── Порожній запит без фільтра: повертаємо кешований HTML ─
   if (!query && lineFilter.size === 0) {
     if (_emptyQueryDataRef !== state.stationsData || !_emptyQueryHtml) {
-      // [OPT-P5] Сортуємо і рендеримо лише один раз між перезавантаженнями
+      // Сортуємо і рендеримо лише один раз між перезавантаженнями
       const sorted = [...stations].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
       _emptyQueryHtml    = sorted.map(s => _renderItem(s, false, null)).join('');
       _emptyQueryDataRef = state.stationsData;
@@ -5662,6 +7340,7 @@ function _renderItem(s, isExitOnly, exitHint) {
 /**
  * Відкриття шторки пошуку
  */
+/** Відкриває шторку пошуку станцій. */
 export function openSearchSheet() {
   pushSheetHistory();
   const sheetOverlay = document.getElementById('sheetOverlay');
@@ -5791,283 +7470,8 @@ export function openSearchSheet() {
 }
 </file>
 
-<file path="src/map/mapInteraction.js">
-import { state }                  from '../core/state.js';
-import { getCheckins }            from '../domain/checkin.js';
-import { bus }                    from '../core/eventBus.js';
-import { STORAGE_KEYS, Storage }  from '../core/storage.js';
-import { getSlugByLower }         from '../data/stations.js';
-
-const inner = document.getElementById('mapInner');
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
-const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
-const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
-const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
-const HATCH_STEP_PX  = 8;
-
-export function handleMapInteraction(e) {
-  if (!state.stationsData) return;
-  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
-
-  const zone = e.target.closest('[id]');
-  if (!zone?.id) return;
-
-  const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
-  const slug  = getSlugByLower(rawId);
-  if (slug) { e.preventDefault(); bus.emit('station:open', { slug }); }
-}
-
-inner?.addEventListener('click',   handleMapInteraction);
-inner?.addEventListener('keydown', handleMapInteraction);
-
-function removeVisitedHatchOverlays(root = inner) {
-  root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
-}
-
-function round(value) {
-  return Math.round(value * 100) / 100;
-}
-
-const _hatchLineCache = new WeakMap();
-
-// [OPT-P4] Кеш зон станцій (будується один раз після renderMapZones)
-let _stationZoneEls = null;
-function _getStationZoneEls() {
-  // Повертаємо кеш, ТІЛЬКИ якщо він не порожній
-  if (_stationZoneEls && _stationZoneEls.length > 0) return _stationZoneEls;
-  
-  const els = [...inner.querySelectorAll('[id]')].filter(el => {
-    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    return !!getSlugByLower(rawId);
-  });
-  
-  // Кешуємо тільки тоді, коли станції реально знайшлися на карті
-  if (els.length > 0) {
-    _stationZoneEls = els;
-  }
-  
-  return els;
-}
-
-export function invalidateStationZoneCache() { _stationZoneEls = null; }
-
-let _clipIdCounter = 0;
-
-let _hatchRafId = null;
-
-export function applyVisitedHatchOverlays(root = inner) {
-  if (!root) return;
-  if (_hatchRafId !== null) return;
-  _hatchRafId = requestAnimationFrame(() => {
-    _hatchRafId = null;
-    _doApplyHatch(root);
-  });
-}
-
-function _doApplyHatch(root) {
-  removeVisitedHatchOverlays(root);
-
-  const isHatchEnabled = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
-  if (!isHatchEnabled) return;
-
-  const targets = [...root.querySelectorAll('.is-visited-partial, .is-visited-full')]
-    .filter(el => el.closest('.is-visited-partial, .is-visited-full') === el);
-
-  if (!targets.length) return;
-
-  const globalScale = _getGlobalSvgScale();
-
-  targets.forEach(target => {
-    const shapes = _getValidGeometry(target);
-    if (!shapes.length) return;
-
-    const isFull = target.classList.contains('is-visited-full');
-
-    const overlay = document.createElementNS(SVG_NS, 'g');
-    overlay.classList.add(HATCH_OVERLAY_CLASS, isFull ? 'ci-hatch-full' : 'ci-hatch-partial');
-    overlay.setAttribute('aria-hidden', 'true');
-    overlay.setAttribute('focusable', 'false');
-    overlay.dataset.hatchFor = target.id || '';
-
-    shapes.forEach(shape => _appendShapeHatch(shape, overlay, isFull, globalScale));
-    if (!overlay.childElementCount) return;
-
-    if (target instanceof SVGGElement) {
-      target.appendChild(overlay);
-    } else {
-      target.parentNode?.insertBefore(overlay, target.nextSibling);
-    }
-  });
-}
-
-function _getGlobalSvgScale() {
-  const ref = inner.querySelector('path, polygon, rect');
-  if (!ref) return 1;
-  const ctm   = ref.getScreenCTM?.();
-  const scale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
-  return (Number.isFinite(scale) && scale > 0) ? scale : 1;
-}
-
-const _geometryCache = new WeakMap();
-
-function _getValidGeometry(target) {
-  if (_geometryCache.has(target)) return _geometryCache.get(target);
-
-  const geometry = target.matches(HATCH_GEOMETRY_SELECTOR)
-    ? [target]
-    : [...target.querySelectorAll(HATCH_GEOMETRY_SELECTOR)];
-
-  // [OPT-P1] getBBox() тільки при першому зверненні до target
-  const valid = geometry.filter(shape => {
-    if (shape.closest(`.${HATCH_OVERLAY_CLASS}`)) return false;
-    try { const b = shape.getBBox(); return b.width > 0 && b.height > 0; }
-    catch { return false; }
-  });
-
-  // Запобіжник: не кешуємо порожній результат (якщо SVG ще не відмалювався)
-  if (valid.length > 0) {
-    _geometryCache.set(target, valid);
-  }
-  
-  return valid;
-}
-
-function _appendShapeHatch(shape, overlay, isFull, globalScale) {
-  const cached = _hatchLineCache.get(shape);
-  let lines, strokeWidth;
-
-  if (cached && cached.isFull === isFull && Math.abs(cached.scale - globalScale) / globalScale < 0.02) {
-    // Cache hit: нуль getBBox(), нуль layout flush
-    ({ lines, strokeWidth } = cached);
-  } else {
-    // Cache miss: рахуємо один раз (один getBBox всередині buildHatchLines)
-    ({ lines, strokeWidth } = buildHatchLines(shape, isFull, globalScale));
-    _hatchLineCache.set(shape, { isFull, scale: globalScale, lines, strokeWidth });
-  }
-
-  if (!lines.length) return;
-
-  const shapeOverlay = document.createElementNS(SVG_NS, 'g');
-  const transform    = shape.getAttribute('transform');
-  if (transform) shapeOverlay.setAttribute('transform', transform);
-
-  // [OPT-P5] Монотонний лічильник замість Math.random()
-  const clipId   = `ci-clip-${_clipIdCounter++}`;
-  const defs     = document.createElementNS(SVG_NS, 'defs');
-  const clipPath = document.createElementNS(SVG_NS, 'clipPath');
-  clipPath.setAttribute('id', clipId);
-  const clipGeometry = shape.cloneNode(false);
-  clipGeometry.removeAttribute('id');
-  clipGeometry.removeAttribute('class');
-  clipGeometry.setAttribute('stroke-width', '1');
-  clipGeometry.setAttribute('stroke', 'black');
-  clipPath.appendChild(clipGeometry);
-  defs.appendChild(clipPath);
-  shapeOverlay.appendChild(defs);
-
-  const clippedGroup = document.createElementNS(SVG_NS, 'g');
-  clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
-  shapeOverlay.appendChild(clippedGroup);
-  overlay.appendChild(shapeOverlay);
-
-  lines.forEach(d => {
-    const line = document.createElementNS(SVG_NS, 'path');
-    line.classList.add(HATCH_LINE_CLASS);
-    line.setAttribute('d', d);
-    line.setAttribute('stroke-width', String(strokeWidth));
-    clippedGroup.appendChild(line);
-  });
-}
-
-// Оновлена сигнатура: приймає globalScale, щоб не викликати getScreenCTM()
-function buildHatchLines(sourceShape, isFull, scale) {
-  const box  = sourceShape.getBBox(); // єдиний getBBox() на shape
-  // scale передається ззовні — не потрібен getScreenCTM() тут
-  const step = HATCH_STEP_PX / scale;
-  const pad  = step * 2;
-
-  const minX = box.x - pad, maxX = box.x + box.width  + pad;
-  const minY = box.y - pad, maxY = box.y + box.height + pad;
-
-  const cStep    = step * Math.SQRT2;
-  const cMin_raw = isFull ? (minX + minY) : (minX - maxY);
-  const cMax     = isFull ? (maxX + maxY) : (maxX - minY);
-  const cMin     = Math.floor(cMin_raw / cStep) * cStep;
-
-  const lines = [];
-  for (let c = cMin; c <= cMax; c += cStep) {
-    const x1 = minX, x2 = maxX;
-    const y1 = isFull ? (c - x1) : (x1 - c);
-    const y2 = isFull ? (c - x2) : (x2 - c);
-    lines.push(`M ${round(x1)} ${round(y1)} L ${round(x2)} ${round(y2)}`);
-  }
-  return { lines, strokeWidth: round(step * 0.35) };
-}
-
-export function syncMapWithCheckins() {
-  if (!inner || !state.stationsData) return;
-
-  const checkins = getCheckins();
-  const visitedExitsBySlug = {};
-
-  for (const entry of Object.values(checkins)) {
-    if (!entry.slug) continue;
-    if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
-    visitedExitsBySlug[entry.slug].add(`${entry.wagon}|${entry.doors}`);
-  }
-
-  // [OPT] Set для O(1) lookup замість O(V) array.some()
-  const visitedNameSet = new Set(
-    Object.keys(visitedExitsBySlug)
-      .map(slug => state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase())
-      .filter(Boolean)
-  );
-
-  removeVisitedHatchOverlays();
-
-  inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
-    .forEach(el => el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full'));
-
-  // [OPT-P4] Кешований список лише зон станцій (не всього SVG)
-  _getStationZoneEls().forEach(el => {
-    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    const slug  = getSlugByLower(rawId);
-    if (!slug || !visitedExitsBySlug[slug]) return;
-
-    const stData         = state.stationsData[slug];
-    const totalOpenExits = stData?.positions?.length
-      ? stData.positions.filter(p => !p.closed).length
-      : 1;
-
-    el.classList.add(visitedExitsBySlug[slug].size >= totalOpenExits
-      ? 'is-visited-full'
-      : 'is-visited-partial');
-  });
-
-  inner.querySelectorAll('text').forEach(txt => {
-    const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
-    if (cleanText.length <= 2) return;
-    // [OPT] O(1) Set.has() замість O(V) array.some() з substring-matching
-    // Повна відповідність достатня: SVG text збігається з нормалізованою назвою
-    if (visitedNameSet.has(cleanText)) {
-      txt.classList.add('station-checked-in');
-      txt.querySelectorAll('tspan').forEach(t => t.classList.add('station-checked-in'));
-    }
-  });
-
-  applyVisitedHatchOverlays();
-}
-
-bus.on('map:sync-checkins',       syncMapWithCheckins);
-bus.on('data:stations-hydrated',  invalidateStationZoneCache);
-</file>
-
 <file path="src/sheets/aboutSheet.js">
 // ══ ABOUT SHEET ══
-// P1-A fix: весь init-блок (let aboutSheet, if (!aboutSheet) {...}, updateLogo, bindBottomLoader)
-// повернуто всередину тіла openAboutSheet(). В оригіналі функція закривалась на рядку 196,
-// залишаючи решту коду на рівні модуля — це спричиняло ReferenceError при відкритті шторки.
 
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { setupDevModeTapCounter } from '../features/devmode.js';
@@ -6262,9 +7666,6 @@ function bindBottomLoader(aboutSheet) {
 }
 
 // ══ ВІДКРИТТЯ ABOUT-ШТОРКИ ══
-// P1-A fix: весь блок тепер знаходиться всередині функції.
-// В оригінальному коді фігурна дужка закривала функцію на рядку 196,
-// залишаючи let aboutSheet та весь init-блок на рівні модуля.
 export function openAboutSheet() {
   pushSheetHistory();
 
@@ -6407,13 +7808,31 @@ export function openAboutSheet() {
       this.style.height = this.scrollHeight + 'px';
     });
 
+    // Коли клавіатура з'являється — прокручуємо до кнопки «Відправити»,
+    // щоб вона не ховалась за keyboard на Android Capacitor WebView.
+    bugTextarea.addEventListener('focus', () => {
+      setTimeout(() => {
+        bugSubmitBtn?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 350); // 350 мс — час анімації появи клавіатури
+    });
+
     bugSubmitBtn.addEventListener('click', async () => {
       const text = bugTextarea.value.trim();
       if (!text) { bugTextarea.focus(); return; }
 
-      bugSubmitBtn.disabled = true;
-      bugSubmitBtn.textContent = 'Відправка...';
-      bugResultMsg.textContent = '';
+      // Швидка перевірка офлайн-стану ще до fetch
+      if (!navigator.onLine) {
+        bugResultMsg.textContent   = 'Немає з\'єднання з інтернетом. Спробуйте пізніше.';
+        bugResultMsg.style.color   = 'var(--line-red)';
+        return;
+      }
+
+      bugSubmitBtn.disabled     = true;
+      bugSubmitBtn.textContent  = 'Відправка…';
+      bugResultMsg.textContent  = '';
+
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
       try {
         const res = await fetch('https://formspree.io/f/xpqbovbw', {
@@ -6421,10 +7840,10 @@ export function openAboutSheet() {
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
             message: text,
-            source:  'About Sheet Bug Report',
-            time:    new Date().toLocaleString('uk-UA'),
           }),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
 
         if (res.ok) {
           bugTextarea.hidden              = true;
@@ -6435,13 +7854,16 @@ export function openAboutSheet() {
           bugResultMsg.style.fontSize     = 'var(--fs-md)';
           bugResultMsg.style.marginTop    = '8px';
         } else {
-          throw new Error('Server error');
+          throw new Error('HTTP ' + res.status);
         }
-      } catch {
-        bugSubmitBtn.disabled        = false;
-        bugSubmitBtn.textContent     = 'Відправити';
-        bugResultMsg.textContent     = 'Помилка відправки. Спробуйте пізніше.';
-        bugResultMsg.style.color     = 'var(--line-red)';
+      } catch (err) {
+        clearTimeout(timeoutId);
+        bugSubmitBtn.disabled    = false;
+        bugSubmitBtn.textContent = 'Відправити';
+        bugResultMsg.style.color = 'var(--line-red)';
+        bugResultMsg.textContent = err.name === 'AbortError'
+          ? 'Час очікування вичерпано. Перевірте з\'єднання.'
+          : 'Помилка відправки. Спробуйте пізніше.';
       }
     });
   }
@@ -6469,6 +7891,11 @@ import { withUnsavedCheck }        from '../core/unsavedCheck.js';
 import { renderDirections }        from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
 
+// ══ STATION SHEET ══
+// Відповідальність: рендеринг та відкриття картки станції.
+// Кешує HTML рядків renderDirections та маппінги nav-label → slug
+// для уникнення повторних обчислень при повторних відкриттях.
+
 // ══ DOM-вузли ══
 const sheet            = document.getElementById('stationSheet');
 const sheetBody        = document.getElementById('sheetBody');
@@ -6487,18 +7914,18 @@ bindSheetGestures(
 
 // ══ КЕШІ (module scope) ══════════════════════════════════════
 
-// [OPT-P1] Кеш HTML рядка renderDirections.
+// Кеш HTML рядка renderDirections.
 // Ключ: slug. Інвалідується при station:refresh (дані змінились).
 const _directionsHtmlCache = new Map(); // slug → html
 
-// [OPT-P2] Кеш slug-маппінгу для nav-label елементів.
+// Кеш slug-маппінгу для nav-label елементів.
 // Ключ: slug. Значення: Map<labelName, targetSlug|null>.
 // Стабільний між відкриттями (назви напрямків незмінні).
 const _navLinkCache = new Map();
 
 // ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
 
-// [OPT-P1] При оновленні даних — інвалідуємо кеш HTML поточної станції
+// При оновленні даних — інвалідуємо кеш HTML поточної станції
 bus.on('station:refresh', () => {
   _directionsHtmlCache.delete(state.currentStationSlug);
   refreshCurrentStation();
@@ -6523,7 +7950,7 @@ function applyNavLinks(slug) {
   let nameToTarget = _navLinkCache.get(slug);
 
   if (!nameToTarget) {
-    // [OPT-P2] Перший візит: обчислюємо slugByName() і кешуємо результат
+    // Перший візит: обчислюємо slugByName() і кешуємо результат
     nameToTarget = new Map();
     labels.forEach(el => {
       const name = el.dataset.name || '';
@@ -6540,7 +7967,7 @@ function applyNavLinks(slug) {
     });
     _navLinkCache.set(slug, nameToTarget);
   } else {
-    // [OPT-P2] Повторний візит: нуль slugByName() — тільки DOM writes
+    // Повторний візит: нуль slugByName() — тільки DOM writes
     labels.forEach(el => {
       const target = nameToTarget.get(el.dataset.name || '');
       if (target && target !== slug) {
@@ -6564,7 +7991,7 @@ function actualOpenStation(slug) {
   const s     = state.stationsData[slug];
   const color = LINE_COLOR[s.line] || 'var(--text-muted)';
 
-  // [OPT-P1] Guard: та сама станція вже відкрита — пропускаємо повний re-render
+  // Guard: та сама станція вже відкрита — пропускаємо повний re-render
   if (state.currentStationSlug === slug && sheet.classList.contains('sheet-open')) {
     // Лише оновлюємо fav-кнопку (стан міг змінитись ззовні)
     _updateFavBtn(slug, color);
@@ -6595,7 +8022,6 @@ function actualOpenStation(slug) {
   } else if (allExitsClosed) {
     sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
   } else {
-    // [OPT-P1] Читаємо з кешу або рендеримо і зберігаємо
     let directionsHtml = _directionsHtmlCache.get(slug);
     if (!directionsHtml) {
       directionsHtml = renderDirections(s, color);
@@ -6605,7 +8031,7 @@ function actualOpenStation(slug) {
   }
 
   sheetBody.scrollTop = 0;
-  applyNavLinks(slug); // [OPT-P2] кешований slugByName на повторних відкриттях
+  applyNavLinks(slug);
 
   if (s.slug === 'R.Khreshchatyk') {
     sheet.classList.add('sheet-fullscreen', 'sheet-scrollable');
@@ -6633,7 +8059,7 @@ function actualOpenStation(slug) {
 
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);
-  // [OPT-P3] querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
+  // querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
 }
@@ -6660,7 +8086,7 @@ export function refreshCurrentStation() {
   const color      = LINE_COLOR[s.line] || 'var(--text-muted)';
   const prevScroll = sheetBody.scrollTop;
 
-  // [OPT-P1] Кеш вже інвалідовано в bus.on('station:refresh') вище
+  // Кеш вже інвалідовано в bus.on('station:refresh') вище
   stationTitleMain.textContent = s.name;
   sheetBody.innerHTML = renderDirections(s, color);
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
@@ -6669,7 +8095,7 @@ export function refreshCurrentStation() {
   applyNavLinks(slug);
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);
-  // [OPT-P3] Всі кнопки, а не тільки перша
+  // Всі кнопки, а не тільки перша
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
 
@@ -6677,7 +8103,80 @@ export function refreshCurrentStation() {
 }
 </file>
 
+<file path="vite.config.js">
+import { defineConfig } from 'vite';
+import { VitePWA }      from 'vite-plugin-pwa';
+import path             from 'path';
+
+const buildDate = Date.now().toString();
+
+export default defineConfig({
+  base:      './',
+  root:      '.',
+  publicDir: 'public',
+
+  resolve: {
+    alias: {
+      // Зручні аліаси для імпортів — без відносних шляхів ../../
+      '@core':     path.resolve(__dirname, 'src/core'),
+      '@ui':       path.resolve(__dirname, 'src/ui'),
+      '@data':     path.resolve(__dirname, 'src/data'),
+      '@map':      path.resolve(__dirname, 'src/map'),
+      '@sheets':   path.resolve(__dirname, 'src/sheets'),
+      '@features': path.resolve(__dirname, 'src/features'),
+      '@infra':    path.resolve(__dirname, 'src/infra'),
+    },
+  },
+
+  define: {
+    __BUILD_DATE__: JSON.stringify(buildDate),
+  },
+
+  build: {
+    target:        'es2018',
+    sourcemap:     false,          // явно вимкнено для production — менший bundle, без витоку коду
+    modulePreload: { polyfill: false },
+    outDir:        'dist',
+    rollupOptions: {
+      input: 'index.html',
+      output: {
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash][extname]',
+      },
+    },
+  },
+
+  // Видаляємо console.* та debugger з production-збірки через esbuild.
+  // esbuild вбудований у Vite і не потребує окремої залежності.
+  esbuild: {
+    drop:        ['console', 'debugger'],
+    legalComments: 'none',          // прибирає copyright-коментарі з vendor-коду
+  },
+
+  plugins: [
+    VitePWA({
+      strategies:      'injectManifest',
+      srcDir:          'public',
+      filename:        'sw.js',
+      manifest:        false,
+      injectManifest:  {
+        rollupFormat:   'iife',
+        injectionPoint: 'self.__WB_MANIFEST',
+        globDirectory:  'dist',
+        globPatterns:   ['**/*.{js,css,html}'],
+      },
+      devOptions: { enabled: false },
+    }),
+  ],
+});
+</file>
+
 <file path="src/features/settings.js">
+// ══ FEATURE: НАЛАШТУВАННЯ — UI-ШАР ══
+// Відповідальність: відкриття шторки налаштувань, синхронізація тогглів,
+// управління темою, check-in, резервними копіями та очищенням даних.
+
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { LINE_COLOR }              from '../core/constants.js';
 import { applyTheme }              from '../ui/theme.js';
@@ -6724,6 +8223,7 @@ function showCheckinLockToast(rowEl) {
 
 // ══ ВІДКРИТТЯ ШТОРКИ НАЛАШТУВАНЬ ══════════════════════════════
 
+/** Відкриває шторку налаштувань. При першому виклику — ліниво створює DOM з template. */
 export function openSettingsSheet() {
   pushSheetHistory();
   const sheetOverlay = document.getElementById('sheetOverlay');
@@ -6784,16 +8284,6 @@ if (localFbToggle) {
         collapsible?.classList.toggle('is-hidden', !isMainOn);
         Storage.set(STORAGE_KEYS.CHECKIN_MODE, String(isMainOn));
         updateCheckinDock();
-
-const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
-if (hatchToggle) {
-  hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
-  hatchToggle.addEventListener('change', e => {
-    Storage.set(STORAGE_KEYS.CHECKIN_HATCH, String(e.target.checked));
-    bus.emit('map:sync-checkins');
-  });
-}
-
         const currentSlug = document.getElementById('stationSheet').classList.contains('sheet-open')
           ? (state.currentStationSlug ?? null)
           : null;
@@ -6810,14 +8300,14 @@ if (hatchToggle) {
     }
 
     // ── Check-in штриховка ──
-    const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
-    if (hatchToggle) {
-      hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
-      hatchToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.CHECKIN_HATCH, e.target.checked);
-        bus.emit('map:sync-checkins');
-      });
-    }
+const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
+if (hatchToggle) {
+  hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
+  hatchToggle.addEventListener('change', e => {
+    Storage.set(STORAGE_KEYS.CHECKIN_HATCH, String(e.target.checked));
+    bus.emit('map:sync-checkins');
+  });
+}
 
     // ── Check-in по виходах ──
     const statSeg = document.getElementById('settingsCheckinStatSeg');
@@ -6975,10 +8465,10 @@ if (hideInfoToggle) {
     });
 
     // ── Експорт ──
-    document.getElementById('settingsExport')?.addEventListener('click', e => {
+    document.getElementById('settingsExport')?.addEventListener('click', async e => {
       e.stopPropagation();
       try {
-        BackupService.exportData({ devLog: isDevMode() ? getDevLog() : null });
+        await BackupService.exportData({ devLog: isDevMode() ? getDevLog() : null });
       } catch {
         bus.emit('ui:confirm', {
           message:  'Не вдалося створити файл резервної копії.',
@@ -7063,67 +8553,6 @@ if (hideInfoToggle) {
 }
 </file>
 
-<file path="vite.config.js">
-import { defineConfig } from 'vite';
-import { VitePWA }      from 'vite-plugin-pwa';
-import path             from 'path';
-
-const buildDate = Date.now().toString();
-
-export default defineConfig({
-  base:      './',
-  root:      '.',
-  publicDir: 'public',
-
-  resolve: {
-    alias: {
-      // Зручні аліаси для імпортів — без відносних шляхів ../../
-      '@core':     path.resolve(__dirname, 'src/core'),
-      '@ui':       path.resolve(__dirname, 'src/ui'),
-      '@data':     path.resolve(__dirname, 'src/data'),
-      '@map':      path.resolve(__dirname, 'src/map'),
-      '@sheets':   path.resolve(__dirname, 'src/sheets'),
-      '@features': path.resolve(__dirname, 'src/features'),
-      '@infra':    path.resolve(__dirname, 'src/infra'),
-    },
-  },
-
-  define: {
-    __BUILD_DATE__: JSON.stringify(buildDate),
-  },
-
-  build: {
-    target:        'es2018',
-    modulePreload: { polyfill: false },
-    outDir:        'dist',
-    rollupOptions: {
-      input: 'index.html',
-      output: {
-        entryFileNames: 'assets/[name].[hash].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash][extname]',
-      },
-    },
-  },
-
-  plugins: [
-    VitePWA({
-      strategies:      'injectManifest',
-      srcDir:          'public',
-      filename:        'sw.js',
-      manifest:        false,
-      injectManifest:  {
-        rollupFormat:   'iife',
-        injectionPoint: 'self.__WB_MANIFEST',
-        globDirectory:  'dist',
-        globPatterns:   ['**/*.{js,css,html}'],
-      },
-      devOptions: { enabled: false },
-    }),
-  ],
-});
-</file>
-
 <file path="src/main.js">
 // ══ ГОЛОВНА ТОЧКА ВХОДУ (MAIN) ══
 
@@ -7149,7 +8578,7 @@ import './data/localEdits.js';
 import './sheets/sheetsManager.js';
 import './app.js';
 
-// Хелпер для гарантованого приховування заставки
+/** Гарантовано приховує заставку — викликається з обробників помилок. */
 function releaseStartupLoader() {
   document.getElementById('mapViewport')?.classList.remove('is-loading');
   document.getElementById('startupLoader')?.classList.add('hidden');
@@ -7166,28 +8595,26 @@ window.addEventListener('unhandledrejection', e => {
 });
 
 // ── ЯДРО ЗАПУСКУ ДОДАТКУ ─────────────────────────────────────
+/**
+ * Послідовно ініціалізує Storage, тему, карту, дані та UI.
+ * Критична секція: будь-яка необроблена помилка тут → alert + видимий лоадер.
+ */
 async function bootstrap() {
   try {
-    // 1. Ініціалізуємо синхронний кеш сховища
     await Storage.init();
 
-    // 2. Налаштовуємо тему оформлення
     const savedTheme = Storage.get(STORAGE_KEYS.THEME)
       || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     applyTheme(savedTheme);
 
-    // 3. Ініціалізуємо карту та повноекранний режим для Capacitor
     initMap();
     await configureEdgeToEdge();
     
-    // 4. Завантажуємо дані станцій (це запустить гідратацію та localEdits)
     await reloadStationsData();
 
-    // 5. Оновлюємо стан нижніх док-кнопок
     updateCheckinDock();
     updateFavDock();
 
-    // 6. Обробка прямих диплінків (наприклад, ?action=search)
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
 
@@ -7198,13 +8625,28 @@ async function bootstrap() {
     if (action) window.history.replaceState({}, document.title, window.location.pathname);
 
   } catch (err) {
-    alert('BOOTSTRAP CRASH: ' + err.message);
     console.error('[startup] bootstrap failed', err);
     releaseStartupLoader();
+    // Показуємо зрозуміле повідомлення замість технічного alert().
+    // Найімовірніша причина — неможливість завантажити stations.json.
+    const msg = document.createElement('div');
+    msg.style.cssText =
+      'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;' +
+      'justify-content:center;gap:12px;padding:32px;background:var(--bg,#0e0e0f);' +
+      'color:var(--text,#e8e6e3);font-family:system-ui,sans-serif;text-align:center;z-index:9999';
+    msg.innerHTML =
+      '<span style="font-size:2rem">⚠️</span>' +
+      '<strong style="font-size:1.1rem">Не вдалося запустити додаток</strong>' +
+      '<p style="font-size:.9rem;opacity:.7;max-width:320px">' +
+      'Перевірте з\'єднання з інтернетом і спробуйте ще раз.<br>' +
+      '<span style="font-size:.75rem;opacity:.5">' + (err.message || err) + '</span></p>' +
+      '<button onclick="location.reload()" ' +
+      'style="margin-top:8px;padding:12px 28px;border-radius:8px;border:none;' +
+      'background:#c8523a;color:#fff;font-size:1rem;cursor:pointer">Спробувати ще раз</button>';
+    document.body.appendChild(msg);
   }
 }
 
-// Запуск!
 bootstrap();
 registerServiceWorker();
 </file>
@@ -7229,16 +8671,34 @@ registerServiceWorker();
       html:not([data-theme="dark"]), 
       html:not([data-theme="dark"]) body { background: #e5e5ea; } 
     }
-    /* Оскільки лоадер тепер окремо, ми керуємо його видимістю напряму через клас */
+
+
+
+    
+    /* Лоадер має висіти НАД картою, а не штовхати її */
     .loader-container {
-      display: block; /* Увімкнений за замовчуванням */
+      position: fixed;
+      inset: 0; /* Розтягуємо на весь екран (top:0; left:0; right:0; bottom:0) */
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000000; /* Закриваємо карту фоном, поки вона крива */
     }
+    
+    /* Підтримуємо світлу тему для фону лоадера */
+    html[data-theme="light"] .loader-container { background: #e5e5ea; }
+    @media (prefers-color-scheme: light) { 
+      html:not([data-theme="dark"]) .loader-container { background: #e5e5ea; } 
+    }
+
     .loader-container.hidden {
-      display: none; /* Цей клас ми додамо з JS, коли треба буде сховати */
+      display: none;
     }
+    
     .loader-container svg {
-      width: 100%;
-      height: 100%;
+      width: 120px; /* Фіксуємо розмір, бо інакше флекс розтягне його на весь екран */
+      height: 120px;
     }
     /* Базовий колір пелюсток SVG — JS одразу перезаписує, але до старту анімації */
     .loader-container .st4 { fill: #1a1a1a; }
@@ -7781,7 +9241,7 @@ const center = document.getElementById("loaderCenter");
     const TAIL_LENGTH   = 5;
     const ANIMATION_SPEED = 90;
     const HEARTBEAT_SPEED = 20;
-    const BPM           = 45;
+    const BPM           = 60;
     const CYCLE         = 60 / BPM;
     const MIN_INTENSITY = 0.35;
     const MAX_INTENSITY = 0.85;
@@ -7843,9 +9303,6 @@ const center = document.getElementById("loaderCenter");
     animateCenterHeartbeat();
     setTimeout(animateLoader, 200);
   })();
-</script>
-<script>
-  window.MetroApp = window.MetroApp || {};
 </script>
 <script>
   // Цей радар зловить помилку ДО запуску модулів і покаже її на екрані
@@ -7954,9 +9411,8 @@ body#map-page .map-viewport {
   --bg-card:    #e0e0e6;
   --bg-pill:    #cacace;
   --text:       #1c1c1e;
-  --hatch-color: #c1c1c6;
+  --hatch-color: #1c1c1e;
   
-  /* Оригінальні кольори з твого файлу */
   --text-muted: #2c2c2e;
   --icon-color: #2c2c2e;
   
@@ -7965,12 +9421,10 @@ body#map-page .map-viewport {
 
 }
 
-/* ══ КОРЕКЦІЯ ДЛЯ СВІТЛОЇ ТЕМИ ══ */
 [data-theme="light"] .about-input-group {
   background: var(--bg-pill) !important;
 }
 
-/* Текст пошти робимо ТЕМНИМ (--text у світлій темі — чорний) */
 [data-theme="light"] .about-input-group .about-beta-input {
   color: var(--text) !important;
 }
@@ -7979,13 +9433,11 @@ body#map-page .map-viewport {
   color: var(--text);
 }
 
-/* Mono залишається ТЕМНИМ (--text-muted у світлій темі — це темно-сірий) */
 [data-theme="light"] .about-btn-mono-fixed {
   background: var(--text-muted) !important;
   color: var(--bg) !important; /* Текст стає світлим кольором фону */
 }
 
-/* Корекція іконок у світлій темі (робимо їх темними) */
 [data-theme="light"] .about-support-platform-icon {
   color: var(--text-muted); 
   opacity: 0.85;
@@ -8011,12 +9463,6 @@ button { font-family: inherit; }
 
 
 
-
-
-
-
-
-/* ══ НИЖНІЙ ЦЕНТРАЛЬНИЙ ДОК ══ */
 .bottom-nav-dock {
   position: fixed;
   bottom: calc(14px + env(safe-area-inset-bottom));
@@ -10171,7 +11617,7 @@ svg [role="button"]:focus:not(:focus-visible) {
 
 .row-checkin-btn {
   position: absolute;
-  right: 26px;
+  right: 30.5px;
   top: 50%;
   transform: translateY(-50%);
   width: 36px;

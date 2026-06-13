@@ -1,3 +1,7 @@
+// ══ FEATURE: НАЛАШТУВАННЯ — UI-ШАР ══
+// Відповідальність: відкриття шторки налаштувань, синхронізація тогглів,
+// управління темою, check-in, резервними копіями та очищенням даних.
+
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { LINE_COLOR }              from '../core/constants.js';
 import { applyTheme }              from '../ui/theme.js';
@@ -44,6 +48,7 @@ function showCheckinLockToast(rowEl) {
 
 // ══ ВІДКРИТТЯ ШТОРКИ НАЛАШТУВАНЬ ══════════════════════════════
 
+/** Відкриває шторку налаштувань. При першому виклику — ліниво створює DOM з template. */
 export function openSettingsSheet() {
   pushSheetHistory();
   const sheetOverlay = document.getElementById('sheetOverlay');
@@ -124,7 +129,7 @@ const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
 if (hatchToggle) {
   hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
   hatchToggle.addEventListener('change', e => {
-    Storage.set(STORAGE_KEYS.CHECKIN_HATCH, String(e.target.checked)); // <-- Тепер тут є String()
+    Storage.set(STORAGE_KEYS.CHECKIN_HATCH, String(e.target.checked));
     bus.emit('map:sync-checkins');
   });
 }
@@ -285,10 +290,10 @@ if (hideInfoToggle) {
     });
 
     // ── Експорт ──
-    document.getElementById('settingsExport')?.addEventListener('click', e => {
+    document.getElementById('settingsExport')?.addEventListener('click', async e => {
       e.stopPropagation();
       try {
-        BackupService.exportData({ devLog: isDevMode() ? getDevLog() : null });
+        await BackupService.exportData({ devLog: isDevMode() ? getDevLog() : null });
       } catch {
         bus.emit('ui:confirm', {
           message:  'Не вдалося створити файл резервної копії.',

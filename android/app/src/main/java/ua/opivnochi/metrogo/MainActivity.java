@@ -1,4 +1,4 @@
-package com.yourname.kyivmetrogo;
+package ua.opivnochi.metrogo;
 
 import com.getcapacitor.BridgeActivity;
 

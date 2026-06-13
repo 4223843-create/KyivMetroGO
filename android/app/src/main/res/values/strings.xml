@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">KyivMetroGO</string>
     <string name="title_activity_main">KyivMetroGO</string>
-    <string name="package_name">com.yourname.kyivmetrogo</string>
-    <string name="custom_url_scheme">com.yourname.kyivmetrogo</string>
+    <string name="package_name">ua.opivnochi.metrogo</string>
+    <string name="custom_url_scheme">ua.opivnochi.metrogo</string>
 </resources>

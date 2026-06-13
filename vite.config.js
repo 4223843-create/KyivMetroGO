@@ -28,6 +28,7 @@ export default defineConfig({
 
   build: {
     target:        'es2018',
+    sourcemap:     false,          // явно вимкнено для production — менший bundle, без витоку коду
     modulePreload: { polyfill: false },
     outDir:        'dist',
     rollupOptions: {
@@ -38,6 +39,13 @@ export default defineConfig({
         assetFileNames: 'assets/[name].[hash][extname]',
       },
     },
+  },
+
+  // Видаляємо console.* та debugger з production-збірки через esbuild.
+  // esbuild вбудований у Vite і не потребує окремої залежності.
+  esbuild: {
+    drop:        ['console', 'debugger'],
+    legalComments: 'none',          // прибирає copyright-коментарі з vendor-коду
   },
 
   plugins: [

@@ -1,5 +1,10 @@
 // ══ UI-ПРИВ'ЯЗКИ ДОДАТКУ ══
+// Відповідальність: підключення DOM-кнопок до функцій-обробників.
 // Тільки addEventListener. Нуль мережевих запитів, нуль ініціалізації даних.
+// Виконується як side-effect при імпорті в main.js.
+
+import { Capacitor } from '@capacitor/core';
+import { App }       from '@capacitor/app';
 
 import { openFavSheet }    from './features/favorites/index.js';
 import { openCheckinSheet } from './features/checkin/index.js';
@@ -61,9 +66,31 @@ if (menuBtn && dropMenu) {
   });
 }
 
-// ── Android back button ────────────────────────────────────────
-window.addEventListener('popstate', () => {
-  if (document.querySelectorAll('.station-sheet.sheet-open').length > 0) {
-    closeAllSheets(true);
-  }
-});
+// ── Кнопка «Назад» ────────────────────────────────────────────
+// Нативний Android: апаратна кнопка через @capacitor/app.
+//   Пріоритет: закрити відкриту шторку → вийти з додатку.
+//   canGoBack враховує pushSheetHistory() — тому перевіряємо шторки першими,
+//   а не покладаємось на canGoBack як основний сигнал.
+//
+// Веб / PWA: браузерна кнопка «Назад» або свайп → popstate.
+//   На нативному popstate НЕ реєструємо: Capacitor може тригерити обидві події
+//   одночасно, що призводить до подвійного виклику closeAllSheets.
+
+if (Capacitor.isNativePlatform()) {
+  App.addListener('backButton', ({ canGoBack }) => {
+    const hasOpenSheet = document.querySelectorAll('.station-sheet.sheet-open').length > 0;
+    if (hasOpenSheet) {
+      closeAllSheets(true);
+    } else if (canGoBack) {
+      window.history.back();
+    } else {
+      App.exitApp();
+    }
+  });
+} else {
+  window.addEventListener('popstate', () => {
+    if (document.querySelectorAll('.station-sheet.sheet-open').length > 0) {
+      closeAllSheets(true);
+    }
+  });
+}

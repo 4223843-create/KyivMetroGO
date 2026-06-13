@@ -1,18 +1,18 @@
 {
-  "appId": "com.yourname.kyivmetrogo",
+  "appId": "ua.opivnochi.metrogo",
   "appName": "KyivMetroGO",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": true
+    },
+    "Keyboard": {
+      "resize": "body",
+      "resizeOnFullScreen": true
     }
   },
   "android": {
-    "backgroundColor": "#000000",
-    "buildOptions": {
-      "keystorePath": "your-keystore.jks",
-      "keystoreAlias": "key0"
-    }
+    "backgroundColor": "#000000"
   }
 }

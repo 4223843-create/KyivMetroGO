@@ -1,14 +1,5 @@
 // ══ PHOTO STORAGE ══
 // Відповідальність: зберігання фотографій позицій у IndexedDB.
-// Абстракція спроєктована під Capacitor-міграцію:
-// при переході на нативну ФС — міняємо тільки цей файл,
-// devmode.js не чіпаємо взагалі.
-//
-// Capacitor-план:
-//   save(id, dataUrl) → Filesystem.writeFile({ path: `photos/${id}.jpg`, ... })
-//   load(id)         → Filesystem.readFile(...)  → повертає dataUrl
-//   remove(id)       → Filesystem.deleteFile(...)
-//   clear()          → Filesystem.readdir() + deleteFile для кожного
 
 const DB_NAME    = 'MetroPhotoDB';
 const STORE_NAME = 'photos';

@@ -2,19 +2,18 @@
 // Відповідальність: зберегти зміни локально + відправити на Formspree.
 // Не знає про DOM. Спілкується з іншими модулями через bus.
 
-import { STORAGE_KEYS, Storage }    from '@core/storage.js';
-import { state as appState }        from '@core/state.js';
-import { bus }                      from '@core/eventBus.js';
-import { isDevMode, appendDevLog }  from '@features/devmode.js';
+import { STORAGE_KEYS, Storage }    from '../../core/storage.js';
+import { state as appState }        from '../../core/state.js';
+import { bus }                      from '../../core/eventBus.js';
+import { isDevMode, appendDevLog }  from '../devmode.js';
 import {
   saveLocalEdit, getLocalEdits, clearAllLocalEdits,
   invalidateLocalEditsCache, applyLocalEdits, saveExitLabel,
-} from '@data/localEdits.js';
+} from '../../data/localEdits.js';
 import { fbState, resetFbState }    from './fbState.js';
 import { extractFinalValues, buildChangeText } from './fbUtils.js';
 
 const FORMSPREE_URL = 'https://formspree.io/f/xrejbjww';
-const LINE_NAMES    = { red: 'Червона', blue: 'Синя', green: 'Зелена' };
 let _isSubmitting   = false;
 
 /**
@@ -122,6 +121,14 @@ export async function submitFeedback(background = false) {
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
+  // Блокуємо кнопку та очищаємо попередній результат на час відправки
+  if (!background) {
+    const sendBtn  = document.getElementById('fbSend');
+    const resultEl = document.getElementById('fbResult');
+    if (sendBtn)  { sendBtn.disabled = true; sendBtn.textContent = 'Відправка…'; }
+    if (resultEl)   resultEl.innerHTML = '';
+  }
+
   try {
     const formspreeLines = [
       ...posChanges.map(c => buildChangeText(c.p, c.nw ?? c.p.wagon, c.nd ?? c.p.doors, !!c.closed)),
@@ -132,7 +139,7 @@ export async function submitFeedback(background = false) {
     const response = await fetch(FORMSPREE_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ station: s.name, slug, line: LINE_NAMES[s.line], changes: formspreeLines.join('\n') }),
+      body:    JSON.stringify({ station: s.name, changes: formspreeLines.join('\n') }),
       signal:  controller.signal,
     });
     clearTimeout(timeoutId);

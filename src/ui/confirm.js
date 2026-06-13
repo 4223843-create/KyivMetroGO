@@ -1,3 +1,7 @@
+// ══ МОДАЛЬНИЙ ДІАЛОГ ПІДТВЕРДЖЕННЯ ══
+// Відповідальність: показ кастомного confirm-вікна з анімацією «двері ліфта».
+// Запускається або напряму через showCustomConfirm(), або через bus.on('ui:confirm').
+
 import { bus }           from '../core/eventBus.js';
 import { runDoorAnimation } from './animations.js';
 import { TIMING }           from '../core/timing.js';
@@ -54,7 +58,7 @@ export function showCustomConfirm(
   overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
 }
 
-// ── Єдиний bus-обробник (P1-B fix: було два, залишаємо один) ──
+// ── Єдиний bus-обробник ──
 // Підтримує розширені параметри (labelYes, labelNo, styleYes, styleNo)
 // для сумісності з bus.emit із settings.js та backup.js.
 bus.on('ui:confirm', (payload) => {

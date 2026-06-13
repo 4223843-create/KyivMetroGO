@@ -1,4 +1,10 @@
-// ══ STORAGE KEYS ══
+// ══ СХОВИЩЕ ДАНИХ ДОДАТКУ (НАТИВНЕ) ══
+// Відповідальність: збереження даних користувача через Capacitor Preferences.
+// Дані зберігаються надійно у системних сховищах iOS (UserDefaults) та Android (SharedPreferences).
+// Читання синхронне з in-memory кешу, запис — асинхронний у фоні.
+
+import { Preferences } from '@capacitor/preferences';
+
 export const STORAGE_KEYS = {
   THEME:          'metro_theme',
   FAVS:           'metro_favs',
@@ -14,7 +20,6 @@ export const STORAGE_KEYS = {
   CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
   HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
   FAV_ONLY_STREAK:     'metro_fav_only_streak',
-  // Режим розробника
   DEV_MODE:     'metro_dev_mode',
   DEV_LOG:      'metro_dev_log',
   DEV_VERIFIED: 'metro_dev_verified',
@@ -24,61 +29,111 @@ export const STORAGE_KEYS = {
   CHECKIN_HATCH:  'metro_checkin_hatch',
 };
 
-// Внутрішній кеш для синхронного доступу
 const memoryCache = new Map();
 
-// ══ STORAGE ADAPTER ══
-// Адаптовано для плавного переходу на Capacitor Preferences API
 export const Storage = {
-  // 1. Асинхронна ініціалізація (викликатимемо один раз при старті)
+  /**
+   * Наповнює in-memory кеш усіма відомими ключами з нативного сховища.
+   * Використовує Promise.all для паралельного та швидкого завантаження.
+   * @returns {Promise<void>}
+   */
   async init() {
-    const keys = Object.values(STORAGE_KEYS);    
-    for (const key of keys) {
-      // ТУТ У МАЙБУТНЬОМУ БУДЕ: const { value } = await Preferences.get({ key });
-      const value = localStorage.getItem(key);
-      if (value !== null) {
-        memoryCache.set(key, value);
+    const keys = Object.values(STORAGE_KEYS);
+    
+    // Паралельно запитуємо всі ключі з нативного сховища
+    const promises = keys.map(key => Preferences.get({ key }));
+    const results = await Promise.all(promises);
+
+    results.forEach((res, index) => {
+      if (res.value !== null) {
+        memoryCache.set(keys[index], res.value);
       }
-    }
+    });
   },
 
-  // 2. Синхронне читання (код працює як раніше!)
+  /**
+   * Синхронне читання з кешу оперативної пам'яті.
+   * @param {string} key
+   * @returns {string|null}
+   */
   get(key) {
     return memoryCache.get(key) ?? null;
   },
 
-  // 3. Збереження (оновлює кеш миттєво, а в базу пише асинхронно)
+  /**
+   * Записує значення в оперативну пам'ять миттєво,
+   * а в нативне сховище — асинхронно у фоні.
+   * @param {string} key
+   * @param {string} value
+   */
   set(key, value) {
     const valStr = String(value);
     memoryCache.set(key, valStr);
     
-    // Загортаємо в Promise.resolve для імітації фонової роботи
-    Promise.resolve().then(() => {
-      localStorage.setItem(key, valStr);
+    // Фоновий нативний запис, який не блокує головний потік UI
+    Promise.resolve().then(async () => {
+      await Preferences.set({ key, value: valStr });
     });
   },
 
-  // 4. Видалення
+  /**
+   * Видаляє ключ з кешу та нативного сховища.
+   * @param {string} key
+   */
   remove(key) {
     memoryCache.delete(key);
     
-    // ТУТ У МАЙБУТНЬОМУ БУДЕ: Preferences.remove({ key });
-    Promise.resolve().then(() => {
-      localStorage.removeItem(key);
+    Promise.resolve().then(async () => {
+      await Preferences.remove({ key });
     });
+  },
+
+  /**
+   * Відновлює дані з бекап-об'єкта.
+   * На відміну від set(), виконує гарантований await — безпечно перед reload().
+   * Очищає всі відомі ключі, потім паралельно записує нові значення.
+   *
+   * @param {Record<string, string>} data — розібраний і валідований бекап
+   * @returns {Promise<void>}
+   */
+  async restoreFromBackup(data) {
+    const APP_PREFIX = 'metro_';
+
+    // 1. Очистити кеш і Preferences для всіх відомих ключів
+    const clearOps = Object.values(STORAGE_KEYS).map(key => {
+      memoryCache.delete(key);
+      return Preferences.remove({ key });
+    });
+    await Promise.all(clearOps);
+
+    // 2. Записати нові значення — тільки metro_* рядки, без службових роздільників
+    const setOps = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (!key.startsWith(APP_PREFIX)) continue;
+      if (key.startsWith('═'))         continue;  // роздільники dev-логу
+      if (typeof value !== 'string')   continue;  // _dev_change_log — масив
+      memoryCache.set(key, value);
+      setOps.push(Preferences.set({ key, value }));
+    }
+    await Promise.all(setOps);
   },
 };
 
-// ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ ══
-// Один раз при ініціалізації модуля — не алокуємо масив на кожен storage-івент
-const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
+// ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ (ДЛЯ ВЕБ-ВЕРСІЇ) ══
+// На нативному Android Storage event між вкладками ніколи не тригериться
+// (WebView — єдиний процес, вкладок немає). Реєструємо тільки на вебі.
+import { Capacitor } from '@capacitor/core';
 
-window.addEventListener('storage', (e) => {
-  if (_VALID_KEYS.has(e.key)) {
-    if (e.newValue === null) {
-      memoryCache.delete(e.key);
-    } else {
-      memoryCache.set(e.key, e.newValue);
+if (!Capacitor.isNativePlatform()) {
+  const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
+
+  window.addEventListener('storage', (e) => {
+    if (_VALID_KEYS.has(e.key)) {
+      if (e.newValue === null) {
+        memoryCache.delete(e.key);
+      } else {
+        memoryCache.set(e.key, e.newValue);
+      }
     }
-  }
-});
+  });
+}

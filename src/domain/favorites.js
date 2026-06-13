@@ -1,3 +1,19 @@
+// ══ DOMAIN: ОБРАНЕ — ЧИСТА БІЗНЕС-ЛОГІКА ══
+// Відповідальність: зберігання та управління Обраними станціями та виходами.
+// ПРАВИЛО: жодного DOM, жодних UI-функцій.
+// Крос-модульні сигнали — виключно через EventBus.
+//
+// Публічне API:
+//   getFavs()                                    → string[]
+//   saveFavs(arr)                                → void
+//   isFav(slug)                                  → boolean
+//   toggleFav(slug)                              → boolean
+//   getExitFavs()                                → ExitFav[]
+//   exitFavId(slug, dir, wagon, doors)           → string
+//   isExitFav(slug, dir, wagon, doors)           → boolean
+//   toggleExitFav(slug, dir, wagon, doors)       → ToggleResult
+//   replaceExitFav(slug, dir, oldW, oldD, newW, newD) → { status: 'replaced' }
+
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
 

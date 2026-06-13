@@ -1,9 +1,9 @@
 // ══ СТАН ФОРМИ ФІДБЕКУ ══
-// Правило: цей модуль не знає ні про DOM, ні про MetroApp, ні про Storage.
+// Правило: цей модуль не знає ні про DOM, ні про Storage.
 // Він є єдиним джерелом правди для feedback-форми.
 
-import { state as appState }           from '@core/state.js';
-import { getLocalEdits, getExitLabel } from '@data/localEdits.js';
+import { state as appState }           from '../../core/state.js';
+import { getLocalEdits, getExitLabel } from '../../data/localEdits.js';
 import { parseDoorValues }             from './fbUtils.js';
 
 /** @typedef {{ wMain:number, dMain:number, wEx:any, dEx:any, wEx2:any, dEx2:any, hasExtra:boolean, hasThird:boolean, isClosed:boolean, isNew?:boolean, dir?:string }} FbEntryState */
@@ -29,7 +29,6 @@ export function resetFbState() {
 }
 
 /**
- * Чиста функція: обчислює isDirty без мутації стану і без DOM.
  * @param {string[]} changedLabelKeys — масив ключів inputs із data-changed="true"
  */
 export function computeIsDirty(changedLabelKeys = []) {
@@ -50,7 +49,6 @@ export function computeIsDirty(changedLabelKeys = []) {
   return changedLabelKeys.length > 0;
 }
 
-/** Синхронізує current[idx] з тим, що є в DOM. Єдине місце, де state ←← DOM. */
 export function syncCurrentFromDOM(idx) {
   const cur = fbState.current[idx];
   if (!cur) return;
@@ -62,9 +60,7 @@ export function syncCurrentFromDOM(idx) {
   cur.wEx2  = rd(`fbW_ex2_${idx}`);
   cur.dEx2  = rd(`fbD_ex2_${idx}`);
 }
-/** * Ініціалізує стан форми для конкретної станції, 
- * враховуючи як оригінальні дані, так і локальні зміни.
- */
+
 export function initFeedbackState(slug) {
   resetFbState();
   fbState.slug = slug;
@@ -80,7 +76,6 @@ export function initFeedbackState(slug) {
 
     fbState.original[i] = { ...parsed, isClosed: !!edits[i]?.closed };
     
-    // Робимо глибоку копію об'єкта
     fbState.current[i] = structuredClone(fbState.original[i]);
     
     fbState.labels[i] = getExitLabel(slug, i) ?? (p.exit ? p.exit.trim() : '');

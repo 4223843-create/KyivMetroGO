@@ -1,6 +1,21 @@
-// ═══════════════════════════════════════════════════════
-// РЕЖИМ РОЗРОБНИКА — DEV MODE
-// ═══════════════════════════════════════════════════════
+// ══ FEATURE: РЕЖИМ РОЗРОБНИКА (DEV MODE) ══
+// Відповідальність: перегляд і верифікація даних позицій безпосередньо у UI станції.
+// Активується прихованим жестом (5 тапів на футері About-шторки).
+//
+// Публічне API:
+//   isDevMode()                          → boolean
+//   toggleDevMode()                      → boolean
+//   getDevLog()                          → LogEntry[]
+//   appendDevLog(entry)                  → void
+//   isVerified(slug, posIdx)             → boolean
+//   toggleDevVerified(slug, posIdx)      → boolean
+//   getDevNote(slug, posIdx)             → string
+//   setDevNote(slug, posIdx, text)       → void
+//   attachDevModeUI(container, slug)     → void
+//   showDevModeToast(active)             → void
+//   updateDevModeIndicator(sheet, active)→ void
+//   setupDevModeTapCounter(aboutSheet)   → void
+
 
 const DEV_CHECK_SVG = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M14.83 4.89l1.34.94-5.81 8.38H9.02L5.78 9.67l1.34-1.25 2.57 2.4z"/></svg>`;
 
@@ -16,10 +31,12 @@ import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
 
 // ── Активація / деактивація ──────────────────────────
+/** Повертає true якщо режим розробника активний. */
 export function isDevMode() {
   return Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
 }
 
+/** Перемикає режим розробника. Повертає новий стан. */
 export function toggleDevMode() {
   const next = !isDevMode();
   Storage.set(STORAGE_KEYS.DEV_MODE, String(next));
@@ -27,11 +44,16 @@ export function toggleDevMode() {
 }
 
 // ── Лог змін ────────────────────────────────────────
+/** @returns {object[]} масив записів про всі зміни позицій у dev-режимі */
 export function getDevLog() {
   try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_LOG) || '[]'); }
   catch(e) { return []; }
 }
 
+/**
+ * Додає запис до dev-лога.
+ * @param {{ station:string, slug:string, dir:string, exit:string, posIdx:number, field:string, from:*, to:* }} entry
+ */
 export function appendDevLog(entry) {
   const log = getDevLog();
   log.push({ ts: Date.now(), ...entry });
@@ -39,6 +61,11 @@ export function appendDevLog(entry) {
 }
 
 // ── Верифіковані позиції ─────────────────────────────
+/**
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {boolean} true якщо позицію верифіковано в dev-режимі
+ */
 export function isVerified(slug, posIdx) {
   try {
     const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
@@ -46,6 +73,12 @@ export function isVerified(slug, posIdx) {
   } catch(e) { return false; }
 }
 
+/**
+ * Перемикає прапор верифікації позиції.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {boolean} новий стан верифікації
+ */
 export function toggleDevVerified(slug, posIdx) {
   try {
     const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
@@ -62,6 +95,12 @@ export function toggleDevVerified(slug, posIdx) {
 }
 
 // ── Нотатки ──────────────────────────────────────────
+/**
+ * Повертає нотатку розробника для позиції або порожній рядок.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {string}
+ */
 export function getDevNote(slug, posIdx) {
   try {
     const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
@@ -69,6 +108,13 @@ export function getDevNote(slug, posIdx) {
   } catch(e) { return ''; }
 }
 
+/**
+ * Зберігає або видаляє нотатку розробника для позиції.
+ * Порожній text — видаляє запис.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @param {string} text
+ */
 export function setDevNote(slug, posIdx, text) {
   try {
     const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
@@ -83,6 +129,12 @@ export function setDevNote(slug, posIdx, text) {
 }
 
 // ── UI: кнопки в картці станції ──────────────────────
+/**
+ * Вставляє кнопки dev-режиму (верифікація, нотатка, фото) у картку станції.
+ * Нічого не робить якщо isDevMode() === false.
+ * @param {HTMLElement} container — зазвичай sheetBody
+ * @param {string}      slug
+ */
 export function attachDevModeUI(container, slug) {
   if (!isDevMode()) return;
   const lineColor = LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)';
@@ -293,6 +345,10 @@ function showDevPhotoFullscreen(src) {
 }
 
 // ── UI: тост активації ────────────────────────────────
+/**
+ * Показує тимчасовий тост про стан dev-режиму.
+ * @param {boolean} active
+ */
 export function showDevModeToast(active) {
   document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
   const toast = document.createElement('div');
@@ -308,6 +364,11 @@ export function showDevModeToast(active) {
 
 const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
 
+/**
+ * Оновлює SVG-іконку dev-режиму у About-шторці.
+ * @param {HTMLElement} aboutSheet
+ * @param {boolean}     active
+ */
 export function updateDevModeIndicator(aboutSheet, active) {
   const container = aboutSheet.querySelector('#aboutDevBtnContainer');
   if (!container) return;
@@ -319,6 +380,11 @@ export function updateDevModeIndicator(aboutSheet, active) {
 }
 
 // ── Лічильник тапів на футері ─────────────────────────
+/**
+ * Ініціалізує лічильник прихованих тапів на футері About-шторки.
+ * 5 тапів поспіль — перемикають dev-режим.
+ * @param {HTMLElement} aboutSheet
+ */
 export function setupDevModeTapCounter(aboutSheet) {
   let tapCount = 0;
   let tapTimer = null;

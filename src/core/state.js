@@ -1,7 +1,6 @@
 // ══ МУТАБЕЛЬНИЙ СТАН ДОДАТКУ ══
 // Тільки те, що змінюється під час роботи.
 // Константи — в core/constants.js.
-// MetroApp-namespace — в main.js (одноразово при старті).
 
 export const state = {
   stationsData:          null,   // { [slug]: StationObject }

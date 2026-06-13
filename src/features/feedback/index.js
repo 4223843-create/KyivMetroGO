@@ -1,44 +1,62 @@
 // ══ FEEDBACK — ПУБЛІЧНЕ API ══
 // Єдина точка входу для зовнішніх модулів.
 
-import { bus }                                   from '@core/eventBus.js';
-import { state as appState }                     from '@core/state.js';
-import { fbState, resetFbState, computeIsDirty } from './fbState.js';
+import { bus }                                   from '../../core/eventBus.js';
+import { state as appState }                     from '../../core/state.js';
+import { fbState, resetFbState }                 from './fbState.js';
 import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
 
-// РЕЕКСПОРТ: передаємо функцію далі назовні (для devmode.js)
 export { renderFeedbackPositions }               from './fbRenderer.js';
 
 bus.on('sheet:open-feedback', openFeedbackSheet);
-
-// ── Синхронізація прапора для core/unsavedCheck (Dependency Rule: core не імпортує features) ──
 bus.on('feedback:dirty-changed', ({ isDirty }) => { appState.hasUnsavedFeedback = isDirty; });
-
-// ── Fire-and-forget submit із unsavedCheck (без прямого імпорту fbApi у core) ──
 bus.on('feedback:submit-silent', () => submitFeedback(true));
 
-let _sheetEl    = null;   // кешований DOM-вузол
-let _sheetBound = false;  // чи вже підписані listeners
+bus.on('feedback:submit-ui', ({ status, background }) => {
+  if (background) return;
 
-// ── Ядро: відкрити / закрити ────────────────────────────────
+  const resultEl = document.getElementById('fbResult');
+  const sendBtn  = document.getElementById('fbSend');
+  if (!resultEl) return;
+
+  if (sendBtn) {
+    sendBtn.disabled    = false;
+    sendBtn.textContent = 'Застосувати';
+  }
+
+  if (status === 'success') {
+    resultEl.innerHTML =
+      '<p class="fb-note fb-success">✓ Дякуємо! Зміни надіслано та збережено локально.</p>';
+  } else if (status === 'network-error') {
+    resultEl.innerHTML =
+      '<p class="fb-note fb-warn">Немає з\'єднання з інтернетом — зміни збережено локально ' +
+      'і будуть надіслані при наступному запуску з мережею.</p>';
+  } else if (status === 'local-only') {
+    resultEl.innerHTML =
+      '<p class="fb-note fb-success">✓ Зміни збережено локально.</p>';
+  }
+});
+
+let _sheetEl    = null;   
+let _sheetBound = false;  
 
 export function openFeedbackSheet() {
   try {
-    _ensureSheetDOM();            // створює DOM + одразу bind listeners (один раз)
-    _resetSheetUI();              // скидає поля, прибирає старі дані
-    _openSheetDOM();              // клас .sheet-open + overlay
+    _ensureSheetDOM();            
+    _resetSheetUI();              
+    _openSheetDOM();              
   } catch (err) {
     console.error('[FeedbackSheet] openFeedbackSheet failed:', err);
   }
 }
 
 export function closeFeedbackSheet() {
-  if (!hasUnsavedFeedback()) { _forceClose(); return; }
+  if (!fbState.isDirty) { _forceClose(); return; }
 
   const fbSlug      = document.getElementById('fbStation')?.value || '';
   const stationName = (fbSlug ? appState.stationsData?.[fbSlug]?.name : '') || '';
-  const question    = stationName
+  const question = stationName
     ? `Зберегти зміни для станції <span style="white-space:nowrap;font-variant:small-caps;letter-spacing:0.04em;">${stationName}?</span>`
     : 'Зберегти зміни?';
 
@@ -50,12 +68,6 @@ export function closeFeedbackSheet() {
   });
 }
 
-function hasUnsavedFeedback() {
-  return fbState.isDirty;
-}
-
-// ── Внутрішні хелпери ───────────────────────────────────────
-
 function _ensureSheetDOM() {
   if (_sheetEl) return;
   _sheetEl = document.createElement('div');
@@ -64,7 +76,6 @@ function _ensureSheetDOM() {
   const tpl = document.getElementById('tpl-feedback-sheet');
   _sheetEl.appendChild(tpl.content.cloneNode(true));
   document.body.appendChild(_sheetEl);
-  // Q-4 fix: bind одразу після createElement — _resetSheetUI відповідає лише за скидання полів
   _bindOnce();
 }
 
@@ -89,7 +100,6 @@ function _resetSheetUI() {
   if (changeBtn)      changeBtn.hidden      = true;
   if (lineFilterWrap) lineFilterWrap.hidden = false;
   if (sendBtn) { sendBtn.textContent = 'Застосувати'; sendBtn.disabled = true; sendBtn.style.color = ''; }
-  // Клік по «Всі лінії» — показати список станцій
   document.querySelector('#fbLineFilter .search-line-btn[data-line=""]')?.click();
 }
 

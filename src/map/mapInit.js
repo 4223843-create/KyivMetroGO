@@ -3,6 +3,11 @@ import { state }                        from '../core/state.js';
 import { renderMapZones, checkAppReady } from '../data/stations.js';
 import { applyVisitedHatchOverlays } from './mapInteraction.js';
 
+// ══ ІНІЦІАЛІЗАЦІЯ КАРТИ ══
+// Відповідальність: вставка SVG, розрахунок масштабу та центрування,
+// адаптація висоти viewport під реальний розмір екрана (враховує адресний рядок браузера).
+
+
 const vp    = document.getElementById('mapViewport');
 const inner = document.getElementById('mapInner');
 
@@ -16,6 +21,11 @@ setTimeout(() => {
   document.getElementById('startupLoader')?.classList.add('hidden');
 }, 10_000);
 
+/**
+ * Встановлює висоту mapViewport рівно до нижнього краю екрана.
+ * Враховує візуальний viewport (window.visualViewport) для коректної роботи
+ * в мобільних браузерах з динамічною адресною панеллю.
+ */
 export function adjustViewportHeight() {
   if (!vp) return;
   const top   = vp.getBoundingClientRect().top;
@@ -23,6 +33,11 @@ export function adjustViewportHeight() {
   vp.style.height = Math.max(120, avail) + 'px';
 }
 
+/**
+ * Вираховує початковий масштаб карти та вирівнює видимість по центру схеми.
+ * На вузьких екранах (≤500px) застосовує коефіцієнт 4.5 замість 1.5
+ * щоб схема одразу виглядала читабельно без ручного масштабування.
+ */
 export function applyZoomAndCenter() {
   const svgEl = inner.querySelector('svg');
   if (svgEl) {
@@ -54,14 +69,41 @@ export function applyZoomAndCenter() {
     checkAppReady();
     applyVisitedHatchOverlays();
     
-    // Знімаємо блюр з карти та повністю ховаємо лоадер
     vp?.classList.remove('is-loading');
     document.getElementById('startupLoader')?.classList.add('hidden');
   });
 }
 
+/**
+ * Вставляє SVG-схему метро в DOM та запускає початковий рендер.
+ * Викликається один раз з main.js під час bootstrap.
+ */
+/**
+ * Вставляє SVG-схему метро в DOM та запускає початковий рендер.
+ * Викликається один раз з main.js під час bootstrap.
+ */
 export function initMap() {
   inner.innerHTML = svgText;
+
+  const svgEl = inner.querySelector('svg');
+  if (svgEl) {
+    const styleTag = document.getElementById('mapHacksStyle') || document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleTag.id = 'mapHacksStyle';
+    
+    styleTag.textContent = `
+      /* УЛЬТИМАТИВНИЙ ХАК ПРОТИ ПРИМУСОВОЇ ІНВЕРСІЇ CHROMIUM */
+      #mapInner path[aria-label] {
+        fill: #000000 !important;
+        
+        /* Якщо Хром насильно вибілить літери для "контрасту", 
+           цей фільтр схопить уже готовий білий рендер і розчавить його яскравість до 0.
+           Результат: залізобетонний чорний колір у будь-якій темі! */
+        filter: brightness(0) !important;
+      }
+    `;
+    svgEl.appendChild(styleTag);
+  }
+
   renderMapZones();
   adjustViewportHeight();
   applyZoomAndCenter();

@@ -17,6 +17,7 @@ import { dismissHintWithDoors } from '../ui/animations.js';
 import { Icons }                from '../ui/icons.js';
 import { applyFavPillStyles }     from './renderStation.js';
 import { heartSvg }               from '../ui/components.js';
+import { Haptics, NotificationType } from '@capacitor/haptics';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -98,6 +99,12 @@ function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoo
   });
 }
 
+
+
+
+
+
+
 // ── Ядро: toggle exit fav ─────────────────────────────────────
 function _triggerExitFav(favTarget, slug, lineColor) {
   const wagon    = favTarget.dataset.wagon;
@@ -118,13 +125,18 @@ function _triggerExitFav(favTarget, slug, lineColor) {
 
   const added = result.status === 'added';
   if (row) applyFavPillStyles(row, lineColor, added);
+  
   if (added) {
     _showExitFavToast(row);
+
+    // Соковитий подвійний нативний вібровідгук «Успіх»
+    Haptics.notification({ type: NotificationType.Success }).catch(() => {});
+
     _maybeShowCheckinHint(lineColor);
     _maybeDismissOnboarding(lineColor);
   }
 
-  // Оновлюємо серце в шапці
+  // Оновлюємо серце в шапці (тепер цей блок чітко всередині функції)
   const favBtnBar = document.querySelector(`.fav-btn-bar[data-slug="${slug}"]`);
   if (favBtnBar) {
     const nowFav = isFav(slug);

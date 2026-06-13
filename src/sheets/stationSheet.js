@@ -13,6 +13,11 @@ import { withUnsavedCheck }        from '../core/unsavedCheck.js';
 import { renderDirections }        from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
 
+// ══ STATION SHEET ══
+// Відповідальність: рендеринг та відкриття картки станції.
+// Кешує HTML рядків renderDirections та маппінги nav-label → slug
+// для уникнення повторних обчислень при повторних відкриттях.
+
 // ══ DOM-вузли ══
 const sheet            = document.getElementById('stationSheet');
 const sheetBody        = document.getElementById('sheetBody');
@@ -31,18 +36,18 @@ bindSheetGestures(
 
 // ══ КЕШІ (module scope) ══════════════════════════════════════
 
-// [OPT-P1] Кеш HTML рядка renderDirections.
+// Кеш HTML рядка renderDirections.
 // Ключ: slug. Інвалідується при station:refresh (дані змінились).
 const _directionsHtmlCache = new Map(); // slug → html
 
-// [OPT-P2] Кеш slug-маппінгу для nav-label елементів.
+// Кеш slug-маппінгу для nav-label елементів.
 // Ключ: slug. Значення: Map<labelName, targetSlug|null>.
 // Стабільний між відкриттями (назви напрямків незмінні).
 const _navLinkCache = new Map();
 
 // ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
 
-// [OPT-P1] При оновленні даних — інвалідуємо кеш HTML поточної станції
+// При оновленні даних — інвалідуємо кеш HTML поточної станції
 bus.on('station:refresh', () => {
   _directionsHtmlCache.delete(state.currentStationSlug);
   refreshCurrentStation();
@@ -67,7 +72,7 @@ function applyNavLinks(slug) {
   let nameToTarget = _navLinkCache.get(slug);
 
   if (!nameToTarget) {
-    // [OPT-P2] Перший візит: обчислюємо slugByName() і кешуємо результат
+    // Перший візит: обчислюємо slugByName() і кешуємо результат
     nameToTarget = new Map();
     labels.forEach(el => {
       const name = el.dataset.name || '';
@@ -84,7 +89,7 @@ function applyNavLinks(slug) {
     });
     _navLinkCache.set(slug, nameToTarget);
   } else {
-    // [OPT-P2] Повторний візит: нуль slugByName() — тільки DOM writes
+    // Повторний візит: нуль slugByName() — тільки DOM writes
     labels.forEach(el => {
       const target = nameToTarget.get(el.dataset.name || '');
       if (target && target !== slug) {
@@ -108,7 +113,7 @@ function actualOpenStation(slug) {
   const s     = state.stationsData[slug];
   const color = LINE_COLOR[s.line] || 'var(--text-muted)';
 
-  // [OPT-P1] Guard: та сама станція вже відкрита — пропускаємо повний re-render
+  // Guard: та сама станція вже відкрита — пропускаємо повний re-render
   if (state.currentStationSlug === slug && sheet.classList.contains('sheet-open')) {
     // Лише оновлюємо fav-кнопку (стан міг змінитись ззовні)
     _updateFavBtn(slug, color);
@@ -139,7 +144,6 @@ function actualOpenStation(slug) {
   } else if (allExitsClosed) {
     sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
   } else {
-    // [OPT-P1] Читаємо з кешу або рендеримо і зберігаємо
     let directionsHtml = _directionsHtmlCache.get(slug);
     if (!directionsHtml) {
       directionsHtml = renderDirections(s, color);
@@ -149,7 +153,7 @@ function actualOpenStation(slug) {
   }
 
   sheetBody.scrollTop = 0;
-  applyNavLinks(slug); // [OPT-P2] кешований slugByName на повторних відкриттях
+  applyNavLinks(slug);
 
   if (s.slug === 'R.Khreshchatyk') {
     sheet.classList.add('sheet-fullscreen', 'sheet-scrollable');
@@ -177,7 +181,7 @@ function actualOpenStation(slug) {
 
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);
-  // [OPT-P3] querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
+  // querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
 }
@@ -204,7 +208,7 @@ export function refreshCurrentStation() {
   const color      = LINE_COLOR[s.line] || 'var(--text-muted)';
   const prevScroll = sheetBody.scrollTop;
 
-  // [OPT-P1] Кеш вже інвалідовано в bus.on('station:refresh') вище
+  // Кеш вже інвалідовано в bus.on('station:refresh') вище
   stationTitleMain.textContent = s.name;
   sheetBody.innerHTML = renderDirections(s, color);
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
@@ -213,7 +217,7 @@ export function refreshCurrentStation() {
   applyNavLinks(slug);
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);
-  // [OPT-P3] Всі кнопки, а не тільки перша
+  // Всі кнопки, а не тільки перша
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
 

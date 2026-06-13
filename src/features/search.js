@@ -1,3 +1,12 @@
+// ══ FEATURE: ПОШУК СТАНЦІЙ — UI-ШАР ══
+// Відповідальність: рендеринг результатів пошуку та управління шторкою.
+// Нечіткий пошук з підтримкою транслітерації, акронімів та аліасів.
+//
+// Публічне API:
+//   renderSearchResults(query, container, lineFilter) → void
+//   invalidateSearchCache()                          → void
+//   openSearchSheet()                                → void
+
 import { state } from '../core/state.js';
 import { fuzzyMatchToken } from '../utils/stringMatchers.js';
 import { pushSheetHistory }   from '../ui/system.js';
@@ -15,19 +24,28 @@ const SEARCH_ALIASES = {
   'кпі':                 'R.Politekhnychnyi_instytut',
 };
 
-// [OPT-P2] Підняти в module scope — не алокуємо масив в циклі по станціях
+// Підняти в module scope — не алокуємо масив в циклі по станціях
 const SEARCH_ALIASES_ENTRIES = Object.entries(SEARCH_ALIASES);
 
-// [OPT-P5] Кеш HTML для порожнього запиту без лінійних фільтрів
+// Кеш HTML для порожнього запиту без лінійних фільтрів
 // Інвалідується при зміні stationsData (нове посилання після reloadStationsData)
 let _emptyQueryHtml    = null;
 let _emptyQueryDataRef = null;
 
+/** Скидає кеш HTML порожнього запиту (викликається після reloadStationsData). */
 export function invalidateSearchCache() {
   _emptyQueryHtml    = null;
   _emptyQueryDataRef = null;
 }
 
+/**
+ * Відмальовує результати пошуку у container.innerHTML.
+ * При порожньому query без фільтра повертає кешований HTML.
+ *
+ * @param {string}  query       — нормалізований рядок запиту
+ * @param {Element} container   — DOM-вузол для вставки результатів
+ * @param {Set<string>} lineFilter — активні лінії (порожній Set = всі)
+ */
 export function renderSearchResults(query, container, lineFilter = new Set()) {
   if (!state.stationsData) {
     container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються…</p>';
@@ -43,7 +61,7 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
   // ── Порожній запит без фільтра: повертаємо кешований HTML ─
   if (!query && lineFilter.size === 0) {
     if (_emptyQueryDataRef !== state.stationsData || !_emptyQueryHtml) {
-      // [OPT-P5] Сортуємо і рендеримо лише один раз між перезавантаженнями
+      // Сортуємо і рендеримо лише один раз між перезавантаженнями
       const sorted = [...stations].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
       _emptyQueryHtml    = sorted.map(s => _renderItem(s, false, null)).join('');
       _emptyQueryDataRef = state.stationsData;
@@ -135,6 +153,7 @@ function _renderItem(s, isExitOnly, exitHint) {
 /**
  * Відкриття шторки пошуку
  */
+/** Відкриває шторку пошуку станцій. */
 export function openSearchSheet() {
   pushSheetHistory();
   const sheetOverlay = document.getElementById('sheetOverlay');

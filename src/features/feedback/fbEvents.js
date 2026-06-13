@@ -3,18 +3,18 @@
 // Правило: не генерує HTML, не робить fetch.
 //          Читає DOM → оновлює fbState → викликає callbacks.
 
-import { state as appState }         from '@core/state.js';
-import { bus }                       from '@core/eventBus.js';
-import { STORAGE_KEYS, Storage }     from '@core/storage.js';
+import { state as appState }         from '../../core/state.js';
+import { bus }                       from '../../core/eventBus.js';
+import { STORAGE_KEYS, Storage }     from '../../core/storage.js';
 import { getLocalEdits, saveExitLabel,
          clearAllLocalEdits, invalidateLocalEditsCache,
-         applyLocalEdits, applyExitLabels }  from '@data/localEdits.js';
+         applyLocalEdits, applyExitLabels }  from '../../data/localEdits.js';
 import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
 import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
 import { renderFeedbackPositions, renderResetBtn,
          stationListHtml }                              from './fbRenderer.js';
-import { initKinematicSwipe } from '@ui/swipe.js';
-import { Icons }              from '@ui/icons.js';
+import { initKinematicSwipe } from '../../ui/swipe.js';
+import { Icons }              from '../../ui/icons.js';
 
 // ── Внутрішні DOM-хелпери ────────────────────────────────────
 
@@ -58,8 +58,8 @@ export function markFeedbackDirty() {
  * Викликається ОДИН РАЗ після createElement.
  *
  * @param {HTMLElement} sheet
- * @param {{\n *   onClose:  () => void,
- *   onSubmit: () => void,
+ * @param {{\n * onClose:  () => void,
+ * onSubmit: () => void,
  * }} callbacks
  */
 export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
@@ -245,7 +245,6 @@ function _handleRestore(idx, slug, afterRender) {
 }
 
 function _handleCloseExit(idx, slug, afterRender) {
-  // Новий (isNew) вихід — просто видаляємо
   if (fbState.current[idx]?.isNew) {
     delete fbState.current[idx];
     delete fbState.labels[idx];
@@ -262,7 +261,6 @@ function _handleCloseExit(idx, slug, afterRender) {
     return;
   }
 
-  // Якщо відкрита зона «extra doors» — спочатку стягуємо ex→main
   const exWrap = document.getElementById(`fbExtraWrap${idx}`);
   if (exWrap && !exWrap.classList.contains('is-hidden')) {
     document.getElementById(`fbW${idx}`).textContent = document.getElementById(`fbW_ex${idx}`).textContent;
@@ -277,7 +275,6 @@ function _handleCloseExit(idx, slug, afterRender) {
     return;
   }
 
-  // Позначаємо вихід як закритий
   const p = appState.stationsData[fbState.slug]?.positions[idx];
   if (!p) return;
   saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
@@ -327,7 +324,6 @@ function _handleStep(btn) {
   const idx     = parseInt(id.replace(/[^0-9]/g, ''));
 
   if (isExtra) {
-    // Рух по сусідніх дверях відносно головних
     const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
     const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
     const adj   = getAdjacentDoors(mainW, mainD);
@@ -348,7 +344,6 @@ function _handleStep(btn) {
     document.getElementById(`fbW_ex${idx}`).textContent = curW;
     document.getElementById(`fbD_ex${idx}`).textContent = curD;
 
-    // Третій вхід — автопозиція
     const ex2W  = document.getElementById(`fbW_ex2_${idx}`);
     const ex2D  = document.getElementById(`fbD_ex2_${idx}`);
     const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
@@ -372,7 +367,6 @@ function _handleLabelChange(input, slug) {
   const wrapId = input.id.replace('fbLabelInput', '');
   if (slug && wrapId !== '') saveExitLabel(slug, parseInt(wrapId), input.value);
 
-  // Оновлюємо превью тексту без перемальовки всього posEl
   const wrap = document.getElementById(`fbLabelWrap${wrapId}`);
   const row  = wrap?.previousElementSibling;
   if (!row?.classList.contains('fb-exit-label-row')) return;
@@ -402,7 +396,6 @@ function _toggleLabelInput(itemIdx) {
   if (!wrap || !input) return;
 
   const isOpen = wrap.classList.contains('label-input-open');
-  // Закрити всі інші
   document.querySelectorAll('.fb-exit-label-input-wrap.label-input-open').forEach(w => {
     if (w !== wrap) w.classList.remove('label-input-open');
   });
@@ -429,7 +422,6 @@ function _handleAddExit(dir, slug, afterRender) {
   fbState.labels[newIdx] = '';
 
   renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
-  // Одразу відкриваємо поле вводу опису нового виходу
   setTimeout(() =>
     document.querySelector(`.fb-add-desc-btn[data-item-idx="${newIdx}"]`)?.click(), 100);
 }
@@ -453,7 +445,6 @@ function _handleReset(afterRender) {
     message: 'Скинути всі локальні зміни та повернутись до стандартних даних?',
     onYes: async () => {
       clearAllLocalEdits();
-      // reloadStationsData — викликає index.js через bus, щоб не імпортувати тут
       bus.emit('data:reload-stations', {
         onDone: () => {
           document.getElementById('fbResetWrap').innerHTML =

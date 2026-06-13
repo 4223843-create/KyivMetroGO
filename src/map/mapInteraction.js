@@ -1,3 +1,7 @@
+// ══ ВЗАЄМОДІЯ З КАРТОЮ ══
+// Відповідальність: обробка кліків на SVG-зони станцій,
+// накладання та зняття heatmap-штрихування для відвіданих виходів (check-in).
+
 import { state }                  from '../core/state.js';
 import { getCheckins }            from '../domain/checkin.js';
 import { bus }                    from '../core/eventBus.js';
@@ -12,6 +16,11 @@ const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
 const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
 const HATCH_STEP_PX  = 8;
 
+/**
+ * Обробляє клік або Enter/Space на SVG-зоні карти.
+ * Знаходить slug за id елемента і емітує 'station:open'.
+ * @param {MouseEvent|KeyboardEvent} e
+ */
 export function handleMapInteraction(e) {
   if (!state.stationsData) return;
   if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
@@ -37,7 +46,7 @@ function round(value) {
 
 const _hatchLineCache = new WeakMap();
 
-// [OPT-P4] Кеш зон станцій (будується один раз після renderMapZones)
+// Кеш зон станцій (будується один раз після renderMapZones)
 let _stationZoneEls = null;
 function _getStationZoneEls() {
   // Повертаємо кеш, ТІЛЬКИ якщо він не порожній
@@ -56,12 +65,18 @@ function _getStationZoneEls() {
   return els;
 }
 
+/** Скидає кеш зон станцій (викликати після повторного renderMapZones). */
 export function invalidateStationZoneCache() { _stationZoneEls = null; }
 
 let _clipIdCounter = 0;
 
 let _hatchRafId = null;
 
+/**
+ * Планує накладання heatmap-штрихування на відвідані зони карти.
+ * Дедублюється через requestAnimationFrame — безпечно викликати кілька разів поспіль.
+ * @param {Element} [root] — за замовчуванням mapInner
+ */
 export function applyVisitedHatchOverlays(root = inner) {
   if (!root) return;
   if (_hatchRafId !== null) return;
@@ -124,7 +139,7 @@ function _getValidGeometry(target) {
     ? [target]
     : [...target.querySelectorAll(HATCH_GEOMETRY_SELECTOR)];
 
-  // [OPT-P1] getBBox() тільки при першому зверненні до target
+  // getBBox() тільки при першому зверненні до target — кешуємо через WeakMap
   const valid = geometry.filter(shape => {
     if (shape.closest(`.${HATCH_OVERLAY_CLASS}`)) return false;
     try { const b = shape.getBBox(); return b.width > 0 && b.height > 0; }
@@ -158,7 +173,7 @@ function _appendShapeHatch(shape, overlay, isFull, globalScale) {
   const transform    = shape.getAttribute('transform');
   if (transform) shapeOverlay.setAttribute('transform', transform);
 
-  // [OPT-P5] Монотонний лічильник замість Math.random()
+  // Монотонний лічильник замість Math.random()
   const clipId   = `ci-clip-${_clipIdCounter++}`;
   const defs     = document.createElementNS(SVG_NS, 'defs');
   const clipPath = document.createElementNS(SVG_NS, 'clipPath');
@@ -211,6 +226,10 @@ function buildHatchLines(sourceShape, isFull, scale) {
   return { lines, strokeWidth: round(step * 0.35) };
 }
 
+/**
+ * Оновлює CSS-класи зон карти (.is-visited-full / .is-visited-partial) відповідно
+ * до поточного стану check-in. Викликається при 'map:sync-checkins'.
+ */
 export function syncMapWithCheckins() {
   if (!inner || !state.stationsData) return;
 
@@ -223,7 +242,7 @@ export function syncMapWithCheckins() {
     visitedExitsBySlug[entry.slug].add(`${entry.wagon}|${entry.doors}`);
   }
 
-  // [OPT] Set для O(1) lookup замість O(V) array.some()
+  // Set для O(1) lookup замість O(V) array.some()
   const visitedNameSet = new Set(
     Object.keys(visitedExitsBySlug)
       .map(slug => state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase())
@@ -235,7 +254,7 @@ export function syncMapWithCheckins() {
   inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
     .forEach(el => el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full'));
 
-  // [OPT-P4] Кешований список лише зон станцій (не всього SVG)
+  // Кешований список лише зон станцій (не всього SVG)
   _getStationZoneEls().forEach(el => {
     const rawId = el.id.replace(/\d+$/, '').toLowerCase();
     const slug  = getSlugByLower(rawId);
@@ -254,7 +273,7 @@ export function syncMapWithCheckins() {
   inner.querySelectorAll('text').forEach(txt => {
     const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
     if (cleanText.length <= 2) return;
-    // [OPT] O(1) Set.has() замість O(V) array.some() з substring-matching
+    // O(1) Set.has() замість O(V) array.some() з substring-matching
     // Повна відповідність достатня: SVG text збігається з нормалізованою назвою
     if (visitedNameSet.has(cleanText)) {
       txt.classList.add('station-checked-in');

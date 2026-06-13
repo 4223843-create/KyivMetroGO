@@ -1,6 +1,22 @@
+import { Capacitor }                      from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+
 import { state, startupSlug } from '../core/state.js';
 import { bus }                from '../core/eventBus.js';
 import { traversePositions }  from './positions.js';
+
+// ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
+// SW обробляє stations.json для веб/PWA (networkFirst + version-check + postMessage).
+// На нативній платформі SW інертний — реалізуємо ту саму логіку вручну:
+//   1. fetch(REMOTE_STATIONS_URL) з таймаутом
+//   2. Filesystem.Cache як проміжний кеш
+//   3. http://localhost/stations.json (bundled в APK) як фінальний fallback
+//
+// Замініть REMOTE_STATIONS_URL на реальний домен перед релізом.
+
+const REMOTE_STATIONS_URL = 'https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/public/stations.json';
+const NATIVE_CACHE_PATH   = 'stations_cache.json';
+const FETCH_TIMEOUT_MS    = 8000;
 
 // ══ ПРИВАТНІ СЛОВНИКИ (closure) ══════════════════════════════
 // Заповнюються у hydrateStations(), читаються через slugByName() / getSlugByLower().
@@ -104,11 +120,9 @@ export function getSlugByLower(lowerSlug) {
  * @returns {Record<string, object>} state.stationsData
  */
 export function hydrateStations(data) {
-  // Очищаємо поточний стан
   if (!state.stationsData) state.stationsData = {};
   Object.keys(state.stationsData).forEach(key => delete state.stationsData[key]);
 
-  // Очищаємо приватні словники
   Object.keys(_nameToSlug).forEach(k  => delete _nameToSlug[k]);
   Object.keys(_slugByLower).forEach(k => delete _slugByLower[k]);
 
@@ -163,8 +177,6 @@ export function hydrateStations(data) {
     state.stationsData[station.slug] = station;
   });
 
-  // Блок Б: замість прямих викликів MetroApp.applyLocalEdits / MetroApp.applyExitLabels
-  // та присвоєння MetroApp.currentStationsData — емітуємо подію.
   // data/localEdits.js підписаний через bus.on('data:stations-hydrated') і виконує
   // applyLocalEdits + applyExitLabels синхронно перед поверненням цієї функції.
   bus.emit('data:stations-hydrated', { stationsData: state.stationsData });
@@ -176,7 +188,6 @@ export function hydrateStations(data) {
 
 /**
  * Прив'язує SVG-зони на карті до slug-ів станцій.
- * Використовує приватний _slugByLower замість MetroApp.SLUG_BY_LOWER.
  */
 export function renderMapZones() {
   if (state.isZonesReady) return;
@@ -214,29 +225,178 @@ export function checkAppReady() {
   });
 }
 
-// ══ ЗАВАНТАЖЕННЯ ══════════════════════════════════════════════
+// ══ НАТИВНЕ ЗАВАНТАЖЕННЯ (три рівні надійності) ═══════════════
 
+/**
+ * Зчитує закешовану версію stations.json з Filesystem.Cache.
+ * Повертає { data, version } або null якщо кеш відсутній / пошкоджений.
+ *
+ * @returns {Promise<{ data: object, version: number|string|null }|null>}
+ */
+async function _readFilesystemCache() {
+  try {
+    const cached = await Filesystem.readFile({
+      path:      NATIVE_CACHE_PATH,
+      directory: Directory.Cache,
+      encoding:  Encoding.UTF8,
+    });
+    const data = JSON.parse(cached.data);
+    return { data, version: data.version ?? null };
+  } catch {
+    return null; // кеш відсутній або JSON пошкоджений
+  }
+}
+
+/**
+ * Зберігає свіжі дані stations.json у Filesystem.Cache.
+ * Помилка запису не є критичною — додаток продовжить роботу з мережевими даними.
+ *
+ * @param {object} data — розібраний об'єкт stations.json
+ */
+async function _writeFilesystemCache(data) {
+  try {
+    await Filesystem.writeFile({
+      path:      NATIVE_CACHE_PATH,
+      data:      JSON.stringify(data),
+      directory: Directory.Cache,
+      encoding:  Encoding.UTF8,
+    });
+  } catch {
+    // Не критично: наступний запуск спробує знову.
+  }
+}
+
+/**
+ * Завантажує stations.json для нативної платформи.
+ * Три рівні надійності:
+ *   1. Мережа (REMOTE_STATIONS_URL) з таймаутом → Filesystem.Cache (запис)
+ *   2. Filesystem.Cache (читання) — якщо мережа недоступна
+ *   3. Bundled APK (http://localhost/stations.json) — якщо кеш теж порожній
+ *
+ * При виявленні нової версії емітує 'stations:updated' — swUpdate.js покаже тост.
+ *
+ * @param {boolean} forceFresh — ігнорувати кеш, завжди йти в мережу
+ * @returns {Promise<object>} розібраний stations.json
+ */
+async function _fetchStationsNative(forceFresh = false) {
+  // ── Рівень 1: мережа ─────────────────────────────────────────
+  try {
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    const response = await fetch(REMOTE_STATIONS_URL, {
+      signal: controller.signal,
+      cache:  forceFresh ? 'no-store' : 'default',
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('json')) {
+        throw new Error(`Unexpected content-type: ${contentType}`);
+      }
+
+      const freshData = await response.json();
+
+      // Порівнюємо версію з кешем — щоб повідомити користувача про оновлення.
+      if (!forceFresh) {
+        const cached = await _readFilesystemCache();
+        if (
+          freshData.version != null &&
+          cached?.version   != null &&
+          freshData.version !== cached.version
+        ) {
+          // Дзеркало SW-логіки: там postMessage({ type: 'STATIONS_UPDATED' }),
+          // тут — bus.emit, який swUpdate.js перехоплює через підписку.
+          bus.emit('stations:updated', { version: freshData.version });
+        }
+      }
+
+      // Зберігаємо в кеш асинхронно — не блокуємо гідратацію.
+      _writeFilesystemCache(freshData);
+
+      return freshData;
+    }
+  } catch (networkError) {
+    // AbortError (таймаут) або відсутність мережі — переходимо до рівня 2.
+    if (networkError.name !== 'AbortError') {
+      console.warn('[stations] network fetch failed:', networkError.message);
+    }
+  }
+
+  // ── Рівень 2: Filesystem.Cache ────────────────────────────────
+  if (!forceFresh) {
+    const cached = await _readFilesystemCache();
+    if (cached) {
+      console.info('[stations] loaded from Filesystem cache');
+      return cached.data;
+    }
+  }
+
+  // ── Рівень 3: bundled APK (http://localhost/stations.json) ────
+  console.info('[stations] falling back to bundled APK copy');
+  const bundledUrl      = getStationsUrl();
+  const bundledResponse = await fetch(bundledUrl);
+
+  if (!bundledResponse.ok) {
+    throw new Error(
+      `stations.json bundled fetch failed: ${bundledResponse.status} (${bundledUrl.href})`,
+    );
+  }
+  return bundledResponse.json();
+}
+
+// ══ ЗАВАНТАЖЕННЯ (публічне) ════════════════════════════════════
+
+/**
+ * Завантажує та гідратує stations.json.
+ * На нативній платформі — _fetchStationsNative() (мережа→кеш→bundled).
+ * На веб/PWA — прямий fetch; SW самостійно обробляє networkFirst та кешування.
+ *
+ * @param {boolean} [forceFresh=false] — примусово оновити дані (ігнорувати кеш/SW)
+ * @returns {Promise<Record<string, object>>} state.stationsData після гідратації
+ */
 export async function reloadStationsData(forceFresh = false) {
-  const stationsUrl = getStationsUrl();
-  const response    = await fetch(
-    stationsUrl,
-    forceFresh ? { cache: 'no-store' } : undefined,
-  );
+  let data;
 
-  if (!response.ok) {
+  if (Capacitor.isNativePlatform()) {
+    data = await _fetchStationsNative(forceFresh);
+  } else {
+    // Веб/PWA: SW перехоплює цей fetch і виконує networkFirst для stations.json.
+    const stationsUrl = getStationsUrl();
+    const response    = await fetch(
+      stationsUrl,
+      forceFresh ? { cache: 'no-store' } : undefined,
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
+      );
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('json')) {
+      throw new Error(
+        `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
+      );
+    }
+
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      throw new Error(
+        `stations.json contains invalid JSON (${stationsUrl.href}): ${parseError.message}`,
+      );
+    }
+  }
+
+  if (!data || !Array.isArray(data.stations) || data.stations.length === 0) {
     throw new Error(
-      `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
+      'stations.json has unexpected structure: missing or empty "stations" array',
     );
   }
 
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('json')) {
-    throw new Error(
-      `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
-    );
-  }
-
-  const data     = await response.json();
   const hydrated = hydrateStations(data);
 
   if (!forceFresh) {

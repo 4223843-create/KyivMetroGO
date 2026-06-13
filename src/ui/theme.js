@@ -1,7 +1,18 @@
-import { STORAGE_KEYS, Storage } from '@core/storage.js';
+// ══ УПРАВЛІННЯ ТЕМОЮ ОФОРМЛЕННЯ ══
+// Підтримує три варіанти: 'light', 'dark', 'system'.
+// Перемикання без перехідної анімації (transition: none на час зміни атрибута).
+
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
 
 const root = document.documentElement;
 
+/**
+ * Застосовує тему оформлення та опціонально зберігає вибір у Storage.
+ * Перемикання відбувається миттєво (без CSS-переходу) через тимчасовий <style>.
+ *
+ * @param {'light'|'dark'|'system'|string} preference — значення теми
+ * @param {boolean} [save=true] — чи зберігати у Storage
+ */
 export function applyTheme(preference, save = true) {
   let pref = preference;
 
@@ -19,12 +30,11 @@ export function applyTheme(preference, save = true) {
   document.head.appendChild(css);
 
   root.setAttribute('data-theme', actualTheme);
-
+  root.style.colorScheme = actualTheme;
   if (save) {
     Storage.set(STORAGE_KEYS.THEME, pref);
   }
 
-  // Оновлюємо сегментований контрол
   document.querySelectorAll('#settingsThemeSeg .settings-seg-btn').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.themeVal === pref);
   });

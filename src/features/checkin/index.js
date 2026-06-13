@@ -21,6 +21,7 @@ import { LINE_COLOR }         from '../../core/constants.js';
 import { animateSheetClose }  from '../../ui/animations.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
 import { pushSheetHistory }   from '../../ui/system.js';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 import {
   getCheckins,
@@ -119,6 +120,10 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
 
     btn.addEventListener('click', e => {
       e.stopPropagation();
+
+      // Легкий тактильний «клік» при натисканні на шпильку чекіна
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+
       const nowChecked = toggleCheckin(slug, dir, wagon, doors, lineColor);
       btn.classList.toggle('is-checked', nowChecked);
       btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
@@ -398,13 +403,11 @@ export function openCheckinSheet() {
 
 // ══ BUS-ПІДПИСКИ ══════════════════════════════════════════════
 
-// Замінює: MetroApp.attachCheckinButtons = function(sheetEl, slug, lineColor) {...}
 bus.on('checkin:attach-buttons', ({ sheetEl, slug, color }) => {
   attachCheckinButtons(sheetEl, slug, color);
 });
 
 // Після toggleCheckin (domain/checkin) → оновлюємо dock та синхронізуємо карту.
-// Замінює прямі виклики updateCheckinDock() + MetroApp.syncMapWithCheckins?.() у toggleCheckin.
 bus.on('checkin:updated', () => {
   _checkinCount = null;
   updateCheckinDock();

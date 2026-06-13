@@ -1,7 +1,4 @@
 // ══ ABOUT SHEET ══
-// P1-A fix: весь init-блок (let aboutSheet, if (!aboutSheet) {...}, updateLogo, bindBottomLoader)
-// повернуто всередину тіла openAboutSheet(). В оригіналі функція закривалась на рядку 196,
-// залишаючи решту коду на рівні модуля — це спричиняло ReferenceError при відкритті шторки.
 
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { setupDevModeTapCounter } from '../features/devmode.js';
@@ -196,9 +193,6 @@ function bindBottomLoader(aboutSheet) {
 }
 
 // ══ ВІДКРИТТЯ ABOUT-ШТОРКИ ══
-// P1-A fix: весь блок тепер знаходиться всередині функції.
-// В оригінальному коді фігурна дужка закривала функцію на рядку 196,
-// залишаючи let aboutSheet та весь init-блок на рівні модуля.
 export function openAboutSheet() {
   pushSheetHistory();
 
@@ -341,13 +335,31 @@ export function openAboutSheet() {
       this.style.height = this.scrollHeight + 'px';
     });
 
+    // Коли клавіатура з'являється — прокручуємо до кнопки «Відправити»,
+    // щоб вона не ховалась за keyboard на Android Capacitor WebView.
+    bugTextarea.addEventListener('focus', () => {
+      setTimeout(() => {
+        bugSubmitBtn?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 350); // 350 мс — час анімації появи клавіатури
+    });
+
     bugSubmitBtn.addEventListener('click', async () => {
       const text = bugTextarea.value.trim();
       if (!text) { bugTextarea.focus(); return; }
 
-      bugSubmitBtn.disabled = true;
-      bugSubmitBtn.textContent = 'Відправка...';
-      bugResultMsg.textContent = '';
+      // Швидка перевірка офлайн-стану ще до fetch
+      if (!navigator.onLine) {
+        bugResultMsg.textContent   = 'Немає з\'єднання з інтернетом. Спробуйте пізніше.';
+        bugResultMsg.style.color   = 'var(--line-red)';
+        return;
+      }
+
+      bugSubmitBtn.disabled     = true;
+      bugSubmitBtn.textContent  = 'Відправка…';
+      bugResultMsg.textContent  = '';
+
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
       try {
         const res = await fetch('https://formspree.io/f/xpqbovbw', {
@@ -355,10 +367,10 @@ export function openAboutSheet() {
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
             message: text,
-            source:  'About Sheet Bug Report',
-            time:    new Date().toLocaleString('uk-UA'),
           }),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
 
         if (res.ok) {
           bugTextarea.hidden              = true;
@@ -369,13 +381,16 @@ export function openAboutSheet() {
           bugResultMsg.style.fontSize     = 'var(--fs-md)';
           bugResultMsg.style.marginTop    = '8px';
         } else {
-          throw new Error('Server error');
+          throw new Error('HTTP ' + res.status);
         }
-      } catch {
-        bugSubmitBtn.disabled        = false;
-        bugSubmitBtn.textContent     = 'Відправити';
-        bugResultMsg.textContent     = 'Помилка відправки. Спробуйте пізніше.';
-        bugResultMsg.style.color     = 'var(--line-red)';
+      } catch (err) {
+        clearTimeout(timeoutId);
+        bugSubmitBtn.disabled    = false;
+        bugSubmitBtn.textContent = 'Відправити';
+        bugResultMsg.style.color = 'var(--line-red)';
+        bugResultMsg.textContent = err.name === 'AbortError'
+          ? 'Час очікування вичерпано. Перевірте з\'єднання.'
+          : 'Помилка відправки. Спробуйте пізніше.';
       }
     });
   }

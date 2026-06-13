@@ -1,21 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="ua.opivnochi.metrogo">
+
+    <!--
+        KyivMetroGO — мінімальний набір дозволів.
+        Додаток є офлайн-картою метро. Не збирає даних,
+        не використовує геолокацію, не має аналітики.
+        INTERNET потрібен виключно для форми зворотного зв'язку (Formspree)
+        та динамічного оновлення stations.json.
+    -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Стандартний Capacitor-дозвіл: дозволяє WebView отримувати
+        доступ до мережі навіть у режимі "Background Data Restriction".
+        Не є небезпечним (normal protection level).
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:hardwareAccelerated="true"
+        android:usesCleartextTraffic="false">
+
+        <!--
+            usesCleartextTraffic="false" — забороняє HTTP (тільки HTTPS).
+            Formspree і YOUR_DOMAIN.com мають підтримувати HTTPS — що вони і роблять.
+        -->
 
         <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
-            android:label="@string/title_activity_main"
-            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:exported="true"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:windowSoftInputMode="adjustResize">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -24,6 +48,11 @@
 
         </activity>
 
+        <!--
+            FileProvider потрібен для @capacitor/share при експорті бекапу.
+            Надає тимчасовий доступ до файлу в Directory.Cache без дозволу
+            на читання зовнішнього сховища (READ_EXTERNAL_STORAGE не потрібен).
+        -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -31,11 +60,9 @@
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths"></meta-data>
+                android:resource="@xml/file_paths" />
         </provider>
+
     </application>
 
-    <!-- Permissions -->
-
-    <uses-permission android:name="android.permission.INTERNET" />
 </manifest>

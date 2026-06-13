@@ -1,14 +1,22 @@
 // ══ BACKUP SERVICE ══
 // Відповідальність: серіалізація / десеріалізація даних користувача.
-// Правило: жодного MetroApp, жодного bus, жодного UI.
+// Правило: жодного bus, жодного UI.
 //          Повертає дані та Promise<ImportResult> — caller вирішує, що показати.
+//
+// Платформна логіка:
+//   - Нативний Android/iOS → exportData через Filesystem+Share, pickAndValidate через FilePicker
+//   - Веб / PWA (iPhone)   → exportData через Blob+<a>, pickAndValidate через <input type=file>
 
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { Capacitor }                       from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share }                           from '@capacitor/share';
+import { FilePicker }                      from '@capawesome/capacitor-file-picker';
+import { STORAGE_KEYS, Storage }           from '../core/storage.js';
 
 // ── Константи ─────────────────────────────────────────────────
 
 const APP_PREFIX   = 'metro_';
-const BACKUP_TOKEN = STORAGE_KEYS.FAVS; // маркер валідного бекапу
+const BACKUP_TOKEN = STORAGE_KEYS.FAVS;
 
 /**
  * Ключі, які належать користувачу (не налаштуванням).
@@ -36,26 +44,30 @@ export const USER_DATA_KEYS = [
 // ── Хелпери ───────────────────────────────────────────────────
 
 /**
- * Зчитує всі metro_* ключі з localStorage.
- * Не читає через Storage.get(), щоб гарантовано захопити всі ключі,
- * включно з тими, що не оголошені в STORAGE_KEYS (legacy або майбутні).
+ * Зчитує всі metro_* ключі з in-memory кешу Storage.
+ * Коректно читає дані незалежно від платформи (Preferences / localStorage fallback).
  *
  * @returns {Record<string, string>}
  */
 function _readAllAppData() {
   const result = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(APP_PREFIX)) {
-      result[key] = localStorage.getItem(key);
-    }
+  for (const key of Object.values(STORAGE_KEYS)) {
+    const value = Storage.get(key);
+    if (value !== null) result[key] = value;
   }
   return result;
 }
 
 /**
+ * Генерує ім'я файлу бекапу з поточною датою.
+ * @returns {string}
+ */
+function _backupFilename() {
+  return `KyivMetroGO_backup_${new Date().toISOString().slice(0, 10)}.json`;
+}
+
+/**
  * Перевіряє, чи об'єкт є валідним бекапом KyivMetroGO.
- * Мінімальна умова: наявність хоча б одного з відомих ключів.
  *
  * @param {unknown} data
  * @returns {{ valid: boolean, reason?: string }}
@@ -74,23 +86,127 @@ function _validate(data) {
 }
 
 /**
- * Записує данні в localStorage, пропускаючи службові маркери dev-логу.
- * Ключі-роздільники (═══...) ігноруються.
- *
- * @param {Record<string, unknown>} data
+ * Парсить і валідує рядок JSON бекапу.
+ * @param {string} text
+ * @returns {ImportResult}
  */
-function _restoreToStorage(data) {
-  // Очищаємо тільки metro_* ключі, не чіпаємо сторонні (напр. Formspree token)
-  for (let i = localStorage.length - 1; i >= 0; i--) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(APP_PREFIX)) localStorage.removeItem(key);
+function _parseAndValidate(text) {
+  try {
+    const parsed     = JSON.parse(text);
+    const validation = _validate(parsed);
+    if (!validation.valid) return { status: 'invalid', reason: validation.reason };
+    return { status: 'success', data: parsed };
+  } catch {
+    return { status: 'invalid', reason: 'Файл містить некоректний JSON.' };
   }
-  for (const [key, value] of Object.entries(data)) {
-    if (!key.startsWith(APP_PREFIX))    continue;  // ігнор сторонніх
-    if (key.startsWith('═'))            continue;  // ігнор роздільників
-    if (typeof value !== 'string')      continue;  // ігнор _dev_change_log (масив)
-    localStorage.setItem(key, value);
-  }
+}
+
+// ── Реалізації експорту ───────────────────────────────────────
+
+/**
+ * Нативний експорт: записує файл у кеш і відкриває системний шеринг.
+ * @param {string} json
+ * @param {string} filename
+ */
+async function _exportNative(json, filename) {
+  await Filesystem.writeFile({
+    path:      filename,
+    data:      json,
+    directory: Directory.Cache,
+    encoding:  Encoding.UTF8,
+  });
+  const { uri } = await Filesystem.getUri({
+    directory: Directory.Cache,
+    path:      filename,
+  });
+  await Share.share({
+    title:       'KyivMetroGO — резервна копія',
+    url:         uri,
+    dialogTitle: 'Зберегти резервну копію',
+  });
+}
+
+/**
+ * Веб-експорт: Blob + <a download>.
+ * @param {string} json
+ * @param {string} filename
+ */
+function _exportWeb(json, filename) {
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url, download: filename, style: 'display:none',
+  });
+  document.body.appendChild(a);
+  a.click();
+  Promise.resolve().then(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
+// ── Реалізації імпорту ────────────────────────────────────────
+
+/**
+ * Веб-пікер: <input type="file"> з подвійним fallback для скасування.
+ * focus (десктоп) + visibilitychange (Android WebView).
+ * @returns {Promise<ImportResult>}
+ */
+function _pickWeb() {
+  return new Promise(resolve => {
+    const input = Object.assign(document.createElement('input'), {
+      type: 'file', accept: '.json', style: 'display:none',
+    });
+    document.body.appendChild(input);
+
+    let settled = false;
+    const settle = result => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(result);
+    };
+
+    const cleanup = () => {
+      if (input.parentNode) document.body.removeChild(input);
+      window.removeEventListener('focus',            onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+
+    // Fallback А — десктоп і більшість браузерів
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!input.files?.length) settle({ status: 'cancelled' });
+      }, 400);
+    };
+
+    // Fallback Б — Android WebView: додаток повертається у фокус через visibilitychange
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          if (!input.files?.length) settle({ status: 'cancelled' });
+        }, 500);
+      }
+    };
+
+    window.addEventListener('focus',            onFocus,   { once: true });
+    document.addEventListener('visibilitychange', onVisible, { once: true });
+
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (!file) { settle({ status: 'cancelled' }); return; }
+
+      const reader = new FileReader();
+      reader.onerror = () => settle({ status: 'error', error: reader.error });
+      reader.onload  = ev => settle(_parseAndValidate(ev.target.result));
+      reader.readAsText(file);
+    });
+
+    // Нативна подія скасування (сучасні браузери)
+    input.addEventListener('cancel', () => settle({ status: 'cancelled' }));
+
+    input.click();
+  });
 }
 
 // ── Публічне API ──────────────────────────────────────────────
@@ -109,15 +225,16 @@ export function hasUserData() {
 }
 
 /**
- * Генерує та завантажує JSON-файл резервної копії.
- * Синхронний — Blob і URL.createObjectURL не потребують await.
+ * Генерує та зберігає JSON-файл резервної копії.
+ * Нативний: Filesystem + Share. Веб: Blob + <a download>.
  *
  * @param {{ devLog?: Array<object>|null }} [opts]
+ * @returns {Promise<void>}
  */
-export function exportData({ devLog = null } = {}) {
+export async function exportData({ devLog = null } = {}) {
   const allData = _readAllAppData();
 
-  // Dev-лог додається як нефільтрований масив в окремий ключ
+  // Dev-лог — окремий нефільтрований ключ (не рядок → _restoreToStorage ігнорує)
   if (devLog && devLog.length > 0) {
     allData['═══════════════════════════════════════════════════'] =
       '══ ЛОГ ЗМІН — РЕЖИМ РОЗРОБНИКА ══';
@@ -134,86 +251,73 @@ export function exportData({ devLog = null } = {}) {
   }
 
   const json     = JSON.stringify(allData, null, 2);
-  const blob     = new Blob([json], { type: 'application/json' });
-  const url      = URL.createObjectURL(blob);
-  const filename = `KyivMetroGO_backup_${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = _backupFilename();
 
-  const a = Object.assign(document.createElement('a'), {
-    href: url, download: filename, style: 'display:none',
-  });
-  document.body.appendChild(a);
-  a.click();
-  // Мікротаск: прибираємо після того, як браузер ініціював завантаження
-  Promise.resolve().then(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+  if (Capacitor.isNativePlatform()) {
+    await _exportNative(json, filename);
+  } else {
+    _exportWeb(json, filename);
+  }
 }
 
+// ── Нативний пікер ────────────────────────────────────────────
+
 /**
- * Відкриває файловий діалог, читає файл, валідує, повертає результат.
+ * Нативний пікер через @capawesome/capacitor-file-picker.
+ * Використовує системний Intent.ACTION_GET_CONTENT (Android) або UIDocumentPickerViewController (iOS).
+ * Скасування — явне: FilePicker повертає порожній files[], жодних таймерів.
+ * readData:true → file.data є base64, безпечно для маленьких JSON-файлів.
+ *
+ * @returns {Promise<ImportResult>}
+ */
+async function _pickNative() {
+  const result = await FilePicker.pickFiles({
+    types:    ['application/json'],
+    limit:    1,
+    readData: true,
+  });
+
+  // Порожній масив = користувач закрив пікер без вибору
+  if (!result.files.length) return { status: 'cancelled' };
+
+  const file = result.files[0];
+
+  // file.data — base64-рядок; atob() декодує в UTF-8 текст
+  let text;
+  try {
+    text = atob(file.data);
+  } catch {
+    return { status: 'invalid', reason: 'Не вдалося прочитати вміст файлу.' };
+  }
+
+  return _parseAndValidate(text);
+}
+
+// ── Публічне API ──────────────────────────────────────────────
+
+/**
+ * Відкриває файловий діалог, читає, валідує — повертає ImportResult.
  * НЕ перезаписує Storage — caller вирішує, що робити з результатом.
+ *
+ * Нативний Android/iOS → FilePicker (системний Intent, надійне скасування).
+ * Веб / PWA (iPhone)   → <input type="file"> з подвійним fallback.
  *
  * @returns {Promise<ImportResult>}
  */
 export function pickAndValidateBackup() {
-  return new Promise(resolve => {
-    const input = Object.assign(document.createElement('input'), {
-      type: 'file', accept: '.json', style: 'display:none',
-    });
-    document.body.appendChild(input);
-
-    // Cleanup helper
-    const cleanup = () => {
-      if (input.parentNode) document.body.removeChild(input);
-    };
-
-    // Якщо користувач закрив діалог без вибору файлу
-    // 'cancel' подія є лише в нових браузерах — fallback через focus + таймер
-    const onWindowFocus = () => {
-      setTimeout(() => {
-        if (!input.files?.length) { cleanup(); resolve({ status: 'cancelled' }); }
-      }, 400);
-    };
-    window.addEventListener('focus', onWindowFocus, { once: true });
-
-    input.addEventListener('change', () => {
-      window.removeEventListener('focus', onWindowFocus);
-      const file = input.files?.[0];
-      cleanup();
-      if (!file) { resolve({ status: 'cancelled' }); return; }
-
-      const reader = new FileReader();
-      reader.onerror = () => resolve({ status: 'error', error: reader.error });
-      reader.onload  = ev => {
-        try {
-          const parsed     = JSON.parse(ev.target.result);
-          const validation = _validate(parsed);
-          if (!validation.valid) {
-            resolve({ status: 'invalid', reason: validation.reason });
-            return;
-          }
-          // Повертаємо розібрані дані — caller зробить підтвердження і потім restore
-          resolve({ status: 'success', data: parsed });
-        } catch {
-          resolve({ status: 'invalid', reason: 'Файл містить некоректний JSON.' });
-        }
-      };
-      reader.readAsText(file);
-    });
-
-    input.click();
-  });
+  return Capacitor.isNativePlatform() ? _pickNative() : _pickWeb();
 }
 
 /**
  * Відновлює дані з валідованого об'єкту бекапу та перезавантажує сторінку.
  * Викликається лише після підтвердження користувачем.
+ * Гарантує завершення запису до reload().
  *
  * @param {Record<string, string>} data — результат успішного pickAndValidateBackup
+ * @returns {Promise<void>}
  */
-export function restoreAndReload(data) {
-  _restoreToStorage(data);
+export async function restoreAndReload(data) {
+  await Storage.restoreFromBackup(data);
   window.location.reload();
 }
 

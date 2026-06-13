@@ -1,3 +1,8 @@
+// ══ SHEETS MANAGER ══
+// Відповідальність: управління відкриттям/закриттям шторок,
+// overlay, swipe-жести основної шторки, делегування bus-подій.
+// Єдина точка входу для навігації між шторками ззовні (openStation, openAboutSheet).
+
 import { bus }                from '../core/eventBus.js';
 import { withUnsavedCheck }  from '../core/unsavedCheck.js';
 import { openStation }       from './stationSheet.js';
@@ -7,6 +12,7 @@ import { heartSvg }          from '../ui/components.js';
 import { reloadStationsData, getSlugByLower } from '../data/stations.js';
 import { animateSheetClose }  from '../ui/animations.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export { openStation, openAboutSheet, withUnsavedCheck };
 
@@ -17,6 +23,11 @@ const sheetOverlay = document.getElementById('sheetOverlay');
 const dropMenuEl   = document.getElementById('dropMenu');
 
 // ══ ЗАКРИТТЯ ВСІХ ШТОРОК ══
+/**
+ * Закриває всі відкриті шторки (або тільки верхню).
+ * Якщо force=false — спочатку перевіряє незбережений фідбек.
+ * @param {boolean} [force=false]
+ */
 export function closeAllSheets(force = false) {
   if (!force) {
     if (withUnsavedCheck(() => closeAllSheets(true))) return false;
@@ -63,15 +74,16 @@ if (sheetOverlay) {
   });
 }
 
-// P1-D fix: nav-label handler видалено — stationEvents.js вже обробляє
-// кліки через делеговану подію і емітує bus.emit('station:open', { slug }).
-
 const mainFavBtn = sheet?.querySelector('.fav-btn-bar');
 if (mainFavBtn) {
   mainFavBtn.addEventListener('click', e => {
     const btn  = e.currentTarget;
     const slug = btn.dataset.slug;
     if (!slug) return;
+
+    // Додаємо вібровідгук саме сюди: після перевірки, перед збереженням
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+
     const nowFav = toggleFav(slug);
     btn.innerHTML = heartSvg(nowFav, slug, btn.dataset.color || 'var(--text-muted)');
     btn.classList.toggle('fav-active', nowFav);
@@ -84,7 +96,7 @@ setTimeout(() => {
 
 // ══ BUS-ПІДПИСКИ ══
 
-// P1-C fix: feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
+// feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
 bus.on('sheet:close', ({ sheetEl }) => {
   if (!sheetEl) return;
   animateSheetClose(sheetEl, () => {
@@ -95,7 +107,7 @@ bus.on('sheet:close', ({ sheetEl }) => {
   });
 });
 
-// P1-C fix: fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.
+// fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.
 bus.on('data:reload-stations', async ({ onDone } = {}) => {
   try {
     await reloadStationsData();

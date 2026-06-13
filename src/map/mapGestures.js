@@ -1,4 +1,4 @@
-// ══ ЖЕСТИ КАРТИ: PAN + PINCH ZOOM ══
+// ══ ЖЕСТИ КАРТИ: PAN + PINCH ZOOM (OPTIMIZED VIA rAF) ══
 
 import { BASE_MAP_WIDTH, BASE_MAP_HEIGHT } from './mapInit.js';
 import { applyVisitedHatchOverlays } from './mapInteraction.js';
@@ -11,6 +11,7 @@ const sheetOverlay = document.getElementById('sheetOverlay');
 let panStartX = 0, panStartY = 0;
 let panStartScrollLeft = 0, panStartScrollTop = 0;
 let isPanActive = false;
+let pendingPan = null, panRAFScheduled = false;
 
 // ── Pinch zoom (2 пальці) ────────────────────────────────────
 let pendingPinch = null, pinchRAFScheduled = false;
@@ -45,13 +46,30 @@ document.addEventListener('touchstart', e => {
     panStartY          = e.touches[0].clientY;
     panStartScrollLeft = vp.scrollLeft;
     panStartScrollTop  = vp.scrollTop;
+    pendingPan         = null;
   }
 }, { passive: true });
 
 vp.addEventListener('touchmove', e => {
   if (!isPanActive || e.touches.length !== 1) return;
-  vp.scrollLeft = panStartScrollLeft - (e.touches[0].clientX - panStartX);
-  vp.scrollTop  = panStartScrollTop  - (e.touches[0].clientY - panStartY);
+
+  // Зберігаємо останні координати без негайної мутації макету
+  pendingPan = {
+    clientX: e.touches[0].clientX,
+    clientY: e.touches[0].clientY
+  };
+
+  if (!panRAFScheduled) {
+    panRAFScheduled = true;
+    requestAnimationFrame(() => {
+      panRAFScheduled = false;
+      if (!pendingPan) return;
+      
+      vp.scrollLeft = panStartScrollLeft - (pendingPan.clientX - panStartX);
+      vp.scrollTop  = panStartScrollTop  - (pendingPan.clientY - panStartY);
+      pendingPan = null;
+    });
+  }
 }, { passive: true });
 
 document.addEventListener('touchmove', e => {
@@ -103,8 +121,7 @@ document.addEventListener('touchend', e => {
     pinchStartDist    = 0;
     pendingPinch      = null;
     pinchRAFScheduled = false;
-    // Перерисовуємо хетч тільки якщо масштаб реально змінився,
-    // і не частіше ніж раз на 300 мс
+    
     clearTimeout(_hatchTimer);
     _hatchTimer = setTimeout(() => {
       applyVisitedHatchOverlays();
@@ -117,5 +134,9 @@ document.addEventListener('touchend', e => {
     panStartScrollLeft = vp.scrollLeft;
     panStartScrollTop  = vp.scrollTop;
   }
-  if (e.touches.length === 0) isPanActive = false;
+  if (e.touches.length === 0) {
+    isPanActive = false;
+    panRAFScheduled = false;
+    pendingPan = null;
+  }
 }, { passive: true });
