@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   CHECKINS:       'metro_checkins',
   CHECKIN_MODE:       'metro_checkin_mode',
   CHECKIN_BY_STATION: 'metro_checkin_by_station',
+  CHECKIN_BY_EXIT:    'metro_checkin_by_exit',
   START_ON_FAV:   'metro_start_on_fav',
   LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
   CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',

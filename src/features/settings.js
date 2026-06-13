@@ -149,6 +149,15 @@ if (hatchToggle) {
       });
     }
 
+    // Ініціалізація та збереження тумблера чекінів по виходах
+    const checkinByExitToggle = document.getElementById('settingsCheckinByExitToggle');
+    if (checkinByExitToggle) {
+      checkinByExitToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
+      checkinByExitToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.CHECKIN_BY_EXIT, String(e.target.checked));
+      });
+    }
+
     // ── Приховати інформаційні блоки ──
     const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
 if (hideInfoToggle) {
@@ -350,6 +359,9 @@ if (hideInfoToggle) {
     document.querySelectorAll('#settingsCheckinStatSeg .settings-seg-btn').forEach(btn =>
       btn.classList.toggle('is-active', btn.dataset.statVal === savedStat)
     );
+
+    const eX = document.getElementById('settingsCheckinByExitToggle');
+    if (eX) eX.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
 
     const c = document.getElementById('settingsCheckinToggle');
     const l = document.getElementById('settingsLocalFeedbackToggle');

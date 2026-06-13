@@ -412,4 +412,5 @@ bus.on('checkin:updated', () => {
   _checkinCount = null;
   updateCheckinDock();
   bus.emit('map:sync-checkins');
+  bus.emit('station:refresh'); // Оновлюємо станцію на льоту, щоб підсвітити дзеркальні піни
 });

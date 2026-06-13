@@ -463,6 +463,17 @@ document.documentElement.setAttribute('data-theme', actual);
               </div>
             </div>
             <div class="settings-rule"></div>
+            <div class="settings-row" id="checkinByExitRow">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Чекіни по виходам</span>
+                <span class="settings-sublabel" style="text-align: left;">Інакше чекін залежатиме від попередньої станції</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsCheckinByExitToggle">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-rule"></div>
             <div class="settings-row" id="checkinHatchRow">
               <div class="settings-label-wrap">
                 <span class="settings-label">Штриховка відвіданих станцій</span>
@@ -598,14 +609,14 @@ const center = document.getElementById("loaderCenter");
 
     const startTimestamp = Date.now();
     let tail = [];
-    let loaderTimeout = null; // 🔴 ДОДАНО: Створюємо змінну для таймауту
+    let loaderTimeout = null;
 
     function getRandomPetal() {
       return Math.floor(Math.random() * petals.length);
     }
 
     function getRandomInterval() {
-      return 300 + Math.random() * 400; // 300-700ms — непередбачувано
+      return 300 + Math.random() * 400;
     }
 
     function animatePetal(petalIndex) {
@@ -623,7 +634,7 @@ const center = document.getElementById("loaderCenter");
 
     function animateLoader() {
       if (!viewport.classList.contains('is-loading')) {
-        if (loaderTimeout) clearTimeout(loaderTimeout); // Очищуємо
+        if (loaderTimeout) clearTimeout(loaderTimeout);
         return;
       }
 

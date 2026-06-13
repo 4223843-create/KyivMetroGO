@@ -40,7 +40,8 @@ export function showCustomConfirm(
 
   function animateClose(callback) {
     const card = overlay.querySelector('.global-confirm-card');
-    if (!card) { overlay.remove(); callback?.(); return; }
+    // Захист: якщо callback є функцією — викликаємо, якщо null (як при скасуванні) — просто закриваємо
+    if (!card) { overlay.remove(); if (typeof callback === 'function') callback(); return; }
 
     const rect = card.getBoundingClientRect();
     card.style.display = 'none';
@@ -53,9 +54,9 @@ export function showCustomConfirm(
   }
 
   overlay.querySelector('#confirmYes').addEventListener('click', () => animateClose(onYes));
-  overlay.querySelector('#confirmNo').addEventListener('click',  () => animateClose(onNo));
+  // Додано безпечний оператор кліку (?.), якщо кнопки "Ні" немає в HTML
+  overlay.querySelector('#confirmNo')?.addEventListener('click',  () => animateClose(onNo));
   overlay.querySelector('#confirmCancel')?.addEventListener('click', () => animateClose(onCancel));
-  overlay.addEventListener('click', e => { if (e.target === overlay) animateClose(onCancel); });
 }
 
 // ── Єдиний bus-обробник ──

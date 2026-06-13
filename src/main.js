@@ -20,6 +20,7 @@ import './features/checkin/index.js';
 import './features/favorites/index.js';
 import './data/localEdits.js';
 import './sheets/sheetsManager.js';
+import './ui/confirm.js';
 import './app.js';
 
 /** Гарантовано приховує заставку — викликається з обробників помилок. */
@@ -29,8 +30,11 @@ function releaseStartupLoader() {
 }
 
 // Глобальне перехоплення раптових помилок
-window.addEventListener('error', e => { 
-  console.error('[startup] uncaught error', e.error || e.message); 
+window.addEventListener('unhandledrejection', e => { 
+  // Ігноруємо помилки підключення розробницького сервера Vite HMR до WebSockets
+  if (e.reason?.message?.includes('WebSocket') || String(e.reason).includes('string was specified')) return;
+
+  console.error('[startup] unhandled rejection', e.reason); 
   releaseStartupLoader(); 
 });
 window.addEventListener('unhandledrejection', e => { 

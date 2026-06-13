@@ -893,6 +893,54 @@ This section contains the contents of the repository's files.
 </html>
 </file>
 
+<file path="src/utils/stringMatchers.js">
+// ══ STRING MATCHERS ══
+// Чисті функції для нечіткого пошуку. Нуль залежностей від DOM або стану додатку.
+// Покриваються unit-тестами незалежно від будь-якого UI.
+
+/**
+ * Відстань Левенштейна між рядками a та b.
+ * Одновимірний DP-масив для економії пам'яті.
+ * Рання відмова: якщо різниця довжин > 3 — повертаємо 99 без обчислень.
+ *
+ * @param {string} a
+ * @param {string} b
+ * @returns {number}
+ */
+function levenshtein(a, b) {
+  const la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > 3) return 99;
+  let prev = Array.from({ length: lb + 1 }, (_, j) => j);
+  for (let i = 1; i <= la; i++) {
+    const curr = [i];
+    for (let j = 1; j <= lb; j++) {
+      curr[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j], curr[j - 1], prev[j - 1]);
+    }
+    prev = curr;
+  }
+  return prev[lb];
+}
+
+/**
+ * Нечіткий збіг одного токена запиту з одним токеном індексу.
+ * Спочатку — дешевий prefix-check; Левенштейн лише якщо prefix не спрацював.
+ * Поріг: 1 правка для ≤5 символів, 2 — для довших.
+ *
+ * @param {string} query  — нормалізоване слово запиту
+ * @param {string} token  — нормалізоване слово з пошукового індексу
+ * @returns {boolean}
+ */
+export function fuzzyMatchToken(query, token) {
+  if (token.startsWith(query)) return true;
+  if (query.length < 4) return false;          // Короткі запити — тільки prefix
+  const prefix    = token.slice(0, query.length + 1);
+  const threshold = query.length <= 5 ? 1 : 2;
+  return levenshtein(query, prefix) <= threshold;
+}
+</file>
+
 <file path="src/core/eventBus.js">
 // ══ МІНІМАЛЬНИЙ EVENT BUS ══
 // Синхронна шина подій: handlers викликаються в порядку реєстрації,
@@ -942,6 +990,28 @@ export const bus = {
 // 'feedback:submitted'      { slug: string }
 // 'station:refresh'         void
 // 'station:open'            { slug: string }
+</file>
+
+<file path="src/core/timing.js">
+// ══ КОНСТАНТИ ТАЙМІНГІВ АНІМАЦІЙ ══
+// Усі затримки анімацій зібрані тут.
+// Змінюй значення в одному місці — ефект скрізь.
+
+export const TIMING = {
+  DOOR_CALLBACK:  200,
+  DOOR_CLEANUP:   620,
+
+  HINT_CALLBACK:  200,
+  HINT_CLEANUP:   600,
+
+  TOAST_SHOW:    2500,
+  TOAST_FADE:     300,
+
+  PANEL_CLOSE:    300,
+
+  LONG_PRESS:     600,
+  DOUBLE_TAP:     500,
+};
 </file>
 
 <file path="src/data/photoStorage.js">
@@ -2144,6 +2214,36 @@ export function buildChangeText(p, nw, nd, closed) {
 }
 </file>
 
+<file path="src/infra/offline.js">
+// ══ ОФЛАЙН-БАНЕР ══
+
+const banner = document.createElement('div');
+banner.id        = 'offlineBanner';
+banner.className = 'offline-banner';
+banner.setAttribute('role', 'status');
+banner.setAttribute('aria-live', 'polite');
+banner.textContent = 'Офлайн — відображаються кешовані дані';
+banner.hidden = navigator.onLine;
+document.body.appendChild(banner);
+
+window.addEventListener('offline', () => { banner.hidden = false; });
+window.addEventListener('online',  () => { banner.hidden = true;  });
+</file>
+
+<file path="src/infra/serviceWorker.js">
+// ══ РЕЄСТРАЦІЯ SERVICE WORKER ══
+
+export function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./sw.js', { scope: './' })
+      .catch(err => console.error('[PWA] service worker registration failed', err));
+  });
+}
+</file>
+
 <file path="src/services/backup.js">
 // ══ BACKUP SERVICE ══
 // Відповідальність: серіалізація / десеріалізація даних користувача.
@@ -2471,52 +2571,302 @@ export async function restoreAndReload(data) {
 export const BackupService = { exportData, pickAndValidateBackup, restoreAndReload, hasUserData };
 </file>
 
-<file path="src/utils/stringMatchers.js">
-// ══ STRING MATCHERS ══
-// Чисті функції для нечіткого пошуку. Нуль залежностей від DOM або стану додатку.
-// Покриваються unit-тестами незалежно від будь-якого UI.
+<file path="src/ui/animations.js">
+// ══ АНІМАЦІЇ ══
+// Анімація «двері ліфта» і розсування підказок.
+
+import { TIMING } from '../core/timing.js';
 
 /**
- * Відстань Левенштейна між рядками a та b.
- * Одновимірний DP-масив для економії пам'яті.
- * Рання відмова: якщо різниця довжин > 3 — повертаємо 99 без обчислень.
+ * Базова анімація «двері ліфта» — клонує елемент і розсуває клони.
+ * Використовується як animateSheetClose, так і showCustomConfirm.
  *
- * @param {string} a
- * @param {string} b
- * @returns {number}
+ * @param {HTMLElement} el       - елемент, що «розрізається»
+ * @param {DOMRect}     rect     - його getBoundingClientRect()
+ * @param {Function}    callback - викликається через DOOR_CALLBACK мс
+ * @param {HTMLElement} parent   - куди додати клони (body або overlay)
  */
-function levenshtein(a, b) {
-  const la = a.length, lb = b.length;
-  if (Math.abs(la - lb) > 3) return 99;
-  let prev = Array.from({ length: lb + 1 }, (_, j) => j);
-  for (let i = 1; i <= la; i++) {
-    const curr = [i];
-    for (let j = 1; j <= lb; j++) {
-      curr[j] = a[i - 1] === b[j - 1]
-        ? prev[j - 1]
-        : 1 + Math.min(prev[j], curr[j - 1], prev[j - 1]);
-    }
-    prev = curr;
+export function runDoorAnimation(el, rect, callback, parent = document.body) {
+  const baseStyle = [
+    'position:fixed',
+    `top:${rect.top}px`, `left:${rect.left}px`,
+    `width:${rect.width}px`, `height:${rect.height}px`,
+    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
+    'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
+  ].join(';');
+
+  const L = el.cloneNode(true);
+  const R = el.cloneNode(true);
+  L.classList.remove('sheet-open'); L.removeAttribute('id');
+  R.classList.remove('sheet-open'); R.removeAttribute('id');
+  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
+  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
+  parent.appendChild(L);
+  parent.appendChild(R);
+
+  void L.offsetWidth; // force reflow
+  L.style.transform = 'translateX(-50%)'; L.style.opacity = '0';
+  R.style.transform = 'translateX(50%)';  R.style.opacity = '0';
+
+  if (callback) setTimeout(callback, TIMING.DOOR_CALLBACK);
+  setTimeout(() => { L.remove(); R.remove(); }, TIMING.DOOR_CLEANUP);
+}
+
+/**
+ * Закриття шторки через анімацію «двері ліфта».
+ */
+export function animateSheetClose(sheetEl, callback) {
+  if (!sheetEl || !sheetEl.classList.contains('sheet-open')) { callback?.(); return; }
+  const rect = sheetEl.getBoundingClientRect();
+  if (rect.height < 10) { callback?.(); return; }
+
+  sheetEl.style.transition = 'none';
+  sheetEl.style.visibility = 'hidden';
+
+  runDoorAnimation(sheetEl, rect, callback, document.body);
+
+  setTimeout(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      sheetEl.style.transition = '';
+      sheetEl.style.visibility = '';
+    }));
+  }, TIMING.DOOR_CLEANUP);
+}
+
+/**
+ * Розсування підказки (hints у картці станції).
+ * Схожа механіка, але інші тайминги і parent = document.body.
+ */
+export function dismissHintWithDoors(el, onDone) {
+  if (!el || !document.body.contains(el)) { onDone?.(); return; }
+  const rect = el.getBoundingClientRect();
+  if (rect.height < 4) { el.remove(); onDone?.(); return; }
+
+  const baseStyle = [
+    'position:fixed',
+    `top:${rect.top}px`, `left:${rect.left}px`,
+    `width:${rect.width}px`, `height:${rect.height}px`,
+    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
+    'transition:transform 0.55s cubic-bezier(0.32,0.72,0,1),opacity 0.4s ease',
+  ].join(';');
+
+  const L = el.cloneNode(true); L.removeAttribute('id');
+  const R = el.cloneNode(true); R.removeAttribute('id');
+  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0)';
+  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%)';
+  document.body.appendChild(L);
+  document.body.appendChild(R);
+
+  el.style.visibility = 'hidden';
+  void L.offsetWidth;
+  L.style.transform = 'translateX(-52%)'; L.style.opacity = '0';
+  R.style.transform = 'translateX(52%)';  R.style.opacity = '0';
+
+  setTimeout(() => { el.remove(); onDone?.(); }, TIMING.HINT_CALLBACK);
+  setTimeout(() => { L.remove(); R.remove(); }, TIMING.HINT_CLEANUP);
+}
+</file>
+
+<file path="src/ui/components.js">
+// ══ UI-КОМПОНЕНТИ ══
+// Чисті функції: string in → HTML string out. Нуль побічних ефектів.
+
+import { Icons } from './icons.js';
+
+/**
+ * Пілюля «вагон / двері» у картці станції.
+ */
+export function pill(label, value, color) {
+  return `<div class="pos-pill">
+    <div class="pos-pill-label">${label}</div>
+    <div class="pos-pill-num" style="color:${color}">${value}</div>
+  </div>`;
+}
+
+/**
+ * SVG-серце для кнопки Вибраного.
+ */
+export function heartSvg(isFav, _slug, lineColor) {
+  const base = 'width="18" height="18" viewBox="-1 -1 19 19" xmlns="http://www.w3.org/2000/svg"';
+  if (!isFav) {
+    return `<svg ${base} fill="none" stroke="currentColor" stroke-width="1.3"><path d="${Icons.heartPath}"/></svg>`;
   }
-  return prev[lb];
+  return `<svg ${base} fill="${lineColor}"><path d="${Icons.heartPath}"/></svg>`;
 }
+</file>
 
-/**
- * Нечіткий збіг одного токена запиту з одним токеном індексу.
- * Спочатку — дешевий prefix-check; Левенштейн лише якщо prefix не спрацював.
- * Поріг: 1 правка для ≤5 символів, 2 — для довших.
- *
- * @param {string} query  — нормалізоване слово запиту
- * @param {string} token  — нормалізоване слово з пошукового індексу
- * @returns {boolean}
- */
-export function fuzzyMatchToken(query, token) {
-  if (token.startsWith(query)) return true;
-  if (query.length < 4) return false;          // Короткі запити — тільки prefix
-  const prefix    = token.slice(0, query.length + 1);
-  const threshold = query.length <= 5 ? 1 : 2;
-  return levenshtein(query, prefix) <= threshold;
-}
+<file path="thanks.html">
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Дякуємо! - KyivMetroGO</title>
+  
+  <style>
+    :root {
+      --line-red: #c8523a;
+      --line-blue: #5b9bd5;
+      --line-green: #5aaa6a;
+      --text: #ffffff;
+      --text-muted: #ababab;
+      --bg: #000000;
+      --bg-card: #2c2c2e;
+      --btn-bg: #1c1c1e;
+    }
+
+    [data-theme="light"] {
+      --text: #000000;
+      --text-muted: #8e8e93;
+      --bg: #e5e5ea;
+      --bg-card: #ffffff;
+      --btn-bg: #ffffff;
+    }
+    
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --text: #000000;
+        --text-muted: #8e8e93;
+        --bg: #e5e5ea;
+        --bg-card: #ffffff;
+        --btn-bg: #ffffff;
+      }
+    }
+
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      text-align: center;
+    }
+    .salute-container {
+      width: 160px; height: 160px; margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 24px; font-weight: 600; margin: 0 0 10px 0; font-variant: small-caps; letter-spacing: 0.04em;
+    }
+    p {
+      font-size: 15px; color: var(--text-muted); max-width: 340px; margin: 0 0 40px 0; line-height: 1.45;
+    }
+    strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .back-btn {
+      text-decoration: none; font-size: 16px; font-weight: 600;
+      color: var(--text); background: var(--btn-bg);
+      padding: 14px 28px; border-radius: 12px; transition: opacity 0.2s;
+    }
+    .back-btn:active { opacity: 0.7; }
+  </style>
+
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('metro_theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    } catch (e) { }
+  </script>
+</head>
+<body>
+
+  <div class="salute-container">
+    <svg id="saluteSvg" viewBox="-4 -4 44.3 45.1" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; overflow: visible;">
+      <g transform="translate(-162.85484,-126.18087)">
+        <g transform="translate(32.460036,2.9988233)">
+          <g class="eggPetals" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
+            <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
+            <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
+            <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
+            <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 -8,-2 -8,-4.9 z" />
+            <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z" />
+            <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z" />
+            <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z" />
+            <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 -3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
+            <path class="st4" d="m 227.95,217.46 c 2.1,-0.9 4.2,-1.3 4.8,1.4 0.5,2.5 -0.6,5.3 -1.7,6 -1.5,0.3 -4.1,-1 -5.5,-3 -1.4,-2.4 0.3,-3.6 2.4,-4.4 z" />
+            <path class="st4" d="m 212.05,255.66 c -0.9,-2.1 -1.3,-4.2 1.4,-4.7 2.5,-0.5 5.4,0.6 6,1.7 0.3,1.5 -1,4.1 -3.1,5.4 -2.2,1.4 -3.5,-0.3 -4.3,-2.4 z" />
+            <path class="st4" d="m 250.75,271.96 c 2.1,-0.9 3.9,-2.1 2.4,-4.4 -1.4,-2.1 -4.2,-3.3 -5.5,-3 -1.3,0.8 -2.2,3.6 -1.7,6 0.6,2.7 2.7,2.3 4.8,1.4 z" />
+            <path class="st4" d="m 212.05,233.26 c 0.9,-2.1 2.1,-3.9 4.4,-2.4 2.2,1.4 3.4,4.2 3.1,5.4 -0.8,1.3 -3.6,2.2 -6,1.7 -2.8,-0.6 -2.4,-2.6 -1.5,-4.7 z" />
+            <path class="st4" d="m 228.35,271.46 c -2.1,-0.9 -3.9,-2.1 -2.4,-4.4 1.4,-2.1 4.2,-3.3 5.5,-3 1.3,0.8 2.2,3.6 1.7,6 -0.6,2.7 -2.7,2.3 -4.8,1.4 z" />
+            <path class="st4" d="m 250.55,217.46 c 2.1,0.9 3.9,2.1 2.4,4.4 -1.4,2.1 -4.2,3.3 -5.5,3 -1.3,-0.8 -2.2,-3.6 -1.7,-6 0.6,-2.7 2.7,-2.3 4.8,-1.4 z" />
+            <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z" />
+            <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z" />
+          </g>
+          <path class="eggCenter" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" style="fill: var(--line-red)"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <h1 id="thanksTitle">Дякуємо за підтримку!</h1>
+  <p id="thanksText">Вже задонатили на Сили оборони, і хочете допомогти KyivMetroGO?<br><br>Щоб опублікувати додаток в App Store, треба сплатити ліцензію Apple Developer, яка коштує <strong>$99 на рік</strong>.</p>
+  
+  <a href="index.html" class="back-btn">Повернутись до карти</a>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('type') === 'beta') {
+      document.getElementById('thanksTitle').innerText = 'Дякуємо! Напишемо.';
+      document.getElementById('thanksText').innerHTML = 'Електронну адресу збережено.<br><br>За правилами Google Play, перед публікацією ми маємо провести закрите тестування. Для нього потрібно <strong>20 тестувальників</strong>, які користуватимуться додатком <strong>14 днів поспіль</strong>. Ми надішлемо вам запрошення, щойно назбираємо доста охочих!';
+    }
+
+    const rs = getComputedStyle(document.documentElement);
+    
+    const getColor = (prop, fallback) => {
+      const val = rs.getPropertyValue(prop).trim();
+      return val ? val : fallback;
+    };
+
+    const THEME_COLORS = { 
+      red:   getColor('--line-red', '#c8523a'), 
+      blue:  getColor('--line-blue', '#5b9bd5'), 
+      green: getColor('--line-green', '#5aaa6a'), 
+      base:  getColor('--bg-card', '#2c2c2e')
+    };
+
+    const hexToRgb = hex => { const n = parseInt(hex.replace('#',''), 16); return [(n>>16)&255, (n>>8)&255, n&255]; };
+    const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+    const mixColors = (c, b, t) => { const [r1,g1,b1]=hexToRgb(c); const [r2,g2,b2]=hexToRgb(b); return `rgb(${lerp(r2,r1,t)},${lerp(g2,g1,t)},${lerp(b2,b1,t)})`; };
+
+    const svg = document.getElementById('saluteSvg');
+    const petalsUnsorted = Array.from(svg.querySelectorAll('.st4'));
+    const center = svg.querySelector('.eggCenter');
+    const cb = center.getBoundingClientRect();
+    const cx = cb.left + cb.width/2, cy = cb.top + cb.height/2;
+
+    const petals = petalsUnsorted.map(p => {
+      const b = p.getBoundingClientRect();
+      const a = Math.atan2(b.top+b.height/2 - cy, b.left+b.width/2 - cx) * 180 / Math.PI;
+      return { el: p, a: (a+90+360)%360 };
+    }).sort((a,b) => a.a - b.a).map(p => p.el);
+
+    petals.forEach(p => { p.style.fill = THEME_COLORS.base; p.style.transition = "fill 0.25s ease"; });
+
+    const schemes = [
+      { c: THEME_COLORS.red, p: [THEME_COLORS.blue, THEME_COLORS.green] },
+      { c: THEME_COLORS.blue, p: [THEME_COLORS.red, THEME_COLORS.green] },
+      { c: THEME_COLORS.green, p: [THEME_COLORS.red, THEME_COLORS.blue] }
+    ];
+    const s = schemes[Math.floor(Math.random() * schemes.length)];
+
+    const runPetals = () => {
+      const i = Math.floor(Math.random() * petals.length);
+      petals[i].style.fill = mixColors(s.p[i%2], THEME_COLORS.base, 0.85);
+      setTimeout(() => { petals[i].style.fill = THEME_COLORS.base; }, 400);
+      setTimeout(runPetals, 150 + Math.random() * 200);
+    };
+    const runCenter = () => {
+      const ph = (Date.now()/1000)%1.2;
+      center.style.fill = mixColors(s.c, THEME_COLORS.base, 0.35 + Math.abs(Math.sin(ph*Math.PI))*0.65);
+      requestAnimationFrame(runCenter);
+    };
+
+    runPetals(); runCenter();
+  </script>
+</body>
+</html>
 </file>
 
 <file path="src/core/state.js">
@@ -2539,26 +2889,45 @@ export const startupSlug = new URLSearchParams(window.location.search).get('stat
 if (startupSlug) window.history.replaceState({}, document.title, window.location.pathname);
 </file>
 
-<file path="src/core/timing.js">
-// ══ КОНСТАНТИ ТАЙМІНГІВ АНІМАЦІЙ ══
-// Усі затримки анімацій зібрані тут.
-// Змінюй значення в одному місці — ефект скрізь.
+<file path="src/core/unsavedCheck.js">
+// ══ UNSAVED CHECK — СПІЛЬНА УТИЛІТА ══
+// Винесено з sheetsManager.js щоб уникнути кругової залежності:
+//   stationSheet.js → sheetsManager.js → stationSheet.js
+//
+// Імпортується незалежно і в sheetsManager.js, і в stationSheet.js.
 
-export const TIMING = {
-  DOOR_CALLBACK:  200,
-  DOOR_CLEANUP:   620,
+import { state } from './state.js';
+import { bus }   from './eventBus.js';
 
-  HINT_CALLBACK:  200,
-  HINT_CLEANUP:   600,
+/**
+ * Перевіряє наявність незбережених змін у feedback-формі.
+ * Якщо є — показує confirm-діалог і делегує рішення користувачу.
+ * Якщо немає — одразу викликає proceed().
+ *
+ * @param {Function} proceed — callback, що виконується після підтвердження
+ * @returns {boolean} true, якщо діалог було показано (proceed відкладено)
+ */
+export function withUnsavedCheck(proceed) {
+  if (!state.hasUnsavedFeedback) {
+    proceed();
+    return false;
+  }
 
-  TOAST_SHOW:    2500,
-  TOAST_FADE:     300,
+  const fbSlug      = document.getElementById('fbStation')?.value || '';
+  const stationName = (fbSlug ? state.stationsData?.[fbSlug]?.name : '') || '';
+  const question    = stationName
+    ? `Зберегти зміни для станції <span style="white-space:nowrap;font-variant:small-caps;letter-spacing:0.04em;">${stationName}?</span>`
+    : 'Зберегти зміни?';
 
-  PANEL_CLOSE:    300,
+  bus.emit('ui:confirm', {
+  message:  question,
+  onYes:    () => { bus.emit('feedback:submit-silent'); proceed(); },
+  onNo:     () => { proceed(); },
+  onCancel: () => {},
+});
 
-  LONG_PRESS:     600,
-  DOUBLE_TAP:     500,
-};
+  return true;
+}
 </file>
 
 <file path="src/data/positions.js">
@@ -3036,36 +3405,6 @@ bus.on('checkin:updated', () => {
 });
 </file>
 
-<file path="src/infra/offline.js">
-// ══ ОФЛАЙН-БАНЕР ══
-
-const banner = document.createElement('div');
-banner.id        = 'offlineBanner';
-banner.className = 'offline-banner';
-banner.setAttribute('role', 'status');
-banner.setAttribute('aria-live', 'polite');
-banner.textContent = 'Офлайн — відображаються кешовані дані';
-banner.hidden = navigator.onLine;
-document.body.appendChild(banner);
-
-window.addEventListener('offline', () => { banner.hidden = false; });
-window.addEventListener('online',  () => { banner.hidden = true;  });
-</file>
-
-<file path="src/infra/serviceWorker.js">
-// ══ РЕЄСТРАЦІЯ SERVICE WORKER ══
-
-export function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
-
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('./sw.js', { scope: './' })
-      .catch(err => console.error('[PWA] service worker registration failed', err));
-  });
-}
-</file>
-
 <file path="src/infra/swUpdate.js">
 // ══ TOAST «НОВА ВЕРСІЯ ДОСТУПНА» ══
 
@@ -3132,6 +3471,238 @@ if ('serviceWorker' in navigator) {
 // Дзеркало SW-логіки: той самий тост, той самий UX — незалежно від платформи.
 import { bus } from '../core/eventBus.js';
 bus.on('stations:updated', ({ version }) => showDataUpdateToast(version));
+</file>
+
+<file path="src/sheets/renderStation.js">
+import { slugByName } from '../data/stations.js';
+import { state }      from '../core/state.js';
+import { pill }       from '../ui/components.js';
+import { LINE_COLOR } from '../core/constants.js';
+import { Icons }      from '../ui/icons.js';
+
+
+function formatDirLabel(raw) {
+  if (!raw) return raw;
+  const match = raw.trim().match(/^([^\s&]+)(?:\s+|&nbsp;)(.*)$/i);
+  if (!match) return raw;
+  return `${match[1].toLowerCase()} <span class="dir-name-caps">${match[2]}</span>`;
+}
+
+function formatLabel(raw) {
+  const text      = raw.trim();
+  const cleanText = text.replace(/&nbsp;/g, ' ').toLowerCase();
+  const isTransfer = cleanText.includes('пересадка') || cleanText.includes('перехід');
+  if (isTransfer) {
+    const targetSlug = slugByName(cleanText);
+    if (targetSlug && state.stationsData?.[targetSlug]) {
+      const color = LINE_COLOR[state.stationsData[targetSlug].line];
+      return `<span class="transfer-label">` +
+        `<span class="transfer-line" style="background:${color}"></span>` +
+        `<span class="transfer-text">${text}</span>` +
+        `<span class="transfer-line" style="background:${color}"></span>` +
+        `</span>`;
+    }
+  }
+  return `<span class="exit-label-text">${text}</span>`;
+}
+
+// ══ РЕНДЕР ПОЗИЦІЙ ══
+
+/**
+ * Генерує пару пілюль «вагон + двері» для одного або кількох виходів.
+ * Підтримує формат "1, 2" (кілька вагонів через кому).
+ */
+function generatePills(wStr, dStr, color) {
+  const wArr  = String(wStr).split(',').map(s => s.trim());
+  const dArr  = String(dStr).split(',').map(s => s.trim());
+  const blocks = [];
+  const count  = Math.max(wArr.length, dArr.length);
+  for (let i = 0; i < count; i++) {
+    blocks.push(
+      `${pill('вагон', wArr[i] || wArr[0], color)}\n${pill('двері', dArr[i] || dArr[0], color)}`
+    );
+  }
+  return blocks.join('<span class="pos-multi-sep" style="margin: 0 6px;">·</span>');
+}
+
+/**
+ * Генерує div.fav-tap-target з data-wagon та data-doors.
+ * Ці атрибути — єдине джерело правди для stationEvents.js при жестах.
+ * Зберігаємо оригінальні рядки ("1, 2", "1-3") без нормалізації.
+ */
+function favTargetHtml(wStr, dStr, color) {
+  return `<div class="fav-tap-target"
+               data-wagon="${wStr}"
+               data-doors="${dStr}"
+               style="display:flex;gap:6px;align-items:center;">
+    ${generatePills(wStr, dStr, color)}
+  </div>`;
+}
+
+/**
+ * Генерує HTML для одного або кількох .position-row.
+ *
+ * @param {Array}   positions — масив позицій з stationsData
+ * @param {string}  color     — колір лінії
+ * @param {boolean} multiRow  — true для Хрещатика (кілька виходів в одному рядку)
+ */
+function renderPositions(positions, color, multiRow) {
+  positions = positions.filter(p => !p.closed);
+  if (!positions.length) return '';
+
+  // Один вихід
+  if (positions.length === 1) {
+    const p       = positions[0];
+    const isMulti = String(p.wagon).includes(',');
+    const edited  = p._edited
+      ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
+      : '';
+    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
+      ${edited}${favTargetHtml(p.wagon, p.doors, color)}
+    </div>`;
+  }
+
+  // Кілька виходів в одному рядку (Хрещатик)
+  if (multiRow) {
+    const editedPos = positions.find(p => p._edited);
+    const edited    = editedPos
+      ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${Icons.pencil}</span>`
+      : '';
+    const spacer  = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
+    const targets = positions.map((p, i) =>
+      `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}`
+    ).join('');
+    return `<div class="position-row position-row-multi">${edited}${targets}${spacer}</div>`;
+  }
+
+  // Кілька виходів у окремих рядках
+  return positions.map(p => {
+    const isMulti = String(p.wagon).includes(',');
+    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
+      ${favTargetHtml(p.wagon, p.doors, color)}
+    </div>`;
+  }).join('');
+}
+
+// ══ РЕНДЕР ПІДПИСУ ВИХОДУ ══
+
+/**
+ * Генерує HTML підпису виходу (назва вулиці, орієнтир).
+ * Якщо підпис відредаговано локально — додає іконку олівця.
+ */
+function renderExitLabel(exit) {
+  if (!exit.label) return '';
+  const edited = exit._labelEdited
+    ? `<span class="pos-edited-mark label-pencil" data-slug="${exit._slug}">${Icons.pencil}</span>`
+    : '';
+  return `<div class="exit-label nav-label" data-name="${exit.label}">
+    <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
+      ${formatLabel(exit.label)}${edited}
+    </div>
+  </div>`;
+}
+
+// ══ РЕНДЕР НАПРЯМКІВ ══
+
+/**
+ * Головна функція рендеру. Генерує весь HTML тіла картки станції.
+ * Обробляє особливий кейс Хрещатика (довгий перехід окремим блоком).
+ *
+ * @param {Object} s     — об'єкт станції зі stationsData
+ * @param {string} color — колір лінії (#rrggbb)
+ * @returns {string}     — HTML-рядок для вставки в sheetBody.innerHTML
+ */
+export function renderDirections(s, color) {
+  const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
+
+  if (isKhreshchatyk) {
+    const mainDirs = s.directions.filter(d => d.from !== '__long_transfer__');
+    const longDir  = s.directions.find(d => d.from === '__long_transfer__');
+
+    const mainHtml = mainDirs.map(dir => `
+      <div class="direction-block">
+        <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
+        ${dir.exits.map(exit =>
+          `${renderExitLabel(exit)}${renderPositions(exit.positions, color, true)}`
+        ).join('')}
+      </div>`
+    ).join('');
+
+    let longHtml = '';
+    if (longDir) {
+      const rows = longDir.exits.map(exit => {
+        const posRows = exit.positions.map(p =>
+          `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
+        ).join('');
+        const edited = exit._labelEdited
+          ? `<span class="pos-edited-mark" data-slug="${exit._slug}">${Icons.pencil}</span>`
+          : '';
+        return `<div class="long-transfer-exit">
+          <div class="long-transfer-exit-label" style="position:relative;">${edited}${exit.label}</div>
+          ${posRows}
+        </div>`;
+      }).join('');
+
+      longHtml = `<div class="long-transfer-block">
+        <div class="long-transfer-title">
+          <span class="transfer-label">
+            <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
+            <span class="transfer-text">довгий&nbsp;перехід на&nbsp;Майдан&nbsp;Незалежності</span>
+            <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
+          </span>
+        </div>
+        ${rows}
+      </div>`;
+    }
+
+    return mainHtml + longHtml;
+  }
+
+  return s.directions.map(dir => {
+    if (dir.from === 'вихід праворуч') {
+      return `<div class="direction-block direction-exit-right">
+        <div class="direction-label">вихід праворуч</div>
+      </div>`;
+    }
+    if (dir.from.trim().toLowerCase() === 'кінцева') {
+      return `<div class="direction-block direction-exit-right" style="margin-bottom:10px;">
+          <div class="direction-label" style="margin:0;">кінцева</div>
+        </div>
+        <div class="direction-block">
+          ${dir.exits.map(exit =>
+            `${renderExitLabel(exit)}${renderPositions(exit.positions, color, false)}`
+          ).join('')}
+        </div>`;
+    }
+    return `<div class="direction-block">
+      <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
+      ${dir.exits.map(exit =>
+        `${renderExitLabel(exit)}${renderPositions(exit.positions, color, false)}`
+      ).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ══ СТИЛІЗАЦІЯ ПІЛЮЛЬ УЛЮБЛЕНОГО ══
+
+/**
+ * Підфарбовує або знебарвлює пілюлі .pos-pill у заданому контейнері.
+ * Викликається з stationEvents.js при toggle/restore exit fav,
+ * та з stationSheet.js при відкритті картки (applyInitialFavStyles).
+ *
+ * @param {Element} container  — зазвичай .position-row
+ * @param {string}  lineColor  — колір лінії (#rrggbb)
+ * @param {boolean} isFaved    — true = пофарбувати, false = знебарвити
+ */
+export function applyFavPillStyles(container, lineColor, isFaved) {
+  container.querySelectorAll('.pos-pill').forEach(p => {
+    p.style.background = isFaved ? lineColor : '';
+    const num = p.querySelector('.pos-pill-num');
+    const lbl = p.querySelector('.pos-pill-label');
+    if (num) num.style.color = isFaved ? 'var(--bg)' : lineColor;
+    if (lbl) lbl.style.color = isFaved ? 'var(--bg)' : '';
+  });
+}
 </file>
 
 <file path="src/sheets/stationEvents.js">
@@ -3414,130 +3985,6 @@ export function applyInitialFavStyles(sheetBody, slug, lineColor) {
 }
 </file>
 
-<file path="src/ui/animations.js">
-// ══ АНІМАЦІЇ ══
-// Анімація «двері ліфта» і розсування підказок.
-
-import { TIMING } from '../core/timing.js';
-
-/**
- * Базова анімація «двері ліфта» — клонує елемент і розсуває клони.
- * Використовується як animateSheetClose, так і showCustomConfirm.
- *
- * @param {HTMLElement} el       - елемент, що «розрізається»
- * @param {DOMRect}     rect     - його getBoundingClientRect()
- * @param {Function}    callback - викликається через DOOR_CALLBACK мс
- * @param {HTMLElement} parent   - куди додати клони (body або overlay)
- */
-export function runDoorAnimation(el, rect, callback, parent = document.body) {
-  const baseStyle = [
-    'position:fixed',
-    `top:${rect.top}px`, `left:${rect.left}px`,
-    `width:${rect.width}px`, `height:${rect.height}px`,
-    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
-    'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
-  ].join(';');
-
-  const L = el.cloneNode(true);
-  const R = el.cloneNode(true);
-  L.classList.remove('sheet-open'); L.removeAttribute('id');
-  R.classList.remove('sheet-open'); R.removeAttribute('id');
-  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0);visibility:visible';
-  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%);visibility:visible';
-  parent.appendChild(L);
-  parent.appendChild(R);
-
-  void L.offsetWidth; // force reflow
-  L.style.transform = 'translateX(-50%)'; L.style.opacity = '0';
-  R.style.transform = 'translateX(50%)';  R.style.opacity = '0';
-
-  if (callback) setTimeout(callback, TIMING.DOOR_CALLBACK);
-  setTimeout(() => { L.remove(); R.remove(); }, TIMING.DOOR_CLEANUP);
-}
-
-/**
- * Закриття шторки через анімацію «двері ліфта».
- */
-export function animateSheetClose(sheetEl, callback) {
-  if (!sheetEl || !sheetEl.classList.contains('sheet-open')) { callback?.(); return; }
-  const rect = sheetEl.getBoundingClientRect();
-  if (rect.height < 10) { callback?.(); return; }
-
-  sheetEl.style.transition = 'none';
-  sheetEl.style.visibility = 'hidden';
-
-  runDoorAnimation(sheetEl, rect, callback, document.body);
-
-  setTimeout(() => {
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      sheetEl.style.transition = '';
-      sheetEl.style.visibility = '';
-    }));
-  }, TIMING.DOOR_CLEANUP);
-}
-
-/**
- * Розсування підказки (hints у картці станції).
- * Схожа механіка, але інші тайминги і parent = document.body.
- */
-export function dismissHintWithDoors(el, onDone) {
-  if (!el || !document.body.contains(el)) { onDone?.(); return; }
-  const rect = el.getBoundingClientRect();
-  if (rect.height < 4) { el.remove(); onDone?.(); return; }
-
-  const baseStyle = [
-    'position:fixed',
-    `top:${rect.top}px`, `left:${rect.left}px`,
-    `width:${rect.width}px`, `height:${rect.height}px`,
-    'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
-    'transition:transform 0.55s cubic-bezier(0.32,0.72,0,1),opacity 0.4s ease',
-  ].join(';');
-
-  const L = el.cloneNode(true); L.removeAttribute('id');
-  const R = el.cloneNode(true); R.removeAttribute('id');
-  L.style.cssText = baseStyle + ';clip-path:inset(0 50% 0 0)';
-  R.style.cssText = baseStyle + ';clip-path:inset(0 0 0 50%)';
-  document.body.appendChild(L);
-  document.body.appendChild(R);
-
-  el.style.visibility = 'hidden';
-  void L.offsetWidth;
-  L.style.transform = 'translateX(-52%)'; L.style.opacity = '0';
-  R.style.transform = 'translateX(52%)';  R.style.opacity = '0';
-
-  setTimeout(() => { el.remove(); onDone?.(); }, TIMING.HINT_CALLBACK);
-  setTimeout(() => { L.remove(); R.remove(); }, TIMING.HINT_CLEANUP);
-}
-</file>
-
-<file path="src/ui/components.js">
-// ══ UI-КОМПОНЕНТИ ══
-// Чисті функції: string in → HTML string out. Нуль побічних ефектів.
-
-import { Icons } from './icons.js';
-
-/**
- * Пілюля «вагон / двері» у картці станції.
- */
-export function pill(label, value, color) {
-  return `<div class="pos-pill">
-    <div class="pos-pill-label">${label}</div>
-    <div class="pos-pill-num" style="color:${color}">${value}</div>
-  </div>`;
-}
-
-/**
- * SVG-серце для кнопки Вибраного.
- */
-export function heartSvg(isFav, _slug, lineColor) {
-  const base = 'width="18" height="18" viewBox="-1 -1 19 19" xmlns="http://www.w3.org/2000/svg"';
-  if (!isFav) {
-    return `<svg ${base} fill="none" stroke="currentColor" stroke-width="1.3"><path d="${Icons.heartPath}"/></svg>`;
-  }
-  return `<svg ${base} fill="${lineColor}"><path d="${Icons.heartPath}"/></svg>`;
-}
-</file>
-
 <file path="src/ui/icons.js">
 // ══ ІКОНКИ ══
 // Єдине сховище SVG-рядків. Чистий ES-модуль без залежностей.
@@ -3564,6 +4011,51 @@ export const Icons = {
 
   dockPinFilled: `<svg viewBox="0 -1.5 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);" opacity="0.5"><path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
 };
+</file>
+
+<file path="src/ui/swipe.js">
+// ══ КІНЕМАТИЧНИЙ СВАЙП ШТОРКИ ══
+// Підключається до будь-якої шторки через initKinematicSwipe(sheet, body, onClose).
+
+/**
+ * Прив'язує жест «свайп вниз → закрити» до шторки.
+ *
+ * @param {HTMLElement} sheet         - кореневий елемент шторки
+ * @param {HTMLElement} body          - прокручуваний контент всередині
+ * @param {Function}    closeCallback - викликається при достатньому свайпі вниз
+ */
+export function initKinematicSwipe(sheet, bodyOrGetter, closeCallback) {
+  const getBody = typeof bodyOrGetter === 'function' ? bodyOrGetter : () => bodyOrGetter;
+  let startY = 0, currentY = 0, isDragging = false;
+
+  sheet.addEventListener('touchstart', e => {
+    const body = getBody();
+    const isHandle  = !!e.target.closest('.sheet-handle-bar');
+    const isAtTop   = body ? body.scrollTop <= 0 : true;
+
+    if (isHandle || (isAtTop && sheet.classList.contains('sheet-scrollable'))) {
+      startY     = e.touches[0].clientY;
+      isDragging = true;
+      sheet.style.transition = 'none';
+    }
+  }, { passive: true });
+
+  sheet.addEventListener('touchmove', e => {
+    if (!isDragging) return;
+    const y = e.touches[0].clientY;
+    currentY = y - startY;
+    if (currentY > 0) sheet.style.transform = `translateY(${currentY}px)`;
+  }, { passive: true });
+
+  sheet.addEventListener('touchend', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    sheet.style.transition = '';
+    sheet.style.transform  = '';
+    if (currentY > 70) closeCallback();
+    currentY = 0;
+  }, { passive: true });
+}
 </file>
 
 <file path="src/ui/theme.js">
@@ -3617,180 +4109,6 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 });
 </file>
 
-<file path="thanks.html">
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Дякуємо! - KyivMetroGO</title>
-  
-  <style>
-    :root {
-      --line-red: #c8523a;
-      --line-blue: #5b9bd5;
-      --line-green: #5aaa6a;
-      --text: #ffffff;
-      --text-muted: #ababab;
-      --bg: #000000;
-      --bg-card: #2c2c2e;
-      --btn-bg: #1c1c1e;
-    }
-
-    [data-theme="light"] {
-      --text: #000000;
-      --text-muted: #8e8e93;
-      --bg: #e5e5ea;
-      --bg-card: #ffffff;
-      --btn-bg: #ffffff;
-    }
-    
-    @media (prefers-color-scheme: light) {
-      :root:not([data-theme="dark"]) {
-        --text: #000000;
-        --text-muted: #8e8e93;
-        --bg: #e5e5ea;
-        --bg-card: #ffffff;
-        --btn-bg: #ffffff;
-      }
-    }
-
-    html, body {
-      margin: 0; padding: 0; height: 100%;
-      background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      text-align: center;
-    }
-    .salute-container {
-      width: 160px; height: 160px; margin-bottom: 20px;
-    }
-    h1 {
-      font-size: 24px; font-weight: 600; margin: 0 0 10px 0; font-variant: small-caps; letter-spacing: 0.04em;
-    }
-    p {
-      font-size: 15px; color: var(--text-muted); max-width: 340px; margin: 0 0 40px 0; line-height: 1.45;
-    }
-    strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-    .back-btn {
-      text-decoration: none; font-size: 16px; font-weight: 600;
-      color: var(--text); background: var(--btn-bg);
-      padding: 14px 28px; border-radius: 12px; transition: opacity 0.2s;
-    }
-    .back-btn:active { opacity: 0.7; }
-  </style>
-
-  <script>
-    try {
-      const savedTheme = localStorage.getItem('metro_theme');
-      if (savedTheme) {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-      }
-    } catch (e) { }
-  </script>
-</head>
-<body>
-
-  <div class="salute-container">
-    <svg id="saluteSvg" viewBox="-4 -4 44.3 45.1" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; overflow: visible;">
-      <g transform="translate(-162.85484,-126.18087)">
-        <g transform="translate(32.460036,2.9988233)">
-          <g class="eggPetals" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
-            <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
-            <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
-            <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
-            <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 -8,-2 -8,-4.9 z" />
-            <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z" />
-            <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z" />
-            <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z" />
-            <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 -3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
-            <path class="st4" d="m 227.95,217.46 c 2.1,-0.9 4.2,-1.3 4.8,1.4 0.5,2.5 -0.6,5.3 -1.7,6 -1.5,0.3 -4.1,-1 -5.5,-3 -1.4,-2.4 0.3,-3.6 2.4,-4.4 z" />
-            <path class="st4" d="m 212.05,255.66 c -0.9,-2.1 -1.3,-4.2 1.4,-4.7 2.5,-0.5 5.4,0.6 6,1.7 0.3,1.5 -1,4.1 -3.1,5.4 -2.2,1.4 -3.5,-0.3 -4.3,-2.4 z" />
-            <path class="st4" d="m 250.75,271.96 c 2.1,-0.9 3.9,-2.1 2.4,-4.4 -1.4,-2.1 -4.2,-3.3 -5.5,-3 -1.3,0.8 -2.2,3.6 -1.7,6 0.6,2.7 2.7,2.3 4.8,1.4 z" />
-            <path class="st4" d="m 212.05,233.26 c 0.9,-2.1 2.1,-3.9 4.4,-2.4 2.2,1.4 3.4,4.2 3.1,5.4 -0.8,1.3 -3.6,2.2 -6,1.7 -2.8,-0.6 -2.4,-2.6 -1.5,-4.7 z" />
-            <path class="st4" d="m 228.35,271.46 c -2.1,-0.9 -3.9,-2.1 -2.4,-4.4 1.4,-2.1 4.2,-3.3 5.5,-3 1.3,0.8 2.2,3.6 1.7,6 -0.6,2.7 -2.7,2.3 -4.8,1.4 z" />
-            <path class="st4" d="m 250.55,217.46 c 2.1,0.9 3.9,2.1 2.4,4.4 -1.4,2.1 -4.2,3.3 -5.5,3 -1.3,-0.8 -2.2,-3.6 -1.7,-6 0.6,-2.7 2.7,-2.3 4.8,-1.4 z" />
-            <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z" />
-            <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z" />
-          </g>
-          <path class="eggCenter" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" style="fill: var(--line-red)"/>
-        </g>
-      </g>
-    </svg>
-  </div>
-
-  <h1 id="thanksTitle">Дякуємо за підтримку!</h1>
-  <p id="thanksText">Вже задонатили на Сили оборони, і хочете допомогти KyivMetroGO?<br><br>Щоб опублікувати додаток в App Store, треба сплатити ліцензію Apple Developer, яка коштує <strong>$99 на рік</strong>.</p>
-  
-  <a href="index.html" class="back-btn">Повернутись до карти</a>
-
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('type') === 'beta') {
-      document.getElementById('thanksTitle').innerText = 'Дякуємо! Напишемо.';
-      document.getElementById('thanksText').innerHTML = 'Електронну адресу збережено.<br><br>За правилами Google Play, перед публікацією ми маємо провести закрите тестування. Для нього потрібно <strong>20 тестувальників</strong>, які користуватимуться додатком <strong>14 днів поспіль</strong>. Ми надішлемо вам запрошення, щойно назбираємо доста охочих!';
-    }
-
-    const rs = getComputedStyle(document.documentElement);
-    
-    const getColor = (prop, fallback) => {
-      const val = rs.getPropertyValue(prop).trim();
-      return val ? val : fallback;
-    };
-
-    const THEME_COLORS = { 
-      red:   getColor('--line-red', '#c8523a'), 
-      blue:  getColor('--line-blue', '#5b9bd5'), 
-      green: getColor('--line-green', '#5aaa6a'), 
-      base:  getColor('--bg-card', '#2c2c2e')
-    };
-
-    const hexToRgb = hex => { const n = parseInt(hex.replace('#',''), 16); return [(n>>16)&255, (n>>8)&255, n&255]; };
-    const lerp = (a, b, t) => Math.round(a + (b - a) * t);
-    const mixColors = (c, b, t) => { const [r1,g1,b1]=hexToRgb(c); const [r2,g2,b2]=hexToRgb(b); return `rgb(${lerp(r2,r1,t)},${lerp(g2,g1,t)},${lerp(b2,b1,t)})`; };
-
-    const svg = document.getElementById('saluteSvg');
-    const petalsUnsorted = Array.from(svg.querySelectorAll('.st4'));
-    const center = svg.querySelector('.eggCenter');
-    const cb = center.getBoundingClientRect();
-    const cx = cb.left + cb.width/2, cy = cb.top + cb.height/2;
-
-    const petals = petalsUnsorted.map(p => {
-      const b = p.getBoundingClientRect();
-      const a = Math.atan2(b.top+b.height/2 - cy, b.left+b.width/2 - cx) * 180 / Math.PI;
-      return { el: p, a: (a+90+360)%360 };
-    }).sort((a,b) => a.a - b.a).map(p => p.el);
-
-    petals.forEach(p => { p.style.fill = THEME_COLORS.base; p.style.transition = "fill 0.25s ease"; });
-
-    const schemes = [
-      { c: THEME_COLORS.red, p: [THEME_COLORS.blue, THEME_COLORS.green] },
-      { c: THEME_COLORS.blue, p: [THEME_COLORS.red, THEME_COLORS.green] },
-      { c: THEME_COLORS.green, p: [THEME_COLORS.red, THEME_COLORS.blue] }
-    ];
-    const s = schemes[Math.floor(Math.random() * schemes.length)];
-
-    const runPetals = () => {
-      const i = Math.floor(Math.random() * petals.length);
-      petals[i].style.fill = mixColors(s.p[i%2], THEME_COLORS.base, 0.85);
-      setTimeout(() => { petals[i].style.fill = THEME_COLORS.base; }, 400);
-      setTimeout(runPetals, 150 + Math.random() * 200);
-    };
-    const runCenter = () => {
-      const ph = (Date.now()/1000)%1.2;
-      center.style.fill = mixColors(s.c, THEME_COLORS.base, 0.35 + Math.abs(Math.sin(ph*Math.PI))*0.65);
-      requestAnimationFrame(runCenter);
-    };
-
-    runPetals(); runCenter();
-  </script>
-</body>
-</html>
-</file>
-
 <file path="src/core/constants.js">
 // ══ СТАТИЧНІ КОНСТАНТИ ДОДАТКУ ══
 // Значення, що ніколи не змінюються під час роботи.
@@ -3819,47 +4137,6 @@ export const STATIONS_WITH_POTENTIAL_EXITS = new Set([
   'G.Osokorky',
   'G.Chervonyi_khutir',
 ]);
-</file>
-
-<file path="src/core/unsavedCheck.js">
-// ══ UNSAVED CHECK — СПІЛЬНА УТИЛІТА ══
-// Винесено з sheetsManager.js щоб уникнути кругової залежності:
-//   stationSheet.js → sheetsManager.js → stationSheet.js
-//
-// Імпортується незалежно і в sheetsManager.js, і в stationSheet.js.
-
-import { state } from './state.js';
-import { bus }   from './eventBus.js';
-
-/**
- * Перевіряє наявність незбережених змін у feedback-формі.
- * Якщо є — показує confirm-діалог і делегує рішення користувачу.
- * Якщо немає — одразу викликає proceed().
- *
- * @param {Function} proceed — callback, що виконується після підтвердження
- * @returns {boolean} true, якщо діалог було показано (proceed відкладено)
- */
-export function withUnsavedCheck(proceed) {
-  if (!state.hasUnsavedFeedback) {
-    proceed();
-    return false;
-  }
-
-  const fbSlug      = document.getElementById('fbStation')?.value || '';
-  const stationName = (fbSlug ? state.stationsData?.[fbSlug]?.name : '') || '';
-  const question    = stationName
-    ? `Зберегти зміни для станції <span style="white-space:nowrap;font-variant:small-caps;letter-spacing:0.04em;">${stationName}?</span>`
-    : 'Зберегти зміни?';
-
-  bus.emit('ui:confirm', {
-  message:  question,
-  onYes:    () => { bus.emit('feedback:submit-silent'); proceed(); },
-  onNo:     () => { proceed(); },
-  onCancel: () => {},
-});
-
-  return true;
-}
 </file>
 
 <file path="src/features/feedback/fbEvents.js">
@@ -4442,283 +4719,6 @@ function _forceClose() {
 }
 </file>
 
-<file path="src/sheets/renderStation.js">
-import { slugByName } from '../data/stations.js';
-import { state }      from '../core/state.js';
-import { pill }       from '../ui/components.js';
-import { LINE_COLOR } from '../core/constants.js';
-import { Icons }      from '../ui/icons.js';
-
-
-function formatDirLabel(raw) {
-  if (!raw) return raw;
-  const match = raw.trim().match(/^([^\s&]+)(?:\s+|&nbsp;)(.*)$/i);
-  if (!match) return raw;
-  return `${match[1].toLowerCase()} <span class="dir-name-caps">${match[2]}</span>`;
-}
-
-function formatLabel(raw) {
-  const text      = raw.trim();
-  const cleanText = text.replace(/&nbsp;/g, ' ').toLowerCase();
-  const isTransfer = cleanText.includes('пересадка') || cleanText.includes('перехід');
-  if (isTransfer) {
-    const targetSlug = slugByName(cleanText);
-    if (targetSlug && state.stationsData?.[targetSlug]) {
-      const color = LINE_COLOR[state.stationsData[targetSlug].line];
-      return `<span class="transfer-label">` +
-        `<span class="transfer-line" style="background:${color}"></span>` +
-        `<span class="transfer-text">${text}</span>` +
-        `<span class="transfer-line" style="background:${color}"></span>` +
-        `</span>`;
-    }
-  }
-  return `<span class="exit-label-text">${text}</span>`;
-}
-
-// ══ РЕНДЕР ПОЗИЦІЙ ══
-
-/**
- * Генерує пару пілюль «вагон + двері» для одного або кількох виходів.
- * Підтримує формат "1, 2" (кілька вагонів через кому).
- */
-function generatePills(wStr, dStr, color) {
-  const wArr  = String(wStr).split(',').map(s => s.trim());
-  const dArr  = String(dStr).split(',').map(s => s.trim());
-  const blocks = [];
-  const count  = Math.max(wArr.length, dArr.length);
-  for (let i = 0; i < count; i++) {
-    blocks.push(
-      `${pill('вагон', wArr[i] || wArr[0], color)}\n${pill('двері', dArr[i] || dArr[0], color)}`
-    );
-  }
-  return blocks.join('<span class="pos-multi-sep" style="margin: 0 6px;">·</span>');
-}
-
-/**
- * Генерує div.fav-tap-target з data-wagon та data-doors.
- * Ці атрибути — єдине джерело правди для stationEvents.js при жестах.
- * Зберігаємо оригінальні рядки ("1, 2", "1-3") без нормалізації.
- */
-function favTargetHtml(wStr, dStr, color) {
-  return `<div class="fav-tap-target"
-               data-wagon="${wStr}"
-               data-doors="${dStr}"
-               style="display:flex;gap:6px;align-items:center;">
-    ${generatePills(wStr, dStr, color)}
-  </div>`;
-}
-
-/**
- * Генерує HTML для одного або кількох .position-row.
- *
- * @param {Array}   positions — масив позицій з stationsData
- * @param {string}  color     — колір лінії
- * @param {boolean} multiRow  — true для Хрещатика (кілька виходів в одному рядку)
- */
-function renderPositions(positions, color, multiRow) {
-  positions = positions.filter(p => !p.closed);
-  if (!positions.length) return '';
-
-  // Один вихід
-  if (positions.length === 1) {
-    const p       = positions[0];
-    const isMulti = String(p.wagon).includes(',');
-    const edited  = p._edited
-      ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
-      : '';
-    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
-      ${edited}${favTargetHtml(p.wagon, p.doors, color)}
-    </div>`;
-  }
-
-  // Кілька виходів в одному рядку (Хрещатик)
-  if (multiRow) {
-    const editedPos = positions.find(p => p._edited);
-    const edited    = editedPos
-      ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${Icons.pencil}</span>`
-      : '';
-    const spacer  = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
-    const targets = positions.map((p, i) =>
-      `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}`
-    ).join('');
-    return `<div class="position-row position-row-multi">${edited}${targets}${spacer}</div>`;
-  }
-
-  // Кілька виходів у окремих рядках
-  return positions.map(p => {
-    const isMulti = String(p.wagon).includes(',');
-    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
-      ${favTargetHtml(p.wagon, p.doors, color)}
-    </div>`;
-  }).join('');
-}
-
-// ══ РЕНДЕР ПІДПИСУ ВИХОДУ ══
-
-/**
- * Генерує HTML підпису виходу (назва вулиці, орієнтир).
- * Якщо підпис відредаговано локально — додає іконку олівця.
- */
-function renderExitLabel(exit) {
-  if (!exit.label) return '';
-  const edited = exit._labelEdited
-    ? `<span class="pos-edited-mark label-pencil" data-slug="${exit._slug}">${Icons.pencil}</span>`
-    : '';
-  return `<div class="exit-label nav-label" data-name="${exit.label}">
-    <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
-      ${formatLabel(exit.label)}${edited}
-    </div>
-  </div>`;
-}
-
-// ══ РЕНДЕР НАПРЯМКІВ ══
-
-/**
- * Головна функція рендеру. Генерує весь HTML тіла картки станції.
- * Обробляє особливий кейс Хрещатика (довгий перехід окремим блоком).
- *
- * @param {Object} s     — об'єкт станції зі stationsData
- * @param {string} color — колір лінії (#rrggbb)
- * @returns {string}     — HTML-рядок для вставки в sheetBody.innerHTML
- */
-export function renderDirections(s, color) {
-  const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
-
-  if (isKhreshchatyk) {
-    const mainDirs = s.directions.filter(d => d.from !== '__long_transfer__');
-    const longDir  = s.directions.find(d => d.from === '__long_transfer__');
-
-    const mainHtml = mainDirs.map(dir => `
-      <div class="direction-block">
-        <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
-        ${dir.exits.map(exit =>
-          `${renderExitLabel(exit)}${renderPositions(exit.positions, color, true)}`
-        ).join('')}
-      </div>`
-    ).join('');
-
-    let longHtml = '';
-    if (longDir) {
-      const rows = longDir.exits.map(exit => {
-        const posRows = exit.positions.map(p =>
-          `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
-        ).join('');
-        const edited = exit._labelEdited
-          ? `<span class="pos-edited-mark" data-slug="${exit._slug}">${Icons.pencil}</span>`
-          : '';
-        return `<div class="long-transfer-exit">
-          <div class="long-transfer-exit-label" style="position:relative;">${edited}${exit.label}</div>
-          ${posRows}
-        </div>`;
-      }).join('');
-
-      longHtml = `<div class="long-transfer-block">
-        <div class="long-transfer-title">
-          <span class="transfer-label">
-            <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
-            <span class="transfer-text">довгий&nbsp;перехід на&nbsp;Майдан&nbsp;Незалежності</span>
-            <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
-          </span>
-        </div>
-        ${rows}
-      </div>`;
-    }
-
-    return mainHtml + longHtml;
-  }
-
-  return s.directions.map(dir => {
-    if (dir.from === 'вихід праворуч') {
-      return `<div class="direction-block direction-exit-right">
-        <div class="direction-label">вихід праворуч</div>
-      </div>`;
-    }
-    if (dir.from.trim().toLowerCase() === 'кінцева') {
-      return `<div class="direction-block direction-exit-right" style="margin-bottom:10px;">
-          <div class="direction-label" style="margin:0;">кінцева</div>
-        </div>
-        <div class="direction-block">
-          ${dir.exits.map(exit =>
-            `${renderExitLabel(exit)}${renderPositions(exit.positions, color, false)}`
-          ).join('')}
-        </div>`;
-    }
-    return `<div class="direction-block">
-      <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
-      ${dir.exits.map(exit =>
-        `${renderExitLabel(exit)}${renderPositions(exit.positions, color, false)}`
-      ).join('')}
-    </div>`;
-  }).join('');
-}
-
-// ══ СТИЛІЗАЦІЯ ПІЛЮЛЬ УЛЮБЛЕНОГО ══
-
-/**
- * Підфарбовує або знебарвлює пілюлі .pos-pill у заданому контейнері.
- * Викликається з stationEvents.js при toggle/restore exit fav,
- * та з stationSheet.js при відкритті картки (applyInitialFavStyles).
- *
- * @param {Element} container  — зазвичай .position-row
- * @param {string}  lineColor  — колір лінії (#rrggbb)
- * @param {boolean} isFaved    — true = пофарбувати, false = знебарвити
- */
-export function applyFavPillStyles(container, lineColor, isFaved) {
-  container.querySelectorAll('.pos-pill').forEach(p => {
-    p.style.background = isFaved ? lineColor : '';
-    const num = p.querySelector('.pos-pill-num');
-    const lbl = p.querySelector('.pos-pill-label');
-    if (num) num.style.color = isFaved ? 'var(--bg)' : lineColor;
-    if (lbl) lbl.style.color = isFaved ? 'var(--bg)' : '';
-  });
-}
-</file>
-
-<file path="src/ui/swipe.js">
-// ══ КІНЕМАТИЧНИЙ СВАЙП ШТОРКИ ══
-// Підключається до будь-якої шторки через initKinematicSwipe(sheet, body, onClose).
-
-/**
- * Прив'язує жест «свайп вниз → закрити» до шторки.
- *
- * @param {HTMLElement} sheet         - кореневий елемент шторки
- * @param {HTMLElement} body          - прокручуваний контент всередині
- * @param {Function}    closeCallback - викликається при достатньому свайпі вниз
- */
-export function initKinematicSwipe(sheet, bodyOrGetter, closeCallback) {
-  const getBody = typeof bodyOrGetter === 'function' ? bodyOrGetter : () => bodyOrGetter;
-  let startY = 0, currentY = 0, isDragging = false;
-
-  sheet.addEventListener('touchstart', e => {
-    const body = getBody();
-    const isHandle  = !!e.target.closest('.sheet-handle-bar');
-    const isAtTop   = body ? body.scrollTop <= 0 : true;
-
-    if (isHandle || (isAtTop && sheet.classList.contains('sheet-scrollable'))) {
-      startY     = e.touches[0].clientY;
-      isDragging = true;
-      sheet.style.transition = 'none';
-    }
-  }, { passive: true });
-
-  sheet.addEventListener('touchmove', e => {
-    if (!isDragging) return;
-    const y = e.touches[0].clientY;
-    currentY = y - startY;
-    if (currentY > 0) sheet.style.transform = `translateY(${currentY}px)`;
-  }, { passive: true });
-
-  sheet.addEventListener('touchend', () => {
-    if (!isDragging) return;
-    isDragging = false;
-    sheet.style.transition = '';
-    sheet.style.transform  = '';
-    if (currentY > 70) closeCallback();
-    currentY = 0;
-  }, { passive: true });
-}
-</file>
-
 <file path="src/ui/system.js">
 // ══ СИСТЕМНІ UI-УТИЛІТИ ══
 // Відповідальність: налаштування Edge-to-edge для мобільних пристроїв через Capacitor.
@@ -4760,6 +4760,98 @@ export function pushSheetHistory() {
   if (!history.state?.isSheetOpen) {
     history.pushState({ isSheetOpen: true }, '');
   }
+}
+</file>
+
+<file path="public/sw.js">
+/* eslint-disable no-undef */
+const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'dev';
+const CACHE_NAME = `kyivmetro-${BUILD_DATE}`;
+
+const PRECACHE_ASSETS = (self.__WB_MANIFEST || [])
+  .map(entry => (typeof entry === 'string' ? entry : entry.url))
+  .concat([
+    './index.html',
+    './manifest.json',
+    './ProbaNav2-Medium.woff2',
+  ]);
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_ASSETS)),
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)),
+    )).then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  if (url.pathname.endsWith('stations.json')) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  event.respondWith(staleWhileRevalidate(event.request));
+});
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(request);
+
+      if (cached) {
+        try {
+          const [newData, oldData] = await Promise.all([
+            response.clone().json(),
+            cached.json(),
+          ]);
+
+          if (newData.version && newData.version === oldData.version) {
+            return response;
+          }
+
+          // Версія змінилась — повідомляємо всі вкладки.
+          self.clients.matchAll({ type: 'window', includeUncontrolled: false })
+            .then(clients => clients.forEach(client =>
+              client.postMessage({ type: 'STATIONS_UPDATED', version: newData.version ?? null })
+            ))
+            .catch(() => {});  // не критично
+        } catch {
+          // Ignore invalid JSON and refresh the cached copy below.
+        }
+      }
+
+      cache.put(request, response.clone());
+    }
+
+    return response;
+  } catch {
+    return (await caches.match(request)) || new Response('Офлайн', { status: 503 });
+  }
+}
+
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cachedResponse = await cache.match(request);
+
+  const networkPromise = fetch(request).then(response => {
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  }).catch(() => null);
+
+  if (cachedResponse) return cachedResponse;
+  return await networkPromise || new Response('Офлайн', { status: 503 });
 }
 </file>
 
@@ -5308,98 +5400,6 @@ export function stationListHtml(activeLine, activeSlug = '') {
       </div>`;
     })
     .join('');
-}
-</file>
-
-<file path="public/sw.js">
-/* eslint-disable no-undef */
-const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'dev';
-const CACHE_NAME = `kyivmetro-${BUILD_DATE}`;
-
-const PRECACHE_ASSETS = (self.__WB_MANIFEST || [])
-  .map(entry => (typeof entry === 'string' ? entry : entry.url))
-  .concat([
-    './index.html',
-    './manifest.json',
-    './ProbaNav2-Medium.woff2',
-  ]);
-
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_ASSETS)),
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)),
-    )).then(() => self.clients.claim()),
-  );
-});
-
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
-
-  if (url.pathname.endsWith('stations.json')) {
-    event.respondWith(networkFirst(event.request));
-    return;
-  }
-
-  event.respondWith(staleWhileRevalidate(event.request));
-});
-
-async function networkFirst(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      const cached = await cache.match(request);
-
-      if (cached) {
-        try {
-          const [newData, oldData] = await Promise.all([
-            response.clone().json(),
-            cached.json(),
-          ]);
-
-          if (newData.version && newData.version === oldData.version) {
-            return response;
-          }
-
-          // Версія змінилась — повідомляємо всі вкладки.
-          self.clients.matchAll({ type: 'window', includeUncontrolled: false })
-            .then(clients => clients.forEach(client =>
-              client.postMessage({ type: 'STATIONS_UPDATED', version: newData.version ?? null })
-            ))
-            .catch(() => {});  // не критично
-        } catch {
-          // Ignore invalid JSON and refresh the cached copy below.
-        }
-      }
-
-      cache.put(request, response.clone());
-    }
-
-    return response;
-  } catch {
-    return (await caches.match(request)) || new Response('Офлайн', { status: 503 });
-  }
-}
-
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cachedResponse = await cache.match(request);
-
-  const networkPromise = fetch(request).then(response => {
-    if (response.ok) cache.put(request, response.clone());
-    return response;
-  }).catch(() => null);
-
-  if (cachedResponse) return cachedResponse;
-  return await networkPromise || new Response('Офлайн', { status: 503 });
 }
 </file>
 

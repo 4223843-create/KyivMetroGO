@@ -98,24 +98,128 @@ export function isCheckedIn(slug, dir, wagon, doors) {
  * @param {string}  lineColor — колір гілки (зберігається в записі для heatmap)
  * @returns {boolean} — true якщо вихід тепер позначений як відвіданий
  */
+
+
+
 export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
   const id  = checkinId(slug, dir, wagon, doors);
   const all = getCheckins();
+  const isByExit = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
 
-  if (all[id]) {
-    delete all[id];
-  } else {
-    all[id] = { slug, dir, wagon, doors, color: lineColor, ts: Date.now() };
+  const willCheckIn = !all[id];
+  const targets = [];
+
+  const normalizeStr = (str) => String(str || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  const parseTokens = (s) => {
+    if (String(s).includes('-')) {
+      const [start, end] = String(s).split('-').map(Number);
+      const arr = [];
+      for (let i = start; i <= end; i++) arr.push(i);
+      return arr;
+    }
+    return String(s).split(',').map(x => parseInt(x.trim())).filter(Boolean);
+  };
+
+  const matchMirror = (w1, d1, w2, d2) => {
+    const mW = parseTokens(w1).map(w => 6 - w).sort();
+    const mD = parseTokens(d1).map(d => 5 - d).sort();
+    const pW = parseTokens(w2).sort();
+    const pD = parseTokens(d2).sort();
+    return JSON.stringify(mW) === JSON.stringify(pW) && JSON.stringify(mD) === JSON.stringify(pD);
+  };
+
+  const station = state.stationsData?.[slug];
+  let sourceDirIdx = -1;
+  let sourceExitIdx = -1;
+
+  // Крок 1: Визначаємо точний індекс рідного блоку виходу в ієрархічній структурі даних
+  if (isByExit && station?.directions) {
+    for (let dIdx = 0; dIdx < station.directions.length; dIdx++) {
+      const d = station.directions[dIdx];
+      if (normalizeStr(d.from) === normalizeStr(dir)) {
+        for (let eIdx = 0; eIdx < d.exits.length; eIdx++) {
+          const ex = d.exits[eIdx];
+          const hasPos = ex.positions?.some(p => 
+            String(p.wagon).trim() === String(wagon).trim() &&
+            String(p.doors).trim() === String(doors).trim()
+          );
+          if (hasPos) {
+            sourceDirIdx = dIdx;
+            sourceExitIdx = eIdx;
+            break;
+          }
+        }
+      }
+      if (sourceExitIdx !== -1) break;
+    }
   }
+
+  // Крок 2: Збираємо всі пов'язані блоки виходів по всій станції
+  if (isByExit && sourceExitIdx !== -1) {
+    const sourceExit = station.directions[sourceDirIdx].exits[sourceExitIdx];
+    const sourceExitPositions = sourceExit.positions || [];
+    const matchedExits = [];
+
+    station.directions.forEach((d, dIdx) => {
+      d.exits.forEach((ex, eIdx) => {
+        let isMatch = false;
+
+        if (dIdx === sourceDirIdx && eIdx === sourceExitIdx) {
+          isMatch = true;
+        } else if (sourceExit.label && ex.label && normalizeStr(sourceExit.label) === normalizeStr(ex.label)) {
+          isMatch = true;
+        } else if (eIdx === sourceExitIdx && station.directions[sourceDirIdx].from !== '__long_transfer__' && d.from !== '__long_transfer__') {
+          // Збіг індексів для головних виходів без текстових назв (як на Хрещатику)
+          isMatch = true;
+        } else {
+          // Збіг по геометричному дзеркалу платформ
+          isMatch = (ex.positions || []).some(p2 => 
+            sourceExitPositions.some(p1 => matchMirror(p1.wagon, p1.doors, p2.wagon, p2.doors))
+          );
+        }
+
+        if (isMatch) {
+          matchedExits.push({ dirFrom: d.from, exitsBlock: ex });
+        }
+      });
+    });
+
+    // Розгортаємо знайдені блоки у плоский список на чекін
+    matchedExits.forEach(item => {
+      (item.exitsBlock.positions || []).forEach(p => {
+        const alreadyAdded = targets.some(t =>
+          normalizeStr(t.dir) === normalizeStr(item.dirFrom) &&
+          String(t.wagon).trim() === String(p.wagon).trim() &&
+          String(t.doors).trim() === String(p.doors).trim()
+        );
+        if (!alreadyAdded) {
+          targets.push({ dir: item.dirFrom, wagon: String(p.wagon), doors: String(p.doors) });
+        }
+      });
+    });
+  }
+
+  // Гарантований фолбек: якщо налаштування вимкнено — маркуємо тільки один клікнутий пін
+  if (!targets.some(t => normalizeStr(t.dir) === normalizeStr(dir) && String(t.wagon).trim() === String(wagon).trim() && String(t.doors).trim() === String(doors).trim())) {
+    targets.push({ dir, wagon, doors });
+  }
+
+  // Застосовуємо єдиний стан (вкл/викл) для всього пулу цільових точок
+  targets.forEach(t => {
+    const tId = checkinId(slug, t.dir, t.wagon, t.doors);
+    if (willCheckIn) {
+      all[tId] = { slug, dir: t.dir, wagon: t.wagon, doors: t.doors, color: lineColor, ts: Date.now() };
+    } else {
+      delete all[tId];
+    }
+  });
 
   Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
   _checkinsCache = all;
 
-  // UI-шар підписаний через bus.on('checkin:updated'):
-  //   features/checkin/index.js → updateCheckinDock() + bus.emit('map:sync-checkins')
   bus.emit('checkin:updated');
-
-  return !!all[id];
+  return willCheckIn;
 }
 
 // ══ ФОРМАТУВАННЯ ЧАСУ ════════════════════════════════════════
