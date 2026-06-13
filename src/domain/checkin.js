@@ -68,10 +68,12 @@ export function isCheckinMode() {
 
 /**
  * Формує унікальний ключ для запису check-in.
+ * Автоматично нормалізує регістр та пробіли напрямку для уникнення конфліктів з DOM-капітеллю.
  * @returns {string}
  */
 export function checkinId(slug, dir, wagon, doors) {
-  return `${slug}|${dir}|${wagon}|${doors}`;
+  const cleanDir = String(dir || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return `${slug}|${cleanDir}|${String(wagon).trim()}|${String(doors).trim()}`;
 }
 
 // ══ ЧИТАННЯ СТАНУ ════════════════════════════════════════════
@@ -130,28 +132,85 @@ export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
   };
 
   const station = state.stationsData?.[slug];
+  // Оголошуємо змінні на рівні функції, щоб вони були доступні нижче по коду
   let sourceDirIdx = -1;
   let sourceExitIdx = -1;
 
-  // Крок 1: Визначаємо точний індекс рідного блоку виходу в ієрархічній структурі даних
   if (isByExit && station?.directions) {
-    for (let dIdx = 0; dIdx < station.directions.length; dIdx++) {
-      const d = station.directions[dIdx];
-      if (normalizeStr(d.from) === normalizeStr(dir)) {
-        for (let eIdx = 0; eIdx < d.exits.length; eIdx++) {
-          const ex = d.exits[eIdx];
-          const hasPos = ex.positions?.some(p => 
-            String(p.wagon).trim() === String(wagon).trim() &&
-            String(p.doors).trim() === String(doors).trim()
-          );
-          if (hasPos) {
-            sourceDirIdx = dIdx;
-            sourceExitIdx = eIdx;
-            break;
+    // ПЕРЕВІРКА НА ОДИН ВИХІД: якщо в кожному напрямку є строго по 1 блоку виходу
+    const isSingleExitStation = station.directions.every(d => (d.exits || []).length === 1);
+
+    if (isSingleExitStation) {
+      // ПРОСТИЙ ШЛЯХ: без жодних розрахунків копіюємо чекін на всі піни цієї станції
+      station.directions.forEach(d => {
+        (d.exits[0]?.positions || []).forEach(p => {
+          targets.push({ dir: d.from, wagon: String(p.wagon), doors: String(p.doors) });
+        });
+      });
+    } else {
+      // СКЛАДНИЙ ШЛЯХ (Хрещатик): перевикористовуємо змінні без повторного let
+      sourceDirIdx = -1;
+      sourceExitIdx = -1;
+
+      for (let dIdx = 0; dIdx < station.directions.length; dIdx++) {
+        const d = station.directions[dIdx];
+        if (normalizeStr(d.from) === normalizeStr(dir)) {
+          for (let eIdx = 0; eIdx < d.exits.length; eIdx++) {
+            const ex = d.exits[eIdx];
+            const hasPos = ex.positions?.some(p => 
+              String(p.wagon).trim() === String(wagon).trim() &&
+              String(p.doors).trim() === String(doors).trim()
+            );
+            if (hasPos) {
+              sourceDirIdx = dIdx;
+              sourceExitIdx = eIdx;
+              break;
+            }
           }
         }
+        if (sourceExitIdx !== -1) break;
       }
-      if (sourceExitIdx !== -1) break;
+
+      if (sourceExitIdx !== -1) {
+        const sourceExit = station.directions[sourceDirIdx].exits[sourceExitIdx];
+        const sourceExitPositions = sourceExit.positions || [];
+        const matchedExits = [];
+
+        station.directions.forEach((d, dIdx) => {
+          d.exits.forEach((ex, eIdx) => {
+            let isMatch = false;
+
+            if (dIdx === sourceDirIdx && eIdx === sourceExitIdx) {
+              isMatch = true;
+            } else if (sourceExit.label && ex.label && normalizeStr(sourceExit.label) === normalizeStr(ex.label)) {
+              isMatch = true;
+            } else if (eIdx === sourceExitIdx && station.directions[sourceDirIdx].from !== '__long_transfer__' && d.from !== '__long_transfer__') {
+              isMatch = true;
+            } else {
+              isMatch = (ex.positions || []).some(p2 => 
+                sourceExitPositions.some(p1 => matchMirror(p1.wagon, p1.doors, p2.wagon, p2.doors))
+              );
+            }
+
+            if (isMatch) {
+              matchedExits.push({ dirFrom: d.from, exitsBlock: ex });
+            }
+          });
+        });
+
+        matchedExits.forEach(item => {
+          (item.exitsBlock.positions || []).forEach(p => {
+            const alreadyAdded = targets.some(t =>
+              normalizeStr(t.dir) === normalizeStr(item.dirFrom) &&
+              String(t.wagon).trim() === String(p.wagon).trim() &&
+              String(t.doors).trim() === String(p.doors).trim()
+            );
+            if (!alreadyAdded) {
+              targets.push({ dir: item.dirFrom, wagon: String(p.wagon), doors: String(p.doors) });
+            }
+          });
+        });
+      }
     }
   }
 
