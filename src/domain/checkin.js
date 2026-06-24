@@ -72,7 +72,7 @@ export function isCheckinMode() {
  * @returns {string}
  */
 export function checkinId(slug, dir, wagon, doors) {
-  const cleanDir = String(dir || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const cleanDir = String(dir || '').trim().toLowerCase().replace(/[\s\u00a0\u202f\u2009]+/g, ' ');
   return `${slug}|${cleanDir}|${String(wagon).trim()}|${String(doors).trim()}`;
 }
 
@@ -102,177 +102,123 @@ export function isCheckedIn(slug, dir, wagon, doors) {
  */
 
 
-
 export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
-  const id  = checkinId(slug, dir, wagon, doors);
-  const all = getCheckins();
+  const all      = getCheckins();
   const isByExit = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
 
-  const willCheckIn = !all[id];
-  const targets = [];
-
-  const normalizeStr = (str) => String(str || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const norm = (str) =>
+    String(str || '').trim().toLowerCase().replace(/[\s\u00a0\u202f\u2009]+/g, ' ');
 
   const parseTokens = (s) => {
-    if (String(s).includes('-')) {
-      const [start, end] = String(s).split('-').map(Number);
+    const str = String(s);
+    if (str.includes('-')) {
+      const [start, end] = str.split('-').map(Number);
       const arr = [];
       for (let i = start; i <= end; i++) arr.push(i);
       return arr;
     }
-    return String(s).split(',').map(x => parseInt(x.trim())).filter(Boolean);
+    return str.split(',').map(x => parseInt(x.trim())).filter(Boolean);
   };
 
-  const matchMirror = (w1, d1, w2, d2) => {
-    const mW = parseTokens(w1).map(w => 6 - w).sort();
-    const mD = parseTokens(d1).map(d => 5 - d).sort();
-    const pW = parseTokens(w2).sort();
-    const pD = parseTokens(d2).sort();
-    return JSON.stringify(mW) === JSON.stringify(pW) && JSON.stringify(mD) === JSON.stringify(pD);
+  /** Чи містить блок exits[eIdx] пін (wagon, doors)? */
+  const exitContainsPin = (ex, w, d) =>
+    (ex.positions || []).some(p => {
+      const pW = parseTokens(p.wagon); const cW = parseTokens(w);
+      const pD = parseTokens(p.doors); const cD = parseTokens(d);
+      return cW.some(n => pW.includes(n)) && cD.some(n => pD.includes(n));
+    });
+
+  const id          = checkinId(slug, dir, wagon, doors);
+  const willCheckIn = !all[id];
+
+  // ── Збираємо всі піни, що мають бути перемикнуті ────────────────────────
+  // targets — Set рядків вигляду "dir\0wagon\0doors", щоб уникнути дублів.
+  // Використовуємо Map для фінального збору об'єктів.
+  /** @type {Map<string, {dir:string, wagon:string, doors:string}>} */
+  const targets = new Map();
+
+  const addPin = (d, w, drs) => {
+    const key = `${norm(d)}\0${String(w).trim()}\0${String(drs).trim()}`;
+    if (!targets.has(key)) {
+      targets.set(key, { dir: d, wagon: String(w).trim(), doors: String(drs).trim() });
+    }
   };
 
   const station = state.stationsData?.[slug];
-  // Оголошуємо змінні на рівні функції, щоб вони були доступні нижче по коду
-  let sourceDirIdx = -1;
-  let sourceExitIdx = -1;
 
   if (isByExit && station?.directions) {
-    // ПЕРЕВІРКА НА ОДИН ВИХІД: якщо в кожному напрямку є строго по 1 блоку виходу
-    const isSingleExitStation = station.directions.every(d => (d.exits || []).length === 1);
+    // ── КРОК 1: Знаходимо напрямок і блок виходу клікнутого піна ───────────
+    let sourceDirIdx  = -1;
+    let sourceExitIdx = -1;
+    let sourceLabel   = null; // нормалізований ex.label, або null
 
-    if (isSingleExitStation) {
-      // ПРОСТИЙ ШЛЯХ: без жодних розрахунків копіюємо чекін на всі піни цієї станції
-      station.directions.forEach(d => {
-        (d.exits[0]?.positions || []).forEach(p => {
-          targets.push({ dir: d.from, wagon: String(p.wagon), doors: String(p.doors) });
-        });
-      });
-    } else {
-      // СКЛАДНИЙ ШЛЯХ (Хрещатик): перевикористовуємо змінні без повторного let
-      sourceDirIdx = -1;
-      sourceExitIdx = -1;
+    outer: for (let dIdx = 0; dIdx < station.directions.length; dIdx++) {
+      const d = station.directions[dIdx];
+      if (norm(d.from) !== norm(dir)) continue;
+      for (let eIdx = 0; eIdx < (d.exits || []).length; eIdx++) {
+        if (exitContainsPin(d.exits[eIdx], wagon, doors)) {
+          sourceDirIdx  = dIdx;
+          sourceExitIdx = eIdx;
+          sourceLabel   = d.exits[eIdx].label ? norm(d.exits[eIdx].label) : null;
+          break outer;
+        }
+      }
+    }
 
-      for (let dIdx = 0; dIdx < station.directions.length; dIdx++) {
-        const d = station.directions[dIdx];
-        if (normalizeStr(d.from) === normalizeStr(dir)) {
-          for (let eIdx = 0; eIdx < d.exits.length; eIdx++) {
-            const ex = d.exits[eIdx];
-            const hasPos = ex.positions?.some(p => 
-              String(p.wagon).trim() === String(wagon).trim() &&
-              String(p.doors).trim() === String(doors).trim()
-            );
-            if (hasPos) {
-              sourceDirIdx = dIdx;
-              sourceExitIdx = eIdx;
-              break;
+    if (sourceDirIdx !== -1) {
+      // ── КРОК 2: Визначаємо режим синхронізації ──────────────────────────
+      //
+      // ПРАВИЛО 1 — «один-до-одного»:
+      //   Кожен напрямок має рівно один вихід (exits.length === 1).
+      //   Тоді будь-який клік синхронізує єдиний вихід з кожного напрямку.
+      //   Покриває Вокзальну та будь-яку іншу станцію з одним виходом на напрямок.
+      //
+      // ПРАВИЛО 2 — «за підписом»:
+      //   Хоча б один напрямок має більше одного виходу.
+      //   Синхронізуємо лише ті виходи інших напрямків, у яких ex.label
+      //   збігається з label клікнутого виходу (після нормалізації).
+      //   Якщо у клікнутого виходу немає label — синхронізації немає,
+      //   додаємо лише сам клікнутий пін.
+
+      const allHaveOneExit = station.directions.every(d => (d.exits || []).length === 1);
+
+      if (allHaveOneExit) {
+        // Правило 1: беремо перший (і єдиний) вихід з кожного напрямку
+        for (const d of station.directions) {
+          const ex = d.exits[0];
+          for (const p of (ex.positions || [])) {
+            addPin(d.from, p.wagon, p.doors);
+          }
+        }
+      } else if (sourceLabel) {
+        // Правило 2: збираємо виходи з label === sourceLabel в усіх напрямках
+        for (const d of station.directions) {
+          for (const ex of (d.exits || [])) {
+            if (ex.label && norm(ex.label) === sourceLabel) {
+              for (const p of (ex.positions || [])) {
+                addPin(d.from, p.wagon, p.doors);
+              }
             }
           }
         }
-        if (sourceExitIdx !== -1) break;
-      }
-
-      if (sourceExitIdx !== -1) {
-        const sourceExit = station.directions[sourceDirIdx].exits[sourceExitIdx];
-        const sourceExitPositions = sourceExit.positions || [];
-        const matchedExits = [];
-
-        station.directions.forEach((d, dIdx) => {
-          d.exits.forEach((ex, eIdx) => {
-            let isMatch = false;
-
-            if (dIdx === sourceDirIdx && eIdx === sourceExitIdx) {
-              isMatch = true;
-            } else if (sourceExit.label && ex.label && normalizeStr(sourceExit.label) === normalizeStr(ex.label)) {
-              isMatch = true;
-            } else if (eIdx === sourceExitIdx && station.directions[sourceDirIdx].from !== '__long_transfer__' && d.from !== '__long_transfer__') {
-              isMatch = true;
-            } else {
-              isMatch = (ex.positions || []).some(p2 => 
-                sourceExitPositions.some(p1 => matchMirror(p1.wagon, p1.doors, p2.wagon, p2.doors))
-              );
-            }
-
-            if (isMatch) {
-              matchedExits.push({ dirFrom: d.from, exitsBlock: ex });
-            }
-          });
-        });
-
-        matchedExits.forEach(item => {
-          (item.exitsBlock.positions || []).forEach(p => {
-            const alreadyAdded = targets.some(t =>
-              normalizeStr(t.dir) === normalizeStr(item.dirFrom) &&
-              String(t.wagon).trim() === String(p.wagon).trim() &&
-              String(t.doors).trim() === String(p.doors).trim()
-            );
-            if (!alreadyAdded) {
-              targets.push({ dir: item.dirFrom, wagon: String(p.wagon), doors: String(p.doors) });
-            }
-          });
-        });
       }
     }
   }
 
-  // Крок 2: Збираємо всі пов'язані блоки виходів по всій станції
-  if (isByExit && sourceExitIdx !== -1) {
-    const sourceExit = station.directions[sourceDirIdx].exits[sourceExitIdx];
-    const sourceExitPositions = sourceExit.positions || [];
-    const matchedExits = [];
+  // ── КРОК 3: Фолбек — гарантовано додаємо клікнутий пін ─────────────────
+  // Спрацьовує якщо: isByExit вимкнено, станція без directions,
+  // пін не знайдено в JSON, або Правило 2 без label.
+  addPin(dir, wagon, doors);
 
-    station.directions.forEach((d, dIdx) => {
-      d.exits.forEach((ex, eIdx) => {
-        let isMatch = false;
-
-        if (dIdx === sourceDirIdx && eIdx === sourceExitIdx) {
-          isMatch = true;
-        } else if (sourceExit.label && ex.label && normalizeStr(sourceExit.label) === normalizeStr(ex.label)) {
-          isMatch = true;
-        } else if (eIdx === sourceExitIdx && station.directions[sourceDirIdx].from !== '__long_transfer__' && d.from !== '__long_transfer__') {
-          // Збіг індексів для головних виходів без текстових назв (як на Хрещатику)
-          isMatch = true;
-        } else {
-          // Збіг по геометричному дзеркалу платформ
-          isMatch = (ex.positions || []).some(p2 => 
-            sourceExitPositions.some(p1 => matchMirror(p1.wagon, p1.doors, p2.wagon, p2.doors))
-          );
-        }
-
-        if (isMatch) {
-          matchedExits.push({ dirFrom: d.from, exitsBlock: ex });
-        }
-      });
-    });
-
-    // Розгортаємо знайдені блоки у плоский список на чекін
-    matchedExits.forEach(item => {
-      (item.exitsBlock.positions || []).forEach(p => {
-        const alreadyAdded = targets.some(t =>
-          normalizeStr(t.dir) === normalizeStr(item.dirFrom) &&
-          String(t.wagon).trim() === String(p.wagon).trim() &&
-          String(t.doors).trim() === String(p.doors).trim()
-        );
-        if (!alreadyAdded) {
-          targets.push({ dir: item.dirFrom, wagon: String(p.wagon), doors: String(p.doors) });
-        }
-      });
-    });
-  }
-
-  // Гарантований фолбек: якщо налаштування вимкнено — маркуємо тільки один клікнутий пін
-  if (!targets.some(t => normalizeStr(t.dir) === normalizeStr(dir) && String(t.wagon).trim() === String(wagon).trim() && String(t.doors).trim() === String(doors).trim())) {
-    targets.push({ dir, wagon, doors });
-  }
-
-  // Застосовуємо єдиний стан (вкл/викл) для всього пулу цільових точок
-  targets.forEach(t => {
+  // ── КРОК 4: Атомарно записуємо або видаляємо всі зібрані піни ──────────
+  for (const t of targets.values()) {
     const tId = checkinId(slug, t.dir, t.wagon, t.doors);
     if (willCheckIn) {
       all[tId] = { slug, dir: t.dir, wagon: t.wagon, doors: t.doors, color: lineColor, ts: Date.now() };
     } else {
       delete all[tId];
     }
-  });
+  }
 
   Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
   _checkinsCache = all;

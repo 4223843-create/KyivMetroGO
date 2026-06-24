@@ -232,13 +232,24 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
   const panel = document.createElement('div');
   panel.className = 'dev-note-panel';
   panel.dataset.type = 'note';
-  panel.innerHTML = `<textarea class="dev-note-textarea">${existingNote}</textarea> <div class="dev-note-actions"> <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button> <button type="button" class="dev-note-clear confirm-btn-neutral">Скасувати</button> </div>`;
+  
+  // Додаємо третю кнопку "Видалити" з червоним підсвічуванням (confirm-btn-discard)
+  // Вона рендериться тільки якщо нотатка фізично вже існує в базі
+  panel.innerHTML = `
+    <textarea class="dev-note-textarea">${existingNote}</textarea> 
+    <div class="dev-note-actions"> 
+      <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button> 
+      <button type="button" class="dev-note-cancel confirm-btn-neutral">Скасувати</button> 
+      ${existingNote ? `<button type="button" class="dev-note-delete confirm-btn-discard">Видалити</button>` : ''}
+    </div>`;
+    
   row.after(panel);
   requestAnimationFrame(() => panel.classList.add('panel-open'));
 
   const textarea = panel.querySelector('.dev-note-textarea');
   setTimeout(() => textarea.focus(), 60);
 
+  // 1. ЗБЕРЕГТИ: Оновлює або створює вміст
   panel.querySelector('.dev-note-save').addEventListener('click', e => {
     e.stopPropagation();
     const text = textarea.value.trim();
@@ -249,14 +260,25 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
     setTimeout(() => panel.remove(), 280);
   });
 
-  panel.querySelector('.dev-note-clear').addEventListener('click', e => {
+  // 2. СКАСУВАТИ: Просто закриває панель. Старі дані в Storage взагалі не чіпаємо!
+  panel.querySelector('.dev-note-cancel').addEventListener('click', e => {
     e.stopPropagation();
-    setDevNote(slug, posIdx, '');
-    noteBtn.style.color   = defaultColor;
-    noteBtn.style.opacity = defaultOpacity;
     panel.classList.remove('panel-open');
     setTimeout(() => panel.remove(), 280);
   });
+
+  // 3. ВИДАЛИТИ: Повністю очищує нотатку та гасить колір іконки олівця
+  const deleteBtn = panel.querySelector('.dev-note-delete');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      setDevNote(slug, posIdx, '');
+      noteBtn.style.color   = defaultColor;
+      noteBtn.style.opacity = defaultOpacity;
+      panel.classList.remove('panel-open');
+      setTimeout(() => panel.remove(), 280);
+    });
+  }
 }
 
 // ── UI: панель фото ───────────────────────────────────
