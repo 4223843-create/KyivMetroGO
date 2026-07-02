@@ -289,7 +289,7 @@ z-index: var(--z-fullscreen-sheet);
   left: 50%;
   transform: translateX(-50%);
   
-  /* ВМИКАЄМО КАПІТЕЛЬ */
+  /* ВМИКАЕМ КАПІТЕЛЮ */
   font-variant: small-caps;
   text-transform: none; /* ПРИБИРАЄМО ПОВНИЙ UPPERCASE */
   
@@ -372,11 +372,12 @@ z-index: var(--z-fullscreen-sheet);
 /* Вирівнювання пустих Обраних ліворуч, як і заголовок */
 .fav-empty-text {
   color: var(--text-muted);
-  text-align: left;
-  padding: 20px 16px 16px;
-  margin: 0 0 0 calc(50% - 150px - 22px);
+  text-align: center;
+  padding: 24px 8px;
+  line-height: 1.7;
   font-size: var(--fs-md);
   font-weight: var(--fw-normal);
+  margin: 0;
   opacity: 1;
 }
 
@@ -1581,6 +1582,8 @@ padding: 0 8px;
 
 /* кольори .fb-close-exit і .fb-cancel-extra-btn задаються через inline style */
 
+.fb-close-exit:active, .fb-cancel-extra-btn:active { opacity: 0.6; }
+
 .fb-item-inner .hint-1-door { display: block; }
 .fb-item-inner .hint-2-doors { display: none; }
 
@@ -1994,7 +1997,6 @@ margin: 0 0 4px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-shrink: 1;
 }
 
 
@@ -2089,7 +2091,562 @@ margin: 0 0 4px 0;
 
 
 /* ══ КАРТКИ У ВІКНІ "ПРО ДОДАТОК" ══ */
-/* ЗАМІНИТИ: */
+.about-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  box-sizing: border-box;
+}
+.about-card > *:last-child,
+.about-card-text > *:last-child {
+  margin-bottom: 0;
+}
+
+.about-card-icon {
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  width: 37px;
+  height: 37px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.about-card-icon svg {
+  display: block;
+}
+
+.about-card-text {
+  margin: 0;
+  text-align: left;
+  font-size: 18px;
+  line-height: 1.4;
+  flex: 1;
+  color: var(--text-muted);
+}
+
+
+
+
+
+
+
+
+
+svg [role="button"]:focus-visible {
+  outline: 3px solid var(--line-blue) !important;
+  outline-offset: 2px;
+  fill: rgba(128, 128, 128, 0.35) !important;
+}
+
+svg [role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}
+#favSheet:has(.fav-item) .sheet-sheet-title {
+  transform: translateX(calc(-50% - 22px)) !important;
+}
+.fb-inline-confirm {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  margin-top: -6px; /* Трохи "наїжджає" на блок виходу для цілісності */
+}
+.fb-inline-confirm.fb-inline-open {
+  max-height: 50px;
+}
+.fb-inline-confirm-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-pill);
+  border-radius: 0 0 12px 12px;
+  padding: 8px 12px 10px;
+  margin: 0 8px 8px;
+}
+.fb-inline-confirm-note {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-weight: var(--fw-medium);
+}
+.fb-inline-confirm-btns {
+  display: flex;
+  gap: 8px;
+}
+.fb-inline-confirm-yes, .fb-inline-confirm-no {
+  background: var(--bg-card);
+  border: none;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fb-inline-confirm-yes { color: var(--line-green); }
+.fb-inline-confirm-no { color: var(--line-red); }
+.fb-inline-confirm-yes:active, .fb-inline-confirm-no:active { opacity: 0.6; }
+
+/* Приховуємо кнопку "Додати ще", якщо відкрите інлайн підтвердження (щоб не ламало відступи) */
+.fb-inline-confirm-open + .fb-add-exit-row { display: none; }
+
+.search-line-filter {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  justify-content: center;
+  align-items: center;
+  min-height: 56px;
+}
+.search-line-filter::-webkit-scrollbar { display: none; }
+
+.search-line-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  margin: 0;
+
+  height: 34px;
+  padding: 0 16px 2px;
+
+  flex-shrink: 0;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.search-line-btn.is-active {
+  background: var(--bg-card);
+  color: var(--text);
+  border-color: transparent;
+  font-weight: var(--fw-medium);
+}
+.search-line-btn[data-line="red"].is-active  { background: var(--line-red);   color: var(--bg); border-color: transparent; font-weight: var(--fw-medium); }
+.search-line-btn[data-line="blue"].is-active { background: var(--line-blue);  color: var(--bg); border-color: transparent; font-weight: var(--fw-medium); }
+.search-line-btn[data-line="green"].is-active{ background: var(--line-green); color: var(--bg); border-color: transparent; font-weight: var(--fw-medium); }
+
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: calc(var(--z-ui-buttons) + 10);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  text-align: center;
+  padding: 6px 16px calc(6px + env(safe-area-inset-top));
+  padding-top: calc(6px + env(safe-area-inset-top));
+}
+[data-theme="light"] .offline-banner {
+  background: var(--bg-sheet);
+  color: var(--text);
+}
+
+.sheet-station-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semi);
+  color: var(--text-muted);
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  position: absolute;
+  left: 50%;
+  top: 40px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  max-width: 75vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+/* Назва станції у шторці редагування — вище, щоб відступ від «Правки застосуються» був більшим */
+#fbStationTitle {
+  top: 14px;
+}
+
+#sheetBody {
+  padding-top: 18px;
+}
+
+
+.position-row { position: relative; }
+
+.row-checkin-btn {
+  position: absolute;
+  right: 30.5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.2s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 2;
+}
+.row-checkin-btn:active { transform: translateY(-50%) scale(0.82); }
+.row-checkin-btn.is-checked-in { opacity: 1; }
+.row-checkin-btn svg { width: 18px; height: 22px; display: block; }
+
+.checkin-time {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+
+/* ══ FEEDBACK LINE FILTER + STATION LIST ══ */
+.fb-line-filter {
+  justify-content: center;
+  padding: 4px 16px 12px;
+  min-height: 50px; /* 34px кнопка + 4+12px padding */
+}
+.fb-station-list {
+  padding: 0 0 8px;
+}
+.fb-station-item {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.fb-station-item.fb-station-active,
+.fb-station-item:active {
+  background: var(--bg-card);
+}
+
+/* ══ CHECK-IN JOURNAL — стилі (кола + картки) ══ */
+
+/* ── Стат-бар ── */
+.ci-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px 10px;
+}
+.ci-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ci-stat-num { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--text); line-height: 1; }
+.ci-stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; opacity: 0.65; }
+.ci-stat-sep { width: 0.5px; height: 28px; background: var(--border); flex-shrink: 0; }
+
+/* ── Прогрес-смуга охоплення ── */
+.ci-coverage-track {
+  height: 2px;
+  background: var(--border);
+  margin: 0 20px 4px;
+  border-radius: 1px;
+  overflow: hidden;
+}
+.ci-coverage-fill {
+  height: 100%;
+  background: var(--text-muted);
+  border-radius: 1px;
+  transition: width 0.4s ease;
+  opacity: 0.55;
+}
+
+/* ── Сортування ── */
+.ci-sort-bar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 16px 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+.ci-sort-btn {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 0.5px solid var(--border);
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ci-sort-btn.ci-sort-active {
+  background: var(--text-muted);
+  color: var(--bg);
+  border-color: transparent;
+}
+.ci-unvisited-btn {
+  margin-left: auto;
+}
+
+/* ── Режим «Не відвідані» ── */
+.ci-unvisited-exits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0 10px;
+}
+.ci-unvisited-exit {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.ci-unvisited-count {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Картка станції ── */
+.checkin-station-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 0.5px solid var(--border);
+  border-left: 3px solid var(--ci-accent, var(--border));
+  padding: 9px 16px 0 13px;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.checkin-station-card:active { background: var(--bg-card); }
+.checkin-station-card:last-of-type { border-bottom: none; }
+
+/* ── Рядок: назва + час ── */
+.checkin-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.checkin-station-name-text {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-normal);
+  color: var(--text-muted);
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.checkin-time {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  opacity: 0.65;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Кола виходів ── */
+.checkin-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0 9px;
+}
+.checkin-dots-circle {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.checkin-dots-circle.is-checked { background: var(--text); }
+
+#favListBtn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.search-btn-top svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+.search-btn-top:active { opacity: 0.6; }
+
+.search-input-wrap {
+  padding: 0 16px 12px;
+}
+.search-input {
+  width: 100%;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+.search-input:focus {
+  border-color: var(--text-muted);
+}
+.search-results {
+  display: flex;
+  flex-direction: column;
+}
+.search-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  font-weight: var(--fw-medium);
+  -webkit-tap-highlight-color: transparent;
+}
+.search-item:active { background: var(--bg-card); }
+.search-item:last-child { border-bottom: none; }
+
+.search-item-line {
+  width: 10px; 
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+/* Контейнер для назви + підказки (хінт виходу) */
+.search-item-text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+/* Підказка при збігу по виходах — блідіший текст поруч з назвою */
+.search-item-hint {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal);
+  color: var(--text-muted);
+  opacity: 0.50;
+  flex-shrink: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ══ ІКОНКИ ══ */
+.fb-exit-label-edit-btn svg { width: 11px; height: 11px; }
+.fb-restore-exit svg { width: 18px; height: 18px; }
+/* search-btn-top svg: see .search-btn-top svg above */
+
+
+/* ══ ФІНАЛЬНИЙ БЛОК ШТРИХУВАННЯ (ДЛЯ ОБОХ ТЕМ) ══ */
+
+/* --- СВІТЛА ТЕМА --- */
+[data-theme="light"] .map-viewport {
+  background-color: #d0d0d5;
+  background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.07) 0px, rgba(0,0,0,0.07) 1px, transparent 1px, transparent 8px);
+}
+
+[data-theme="light"] .station-sheet .sheet-handle-bar,
+[data-theme="light"] .search-station-sheet .sheet-handle-bar,
+[data-theme="light"] .about-station-sheet .sheet-handle-bar,
+[data-theme="light"] #feedbackSheet .sheet-handle-bar,
+[data-theme="light"] .drop-menu {
+  background-color: #d0d0d5;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E");
+  background-position: bottom left;
+}
+
+/* Основна частина шторки: штрихи вниз (\) */
+[data-theme="light"] .sheet-body,
+[data-theme="light"] .fb-footer-sticky {
+  background-color: #d0d0d5 !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: bottom left !important;
+}
+
+/* Футер: штрихи вгору (/), ЯК У ШАПЦІ */
+[data-theme="light"] .about-footer-wrap {
+  background-color: #d0d0d5 !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: top left !important;
+}
+
+/* --- ТЕМНА ТЕМА --- */
+[data-theme="dark"] .map-viewport {
+  background-color: #000000;
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 8px);
+}
+
+[data-theme="dark"] .station-sheet .sheet-handle-bar,
+[data-theme="dark"] .search-station-sheet .sheet-handle-bar,
+[data-theme="dark"] .about-station-sheet .sheet-handle-bar,
+[data-theme="dark"] #feedbackSheet .sheet-handle-bar,
+[data-theme="dark"] .drop-menu {
+  background-color: var(--bg-sheet);
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E");
+  background-position: bottom left;
+}
+
+/* Основна частина шторки: штрихи вниз (\) */
+[data-theme="dark"] .sheet-body,
+[data-theme="dark"] .fb-footer-sticky {
+  background-color: var(--bg-sheet) !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: bottom left !important;
+}
+
+/* Футер: штрихи вгору (/), ЯК У ШАПЦІ */
+[data-theme="dark"] .about-footer-wrap {
+  background-color: var(--bg-sheet) !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: top left !important;
+}
+
+
+/* ══ УТИЛІТИ ДЛЯ ПРИХОВУВАННЯ ЕЛЕМЕНТІВ ══ */
+.is-hidden {
+  display: none !important;
+}
+
+/* ══ АДАПТИВНЕ ЦЕНТРУВАННЯ ЗАГОЛОВКА ОБРАНОГО ══ */
+#favSheet:has(.fav-item) .sheet-sheet-title {
+  transform: translateX(calc(-50% - 22px)) !important;
+}
+
+/* ══ СТАН ЗАВАНТАЖЕННЯ КАРТИ ══ */
+.map-inner {
+  transition: opacity 0.35s ease; /* Плавна поява карти */
+}
+.map-viewport.is-loading #mapInner {
+  opacity: 0; /* Ховаємо карту, поки вона крива і не готова */
+}
+
+
+/* ══ КАРТКИ У ВІКНІ "ПРО ДОДАТОК" ══ */
 .about-card {
   display: flex;
   align-items: center;
@@ -2935,7 +3492,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   transform: translateY(0) !important;
 }
 
-/* ── Повноекранне фото ── */
+/* ── Повноекранне photo ── */
 .dev-photo-overlay {
   position: fixed;
   inset: 0;
@@ -3042,122 +3599,122 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
    ════════════════════════════════════════════════════════════ */
 
 #btnInfoAndroid, #btnInfoIOS {
-    position: absolute !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    width: 36px !important;
-    height: 36px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    background: transparent !important;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 #btnInfoAndroid {
-    right: 100% !important;
+  right: 100% !important;
 }
 
 #btnInfoIOS {
-    left: 100% !important;
+  left: 100% !important;
 }
 
 #btnInfoAndroid svg, #btnInfoIOS svg {
-    height: 12px !important;
-    width: auto !important;
+  height: 12px !important;
+  width: auto !important;
 }
 [data-theme="dark"] .info-btn-active {
-    color: #ffffff !important;
-    opacity: 1 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
 }
 
 [data-theme="light"] .info-btn-active {
-    color: #000000 !important;
-    opacity: 1 !important;
+  color: #000000 !important;
+  opacity: 1 !important;
 }
 
 .fb-add-doors-info {
-    position: relative;
+  position: relative;
 }
 .settings-info-btn::after, .fb-add-doors-info::after {
-    content: '';
-    position: absolute;
-    top: -12px;
-    right: -12px;
-    bottom: -12px;
-    left: -12px;
-    z-index: 10;
+  content: '';
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  bottom: -12px;
+  left: -12px;
+  z-index: 10;
 }
 
 #aboutDevBtnContainer {
-    width: 36px;
-    height: 36px;
-    transform: scale(1.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    opacity: 0.5;
-    cursor: pointer;
-    flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  transform: scale(1.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 #aboutDevBtnContainer svg {
-    width: 18px;
-    height: 18px;
-    display: block;
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .fb-add-doors-info, #btnInfoAndroid, #btnInfoIOS {
-    position: relative;
+  position: relative;
 }
 .settings-info-btn::after, .fb-add-doors-info::after, #btnInfoAndroid::after, #btnInfoIOS::after {
-    content: '';
-    position: absolute;
-    top: -12px; right: -12px; bottom: -12px; left: -12px;
-    z-index: 10;
+  content: '';
+  position: absolute;
+  top: -12px; right: -12px; bottom: -12px; left: -12px;
+  z-index: 10;
 }
 
 #aboutDevBtnContainer {
-    background: none;
-    border: none;
-    padding: 0;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: var(--text-muted);
-    cursor: pointer;
-    flex-shrink: 0;
-    -webkit-tap-highlight-color: transparent;
+  background: none;
+  border: none;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #aboutDevBtnContainer:active {
-    opacity: 0.5;
+  opacity: 0.5;
 }
 
 #aboutDevBtnContainer svg {
-    width: 18px !important;
-    height: 18px !important;
-    transform: none !important;
-    display: block;
+  width: 18px !important;
+  height: 18px !important;
+  transform: none !important;
+  display: block;
 }
 
 .about-version-title {
-    position: absolute !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    top: 24px !important;
-    text-transform: none !important;
-    letter-spacing: normal !important;
-    font-weight: normal !important;
-    opacity: 0.5 !important;
-    margin: 0 !important;
-    display: block !important;
-    pointer-events: none;
+  position: absolute !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  top: 24px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  font-weight: normal !important;
+  opacity: 0.5 !important;
+  margin: 0 !important;
+  display: block !important;
+  pointer-events: none;
 }
 
 .dev-mode-toast {
@@ -3232,9 +3789,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 /* Коли JS прибирає атрибут hidden, форма стає flex-контейнером */
-.bug-form-wrap:not([hidden]) 
-
-{
+.bug-form-wrap:not([hidden]) {
   display: flex;
 }
 
@@ -3515,7 +4070,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   font-size: var(--fs-md);
   font-weight: var(--fw-medium);
   -webkit-tap-highlight-color: transparent;
-  background: #2c2c2e;
+  background: var(--bg-sheet); /* 🛠️ ВИПРАВЛЕНО: замість #2c2c2e використовуємо динамічну змінну */
   transition: opacity 0.15s;
 }
 .clear-data-item:last-child { border-bottom: none; }

@@ -125,9 +125,16 @@ function _doApplyHatch(root) {
 function _getGlobalSvgScale() {
   const ref = inner.querySelector('path, polygon, rect');
   if (!ref) return 1;
-  const ctm   = ref.getScreenCTM?.();
-  const scale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
-  return (Number.isFinite(scale) && scale > 0) ? scale : 1;
+  const ctm      = ref.getScreenCTM?.();
+  const rawScale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
+  const scale    = (Number.isFinite(rawScale) && rawScale > 0) ? rawScale : 1;
+
+  // Квантуємо масштаб до «сходинок» по 1%, щоб усі фігури в одному
+  // проході рендеру завжди бачили однакове значення scale (інакше різні
+  // фігури можуть лишитись на різних історичних cStep через 2%-допуск
+  // кешу нижче — окрема причина розсинхрону штрихування).
+  const QUANT = 0.01;
+  return Math.round(scale / QUANT) * QUANT;
 }
 
 const _geometryCache = new WeakMap();
@@ -158,8 +165,9 @@ function _appendShapeHatch(shape, overlay, isFull, globalScale) {
   const cached = _hatchLineCache.get(shape);
   let lines, strokeWidth;
 
-  if (cached && cached.isFull === isFull && Math.abs(cached.scale - globalScale) / globalScale < 0.02) {
-    // Cache hit: нуль getBBox(), нуль layout flush
+  if (cached && cached.isFull === isFull && cached.scale === globalScale) {
+    // Cache hit: нуль getBBox(), нуль layout flush.
+    // Точне порівняння безпечне, бо globalScale тепер квантований.
     ({ lines, strokeWidth } = cached);
   } else {
     // Cache miss: рахуємо один раз (один getBBox всередині buildHatchLines)
@@ -239,7 +247,13 @@ export function syncMapWithCheckins() {
   for (const entry of Object.values(checkins)) {
     if (!entry.slug) continue;
     if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
-    visitedExitsBySlug[entry.slug].add(`${entry.wagon}|${entry.doors}`);
+    // Ключ ОБОВ'ЯЗКОВО включає напрямок (dir): два РІЗНІ фізичні виходи
+    // (на різних платформах/напрямках) можуть мати однаковий номер
+    // вагона/дверей — це нормально. Без dir у ключі такі виходи
+    // колапсують в один запис Set, totalOpenExits (без дедуплікації)
+    // лишається більшим за розмір Set, і станція ніколи не отримує
+    // is-visited-full, навіть якщо реально відмічені всі виходи.
+    visitedExitsBySlug[entry.slug].add(`${entry.dir}|${entry.wagon}|${entry.doors}`);
   }
 
   // Set для O(1) lookup замість O(V) array.some()

@@ -114,6 +114,17 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
     document.getElementById('fbLineFilterWrap').hidden = false;
     document.getElementById('fbChangeStation').hidden  = true;
     document.getElementById('fbStationTitle').hidden   = true;
+    
+    const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+    document.getElementById('fbSheetTitle').textContent = isLocal ? 'Локальні зміни' : 'Запропонувати зміни';
+    
+    const introText = document.getElementById('fbMainIntroText');
+    if (introText) {
+      introText.innerHTML = isLocal
+        ? 'Правки застосовуватимуться лише локально. Ви можете змінити це в налаштуваннях'
+        : 'Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику';
+    }
+    
     document.getElementById('fbSheetTitle').hidden     = false;
 
     stationHidden.value  = '';
@@ -123,7 +134,7 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
   });
 
   // ── Event delegation: posEl (stepper, кнопки позицій) ─
-  posEl.addEventListener('click', e => _handlePosClick(e, stationHidden, afterRender));
+  posEl.addEventListener('click', e => _searchLineFilterWrap(e, stationHidden, afterRender));
 
   // ── Event delegation: label inputs ────────────────────
   posEl.addEventListener('change', e => {

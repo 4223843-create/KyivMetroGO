@@ -37,8 +37,8 @@ window.addEventListener('unhandledrejection', e => {
   console.error('[startup] unhandled rejection', e.reason); 
   releaseStartupLoader(); 
 });
-window.addEventListener('unhandledrejection', e => { 
-  console.error('[startup] unhandled rejection', e.reason); 
+window.addEventListener('error', e => { 
+  console.error('[startup] unhandled error', e.error); 
   releaseStartupLoader(); 
 });
 
@@ -51,9 +51,10 @@ async function bootstrap() {
   try {
     await Storage.init();
 
-    const savedTheme = Storage.get(STORAGE_KEYS.THEME)
-      || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    applyTheme(savedTheme);
+    // 🛠️ ВСТАНОВЛЕНО СИСТЕМНУ ТЕМУ ЗА ЗАМОВЧУВАННЯМ
+    // Передаємо false другим параметром, щоб не фіксувати світлу/темну тему в базі при першому старті
+    const savedTheme = Storage.get(STORAGE_KEYS.THEME) || 'system';
+    applyTheme(savedTheme, false);
 
     initMap();
     await configureEdgeToEdge();

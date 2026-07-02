@@ -6,6 +6,7 @@ import { state as appState }                     from '../../core/state.js';
 import { fbState, resetFbState }                 from './fbState.js';
 import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
+import { STORAGE_KEYS, Storage }                 from '../../core/storage.js';
 
 export { renderFeedbackPositions }               from './fbRenderer.js';
 
@@ -90,6 +91,20 @@ function _bindOnce() {
 }
 
 function _resetSheetUI() {
+  const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+  
+  const sheetTitle = document.getElementById('fbSheetTitle');
+  if (sheetTitle) {
+    sheetTitle.textContent = isLocal ? 'Локальні зміни' : 'Запропонувати зміни';
+  }
+
+  const introText = document.getElementById('fbMainIntroText');
+  if (introText) {
+    introText.innerHTML = isLocal
+      ? 'Правки застосовуватимуться лише локально. Ви&nbsp;можете&nbsp;змінити&nbsp;це в&nbsp;налаштуваннях'
+      : 'Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику';
+  }
+
   document.getElementById('fbStation').value       = '';
   document.getElementById('fbLine').value          = '';
   document.getElementById('fbPositions').innerHTML = '';

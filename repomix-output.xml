@@ -55,6 +55,7 @@ src/data/localEdits.js
 src/data/photoStorage.js
 src/data/positions.js
 src/data/stations.js
+src/data/syncMap.js
 src/domain/checkin.js
 src/domain/favorites.js
 src/features/checkin/index.js
@@ -96,6 +97,199 @@ vite.config.js
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="src/data/syncMap.js">
+// ══ DATA: КАРТА РУЧНИХ ЗВ'ЯЗКІВ ВИХОДІВ (SYNC MAP) ══
+// Пов'язує масиви виходів (exitIndex) між різними напрямками станцій.
+// Індекс 0 — перший вихід у JSON, індекс 1 — другий вихід у JSON.
+
+export const SYNC_MAP = {
+  // 🔴 ЧЕРВОНА ГІЛКА (Святошинсько-Броварська)
+  "R.Akademmistechko": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "кінцева", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "кінцева", exitIndex: 1 }]
+  ],
+  "R.Zhytomyrska": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+  "R.Sviatoshyn": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+  "R.Nyvky": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+  "R.Beresteiska": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }]
+  ],
+  "R.Shuliavska": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }]
+  ],
+  "R.Politekhnychnyi_instytut": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }]
+  ],
+  "vokzalna": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }]
+  ],
+  "R.Universytet": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }]
+  ],
+  "R.Teatralna": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }]
+  ],
+  "R.Khreshchatyk": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+  "R.Arsenalna": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }]
+  ],
+  "R.Dnipro": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }]
+  ],
+  "R.Hidropark": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+  "R.Livoberezhna": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+  "R.Darnytsia": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+  "R.Chernihivska": [
+    [{ dir: "до Лісової", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "до Лісової", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+  "R.Lisova": [
+    [{ dir: "кінцева", exitIndex: 0 }, { dir: "до Академмістечка", exitIndex: 0 }],
+    [{ dir: "кінцева", exitIndex: 1 }, { dir: "до Академмістечка", exitIndex: 1 }]
+  ],
+
+  // 🔵 СИНЯ ГІЛКА (Оболонсько-Теремківська)
+  "B.Heroiv_Dnipra": [
+    [{ dir: "до Теремків", exitIndex: 0 }, { dir: "кінцева", exitIndex: 0 }],
+    [{ dir: "до Теремків", exitIndex: 1 }, { dir: "кінцева", exitIndex: 1 }]
+  ],
+  "B.Minska": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }],
+    [{ dir: "до Героїв Дніпра", exitIndex: 1 }, { dir: "до Теремків", exitIndex: 1 }]
+  ],
+  "B.Obolon": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }],
+    [{ dir: "до Героїв Дніпра", exitIndex: 1 }, { dir: "до Теремків", exitIndex: 1 }]
+  ],
+  "B.Pochaina": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }],
+    [{ dir: "до Героїв Дніпра", exitIndex: 1 }, { dir: "до Теремків", exitIndex: 1 }]
+  ],
+  "B.Tarasa_Shevchenka": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Kontraktova_Ploshcha": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }],
+    [{ dir: "до Героїв Дніпра", exitIndex: 1 }, { dir: "до Теремків", exitIndex: 1 }]
+  ],
+  "B.Poshtova_Ploshcha": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Maidan_Nezalezhnosti": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Ploshcha_Ukrainskikh_heroiv": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Olimpiiska": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Palats_Ukraina": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Lybidska": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Demiivska": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Holosiivska": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Vasylkivska": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }],
+    [{ dir: "до Героїв Дніпра", exitIndex: 1 }, { dir: "до Теремків", exitIndex: 1 }]
+  ],
+  "B.Vystavkovyi_Tsentr": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Ipodrom": [
+    [{ dir: "до Героїв Дніпра", exitIndex: 0 }, { dir: "до Теремків", exitIndex: 0 }]
+  ],
+  "B.Teremky": [
+    [{ dir: "кінцева", exitIndex: 0 }, { dir: "до Героїв Дніпра", exitIndex: 0 }],
+    [{ dir: "кінцева", exitIndex: 1 }, { dir: "до Героїв Дніпра", exitIndex: 1 }]
+  ],
+
+  // 🟢 ЗЕЛЕНА ГІЛКА (Сирецько-Печерська)
+  "G.Syrets": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "кінцева", exitIndex: 0 }]
+  ],
+  "G.Dorogozhychi": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Lukianivska": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Zoloti_Vorota": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Palats_Sportu": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Klovska": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Pecherska": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Zvirynetska": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Vydubychi": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }],
+    [{ dir: "до Червоного хутора", exitIndex: 1 }, { dir: "до Сирця", exitIndex: 1 }]
+  ],
+  "G.Slavutych": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Osokorky": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }],
+    [{ dir: "до Червоного хутора", exitIndex: 1 }, { dir: "до Сирця", exitIndex: 1 }]
+  ],
+  "G.Pozniaky": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }],
+    [{ dir: "до Червоного хутора", exitIndex: 1 }, { dir: "до Сирця", exitIndex: 1 }]
+  ],
+  "G.Kharkivska": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }],
+    [{ dir: "до Червоного хутора", exitIndex: 1 }, { dir: "до Сирця", exitIndex: 1 }]
+  ],
+  "G.Vyrlytsia": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }]
+  ],
+  "G.Boryspilska": [
+    [{ dir: "до Червоного хутора", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }],
+    [{ dir: "до Червоного хутора", exitIndex: 1 }, { dir: "до Сирця", exitIndex: 1 }]
+  ],
+  "G.Chervonyi_khutir": [
+    [{ dir: "кінцева", exitIndex: 0 }, { dir: "до Сирця", exitIndex: 0 }],
+    [{ dir: "кінцева", exitIndex: 1 }, { dir: "до Сирця", exitIndex: 1 }]
+  ]
+};
+</file>
 
 <file path="public/privacy.html">
 <!DOCTYPE html>
@@ -3472,364 +3666,6 @@ export const STATIONS_WITH_POTENTIAL_EXITS = new Set([
 ]);
 </file>
 
-<file path="src/domain/checkin.js">
-// ══ DOMAIN: CHECK-IN — ЧИСТА БІЗНЕС-ЛОГІКА ══
-// Відповідальність: управління даними відвідань (check-in),
-// відмінювання іменників, статистика по гілках.
-// ПРАВИЛО: жодного DOM, жодних UI-функцій.
-// Крос-модульні сигнали — виключно через EventBus.
-//
-// Публічне API:
-//   getCheckins()                         → Record<string, CheckinEntry>
-//   invalidateCheckinsCache()             → void
-//   isCheckinMode()                       → boolean
-//   checkinId(slug, dir, wagon, doors)    → string
-//   isCheckedIn(slug, dir, wagon, doors)  → boolean
-//   toggleCheckin(slug, dir, wagon, doors, lineColor) → boolean  (emits 'checkin:updated')
-//   formatCheckinTime(ts)                 → string
-//   stationWord(n)                        → string
-//   exitWord(n)                           → string
-//   declineStantsiya(n)                   → string
-//   declineVykhid(n)                      → string
-//   buildLineStats(entries)               → LineStats
-//   LINE_NAMES                            → Record<string, string>
-//   LINE_ORDER                            → string[]
-
-import { state }                from '../core/state.js';
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
-import { bus }                   from '../core/eventBus.js';
-
-// ══ КОНСТАНТИ ГІЛОК (використовуються також у features/checkin) ══
-
-export const LINE_NAMES = { blue: 'Синя', red: 'Червона', green: 'Зелена' };
-export const LINE_ORDER = ['blue', 'red', 'green'];
-
-// ══ КЕШ ══════════════════════════════════════════════════════
-
-let _checkinsCache = null;
-
-/** Скидає кеш check-in (наприклад, після зовнішніх змін Storage). */
-export function invalidateCheckinsCache() {
-  _checkinsCache = null;
-}
-
-/**
- * Повертає об'єкт усіх check-in з кешу або Storage.
- * Ключ — результат checkinId(), значення — CheckinEntry.
- * @returns {Record<string, {slug:string, dir:string, wagon:string, doors:string, color:string, ts:number}>}
- */
-export function getCheckins() {
-  if (_checkinsCache) return _checkinsCache;
-  try {
-    _checkinsCache = JSON.parse(Storage.get(STORAGE_KEYS.CHECKINS) || '{}');
-  } catch {
-    _checkinsCache = {};
-  }
-  return _checkinsCache;
-}
-
-// ══ РЕЖИМ CHECK-IN ════════════════════════════════════════════
-
-/**
- * Повертає true, якщо режим Check-in активований у налаштуваннях.
- * Вимкнено за замовчуванням (null → false).
- * @returns {boolean}
- */
-export function isCheckinMode() {
-  return Storage.get(STORAGE_KEYS.CHECKIN_MODE) === 'true';
-}
-
-// ══ ІДЕНТИФІКАТОР ════════════════════════════════════════════
-
-/**
- * Формує унікальний ключ для запису check-in.
- * Автоматично нормалізує регістр та пробіли напрямку для уникнення конфліктів з DOM-капітеллю.
- * @returns {string}
- */
-export function checkinId(slug, dir, wagon, doors) {
-  const cleanDir = String(dir || '').trim().toLowerCase().replace(/[\s\u00a0\u202f\u2009]+/g, ' ');
-  return `${slug}|${cleanDir}|${String(wagon).trim()}|${String(doors).trim()}`;
-}
-
-// ══ ЧИТАННЯ СТАНУ ════════════════════════════════════════════
-
-/**
- * Перевіряє, чи позначений вихід як відвіданий.
- * @returns {boolean}
- */
-export function isCheckedIn(slug, dir, wagon, doors) {
-  return !!getCheckins()[checkinId(slug, dir, wagon, doors)];
-}
-
-// ══ МУТАЦІЯ ══════════════════════════════════════════════════
-
-/**
- * Додає або видаляє запис check-in. Зберігає в Storage.
- * Після зміни емітує 'checkin:updated' — features/checkin/index.js
- * підписується і оновлює dock-іконку та heatmap карти.
- *
- * @param {string}  slug
- * @param {string}  dir
- * @param {string}  wagon
- * @param {string}  doors
- * @param {string}  lineColor — колір гілки (зберігається в записі для heatmap)
- * @returns {boolean} — true якщо вихід тепер позначений як відвіданий
- */
-
-
-export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
-  const all      = getCheckins();
-  const isByExit = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
-
-  const norm = (str) =>
-    String(str || '').trim().toLowerCase().replace(/[\s\u00a0\u202f\u2009]+/g, ' ');
-
-  const parseTokens = (s) => {
-    const str = String(s);
-    if (str.includes('-')) {
-      const [start, end] = str.split('-').map(Number);
-      const arr = [];
-      for (let i = start; i <= end; i++) arr.push(i);
-      return arr;
-    }
-    return str.split(',').map(x => parseInt(x.trim())).filter(Boolean);
-  };
-
-  /** Чи містить блок exits[eIdx] пін (wagon, doors)? */
-  const exitContainsPin = (ex, w, d) =>
-    (ex.positions || []).some(p => {
-      const pW = parseTokens(p.wagon); const cW = parseTokens(w);
-      const pD = parseTokens(p.doors); const cD = parseTokens(d);
-      return cW.some(n => pW.includes(n)) && cD.some(n => pD.includes(n));
-    });
-
-  const id          = checkinId(slug, dir, wagon, doors);
-  const willCheckIn = !all[id];
-
-  // ── Збираємо всі піни, що мають бути перемикнуті ────────────────────────
-  // targets — Set рядків вигляду "dir\0wagon\0doors", щоб уникнути дублів.
-  // Використовуємо Map для фінального збору об'єктів.
-  /** @type {Map<string, {dir:string, wagon:string, doors:string}>} */
-  const targets = new Map();
-
-  const addPin = (d, w, drs) => {
-    const key = `${norm(d)}\0${String(w).trim()}\0${String(drs).trim()}`;
-    if (!targets.has(key)) {
-      targets.set(key, { dir: d, wagon: String(w).trim(), doors: String(drs).trim() });
-    }
-  };
-
-  const station = state.stationsData?.[slug];
-
-  if (isByExit && station?.directions) {
-    // ── КРОК 1: Знаходимо напрямок і блок виходу клікнутого піна ───────────
-    let sourceDirIdx  = -1;
-    let sourceExitIdx = -1;
-    let sourceLabel   = null; // нормалізований ex.label, або null
-
-    outer: for (let dIdx = 0; dIdx < station.directions.length; dIdx++) {
-      const d = station.directions[dIdx];
-      if (norm(d.from) !== norm(dir)) continue;
-      for (let eIdx = 0; eIdx < (d.exits || []).length; eIdx++) {
-        if (exitContainsPin(d.exits[eIdx], wagon, doors)) {
-          sourceDirIdx  = dIdx;
-          sourceExitIdx = eIdx;
-          sourceLabel   = d.exits[eIdx].label ? norm(d.exits[eIdx].label) : null;
-          break outer;
-        }
-      }
-    }
-
-    if (sourceDirIdx !== -1) {
-      // ── КРОК 2: Визначаємо режим синхронізації ──────────────────────────
-      //
-      // ПРАВИЛО 1 — «один-до-одного»:
-      //   Кожен напрямок має рівно один вихід (exits.length === 1).
-      //   Тоді будь-який клік синхронізує єдиний вихід з кожного напрямку.
-      //   Покриває Вокзальну та будь-яку іншу станцію з одним виходом на напрямок.
-      //
-      // ПРАВИЛО 2 — «за підписом»:
-      //   Хоча б один напрямок має більше одного виходу.
-      //   Синхронізуємо лише ті виходи інших напрямків, у яких ex.label
-      //   збігається з label клікнутого виходу (після нормалізації).
-      //   Якщо у клікнутого виходу немає label — синхронізації немає,
-      //   додаємо лише сам клікнутий пін.
-
-      const allHaveOneExit = station.directions.every(d => (d.exits || []).length === 1);
-
-      if (allHaveOneExit) {
-        // Правило 1: беремо перший (і єдиний) вихід з кожного напрямку
-        for (const d of station.directions) {
-          const ex = d.exits[0];
-          for (const p of (ex.positions || [])) {
-            addPin(d.from, p.wagon, p.doors);
-          }
-        }
-      } else if (sourceLabel) {
-        // Правило 2: збираємо виходи з label === sourceLabel в усіх напрямках
-        for (const d of station.directions) {
-          for (const ex of (d.exits || [])) {
-            if (ex.label && norm(ex.label) === sourceLabel) {
-              for (const p of (ex.positions || [])) {
-                addPin(d.from, p.wagon, p.doors);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // ── КРОК 3: Фолбек — гарантовано додаємо клікнутий пін ─────────────────
-  // Спрацьовує якщо: isByExit вимкнено, станція без directions,
-  // пін не знайдено в JSON, або Правило 2 без label.
-  addPin(dir, wagon, doors);
-
-  // ── КРОК 4: Атомарно записуємо або видаляємо всі зібрані піни ──────────
-  for (const t of targets.values()) {
-    const tId = checkinId(slug, t.dir, t.wagon, t.doors);
-    if (willCheckIn) {
-      all[tId] = { slug, dir: t.dir, wagon: t.wagon, doors: t.doors, color: lineColor, ts: Date.now() };
-    } else {
-      delete all[tId];
-    }
-  }
-
-  Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
-  _checkinsCache = all;
-
-  bus.emit('checkin:updated');
-  return willCheckIn;
-}
-
-// ══ ФОРМАТУВАННЯ ЧАСУ ════════════════════════════════════════
-
-/**
- * Форматує Unix-timestamp у рядок виду "ДД.ММ ГГ:ХХ".
- * @param {number} ts
- * @returns {string}
- */
-export function formatCheckinTime(ts) {
-  const d   = new Date(ts);
-  const pad = n => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-// ══ ВІДМІНЮВАННЯ ІМЕННИКІВ ════════════════════════════════════
-
-/**
- * Повертає відмінену форму слова «станція» для числа n.
- * @param {number} n
- * @returns {string}
- */
-export function stationWord(n) {
-  const mod10  = Math.abs(n) % 10;
-  const mod100 = Math.abs(n) % 100;
-  if (mod100 >= 11 && mod100 <= 14) return 'станцій';
-  if (mod10 === 1)                   return 'станція';
-  if (mod10 >= 2 && mod10 <= 4)     return 'станції';
-  return 'станцій';
-}
-
-/**
- * Повертає відмінену форму слова «вихід» для числа n.
- * @param {number} n
- * @returns {string}
- */
-export function exitWord(n) {
-  const mod10  = Math.abs(n) % 10;
-  const mod100 = Math.abs(n) % 100;
-  if (mod100 >= 11 && mod100 <= 14) return 'виходів';
-  if (mod10 === 1)                   return 'вихід';
-  if (mod10 >= 2 && mod10 <= 4)     return 'виходи';
-  return 'виходів';
-}
-
-/**
- * Повертає рядок «N станція/станції/станцій».
- * @param {number} n
- * @returns {string}
- */
-export function declineStantsiya(n) {
-  return `${n} ${stationWord(n)}`;
-}
-
-/**
- * Повертає рядок «N вихід/виходи/виходів».
- * @param {number} n
- * @returns {string}
- */
-export function declineVykhid(n) {
-  return `${n} ${exitWord(n)}`;
-}
-
-// ══ СТАТИСТИКА ПО ГІЛКАХ ══════════════════════════════════════
-
-/**
- * @typedef {{
- *   totalStations:   number,
- *   visitedStations: number,
- *   totalExits:      number,
- *   visitedExits:    number,
- * }} LineStatEntry
- *
- * @typedef {Record<string, LineStatEntry>} LineStats
- */
-
-/**
- * Обчислює статистику відвідань по кожній гілці метро.
- * Чиста функція — читає state.stationsData, не торкається DOM.
- *
- * @param {Array<{slug:string, wagon:string, doors:string}>} entries
- *   Масив значень з getCheckins() (Object.values).
- * @returns {LineStats}
- */
-export function buildLineStats(entries) {
-  /** @type {LineStats} */
-  const lineStats = {};
-
-  for (const line of LINE_ORDER) {
-    lineStats[line] = {
-      totalStations:   0,
-      visitedStations: 0,
-      totalExits:      0,
-      visitedExits:    0,
-    };
-  }
-
-  if (!state.stationsData) return lineStats;
-
-  // Будуємо індекс відвіданих виходів по slug для швидкого lookup
-  /** @type {Record<string, Set<string>>} */
-  const visitedBySlug = {};
-  for (const e of entries) {
-    if (!visitedBySlug[e.slug]) visitedBySlug[e.slug] = new Set();
-    visitedBySlug[e.slug].add(`${e.wagon}|${e.doors}`);
-  }
-
-  for (const [slug, st] of Object.entries(state.stationsData)) {
-    const line = st.line;
-    if (!lineStats[line]) continue;
-
-    const openExits = st.positions?.filter(p => !p.closed) ?? [];
-    lineStats[line].totalStations++;
-    lineStats[line].totalExits += openExits.length;
-
-    const visited = visitedBySlug[slug];
-    if (visited) {
-      lineStats[line].visitedStations++;
-      for (const p of openExits) {
-        if (visited.has(`${p.wagon}|${p.doors}`)) {
-          lineStats[line].visitedExits++;
-        }
-      }
-    }
-  }
-
-  return lineStats;
-}
-</file>
-
 <file path="src/features/checkin/index.js">
 // ══ FEATURE: CHECK-IN — UI-ШАР ══
 // Відповідальність: рендеринг та взаємодія UI для check-in.
@@ -3866,6 +3702,8 @@ import {
   stationWord,
   exitWord,
   buildLineStats,
+  exitGroupKey,
+  getStationExitStats,
   LINE_NAMES,
   LINE_ORDER,
 } from '../../domain/checkin.js';
@@ -4053,10 +3891,10 @@ export function openCheckinSheet() {
       selectedLines = new Set();
     } else {
       const uniqueStations     = new Set(entries.map(e => e.slug)).size;
-      const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
+      const uniqueExitsVisited = new Set(entries.map(e => exitGroupKey(e.slug, e.dir, e.wagon, e.doors))).size;
       const totalExitsAll      = state.stationsData
-        ? Object.values(state.stationsData).reduce(
-            (sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0
+        ? Object.keys(state.stationsData).reduce(
+            (sum, slug) => sum + getStationExitStats(slug, entries).total, 0
           )
         : 0;
       const totalStationsAll = state.stationsData ? Object.keys(state.stationsData).length : 0;
@@ -4068,11 +3906,11 @@ export function openCheckinSheet() {
       const covDenom = byExits ? totalExitsAll      : totalStationsAll;
 
       if (covDenom > 0 && covNum > 0) {
-        const raw = Math.floor((covNum / covDenom) * 100);
-        if (covNum === covDenom) { coverageText = '100%';    coverageValue = 100; }
-        else if (raw === 0)      { coverageText = '< 1%';    coverageValue = 1;   }
-        else if (raw === 100)    { coverageText = '> 99%';   coverageValue = 99;  }
-        else                     { coverageText = `${raw}%`; coverageValue = raw; }
+        const pct = (covNum / covDenom) * 100;
+        if (covNum === covDenom) { coverageText = '100%';               coverageValue = 100; }
+        else if (pct < 1)        { coverageText = '< 1%';               coverageValue = 1;   }
+        else if (pct > 99)       { coverageText = '> 99%';              coverageValue = 99;  }
+        else                     { coverageText = `${Math.round(pct)}%`; coverageValue = Math.round(pct); }
       }
 
       bodyHtml = `
@@ -4099,19 +3937,16 @@ export function openCheckinSheet() {
           return st && selectedLines.has(st.line);
         });
 
-        if (ciViewMode === 'unvisited') {
-          const visitedKeys       = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
+          if (ciViewMode === 'unvisited') {
           const unvisitedStations = Object.entries(state.stationsData || {})
             .map(([slug, st]) => {
-              const unvisited = st.positions?.filter(
-                p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)
-              ) || [];
+              const { total, visited } = getStationExitStats(slug, entries);
               return {
                 slug,
                 name:           st.name,
                 line:           st.line,
-                unvisitedCount: unvisited.length,
-                total:          st.positions?.filter(p => !p.closed).length || 0,
+                unvisitedCount: total - visited,
+                total,
               };
             })
             .filter(s => s.unvisitedCount > 0 && selectedLines.has(s.line))
@@ -4150,8 +3985,7 @@ export function openCheckinSheet() {
           listHtml = stationEntries.map(([slug, items]) => {
             const st              = state.stationsData?.[slug];
             const color           = items[0].color || (st ? LINE_COLOR[st.line] : 'var(--text-muted)');
-            const totalExits      = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
-            const visitedExitsCnt = new Set(items.map(e => `${e.wagon}|${e.doors}`)).size;
+            const { total: totalExits, visited: visitedExitsCnt } = getStationExitStats(slug, entries);
             const lastTs          = Math.max(...items.map(e => e.ts));
 
             return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-accent:${color}">
@@ -4366,6 +4200,10 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
     document.getElementById('fbLineFilterWrap').hidden = false;
     document.getElementById('fbChangeStation').hidden  = true;
     document.getElementById('fbStationTitle').hidden   = true;
+    
+    const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+    document.getElementById('fbSheetTitle').textContent = isLocal ? 'Локальні зміни' : 'Запропонувати зміни';
+    
     document.getElementById('fbSheetTitle').hidden     = false;
 
     stationHidden.value  = '';
@@ -4720,6 +4558,7 @@ import { state as appState }                     from '../../core/state.js';
 import { fbState, resetFbState }                 from './fbState.js';
 import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
+import { STORAGE_KEYS, Storage }                 from '../../core/storage.js';
 
 export { renderFeedbackPositions }               from './fbRenderer.js';
 
@@ -4804,6 +4643,10 @@ function _bindOnce() {
 }
 
 function _resetSheetUI() {
+  const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+  const sheetTitle = document.getElementById('fbSheetTitle');
+  if (sheetTitle) sheetTitle.textContent = isLocal ? 'Локальні зміни' : 'Запропонувати зміни';
+
   document.getElementById('fbStation').value       = '';
   document.getElementById('fbLine').value          = '';
   document.getElementById('fbPositions').innerHTML = '';
@@ -5259,6 +5102,396 @@ bus.on('data:stations-hydrated', ({ stationsData }) => {
   applyLocalEdits(stationsData);
   applyExitLabels(stationsData);
 });
+</file>
+
+<file path="src/domain/checkin.js">
+// ══ DOMAIN: CHECK-IN — ЧИСТА БІЗНЕС-ЛОГІКА ══
+// Відповідальність: управління даними відвідань (check-in),
+// відмінювання іменників, статистика по гілках.
+// ПРАВИЛО: жодного DOM, жодних UI-функцій.
+// Крос-модульні сигнали — виключно через EventBus.
+
+import { state }                from '../core/state.js';
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { bus }                   from '../core/eventBus.js';
+
+// ══ КОНСТАНТИ ГІЛОК ══════════════════════════════════════════
+
+export const LINE_NAMES = { blue: 'Синя', red: 'Червона', green: 'Зелена' };
+export const LINE_ORDER = ['blue', 'red', 'green'];
+
+// ══ ВНУТРІШНІ РОЗУМНІ ХЕЛПЕРИ ЗІСТАВЛЕННЯ ════════════════════
+
+const norm = (str) =>
+  String(str || '').trim().toLowerCase().replace(/[\s\u00a0\u202f\u2009]+/g, ' ');
+
+/**
+ * Очищувач префіксів. Зрізає «до», «попередня», «ст.» та пробіли.
+ * Гарантує стабільне зіставлення колій незалежно від форматування в UI.
+ */
+const cleanStr = (s) =>
+  String(s || '')
+    .toLowerCase()
+    // Нормалізуємо &nbsp; (буквальний текст із JSON) та реальний U+00A0
+    // (який browser/DOM textContent повертає після рендеру &nbsp;)
+    // до звичайного пробілу — інакше вони по-різному переживають фільтр нижче
+    // ("&nbsp;" лишає літери n/b/s/p, бо вони у дозволеному діапазоні a-z).
+    .replace(/&nbsp;|\u00a0/g, ' ')
+    .replace(/(?:до|станції|ст\.|напрямок|на|попередня)\s+/g, '')
+    .replace(/^[rbg]\./, '')
+    .replace(/[^a-z0-9а-яіїєґ]/g, '')
+    .trim();
+
+const parseTokens = (s) => {
+  const str = String(s);
+  if (str.includes('-')) {
+    const [start, end] = str.split('-').map(Number);
+    const arr = [];
+    for (let i = start; i <= end; i++) arr.push(i);
+    return arr;
+  }
+  return str.split(',').map(x => parseInt(x.trim())).filter(Boolean);
+};
+
+// ВИНЯТКИ: станції, де токен-перетин (1 входить у "1-3") створює
+// хибну неоднозначність між двома РІЗНИМИ фізичними виходами, що
+// навмисно діляться тим самим вагоном/дверима за даними (напр.
+// Хрещатик: "короткий перехід" 2/"1-3" перетинається з "вихід в
+// місто" 2/"1"). Для них зіставлення йде по точному рядку, а не
+// по перетину токенів. Решту станцій це НЕ зачіпає.
+const EXACT_EXIT_MATCH_STATIONS = new Set(['R.Khreshchatyk']);
+
+const exitContainsPin = (ex, w, d, exact = false) =>
+  (ex.positions || []).some(p => {
+    if (p.closed) return false;
+    if (exact) {
+      return String(p.wagon).trim() === String(w).trim()
+          && String(p.doors).trim() === String(d).trim();
+    }
+    const pW = parseTokens(p.wagon); const cW = parseTokens(w);
+    const pD = parseTokens(p.doors); const cD = parseTokens(d);
+    return cW.some(n => pW.includes(n)) && cD.some(n => pD.includes(n));
+  });
+
+/**
+ * Математичне віддзеркалення вагона або дверей (за ідеєю 6 - Вагон, 5 - Двері).
+ * Працює навіть з діапазонами ("1-3") та переліками ("1, 2").
+ */
+function mirrorValue(str, max) {
+  if (!str || str === '-') return str;
+  if (String(str).includes('-')) {
+    const [start, end] = String(str).split('-').map(Number);
+    return `${max - end + 1}-${max - start + 1}`;
+  }
+  return String(str).split(',').map(x => {
+    const n = parseInt(x.trim());
+    return isNaN(n) ? x.trim() : String(max - n + 1);
+  }).join(', ');
+}
+
+/**
+ * Інтелектуальний локатор. Знаходить точний об'єкт виходу та справжню назву колії.
+ */
+function resolveDirectionAndExit(slug, dir, wagon, doors) {
+  const station = state.stationsData?.[slug];
+  const exact   = EXACT_EXIT_MATCH_STATIONS.has(slug);
+  let clickedExit = null;
+  let correctedDir = dir;
+
+  if (station?.directions) {
+    const cleanedDir = cleanStr(dir);
+
+    // Етап 1: Шукаємо вихід СУВОРО всередині вказаного напрямку
+    if (cleanedDir !== '') {
+      const targetDir = station.directions.find(d => cleanStr(d.from) === cleanedDir);
+      if (targetDir) {
+        clickedExit = (targetDir.exits || []).find(ex => exitContainsPin(ex, wagon, doors, exact));
+        if (clickedExit) correctedDir = targetDir.from;
+      }
+    }
+
+    // Етап 2: Фолбек-скан (якщо dir порожній через баг розмітки кінцевих)
+    if (!clickedExit) {
+      outerLoop: for (const d of station.directions) {
+        if (norm(d.from) === '__long_transfer__') continue;
+        const ex = (d.exits || []).find(e => exitContainsPin(e, wagon, doors, exact));
+        if (ex) {
+          clickedExit = ex;
+          correctedDir = d.from;
+          break outerLoop;
+        }
+      }
+    }
+  }
+  return { clickedExit, correctedDir };
+}
+
+// ══ КЕШ ══════════════════════════════════════════════════════
+
+let _checkinsCache = null;
+
+export function invalidateCheckinsCache() {
+  _checkinsCache = null;
+}
+
+export function getCheckins() {
+  if (_checkinsCache) return _checkinsCache;
+  try {
+    _checkinsCache = JSON.parse(Storage.get(STORAGE_KEYS.CHECKINS) || '{}');
+  } catch {
+    _checkinsCache = {};
+  }
+  return _checkinsCache;
+}
+
+// ══ РЕЖИМ CHECK-IN ════════════════════════════════════════════
+
+export function isCheckinMode() {
+  return Storage.get(STORAGE_KEYS.CHECKIN_MODE) === 'true';
+}
+
+// ══ ІДЕНТИФІКАТОР ════════════════════════════════════════════
+
+export function checkinId(slug, dir, wagon, doors) {
+  const cleanDir = String(dir || '').trim().toLowerCase().replace(/[\s\u00a0\u202f\u2009]+/g, ' ');
+  return `${slug}|${cleanDir}|${String(wagon).trim()}|${String(doors).trim()}`;
+}
+
+/**
+ * Повертає канонічний ключ «фізичного виходу» для піна (slug, dir, wagon, doors).
+ *
+ * Коли ввімкнено «Check-in по виходах» (CHECKIN_BY_EXIT), той самий фізичний
+ * вихід доступний з обох колій станції — тож піни з протилежних напрямків,
+ * що зіставляються між собою (за назвою, дзеркальним номером або індексом —
+ * ЗА ТІЄЮ Ж логікою, що й у toggleCheckin), мають належати ОДНІЙ групі.
+ * Ключ не залежить від того, з якого боку його порахували, тож його можна
+ * однаково використовувати і для «відвіданих», і для «усіх доступних» пінів.
+ *
+ * Коли CHECKIN_BY_EXIT вимкнено — дзеркалювання не відбувається,
+ * тож кожен пін лишається окремим виходом (як і раніше).
+ */
+export function exitGroupKey(slug, dir, wagon, doors) {
+  const isByExit = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
+  if (!isByExit) return checkinId(slug, dir, wagon, doors);
+
+  const station = state.stationsData?.[slug];
+  const { clickedExit, correctedDir } = resolveDirectionAndExit(slug, dir, wagon, doors);
+  if (!clickedExit || !station?.directions) return checkinId(slug, dir, wagon, doors);
+
+  const exact        = EXACT_EXIT_MATCH_STATIONS.has(slug);
+  const clickedLabel = norm(clickedExit.label || '');
+  const sourceDir     = station.directions.find(d => d.from === correctedDir);
+  const sourceIndex   = sourceDir ? (sourceDir.exits || []).indexOf(clickedExit) : -1;
+  const mW = mirrorValue(wagon, 5);
+  const mD = mirrorValue(doors, 4);
+
+  const members = [];
+  for (const d of station.directions) {
+    if (norm(d.from) === '__long_transfer__') continue;
+
+    let targetExit = null;
+    if (d.from === correctedDir) {
+      targetExit = clickedExit;
+    } else {
+      if (!targetExit && clickedLabel !== '') {
+        targetExit = (d.exits || []).find(ex => norm(ex.label || '') === clickedLabel);
+      }
+      if (!targetExit) {
+        targetExit = (d.exits || []).find(ex => exitContainsPin(ex, mW, mD, exact));
+      }
+      if (!targetExit && sourceIndex !== -1) {
+        targetExit = (d.exits || [])[sourceIndex];
+      }
+    }
+
+    const firstOpen = targetExit ? (targetExit.positions || []).find(p => !p.closed) : null;
+    if (firstOpen) members.push(`${d.from}\u0001${firstOpen.wagon}\u0001${firstOpen.doors}`);
+  }
+
+  members.sort();
+  return members.length ? `${slug}\u0002${members.join('\u0003')}` : checkinId(slug, dir, wagon, doors);
+}
+
+// ══ ЧИТАННЯ СТАНУ ════════════════════════════════════════════
+
+export function isCheckedIn(slug, dir, wagon, doors) {
+  const { correctedDir } = resolveDirectionAndExit(slug, dir, wagon, doors);
+  return !!getCheckins()[checkinId(slug, correctedDir, wagon, doors)];
+}
+
+// ══ МУТАЦІЯ СТАНУ (УЛЬТИМАТИВНА КАСКАДНА СИНХРОНІЗАЦІЯ) ══════
+
+export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
+  const all      = getCheckins();
+  const isByExit = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
+  const station  = state.stationsData?.[slug];
+  const exact    = EXACT_EXIT_MATCH_STATIONS.has(slug);
+
+  const { clickedExit, correctedDir } = resolveDirectionAndExit(slug, dir, wagon, doors);
+
+  const targets = new Map();
+  const addPin = (d, w, drs) => {
+    const key = `${norm(d)}\0${String(w).trim()}\0${String(drs).trim()}`;
+    if (!targets.has(key)) {
+      targets.set(key, { dir: d, wagon: String(w).trim(), doors: String(drs).trim() });
+    }
+  };
+
+  if (isByExit && clickedExit && station?.directions) {
+    const clickedLabel = norm(clickedExit.label || '');
+    const sourceDir    = station.directions.find(d => d.from === correctedDir);
+    const sourceIndex  = sourceDir ? (sourceDir.exits || []).indexOf(clickedExit) : -1;
+
+    // Рахуємо математичне дзеркало для підстраховки
+    const mW = mirrorValue(wagon, 5);
+    const mD = mirrorValue(doors, 4);
+
+    for (const d of station.directions) {
+      if (norm(d.from) === '__long_transfer__') continue;
+
+      let targetExit = null;
+
+      // Якщо це ТА САМА колія — підсвічуємо весь блок клікнутого виходу
+      if (d.from === correctedDir) {
+        targetExit = clickedExit;
+      } else {
+        // КАСКАД ДЗЕРКАЛ ДЛЯ ПРОТИЛЕЖНОЇ КОЛІЇ:
+
+        // 1. Label Sync (Шукаємо таку саму назву, наприклад "до Мінського ринку")
+        if (!targetExit && clickedLabel !== '') {
+          targetExit = (d.exits || []).find(ex => norm(ex.label || '') === clickedLabel);
+        }
+
+        // 2. Math Sync (Шукаємо математичне дзеркало 6-W, 5-D, якщо немає назви)
+        if (!targetExit) {
+          targetExit = (d.exits || []).find(ex => exitContainsPin(ex, mW, mD, exact));
+        }
+
+        // 3. Index Sync (Резервний варіант для станцій з одним виходом)
+        if (!targetExit && sourceIndex !== -1) {
+          targetExit = (d.exits || [])[sourceIndex];
+        }
+      }
+
+      if (targetExit && targetExit.positions) {
+        for (const p of targetExit.positions) {
+          if (!p.closed) addPin(d.from, p.wagon, p.doors);
+        }
+      }
+    }
+  }
+
+  // Завжди додаємо первинний клікнутий елемент як надійний фолбек
+  addPin(correctedDir, wagon, doors);
+
+  const primaryId   = checkinId(slug, correctedDir, wagon, doors);
+  const willCheckIn = !all[primaryId];
+
+  // Транзакція в базу
+  for (const t of targets.values()) {
+    const tId = checkinId(slug, t.dir, t.wagon, t.doors);
+    if (willCheckIn) {
+      all[tId] = { slug, dir: t.dir, wagon: t.wagon, doors: t.doors, color: lineColor, ts: Date.now() };
+    } else {
+      delete all[tId];
+    }
+  }
+
+  Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
+  _checkinsCache = all;
+
+  bus.emit('checkin:updated');
+  return willCheckIn;
+}
+
+// ══ ФОРМАТУВАННЯ ЧАСУ ════════════════════════════════════════
+
+export function formatCheckinTime(ts) {
+  const d   = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ══ ВІДМІНЮВАННЯ ІМЕННИКІВ ════════════════════════════════════
+
+export function stationWord(n) {
+  const mod10  = Math.abs(n) % 10;
+  const mod100 = Math.abs(n) % 100;
+  if (mod100 >= 11 && mod100 <= 14) return 'станцій';
+  if (mod10 === 1)                   return 'станція';
+  if (mod10 >= 2 && mod10 <= 4)     return 'станції';
+  return 'станцій';
+}
+
+export function exitWord(n) {
+  const mod10  = Math.abs(n) % 10;
+  const mod100 = Math.abs(n) % 100;
+  if (mod100 >= 11 && mod100 <= 14) return 'виходів';
+  if (mod10 === 1)                   return 'вихід';
+  if (mod10 >= 2 && mod10 <= 4)     return 'виходи';
+  return 'виходів';
+}
+
+export function declineStantsiya(n) { return `${n} ${stationWord(n)}`; }
+export function declineVykhid(n) { return `${n} ${exitWord(n)}`; }
+
+// ══ СТАТИСТИКА ПО ГІЛКАХ ══════════════════════════════════════
+
+/**
+ * Рахує загальну кількість фізичних виходів станції (з урахуванням
+ * дзеркалювання при активному Check-in по виходах) та кількість
+ * фактично відвіданих із них.
+ *
+ * @param {string} slug
+ * @param {object[]} entries — усі записи check-in (Object.values(getCheckins()))
+ * @returns {{ total: number, visited: number }}
+ */
+export function getStationExitStats(slug, entries) {
+  const station = state.stationsData?.[slug];
+  if (!station?.directions) return { total: 0, visited: 0 };
+
+  const totalKeys = new Set();
+  for (const d of station.directions) {
+    if (norm(d.from) === '__long_transfer__') continue;
+    for (const ex of (d.exits || [])) {
+      for (const p of (ex.positions || [])) {
+        if (p.closed) continue;
+        totalKeys.add(exitGroupKey(slug, d.from, p.wagon, p.doors));
+      }
+    }
+  }
+
+  const visitedKeys = new Set();
+  for (const e of entries) {
+    if (e.slug !== slug) continue;
+    visitedKeys.add(exitGroupKey(slug, e.dir, e.wagon, e.doors));
+  }
+
+  return { total: totalKeys.size, visited: visitedKeys.size };
+}
+
+export function buildLineStats(entries) {
+  const lineStats = {};
+  for (const line of LINE_ORDER) {
+    lineStats[line] = { totalStations: 0, visitedStations: 0, totalExits: 0, visitedExits: 0 };
+  }
+  if (!state.stationsData) return lineStats;
+
+  const visitedSlugs = new Set(entries.map(e => e.slug));
+
+  for (const [slug, st] of Object.entries(state.stationsData)) {
+    const line = st.line;
+    if (!lineStats[line]) continue;
+
+    const { total, visited } = getStationExitStats(slug, entries);
+    lineStats[line].totalStations++;
+    lineStats[line].totalExits  += total;
+    lineStats[line].visitedExits += visited;
+
+    if (visitedSlugs.has(slug)) lineStats[line].visitedStations++;
+  }
+  return lineStats;
+}
 </file>
 
 <file path="src/features/feedback/fbRenderer.js">
@@ -6542,6 +6775,311 @@ if (!Capacitor.isNativePlatform()) {
 }
 </file>
 
+<file path="src/map/mapInteraction.js">
+// ══ ВЗАЄМОДІЯ З КАРТОЮ ══
+// Відповідальність: обробка кліків на SVG-зони станцій,
+// накладання та зняття heatmap-штрихування для відвіданих виходів (check-in).
+
+import { state }                  from '../core/state.js';
+import { getCheckins }            from '../domain/checkin.js';
+import { bus }                    from '../core/eventBus.js';
+import { STORAGE_KEYS, Storage }  from '../core/storage.js';
+import { getSlugByLower }         from '../data/stations.js';
+
+const inner = document.getElementById('mapInner');
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
+const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
+const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
+const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
+const HATCH_STEP_PX  = 8;
+
+/**
+ * Обробляє клік або Enter/Space на SVG-зоні карти.
+ * Знаходить slug за id елемента і емітує 'station:open'.
+ * @param {MouseEvent|KeyboardEvent} e
+ */
+export function handleMapInteraction(e) {
+  if (!state.stationsData) return;
+  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+
+  const zone = e.target.closest('[id]');
+  if (!zone?.id) return;
+
+  const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
+  const slug  = getSlugByLower(rawId);
+  if (slug) { e.preventDefault(); bus.emit('station:open', { slug }); }
+}
+
+inner?.addEventListener('click',   handleMapInteraction);
+inner?.addEventListener('keydown', handleMapInteraction);
+
+function removeVisitedHatchOverlays(root = inner) {
+  root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
+}
+
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
+const _hatchLineCache = new WeakMap();
+
+// Кеш зон станцій (будується один раз після renderMapZones)
+let _stationZoneEls = null;
+function _getStationZoneEls() {
+  // Повертаємо кеш, ТІЛЬКИ якщо він не порожній
+  if (_stationZoneEls && _stationZoneEls.length > 0) return _stationZoneEls;
+  
+  const els = [...inner.querySelectorAll('[id]')].filter(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    return !!getSlugByLower(rawId);
+  });
+  
+  // Кешуємо тільки тоді, коли станції реально знайшлися на карті
+  if (els.length > 0) {
+    _stationZoneEls = els;
+  }
+  
+  return els;
+}
+
+/** Скидає кеш зон станцій (викликати після повторного renderMapZones). */
+export function invalidateStationZoneCache() { _stationZoneEls = null; }
+
+let _clipIdCounter = 0;
+
+let _hatchRafId = null;
+
+/**
+ * Планує накладання heatmap-штрихування на відвідані зони карти.
+ * Дедублюється через requestAnimationFrame — безпечно викликати кілька разів поспіль.
+ * @param {Element} [root] — за замовчуванням mapInner
+ */
+export function applyVisitedHatchOverlays(root = inner) {
+  if (!root) return;
+  if (_hatchRafId !== null) return;
+  _hatchRafId = requestAnimationFrame(() => {
+    _hatchRafId = null;
+    _doApplyHatch(root);
+  });
+}
+
+function _doApplyHatch(root) {
+  removeVisitedHatchOverlays(root);
+
+  const isHatchEnabled = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
+  if (!isHatchEnabled) return;
+
+  const targets = [...root.querySelectorAll('.is-visited-partial, .is-visited-full')]
+    .filter(el => el.closest('.is-visited-partial, .is-visited-full') === el);
+
+  if (!targets.length) return;
+
+  const globalScale = _getGlobalSvgScale();
+
+  targets.forEach(target => {
+    const shapes = _getValidGeometry(target);
+    if (!shapes.length) return;
+
+    const isFull = target.classList.contains('is-visited-full');
+
+    const overlay = document.createElementNS(SVG_NS, 'g');
+    overlay.classList.add(HATCH_OVERLAY_CLASS, isFull ? 'ci-hatch-full' : 'ci-hatch-partial');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.setAttribute('focusable', 'false');
+    overlay.dataset.hatchFor = target.id || '';
+
+    shapes.forEach(shape => _appendShapeHatch(shape, overlay, isFull, globalScale));
+    if (!overlay.childElementCount) return;
+
+    if (target instanceof SVGGElement) {
+      target.appendChild(overlay);
+    } else {
+      target.parentNode?.insertBefore(overlay, target.nextSibling);
+    }
+  });
+}
+
+function _getGlobalSvgScale() {
+  const ref = inner.querySelector('path, polygon, rect');
+  if (!ref) return 1;
+  const ctm      = ref.getScreenCTM?.();
+  const rawScale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
+  const scale    = (Number.isFinite(rawScale) && rawScale > 0) ? rawScale : 1;
+
+  // Квантуємо масштаб до «сходинок» по 1%, щоб усі фігури в одному
+  // проході рендеру завжди бачили однакове значення scale (інакше різні
+  // фігури можуть лишитись на різних історичних cStep через 2%-допуск
+  // кешу нижче — окрема причина розсинхрону штрихування).
+  const QUANT = 0.01;
+  return Math.round(scale / QUANT) * QUANT;
+}
+
+const _geometryCache = new WeakMap();
+
+function _getValidGeometry(target) {
+  if (_geometryCache.has(target)) return _geometryCache.get(target);
+
+  const geometry = target.matches(HATCH_GEOMETRY_SELECTOR)
+    ? [target]
+    : [...target.querySelectorAll(HATCH_GEOMETRY_SELECTOR)];
+
+  // getBBox() тільки при першому зверненні до target — кешуємо через WeakMap
+  const valid = geometry.filter(shape => {
+    if (shape.closest(`.${HATCH_OVERLAY_CLASS}`)) return false;
+    try { const b = shape.getBBox(); return b.width > 0 && b.height > 0; }
+    catch { return false; }
+  });
+
+  // Запобіжник: не кешуємо порожній результат (якщо SVG ще не відмалювався)
+  if (valid.length > 0) {
+    _geometryCache.set(target, valid);
+  }
+  
+  return valid;
+}
+
+function _appendShapeHatch(shape, overlay, isFull, globalScale) {
+  const cached = _hatchLineCache.get(shape);
+  let lines, strokeWidth;
+
+  if (cached && cached.isFull === isFull && cached.scale === globalScale) {
+    // Cache hit: нуль getBBox(), нуль layout flush.
+    // Точне порівняння безпечне, бо globalScale тепер квантований.
+    ({ lines, strokeWidth } = cached);
+  } else {
+    // Cache miss: рахуємо один раз (один getBBox всередині buildHatchLines)
+    ({ lines, strokeWidth } = buildHatchLines(shape, isFull, globalScale));
+    _hatchLineCache.set(shape, { isFull, scale: globalScale, lines, strokeWidth });
+  }
+
+  if (!lines.length) return;
+
+  const shapeOverlay = document.createElementNS(SVG_NS, 'g');
+  const transform    = shape.getAttribute('transform');
+  if (transform) shapeOverlay.setAttribute('transform', transform);
+
+  // Монотонний лічильник замість Math.random()
+  const clipId   = `ci-clip-${_clipIdCounter++}`;
+  const defs     = document.createElementNS(SVG_NS, 'defs');
+  const clipPath = document.createElementNS(SVG_NS, 'clipPath');
+  clipPath.setAttribute('id', clipId);
+  const clipGeometry = shape.cloneNode(false);
+  clipGeometry.removeAttribute('id');
+  clipGeometry.removeAttribute('class');
+  clipGeometry.setAttribute('stroke-width', '1');
+  clipGeometry.setAttribute('stroke', 'black');
+  clipPath.appendChild(clipGeometry);
+  defs.appendChild(clipPath);
+  shapeOverlay.appendChild(defs);
+
+  const clippedGroup = document.createElementNS(SVG_NS, 'g');
+  clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
+  shapeOverlay.appendChild(clippedGroup);
+  overlay.appendChild(shapeOverlay);
+
+  lines.forEach(d => {
+    const line = document.createElementNS(SVG_NS, 'path');
+    line.classList.add(HATCH_LINE_CLASS);
+    line.setAttribute('d', d);
+    line.setAttribute('stroke-width', String(strokeWidth));
+    clippedGroup.appendChild(line);
+  });
+}
+
+// Оновлена сигнатура: приймає globalScale, щоб не викликати getScreenCTM()
+function buildHatchLines(sourceShape, isFull, scale) {
+  const box  = sourceShape.getBBox(); // єдиний getBBox() на shape
+  // scale передається ззовні — не потрібен getScreenCTM() тут
+  const step = HATCH_STEP_PX / scale;
+  const pad  = step * 2;
+
+  const minX = box.x - pad, maxX = box.x + box.width  + pad;
+  const minY = box.y - pad, maxY = box.y + box.height + pad;
+
+  const cStep    = step * Math.SQRT2;
+  const cMin_raw = isFull ? (minX + minY) : (minX - maxY);
+  const cMax     = isFull ? (maxX + maxY) : (maxX - minY);
+  const cMin     = Math.floor(cMin_raw / cStep) * cStep;
+
+  const lines = [];
+  for (let c = cMin; c <= cMax; c += cStep) {
+    const x1 = minX, x2 = maxX;
+    const y1 = isFull ? (c - x1) : (x1 - c);
+    const y2 = isFull ? (c - x2) : (x2 - c);
+    lines.push(`M ${round(x1)} ${round(y1)} L ${round(x2)} ${round(y2)}`);
+  }
+  return { lines, strokeWidth: round(step * 0.35) };
+}
+
+/**
+ * Оновлює CSS-класи зон карти (.is-visited-full / .is-visited-partial) відповідно
+ * до поточного стану check-in. Викликається при 'map:sync-checkins'.
+ */
+export function syncMapWithCheckins() {
+  if (!inner || !state.stationsData) return;
+
+  const checkins = getCheckins();
+  const visitedExitsBySlug = {};
+
+  for (const entry of Object.values(checkins)) {
+    if (!entry.slug) continue;
+    if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
+    // Ключ ОБОВ'ЯЗКОВО включає напрямок (dir): два РІЗНІ фізичні виходи
+    // (на різних платформах/напрямках) можуть мати однаковий номер
+    // вагона/дверей — це нормально. Без dir у ключі такі виходи
+    // колапсують в один запис Set, totalOpenExits (без дедуплікації)
+    // лишається більшим за розмір Set, і станція ніколи не отримує
+    // is-visited-full, навіть якщо реально відмічені всі виходи.
+    visitedExitsBySlug[entry.slug].add(`${entry.dir}|${entry.wagon}|${entry.doors}`);
+  }
+
+  // Set для O(1) lookup замість O(V) array.some()
+  const visitedNameSet = new Set(
+    Object.keys(visitedExitsBySlug)
+      .map(slug => state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase())
+      .filter(Boolean)
+  );
+
+  removeVisitedHatchOverlays();
+
+  inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
+    .forEach(el => el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full'));
+
+  // Кешований список лише зон станцій (не всього SVG)
+  _getStationZoneEls().forEach(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    const slug  = getSlugByLower(rawId);
+    if (!slug || !visitedExitsBySlug[slug]) return;
+
+    const stData         = state.stationsData[slug];
+    const totalOpenExits = stData?.positions?.length
+      ? stData.positions.filter(p => !p.closed).length
+      : 1;
+
+    el.classList.add(visitedExitsBySlug[slug].size >= totalOpenExits
+      ? 'is-visited-full'
+      : 'is-visited-partial');
+  });
+
+  inner.querySelectorAll('text').forEach(txt => {
+    const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
+    if (cleanText.length <= 2) return;
+    // O(1) Set.has() замість O(V) array.some() з substring-matching
+    // Повна відповідність достатня: SVG text збігається з нормалізованою назвою
+    if (visitedNameSet.has(cleanText)) {
+      txt.classList.add('station-checked-in');
+      txt.querySelectorAll('tspan').forEach(t => t.classList.add('station-checked-in'));
+    }
+  });
+
+  applyVisitedHatchOverlays();
+}
+
+bus.on('map:sync-checkins',       syncMapWithCheckins);
+bus.on('data:stations-hydrated',  invalidateStationZoneCache);
+</file>
+
 <file path="src/features/devmode.js">
 // ══ FEATURE: РЕЖИМ РОЗРОБНИКА (DEV MODE) ══
 // Відповідальність: перегляд і верифікація даних позицій безпосередньо у UI станції.
@@ -6777,13 +7315,24 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
   const panel = document.createElement('div');
   panel.className = 'dev-note-panel';
   panel.dataset.type = 'note';
-  panel.innerHTML = `<textarea class="dev-note-textarea">${existingNote}</textarea> <div class="dev-note-actions"> <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button> <button type="button" class="dev-note-clear confirm-btn-neutral">Скасувати</button> </div>`;
+  
+  // Додаємо третю кнопку "Видалити" з червоним підсвічуванням (confirm-btn-discard)
+  // Вона рендериться тільки якщо нотатка фізично вже існує в базі
+  panel.innerHTML = `
+    <textarea class="dev-note-textarea">${existingNote}</textarea> 
+    <div class="dev-note-actions"> 
+      <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button> 
+      <button type="button" class="dev-note-cancel confirm-btn-neutral">Скасувати</button> 
+      ${existingNote ? `<button type="button" class="dev-note-delete confirm-btn-discard">Видалити</button>` : ''}
+    </div>`;
+    
   row.after(panel);
   requestAnimationFrame(() => panel.classList.add('panel-open'));
 
   const textarea = panel.querySelector('.dev-note-textarea');
   setTimeout(() => textarea.focus(), 60);
 
+  // 1. ЗБЕРЕГТИ: Оновлює або створює вміст
   panel.querySelector('.dev-note-save').addEventListener('click', e => {
     e.stopPropagation();
     const text = textarea.value.trim();
@@ -6794,14 +7343,25 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
     setTimeout(() => panel.remove(), 280);
   });
 
-  panel.querySelector('.dev-note-clear').addEventListener('click', e => {
+  // 2. СКАСУВАТИ: Просто закриває панель. Старі дані в Storage взагалі не чіпаємо!
+  panel.querySelector('.dev-note-cancel').addEventListener('click', e => {
     e.stopPropagation();
-    setDevNote(slug, posIdx, '');
-    noteBtn.style.color   = defaultColor;
-    noteBtn.style.opacity = defaultOpacity;
     panel.classList.remove('panel-open');
     setTimeout(() => panel.remove(), 280);
   });
+
+  // 3. ВИДАЛИТИ: Повністю очищує нотатку та гасить колір іконки олівця
+  const deleteBtn = panel.querySelector('.dev-note-delete');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      setDevNote(slug, posIdx, '');
+      noteBtn.style.color   = defaultColor;
+      noteBtn.style.opacity = defaultOpacity;
+      panel.classList.remove('panel-open');
+      setTimeout(() => panel.remove(), 280);
+    });
+  }
 }
 
 // ── UI: панель фото ───────────────────────────────────
@@ -7003,297 +7563,6 @@ function setupDevDataClear(container) {
     }, 400); 
   };
 }
-</file>
-
-<file path="src/map/mapInteraction.js">
-// ══ ВЗАЄМОДІЯ З КАРТОЮ ══
-// Відповідальність: обробка кліків на SVG-зони станцій,
-// накладання та зняття heatmap-штрихування для відвіданих виходів (check-in).
-
-import { state }                  from '../core/state.js';
-import { getCheckins }            from '../domain/checkin.js';
-import { bus }                    from '../core/eventBus.js';
-import { STORAGE_KEYS, Storage }  from '../core/storage.js';
-import { getSlugByLower }         from '../data/stations.js';
-
-const inner = document.getElementById('mapInner');
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
-const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
-const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
-const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
-const HATCH_STEP_PX  = 8;
-
-/**
- * Обробляє клік або Enter/Space на SVG-зоні карти.
- * Знаходить slug за id елемента і емітує 'station:open'.
- * @param {MouseEvent|KeyboardEvent} e
- */
-export function handleMapInteraction(e) {
-  if (!state.stationsData) return;
-  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
-
-  const zone = e.target.closest('[id]');
-  if (!zone?.id) return;
-
-  const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
-  const slug  = getSlugByLower(rawId);
-  if (slug) { e.preventDefault(); bus.emit('station:open', { slug }); }
-}
-
-inner?.addEventListener('click',   handleMapInteraction);
-inner?.addEventListener('keydown', handleMapInteraction);
-
-function removeVisitedHatchOverlays(root = inner) {
-  root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
-}
-
-function round(value) {
-  return Math.round(value * 100) / 100;
-}
-
-const _hatchLineCache = new WeakMap();
-
-// Кеш зон станцій (будується один раз після renderMapZones)
-let _stationZoneEls = null;
-function _getStationZoneEls() {
-  // Повертаємо кеш, ТІЛЬКИ якщо він не порожній
-  if (_stationZoneEls && _stationZoneEls.length > 0) return _stationZoneEls;
-  
-  const els = [...inner.querySelectorAll('[id]')].filter(el => {
-    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    return !!getSlugByLower(rawId);
-  });
-  
-  // Кешуємо тільки тоді, коли станції реально знайшлися на карті
-  if (els.length > 0) {
-    _stationZoneEls = els;
-  }
-  
-  return els;
-}
-
-/** Скидає кеш зон станцій (викликати після повторного renderMapZones). */
-export function invalidateStationZoneCache() { _stationZoneEls = null; }
-
-let _clipIdCounter = 0;
-
-let _hatchRafId = null;
-
-/**
- * Планує накладання heatmap-штрихування на відвідані зони карти.
- * Дедублюється через requestAnimationFrame — безпечно викликати кілька разів поспіль.
- * @param {Element} [root] — за замовчуванням mapInner
- */
-export function applyVisitedHatchOverlays(root = inner) {
-  if (!root) return;
-  if (_hatchRafId !== null) return;
-  _hatchRafId = requestAnimationFrame(() => {
-    _hatchRafId = null;
-    _doApplyHatch(root);
-  });
-}
-
-function _doApplyHatch(root) {
-  removeVisitedHatchOverlays(root);
-
-  const isHatchEnabled = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
-  if (!isHatchEnabled) return;
-
-  const targets = [...root.querySelectorAll('.is-visited-partial, .is-visited-full')]
-    .filter(el => el.closest('.is-visited-partial, .is-visited-full') === el);
-
-  if (!targets.length) return;
-
-  const globalScale = _getGlobalSvgScale();
-
-  targets.forEach(target => {
-    const shapes = _getValidGeometry(target);
-    if (!shapes.length) return;
-
-    const isFull = target.classList.contains('is-visited-full');
-
-    const overlay = document.createElementNS(SVG_NS, 'g');
-    overlay.classList.add(HATCH_OVERLAY_CLASS, isFull ? 'ci-hatch-full' : 'ci-hatch-partial');
-    overlay.setAttribute('aria-hidden', 'true');
-    overlay.setAttribute('focusable', 'false');
-    overlay.dataset.hatchFor = target.id || '';
-
-    shapes.forEach(shape => _appendShapeHatch(shape, overlay, isFull, globalScale));
-    if (!overlay.childElementCount) return;
-
-    if (target instanceof SVGGElement) {
-      target.appendChild(overlay);
-    } else {
-      target.parentNode?.insertBefore(overlay, target.nextSibling);
-    }
-  });
-}
-
-function _getGlobalSvgScale() {
-  const ref = inner.querySelector('path, polygon, rect');
-  if (!ref) return 1;
-  const ctm   = ref.getScreenCTM?.();
-  const scale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
-  return (Number.isFinite(scale) && scale > 0) ? scale : 1;
-}
-
-const _geometryCache = new WeakMap();
-
-function _getValidGeometry(target) {
-  if (_geometryCache.has(target)) return _geometryCache.get(target);
-
-  const geometry = target.matches(HATCH_GEOMETRY_SELECTOR)
-    ? [target]
-    : [...target.querySelectorAll(HATCH_GEOMETRY_SELECTOR)];
-
-  // getBBox() тільки при першому зверненні до target — кешуємо через WeakMap
-  const valid = geometry.filter(shape => {
-    if (shape.closest(`.${HATCH_OVERLAY_CLASS}`)) return false;
-    try { const b = shape.getBBox(); return b.width > 0 && b.height > 0; }
-    catch { return false; }
-  });
-
-  // Запобіжник: не кешуємо порожній результат (якщо SVG ще не відмалювався)
-  if (valid.length > 0) {
-    _geometryCache.set(target, valid);
-  }
-  
-  return valid;
-}
-
-function _appendShapeHatch(shape, overlay, isFull, globalScale) {
-  const cached = _hatchLineCache.get(shape);
-  let lines, strokeWidth;
-
-  if (cached && cached.isFull === isFull && Math.abs(cached.scale - globalScale) / globalScale < 0.02) {
-    // Cache hit: нуль getBBox(), нуль layout flush
-    ({ lines, strokeWidth } = cached);
-  } else {
-    // Cache miss: рахуємо один раз (один getBBox всередині buildHatchLines)
-    ({ lines, strokeWidth } = buildHatchLines(shape, isFull, globalScale));
-    _hatchLineCache.set(shape, { isFull, scale: globalScale, lines, strokeWidth });
-  }
-
-  if (!lines.length) return;
-
-  const shapeOverlay = document.createElementNS(SVG_NS, 'g');
-  const transform    = shape.getAttribute('transform');
-  if (transform) shapeOverlay.setAttribute('transform', transform);
-
-  // Монотонний лічильник замість Math.random()
-  const clipId   = `ci-clip-${_clipIdCounter++}`;
-  const defs     = document.createElementNS(SVG_NS, 'defs');
-  const clipPath = document.createElementNS(SVG_NS, 'clipPath');
-  clipPath.setAttribute('id', clipId);
-  const clipGeometry = shape.cloneNode(false);
-  clipGeometry.removeAttribute('id');
-  clipGeometry.removeAttribute('class');
-  clipGeometry.setAttribute('stroke-width', '1');
-  clipGeometry.setAttribute('stroke', 'black');
-  clipPath.appendChild(clipGeometry);
-  defs.appendChild(clipPath);
-  shapeOverlay.appendChild(defs);
-
-  const clippedGroup = document.createElementNS(SVG_NS, 'g');
-  clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
-  shapeOverlay.appendChild(clippedGroup);
-  overlay.appendChild(shapeOverlay);
-
-  lines.forEach(d => {
-    const line = document.createElementNS(SVG_NS, 'path');
-    line.classList.add(HATCH_LINE_CLASS);
-    line.setAttribute('d', d);
-    line.setAttribute('stroke-width', String(strokeWidth));
-    clippedGroup.appendChild(line);
-  });
-}
-
-// Оновлена сигнатура: приймає globalScale, щоб не викликати getScreenCTM()
-function buildHatchLines(sourceShape, isFull, scale) {
-  const box  = sourceShape.getBBox(); // єдиний getBBox() на shape
-  // scale передається ззовні — не потрібен getScreenCTM() тут
-  const step = HATCH_STEP_PX / scale;
-  const pad  = step * 2;
-
-  const minX = box.x - pad, maxX = box.x + box.width  + pad;
-  const minY = box.y - pad, maxY = box.y + box.height + pad;
-
-  const cStep    = step * Math.SQRT2;
-  const cMin_raw = isFull ? (minX + minY) : (minX - maxY);
-  const cMax     = isFull ? (maxX + maxY) : (maxX - minY);
-  const cMin     = Math.floor(cMin_raw / cStep) * cStep;
-
-  const lines = [];
-  for (let c = cMin; c <= cMax; c += cStep) {
-    const x1 = minX, x2 = maxX;
-    const y1 = isFull ? (c - x1) : (x1 - c);
-    const y2 = isFull ? (c - x2) : (x2 - c);
-    lines.push(`M ${round(x1)} ${round(y1)} L ${round(x2)} ${round(y2)}`);
-  }
-  return { lines, strokeWidth: round(step * 0.35) };
-}
-
-/**
- * Оновлює CSS-класи зон карти (.is-visited-full / .is-visited-partial) відповідно
- * до поточного стану check-in. Викликається при 'map:sync-checkins'.
- */
-export function syncMapWithCheckins() {
-  if (!inner || !state.stationsData) return;
-
-  const checkins = getCheckins();
-  const visitedExitsBySlug = {};
-
-  for (const entry of Object.values(checkins)) {
-    if (!entry.slug) continue;
-    if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
-    visitedExitsBySlug[entry.slug].add(`${entry.wagon}|${entry.doors}`);
-  }
-
-  // Set для O(1) lookup замість O(V) array.some()
-  const visitedNameSet = new Set(
-    Object.keys(visitedExitsBySlug)
-      .map(slug => state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase())
-      .filter(Boolean)
-  );
-
-  removeVisitedHatchOverlays();
-
-  inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
-    .forEach(el => el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full'));
-
-  // Кешований список лише зон станцій (не всього SVG)
-  _getStationZoneEls().forEach(el => {
-    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    const slug  = getSlugByLower(rawId);
-    if (!slug || !visitedExitsBySlug[slug]) return;
-
-    const stData         = state.stationsData[slug];
-    const totalOpenExits = stData?.positions?.length
-      ? stData.positions.filter(p => !p.closed).length
-      : 1;
-
-    el.classList.add(visitedExitsBySlug[slug].size >= totalOpenExits
-      ? 'is-visited-full'
-      : 'is-visited-partial');
-  });
-
-  inner.querySelectorAll('text').forEach(txt => {
-    const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
-    if (cleanText.length <= 2) return;
-    // O(1) Set.has() замість O(V) array.some() з substring-matching
-    // Повна відповідність достатня: SVG text збігається з нормалізованою назвою
-    if (visitedNameSet.has(cleanText)) {
-      txt.classList.add('station-checked-in');
-      txt.querySelectorAll('tspan').forEach(t => t.classList.add('station-checked-in'));
-    }
-  });
-
-  applyVisitedHatchOverlays();
-}
-
-bus.on('map:sync-checkins',       syncMapWithCheckins);
-bus.on('data:stations-hydrated',  invalidateStationZoneCache);
 </file>
 
 <file path="src/features/search.js">
@@ -8800,9 +9069,6 @@ registerServiceWorker();
       html:not([data-theme="dark"]) body { background: #e5e5ea; } 
     }
 
-
-
-    
     /* Лоадер має висіти НАД картою, а не штовхати її */
     .loader-container {
       position: fixed;
@@ -8845,7 +9111,6 @@ const actual = t === 'system'
 document.documentElement.setAttribute('data-theme', actual);
 </script>
 
-
 <link rel="stylesheet" href="styles.css">
 
   <link rel="manifest" href="manifest.json">
@@ -8874,11 +9139,11 @@ document.documentElement.setAttribute('data-theme', actual);
               <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
               <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
               <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
-              <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 -8,-2 -8,-4.9 z" />
+              <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 -8,-2 8,-4.9 z" />
               <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z" />
               <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z" />
               <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z" />
-              <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
+              <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 -3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
               <path class="st4" d="m 227.95,217.46 c 2.1,-0.9 4.2,-1.3 4.8,1.4 0.5,2.5 -0.6,5.3 -1.7,6 -1.5,0.3 -4.1,-1 -5.5,-3 -1.4,-2.4 0.3,-3.6 2.4,-4.4 z" />
               <path class="st4" d="m 212.05,255.66 c -0.9,-2.1 -1.3,-4.2 1.4,-4.7 2.5,-0.5 5.4,0.6 6,1.7 0.3,1.5 -1,4.1 -3.1,5.4 -2.2,1.4 -3.5,-0.3 -4.3,-2.4 z" />
               <path class="st4" d="m 250.75,271.96 c 2.1,-0.9 3.9,-2.1 2.4,-4.4 -1.4,-2.1 -4.2,-3.3 -5.5,-3 -1.3,0.8 -2.2,3.6 -1.7,6 0.6,2.7 2.7,2.3 4.8,1.4 z" />
@@ -8916,8 +9181,6 @@ document.documentElement.setAttribute('data-theme', actual);
     </svg>
   </button>
 </nav>
-
-
 
   <div id="dropMenu" class="drop-menu" hidden>
 <button class="drop-item" id="settingsItem">
@@ -8992,10 +9255,7 @@ document.documentElement.setAttribute('data-theme', actual);
     <button class="sheet-close-btn" id="aboutClose" aria-label="Закрити">✕</button>
   </div>
 
-
 <div class="sheet-body">
-
-
 
       <div class="about-content">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" id="aboutLogoImg">
@@ -9020,19 +9280,6 @@ document.documentElement.setAttribute('data-theme', actual);
   </svg>
   
   <p style="text-align: center;">Заощадження часопростору у київському&nbsp;метро</p>      
-
-
-
-
-
-
-
-
-
-
-
-
-        
 
        <div class="about-card">
           <div class="about-card-icon">
@@ -9072,7 +9319,6 @@ document.documentElement.setAttribute('data-theme', actual);
           </div>
           <p class="about-card-text">Виправляйте неточності та підписуйте виходи з&nbsp;метро</p>
         </div>
-
 
 <div class="about-card about-support-card" style="padding-top: 16px;">
   <div class="about-support-cols" style="display: flex; width: 100%;">
@@ -9119,9 +9365,6 @@ document.documentElement.setAttribute('data-theme', actual);
           </svg>
         </button>
 
-
-
-
         <a href="https://send.monobank.ua/ПОСИЛАННЯ" target="_blank" rel="noopener" class="about-donate-btn-mono about-colored-btn about-btn-mono-fixed" style="margin: 0 !important; width: 100% !important;">mono</a>
       </div>
     </div>
@@ -9152,10 +9395,6 @@ document.documentElement.setAttribute('data-theme', actual);
       <p class="about-footer">Зроблено з любовʼю до Києва</p>
     </div>
   </template>
-
-
-
-
 
   <template id="tpl-feedback-sheet">
     <div class="sheet-handle-bar">
@@ -9190,8 +9429,6 @@ document.documentElement.setAttribute('data-theme', actual);
     </div>
   </template>
 
-
-
 <template id="tpl-settings-sheet">
     <div class="sheet-handle-bar">
       <div class="sheet-handle"></div>
@@ -9208,9 +9445,9 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-row">
             <span class="settings-label">Тема</span>
             <div class="settings-seg" id="settingsThemeSeg">
-              <button type="button" class="settings-seg-btn" data-theme-val="system">Системна</button>
-              <button type="button" class="settings-seg-btn" data-theme-val="light">Світла</button>
-              <button type="button" class="settings-seg-btn" data-theme-val="dark">Темна</button>
+              <button type="button" class="settings-seg-btn" data-theme-val="system">системна</button>
+              <button type="button" class="settings-seg-btn" data-theme-val="light">світла</button>
+              <button type="button" class="settings-seg-btn" data-theme-val="dark">темна</button>
             </div>
           </div>
           
@@ -9219,7 +9456,7 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-row">
             <span class="settings-label">При запуску</span>
             <div class="settings-seg" id="settingsStartSeg">
-              <button type="button" class="settings-seg-btn" data-start-val="false">Карта</button>
+              <button type="button" class="settings-seg-btn" data-start-val="false">карта</button>
               <button type="button" class="settings-seg-btn" data-start-val="true" style="font-variant: small-caps;">Вибране</button>
             </div>
           </div>
@@ -9237,12 +9474,15 @@ document.documentElement.setAttribute('data-theme', actual);
           </div>
           <div id="settingsCheckinCollapsible">
             <div class="settings-rule"></div>
-            <div class="settings-row" id="checkinExitsRow">
-              <span class="settings-label">Статистика</span>
-              <div class="settings-seg" id="settingsCheckinStatSeg">
-                <button type="button" class="settings-seg-btn" data-stat-val="station">по станціям</button>
-                <button type="button" class="settings-seg-btn" data-stat-val="exits">по виходам</button>
+            <div class="settings-row" id="checkinExitsRow" style="flex-direction: column; align-items: stretch; gap: 6px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <span class="settings-label">Статистика</span>
+                <div class="settings-seg" id="settingsCheckinStatSeg">
+                  <button type="button" class="settings-seg-btn" data-stat-val="station">по станціям</button>
+                  <button type="button" class="settings-seg-btn" data-stat-val="exits">по виходам</button>
+                </div>
               </div>
+              <span class="settings-sublabel">Впливає на відсоток охоплення та кола статистики</span>
             </div>
             <div class="settings-rule"></div>
             <div class="settings-row" id="checkinByExitRow">
@@ -9276,7 +9516,6 @@ document.documentElement.setAttribute('data-theme', actual);
             <div class="settings-label-wrap">
               <span class="settings-label">Режим локальних змін</span>
               <span class="settings-sublabel" style="text-align: left;">Розробник не бачить правок у <span style="font-variant: small-caps;;">Запропонувати&nbsp;зміни</span>
-
             </div>
             <label class="ios-toggle">
               <input type="checkbox" id="settingsLocalFeedbackToggle">
@@ -9315,8 +9554,6 @@ const center = document.getElementById("loaderCenter");
     const petalGroup = document.getElementById("loaderPetals");    if (!viewport || !center || !petalGroup) return;
 
     const petalNodes = Array.from(petalGroup.querySelectorAll("path"));
-
-
 
     // Отримуємо координати центру (для сортування пелюсток)
     const centerBox = center.getBoundingClientRect();

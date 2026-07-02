@@ -33,6 +33,8 @@ import {
   stationWord,
   exitWord,
   buildLineStats,
+  exitGroupKey,
+  getStationExitStats,
   LINE_NAMES,
   LINE_ORDER,
 } from '../../domain/checkin.js';
@@ -220,10 +222,10 @@ export function openCheckinSheet() {
       selectedLines = new Set();
     } else {
       const uniqueStations     = new Set(entries.map(e => e.slug)).size;
-      const uniqueExitsVisited = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`)).size;
+      const uniqueExitsVisited = new Set(entries.map(e => exitGroupKey(e.slug, e.dir, e.wagon, e.doors))).size;
       const totalExitsAll      = state.stationsData
-        ? Object.values(state.stationsData).reduce(
-            (sum, st) => sum + (st.positions ? st.positions.filter(p => !p.closed).length : 0), 0
+        ? Object.keys(state.stationsData).reduce(
+            (sum, slug) => sum + getStationExitStats(slug, entries).total, 0
           )
         : 0;
       const totalStationsAll = state.stationsData ? Object.keys(state.stationsData).length : 0;
@@ -235,11 +237,11 @@ export function openCheckinSheet() {
       const covDenom = byExits ? totalExitsAll      : totalStationsAll;
 
       if (covDenom > 0 && covNum > 0) {
-        const raw = Math.floor((covNum / covDenom) * 100);
-        if (covNum === covDenom) { coverageText = '100%';    coverageValue = 100; }
-        else if (raw === 0)      { coverageText = '< 1%';    coverageValue = 1;   }
-        else if (raw === 100)    { coverageText = '> 99%';   coverageValue = 99;  }
-        else                     { coverageText = `${raw}%`; coverageValue = raw; }
+        const pct = (covNum / covDenom) * 100;
+        if (covNum === covDenom) { coverageText = '100%';               coverageValue = 100; }
+        else if (pct < 1)        { coverageText = '< 1%';               coverageValue = 1;   }
+        else if (pct > 99)       { coverageText = '> 99%';              coverageValue = 99;  }
+        else                     { coverageText = `${Math.round(pct)}%`; coverageValue = Math.round(pct); }
       }
 
       bodyHtml = `
@@ -266,19 +268,16 @@ export function openCheckinSheet() {
           return st && selectedLines.has(st.line);
         });
 
-        if (ciViewMode === 'unvisited') {
-          const visitedKeys       = new Set(entries.map(e => `${e.slug}|${e.wagon}|${e.doors}`));
+          if (ciViewMode === 'unvisited') {
           const unvisitedStations = Object.entries(state.stationsData || {})
             .map(([slug, st]) => {
-              const unvisited = st.positions?.filter(
-                p => !p.closed && !visitedKeys.has(`${slug}|${p.wagon}|${p.doors}`)
-              ) || [];
+              const { total, visited } = getStationExitStats(slug, entries);
               return {
                 slug,
                 name:           st.name,
                 line:           st.line,
-                unvisitedCount: unvisited.length,
-                total:          st.positions?.filter(p => !p.closed).length || 0,
+                unvisitedCount: total - visited,
+                total,
               };
             })
             .filter(s => s.unvisitedCount > 0 && selectedLines.has(s.line))
@@ -317,8 +316,7 @@ export function openCheckinSheet() {
           listHtml = stationEntries.map(([slug, items]) => {
             const st              = state.stationsData?.[slug];
             const color           = items[0].color || (st ? LINE_COLOR[st.line] : 'var(--text-muted)');
-            const totalExits      = st?.positions ? st.positions.filter(p => !p.closed).length : 0;
-            const visitedExitsCnt = new Set(items.map(e => `${e.wagon}|${e.doors}`)).size;
+            const { total: totalExits, visited: visitedExitsCnt } = getStationExitStats(slug, entries);
             const lastTs          = Math.max(...items.map(e => e.ts));
 
             return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-accent:${color}">

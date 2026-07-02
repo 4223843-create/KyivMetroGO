@@ -1,0 +1,24 @@
+The previous array-index-based synchronization variant was terrible and broke synchronization on multiple other stations because exit indices are not structurally aligned across the entire dataset. I have manually rolled back the code of `src/domain/checkin.js` to its original state. Let's design a completely different, safer, and non-destructive solution.
+
+### THE LOGICAL ARCHITECTURE WE MUST PRESERVE
+We must strictly adhere to the original two business rules of the app without relying on fragile array indices:
+- Rule 1 (One-to-one): Every real passenger direction has exactly one real exit. Tapping any pin must check in all pins from all real passenger directions (e.g., Vokzalna).
+- Rule 2 (By label): If at least one real passenger direction has more than one exit, only sync exits whose `exit.label` matches the label of the clicked exit (case-insensitive, whitespace-normalized). If the clicked exit has no label, do not sync (save the clicked pin only).
+
+### THE TWO GENUINE BUGS TO FIX
+1. The `allHaveOneExit` bug: The original code evaluated `station.directions.every(...)` blindly, which included service directions (like `__long_transfer__` or empty technical tracks). Because service tracks don't have exactly 1 exit, `allHaveOneExit` incorrectly evaluated to `false`, silently breaking Rule 1 for many stations. We must isolate "Real Directions" first. A "Real Direction" is a non-service track containing at least one exit with at least one active, non-closed position.
+2. The empty `dir` bug on terminal stations ("Heroiv Dnipra"): Due to a split-block DOM rendering layout on terminal tracks, the UI layer extracts an empty string (`dir = ""`) when clicking a wagon pill. 
+
+### NEW IMPLEMENTATION ALGORITHM (Strictly inside toggleCheckin)
+Go back to the original `toggleCheckin` signature and structure. Before making any sync decisions, execute these steps:
+
+1. DEDUCE MISSING DIRECTION: If the incoming `dir` argument is empty (`""` or missing), find the valid track name dynamically. Scan all available station directions and exits using `exitContainsPin(ex, wagon, doors)`. Once the clicked pin is found, override `dir` with that direction's real name (`d.from`).
+2. FILTER REAL DIRECTIONS: Build a clean array of purely "Real Directions" and their "Real Exits". A direction is real if its normalized name is NOT `"__long_transfer__"` and it contains at least one exit with at least one non-closed position.
+3. FIND THE SOURCE LABEL: Within the resolved clicked direction, identify the exact clicked exit block using `exitContainsPin` and extract its normalized `label` (if any).
+4. EVALUATE SYNC RULES AGAINST REAL DATA ONLY:
+   - Check if `realDirs.every(d => d.realExits.length === 1)`. If true (Rule 1), add all active positions from the single exit of every real direction to the `targets` Map.
+   - Otherwise, if the clicked exit has a valid normalized label, execute Rule 2: loop through all real directions, find exits with a matching normalized label, and add their non-closed positions to the `targets` Map.
+5. ALWAYS preserve the primary clicked pin under its corrected direction name in the `targets` Map as a final fallback.
+6. Evaluate `willCheckIn` strictly against the primary clicked pin's target ID to avoid partial-sync toggle deadlocks, then apply mutations to the database.
+
+Provide the clean, complete rewrite of the `toggleCheckin` function inside `src/domain/checkin.js`. Do not modify other exports.
