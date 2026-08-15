@@ -260,14 +260,12 @@ z-index: var(--z-fullscreen-sheet);
 
 
 
+/* ══ ФІКСАЦІЯ ТА НЕПРОЗОРІСТЬ ШАПКИ ШТОРКИ ══ */
 .sheet-handle-bar {
-  display: flex;
-  align-items: center;
-  padding: 10px 16px 8px; /* Повертаємо нижній відступ */
-  flex-shrink: 0;
-  background: var(--bg-sheet);
-  position: relative;
-  min-height: 52px; /* Робимо шапку трохи вищою, щоб усе дихало */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--bg-card);
 }
 .sheet-handle {
   width: 40px; height: 3px;
