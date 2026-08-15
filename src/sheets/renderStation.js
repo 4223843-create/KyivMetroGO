@@ -183,21 +183,28 @@ export function renderDirections(s, color) {
   }
 
   return s.directions.map(dir => {
-    if (dir.from === 'вихід праворуч') {
-      return `<div class="direction-block direction-exit-right">
-        <div class="direction-label">вихід праворуч</div>
+    const fromLower = dir.from.trim().toLowerCase();
+
+    // Однакова логіка для плашок "вихід праворуч" та "кінцева"
+    if (fromLower === 'вихід праворуч' || fromLower === 'кінцева') {
+      const headerBlock = `<div class="direction-block direction-exit-right" style="${dir.exits?.length ? 'margin-bottom:10px;' : ''}">
+        <div class="direction-label" style="margin:0;">${fromLower}</div>
       </div>`;
+
+      if (!dir.exits?.length) {
+        return headerBlock;
+      }
+
+      const positionsBlock = `<div class="direction-block">
+        ${dir.exits.map(exit =>
+          `${renderExitLabel(exit)}${renderPositions(exit.positions, color, false)}`
+        ).join('')}
+      </div>`;
+
+      return headerBlock + positionsBlock;
     }
-    if (dir.from.trim().toLowerCase() === 'кінцева') {
-      return `<div class="direction-block direction-exit-right" style="margin-bottom:10px;">
-          <div class="direction-label" style="margin:0;">кінцева</div>
-        </div>
-        <div class="direction-block">
-          ${dir.exits.map(exit =>
-            `${renderExitLabel(exit)}${renderPositions(exit.positions, color, false)}`
-          ).join('')}
-        </div>`;
-    }
+
+    // Звичайні напрямки станцій
     return `<div class="direction-block">
       <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
       ${dir.exits.map(exit =>
