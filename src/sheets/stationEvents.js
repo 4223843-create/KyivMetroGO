@@ -18,6 +18,7 @@ import { Icons }                from '../ui/icons.js';
 import { applyFavPillStyles }     from './renderStation.js';
 import { heartSvg }               from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
+import { isEditModeEnabled }      from '../features/settings.js';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -102,7 +103,27 @@ function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoo
 
 
 
-
+// ── Тост «спершу увімкніть режим редагування» ─────────────────
+function _showEditModeLockToast(row) {
+  document.querySelectorAll('.edit-mode-lock-toast').forEach(t => t.remove());
+  const rect  = row.getBoundingClientRect();
+  const toast = document.createElement('div');
+  toast.className = 'dev-mode-toast dev-mode-toast-open edit-mode-lock-toast';
+  toast.style.cssText = `
+    position: fixed;
+    top: ${rect.top - 45}px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: auto;
+    z-index: 10000;
+  `;
+  toast.textContent = 'Спершу увімкніть режим редагування в налаштуваннях';
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.remove('dev-mode-toast-open');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
 
 
 // ── Ядро: toggle exit fav ─────────────────────────────────────
@@ -215,6 +236,10 @@ export function bindSheetGestures(sheetBody, getCtx) {
       e.stopPropagation();
       const editSlug = pencil.dataset.slug;
       if (!editSlug) return;
+      if (!isEditModeEnabled()) {
+        _showEditModeLockToast(pencil);
+        return;
+      }
       bus.emit('sheet:open-feedback-for', { slug: editSlug });
       return;
     }

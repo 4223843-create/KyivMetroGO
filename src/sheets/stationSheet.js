@@ -49,7 +49,7 @@ const _navLinkCache = new Map();
 
 // При оновленні даних — інвалідуємо кеш HTML поточної станції
 bus.on('station:refresh', () => {
-  _directionsHtmlCache.delete(state.currentStationSlug);
+  _directionsHtmlCache.clear();
   refreshCurrentStation();
 });
 

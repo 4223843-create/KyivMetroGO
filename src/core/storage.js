@@ -21,6 +21,8 @@ export const STORAGE_KEYS = {
   CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
   HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
   FAV_ONLY_STREAK:     'metro_fav_only_streak',
+  EDIT_MODE:           'metro_edit_mode',
+  HIDE_NO_LIFT:        'metro_hide_no_lift',
   DEV_MODE:     'metro_dev_mode',
   DEV_LOG:      'metro_dev_log',
   DEV_VERIFIED: 'metro_dev_verified',

@@ -24,4 +24,6 @@ export const STATIONS_WITH_POTENTIAL_EXITS = new Set([
   'R.Zhytomyrska',
   'G.Osokorky',
   'G.Chervonyi_khutir',
+  'G.Boryspilska',
+  'R.Hidropark',
 ]);

@@ -1,9 +1,9 @@
-import { slugByName } from '../data/stations.js';
-import { state }      from '../core/state.js';
-import { pill }       from '../ui/components.js';
-import { LINE_COLOR } from '../core/constants.js';
-import { Icons }      from '../ui/icons.js';
-
+import { slugByName }          from '../data/stations.js';
+import { state }               from '../core/state.js';
+import { pill }                from '../ui/components.js';
+import { LINE_COLOR }          from '../core/constants.js';
+import { Icons }               from '../ui/icons.js';
+import { isHideNoLiftEnabled } from '../features/settings.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -32,13 +32,9 @@ function formatLabel(raw) {
 
 // ══ РЕНДЕР ПОЗИЦІЙ ══
 
-/**
- * Генерує пару пілюль «вагон + двері» для одного або кількох виходів.
- * Підтримує формат "1, 2" (кілька вагонів через кому).
- */
 function generatePills(wStr, dStr, color) {
-  const wArr  = String(wStr).split(',').map(s => s.trim());
-  const dArr  = String(dStr).split(',').map(s => s.trim());
+  const wArr   = String(wStr).split(',').map(s => s.trim());
+  const dArr   = String(dStr).split(',').map(s => s.trim());
   const blocks = [];
   const count  = Math.max(wArr.length, dArr.length);
   for (let i = 0; i < count; i++) {
@@ -49,11 +45,6 @@ function generatePills(wStr, dStr, color) {
   return blocks.join('<span class="pos-multi-sep" style="margin: 0 6px;">·</span>');
 }
 
-/**
- * Генерує div.fav-tap-target з data-wagon та data-doors.
- * Ці атрибути — єдине джерело правди для stationEvents.js при жестах.
- * Зберігаємо оригінальні рядки ("1, 2", "1-3") без нормалізації.
- */
 function favTargetHtml(wStr, dStr, color) {
   return `<div class="fav-tap-target"
                data-wagon="${wStr}"
@@ -63,13 +54,6 @@ function favTargetHtml(wStr, dStr, color) {
   </div>`;
 }
 
-/**
- * Генерує HTML для одного або кількох .position-row.
- *
- * @param {Array}   positions — масив позицій з stationsData
- * @param {string}  color     — колір лінії
- * @param {boolean} multiRow  — true для Хрещатика (кілька виходів в одному рядку)
- */
 function renderPositions(positions, color, multiRow) {
   positions = positions.filter(p => !p.closed);
   if (!positions.length) return '';
@@ -81,8 +65,9 @@ function renderPositions(positions, color, multiRow) {
     const edited  = p._edited
       ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
       : '';
-    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
-      ${edited}${favTargetHtml(p.wagon, p.doors, color)}
+    const lift    = p.isLift ? `<span class="pos-lift-mark" aria-label="Ліфт">${Icons.wheelchair}</span>` : '';
+    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${p.isLift ? 'position-row-lift' : ''}">
+      ${edited}${favTargetHtml(p.wagon, p.doors, color)}${lift}
     </div>`;
   }
 
@@ -93,27 +78,23 @@ function renderPositions(positions, color, multiRow) {
       ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${Icons.pencil}</span>`
       : '';
     const spacer  = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
-    const targets = positions.map((p, i) =>
-      `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}`
-    ).join('');
+    const targets = positions.map((p, i) => {
+      const lift = p.isLift ? `<span class="pos-lift-mark" aria-label="Ліфт">${Icons.wheelchair}</span>` : '';
+      return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}${lift}`;
+    }).join('');
     return `<div class="position-row position-row-multi">${edited}${targets}${spacer}</div>`;
   }
 
   // Кілька виходів у окремих рядках
   return positions.map(p => {
     const isMulti = String(p.wagon).includes(',');
-    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''}">
-      ${favTargetHtml(p.wagon, p.doors, color)}
+    const lift    = p.isLift ? `<span class="pos-lift-mark" aria-label="Ліфт">${Icons.wheelchair}</span>` : '';
+    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${p.isLift ? 'position-row-lift' : ''}">
+      ${favTargetHtml(p.wagon, p.doors, color)}${lift}
     </div>`;
   }).join('');
 }
 
-// ══ РЕНДЕР ПІДПИСУ ВИХОДУ ══
-
-/**
- * Генерує HTML підпису виходу (назва вулиці, орієнтир).
- * Якщо підпис відредаговано локально — додає іконку олівця.
- */
 function renderExitLabel(exit) {
   if (!exit.label) return '';
   const edited = exit._labelEdited
@@ -128,34 +109,42 @@ function renderExitLabel(exit) {
 
 // ══ РЕНДЕР НАПРЯМКІВ ══
 
-/**
- * Головна функція рендеру. Генерує весь HTML тіла картки станції.
- * Обробляє особливий кейс Хрещатика (довгий перехід окремим блоком).
- *
- * @param {Object} s     — об'єкт станції зі stationsData
- * @param {string} color — колір лінії (#rrggbb)
- * @returns {string}     — HTML-рядок для вставки в sheetBody.innerHTML
- */
 export function renderDirections(s, color) {
   const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
+
+  // Перевірка налаштування та наявності хоча б одного ліфта на станції
+  const hideNoLift = isHideNoLiftEnabled();
+  const hasLift = s.directions?.some(dir =>
+    dir.exits?.some(exit =>
+      exit.positions?.some(p => p.isLift)
+    )
+  );
+  const filterLiftOnly = hideNoLift && hasLift;
 
   if (isKhreshchatyk) {
     const mainDirs = s.directions.filter(d => d.from !== '__long_transfer__');
     const longDir  = s.directions.find(d => d.from === '__long_transfer__');
 
-    const mainHtml = mainDirs.map(dir => `
-      <div class="direction-block">
+    const mainHtml = mainDirs.map(dir => {
+      const exitsHtml = dir.exits.map(exit => {
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift)) || [];
+        if (!visiblePos.length) return '';
+        return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true)}`;
+      }).join('');
+
+      if (!exitsHtml) return '';
+      return `<div class="direction-block">
         <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
-        ${dir.exits.map(exit =>
-          `${renderExitLabel(exit)}${renderPositions(exit.positions, color, true)}`
-        ).join('')}
-      </div>`
-    ).join('');
+        ${exitsHtml}
+      </div>`;
+    }).join('');
 
     let longHtml = '';
     if (longDir) {
       const rows = longDir.exits.map(exit => {
-        const posRows = exit.positions.map(p =>
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift)) || [];
+        if (!visiblePos.length) return '';
+        const posRows = visiblePos.map(p =>
           `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
         ).join('');
         const edited = exit._labelEdited
@@ -165,18 +154,20 @@ export function renderDirections(s, color) {
           <div class="long-transfer-exit-label" style="position:relative;">${edited}${exit.label}</div>
           ${posRows}
         </div>`;
-      }).join('');
+      }).filter(Boolean).join('');
 
-      longHtml = `<div class="long-transfer-block">
-        <div class="long-transfer-title">
-          <span class="transfer-label">
-            <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
-            <span class="transfer-text">довгий&nbsp;перехід на&nbsp;Майдан&nbsp;Незалежності</span>
-            <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
-          </span>
-        </div>
-        ${rows}
-      </div>`;
+      if (rows) {
+        longHtml = `<div class="long-transfer-block">
+          <div class="long-transfer-title">
+            <span class="transfer-label">
+              <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
+              <span class="transfer-text">довгий&nbsp;перехід на&nbsp;Майдан&nbsp;Незалежності</span>
+              <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
+            </span>
+          </div>
+          ${rows}
+        </div>`;
+      }
     }
 
     return mainHtml + longHtml;
@@ -185,46 +176,34 @@ export function renderDirections(s, color) {
   return s.directions.map(dir => {
     const fromLower = dir.from.trim().toLowerCase();
 
-    // Однакова логіка для плашок "вихід праворуч" та "кінцева"
+    const exitsHtml = dir.exits?.map(exit => {
+      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift)) || [];
+      if (!visiblePos.length) return '';
+      return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false)}`;
+    }).join('') || '';
+
     if (fromLower === 'вихід праворуч' || fromLower === 'кінцева') {
       const headerBlock = `<div class="direction-block direction-exit-right" style="${dir.exits?.length ? 'margin-bottom:10px;' : ''}">
         <div class="direction-label" style="margin:0;">${fromLower}</div>
       </div>`;
 
-      if (!dir.exits?.length) {
+      if (!dir.exits?.length || !exitsHtml) {
         return headerBlock;
       }
 
-      const positionsBlock = `<div class="direction-block">
-        ${dir.exits.map(exit =>
-          `${renderExitLabel(exit)}${renderPositions(exit.positions, color, false)}`
-        ).join('')}
-      </div>`;
-
+      const positionsBlock = `<div class="direction-block">${exitsHtml}</div>`;
       return headerBlock + positionsBlock;
     }
 
-    // Звичайні напрямки станцій
+    if (!exitsHtml) return '';
+
     return `<div class="direction-block">
       <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
-      ${dir.exits.map(exit =>
-        `${renderExitLabel(exit)}${renderPositions(exit.positions, color, false)}`
-      ).join('')}
+      ${exitsHtml}
     </div>`;
   }).join('');
 }
 
-// ══ СТИЛІЗАЦІЯ ПІЛЮЛЬ УЛЮБЛЕНОГО ══
-
-/**
- * Підфарбовує або знебарвлює пілюлі .pos-pill у заданому контейнері.
- * Викликається з stationEvents.js при toggle/restore exit fav,
- * та з stationSheet.js при відкритті картки (applyInitialFavStyles).
- *
- * @param {Element} container  — зазвичай .position-row
- * @param {string}  lineColor  — колір лінії (#rrggbb)
- * @param {boolean} isFaved    — true = пофарбувати, false = знебарвити
- */
 export function applyFavPillStyles(container, lineColor, isFaved) {
   container.querySelectorAll('.pos-pill').forEach(p => {
     p.style.background = isFaved ? lineColor : '';

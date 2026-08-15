@@ -458,40 +458,75 @@ document.documentElement.setAttribute('data-theme', actual);
           </div>
         </div>
 
+
+
         <div class="settings-card">
-          <div class="settings-card-header">Дані</div>
-          <div class="settings-rule"></div>
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Режим локальних змін</span>
-              <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsLocalFeedbackToggle">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-          <div class="settings-rule"></div>
-          <div class="clear-data-row" id="clearDataRow">
-            <span class="settings-label">Очистити дані</span>
-            <span class="clear-data-chevron" id="clearDataChevron" style="display: flex; align-items: center; justify-content: center; width: 18px; color: #ABABAB; font-size: 16px;">&#8964;</span>
-          </div>
-          <div class="clear-data-dropdown" id="clearDataDropdown">
-            <div class="clear-data-separator"></div>
-            <div class="clear-data-item" id="settingsClearFavs">Вибране</div>
-            <div class="clear-data-item" id="settingsClearCheckin">Чекіни</div>
-            <div class="clear-data-item" id="settingsClearLocalEdits">Всі локальні зміни</div>
-          </div>
-          <div class="settings-rule"></div>
-          <div class="settings-row">
-            <span class="settings-label">Резервна копія</span>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-              <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
-              <div class="settings-divider-v"></div>
-              <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
-            </div>
-          </div>
-        </div>
+  <div class="settings-card-header">Дані</div>
+  <div class="settings-rule"></div>
+
+  <div class="settings-row">
+    <div class="settings-label-wrap">
+      <span class="settings-label">Режим редагування</span>
+      <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон-двері</span>
+    </div>
+    <label class="ios-toggle">
+      <input type="checkbox" id="settingsEditModeToggle">
+      <span class="ios-toggle-slider"></span>
+    </label>
+  </div>
+
+  <!-- Автоприховується разом із роздільником, якщо "Режим редагування" вимкнено -->
+  <div id="settingsLocalFbRow" class="is-hidden">
+    <div class="settings-rule"></div>
+    <div class="settings-row">
+      <div class="settings-label-wrap">
+        <span class="settings-label">Локальні зміни</span>
+        <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
+      </div>
+      <label class="ios-toggle">
+        <input type="checkbox" id="settingsLocalFeedbackToggle">
+        <span class="ios-toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="settings-rule"></div>
+  <div class="clear-data-row" id="clearDataRow">
+    <span class="settings-label">Очистити дані</span>
+    <span class="clear-data-chevron" id="clearDataChevron" style="display: flex; align-items: center; justify-content: center; width: 18px; color: #ABABAB; font-size: 16px;">&#8964;</span>
+  </div>
+  <div class="clear-data-dropdown" id="clearDataDropdown">
+    <div class="clear-data-separator"></div>
+    <div class="clear-data-item" id="settingsClearFavs">Вибране</div>
+    <div class="clear-data-item" id="settingsClearCheckin">Чекіни</div>
+    <div class="clear-data-item" id="settingsClearLocalEdits">Всі локальні зміни</div>
+  </div>
+  <div class="settings-rule"></div>
+  <div class="settings-row">
+    <span class="settings-label">Резервна копія</span>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
+      <div class="settings-divider-v"></div>
+      <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
+    </div>
+  </div>
+</div>
+
+<!-- Картка Доступність -->
+<div class="settings-card">
+  <div class="settings-card-header">Доступність</div>
+  <div class="settings-rule"></div>
+  <div class="settings-row">
+    <div class="settings-label-wrap">
+      <span class="settings-label">Приховати виходи без ліфтів</span>
+      <span class="settings-sublabel" style="text-align: left;">Застосовується, якщо на станції доступні ліфти.</span>
+    </div>
+    <label class="ios-toggle">
+      <input type="checkbox" id="settingsHideNoLiftToggle">
+      <span class="ios-toggle-slider"></span>
+    </label>
+  </div>
+</div>
 
       </div>
     </div>

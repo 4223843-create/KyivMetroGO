@@ -20,6 +20,13 @@ import {
   isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache,
 } from './checkin/index.js';
 
+// ══ РЕЖИМ РЕДАГУВАННЯ ═══════════════════════════════════════
+
+/** Повертає true якщо користувач увімкнув режим редагування. За замовчуванням — вимкнено. */
+export function isEditModeEnabled() {
+  return Storage.get(STORAGE_KEYS.EDIT_MODE) === 'true';
+}
+
 // ══ ТОСТ «CHECK-IN ЩЕ НЕ АКТИВНИЙ» ══════════════════════════
 
 function showCheckinLockToast(rowEl) {
@@ -91,13 +98,29 @@ export function openSettingsSheet() {
       });
     }
 
-const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
-if (localFbToggle) {
-  localFbToggle.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
-  localFbToggle.addEventListener('change', e =>
-    Storage.set(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK, String(e.target.checked))
-  );
-}
+    const editModeToggle = document.getElementById('settingsEditModeToggle');
+    if (editModeToggle) {
+      editModeToggle.checked = isEditModeEnabled();
+      editModeToggle.addEventListener('change', e => {
+        const isEditOn = e.target.checked;
+        Storage.set(STORAGE_KEYS.EDIT_MODE, String(isEditOn));
+        
+        // Показуємо/приховуємо рядок "Локальні зміни"
+        const localFbRow = document.getElementById('settingsLocalFbRow');
+        if (localFbRow) localFbRow.classList.toggle('is-hidden', !isEditOn);
+        
+        bus.emit('editmode:changed', { enabled: isEditOn });
+      });
+    }
+
+    const hideNoLiftToggle = document.getElementById('settingsHideNoLiftToggle');
+    if (hideNoLiftToggle) {
+      hideNoLiftToggle.checked = isHideNoLiftEnabled();
+      hideNoLiftToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.HIDE_NO_LIFT, String(e.target.checked));
+        bus.emit('station:refresh');
+      });
+    }
 
     // ── Check-in головний ──
     const checkinToggle = document.getElementById('settingsCheckinToggle');
@@ -125,14 +148,14 @@ if (localFbToggle) {
     }
 
     // ── Check-in штриховка ──
-const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
-if (hatchToggle) {
-  hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
-  hatchToggle.addEventListener('change', e => {
-    Storage.set(STORAGE_KEYS.CHECKIN_HATCH, String(e.target.checked));
-    bus.emit('map:sync-checkins');
-  });
-}
+    const hatchToggle = document.getElementById('settingsCheckinHatchToggle');
+    if (hatchToggle) {
+      hatchToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
+      hatchToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.CHECKIN_HATCH, String(e.target.checked));
+        bus.emit('map:sync-checkins');
+      });
+    }
 
     // ── Check-in по виходах ──
     const statSeg = document.getElementById('settingsCheckinStatSeg');
@@ -160,12 +183,12 @@ if (hatchToggle) {
 
     // ── Приховати інформаційні блоки ──
     const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
-if (hideInfoToggle) {
-  hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
-  hideInfoToggle.addEventListener('change', e =>
-    Storage.set(STORAGE_KEYS.HIDE_INFO_BLOCKS, String(e.target.checked))
-  );
-}
+    if (hideInfoToggle) {
+      hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+      hideInfoToggle.addEventListener('change', e =>
+        Storage.set(STORAGE_KEYS.HIDE_INFO_BLOCKS, String(e.target.checked))
+      );
+    }
 
     // ── Очистити Вибране ──
     document.getElementById('settingsClearFavs')?.addEventListener('click', e => {
@@ -363,12 +386,21 @@ if (hideInfoToggle) {
     const eX = document.getElementById('settingsCheckinByExitToggle');
     if (eX) eX.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
 
-    const c = document.getElementById('settingsCheckinToggle');
-    const l = document.getElementById('settingsLocalFeedbackToggle');
-    const h = document.getElementById('settingsHideInfoToggle');
-    if (c) c.checked = isMainOn;
-    if (l) l.checked = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
-    if (h) h.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+    const isEditOn = isEditModeEnabled();
+    const localFbRow = document.getElementById('settingsLocalFbRow');
+    if (localFbRow) localFbRow.classList.toggle('is-hidden', !isEditOn);
+
+    const c  = document.getElementById('settingsCheckinToggle');
+    const l  = document.getElementById('settingsLocalFeedbackToggle');
+    const h  = document.getElementById('settingsHideInfoToggle');
+    const em = document.getElementById('settingsEditModeToggle');
+    const nl = document.getElementById('settingsHideNoLiftToggle');
+
+    if (c)  c.checked  = isMainOn;
+    if (l)  l.checked  = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+    if (h)  h.checked  = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+    if (em) em.checked = isEditOn;
+    if (nl) nl.checked = isHideNoLiftEnabled();
 
     const clearFavsBtn    = document.getElementById('settingsClearFavs');
     const clearCheckinBtn = document.getElementById('settingsClearCheckin');
@@ -387,4 +419,9 @@ if (hideInfoToggle) {
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   settingsSheet.classList.add('sheet-open');
   sheetOverlay.classList.add('overlay-visible');
+}
+
+/** Повертає true якщо увімкнено приховування виходів без ліфтів. */
+export function isHideNoLiftEnabled() {
+  return Storage.get(STORAGE_KEYS.HIDE_NO_LIFT) === 'true';
 }

@@ -9,7 +9,7 @@ import { App }       from '@capacitor/app';
 import { openFavSheet }    from './features/favorites/index.js';
 import { openCheckinSheet } from './features/checkin/index.js';
 import { openSearchSheet } from './features/search.js';
-import { openSettingsSheet } from './features/settings.js';
+import { openSettingsSheet, isEditModeEnabled } from './features/settings.js';
 import {
   openStation, closeAllSheets, openAboutSheet
 } from './sheets/sheetsManager.js';
@@ -31,9 +31,11 @@ function closeDropMenu() {
 }
 
 if (menuBtn && dropMenu) {
+  const feedbackMenuItem = document.getElementById('feedbackItem');
   menuBtn.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
+    if (feedbackMenuItem) feedbackMenuItem.hidden = !isEditModeEnabled();
     const willShow = !dropMenu.classList.contains('show');
     dropMenu.classList.toggle('show', willShow);
     dropMenu.hidden = !willShow;

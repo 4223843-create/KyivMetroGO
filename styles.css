@@ -4116,3 +4116,27 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   background: var(--border);
   flex-shrink: 0;
 }
+
+/* ══ ЛІФТ (окремий вихід-ліфт під основним виходом) ══ */
+.position-row {
+  position: relative;
+}
+
+.pos-lift-mark {
+  position: absolute;
+  left: calc(25% - 35px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  pointer-events: none;
+  width: 24px;
+  height: 24px;
+}
+
+.pos-lift-mark svg {
+  width: 20px;
+  height: 20px;
+}
