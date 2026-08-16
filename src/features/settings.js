@@ -69,15 +69,6 @@ export function openSettingsSheet() {
     settingsSheet.appendChild(tpl.content.cloneNode(true));
     document.body.appendChild(settingsSheet);
 
-    // ── Закрити ──
-    document.getElementById('settingsClose').addEventListener('click', () => {
-      animateSheetClose(settingsSheet, () => {
-        settingsSheet.classList.remove('sheet-open');
-        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-          sheetOverlay.classList.remove('overlay-visible');
-      });
-    });
-
     // ── Тема ──
     document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => applyTheme(btn.dataset.themeVal));
@@ -113,6 +104,9 @@ export function openSettingsSheet() {
       });
     }
 
+
+
+
     const hideNoLiftToggle = document.getElementById('settingsHideNoLiftToggle');
     if (hideNoLiftToggle) {
       hideNoLiftToggle.checked = isHideNoLiftEnabled();
@@ -121,6 +115,25 @@ export function openSettingsSheet() {
         bus.emit('station:refresh');
       });
     }
+
+    // ── Доступність на карті (ВИПРАВЛЕНО: винесено з закриття) ──
+    const showMapAccToggle = document.getElementById('settingsShowMapAccessibilityToggle');
+    if (showMapAccToggle) {
+      showMapAccToggle.checked = isShowMapAccessibilityEnabled();
+      showMapAccToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY, String(e.target.checked));
+        bus.emit('map:update-accessibility');
+      });
+    }
+
+    // ── Закрити ──
+    document.getElementById('settingsClose').addEventListener('click', () => {
+      animateSheetClose(settingsSheet, () => {
+        settingsSheet.classList.remove('sheet-open');
+        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
+          sheetOverlay.classList.remove('overlay-visible');
+      });
+    });
 
     // ── Check-in головний ──
     const checkinToggle = document.getElementById('settingsCheckinToggle');
@@ -412,6 +425,9 @@ export function openSettingsSheet() {
     if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
     if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
     if (clearLocalBtn)   clearLocalBtn.disabled   = !hasAnyData;
+
+    const ma = document.getElementById('settingsShowMapAccessibilityToggle');
+    if (ma) ma.checked = isShowMapAccessibilityEnabled();
   }
 
   syncToggles();
@@ -425,3 +441,9 @@ export function openSettingsSheet() {
 export function isHideNoLiftEnabled() {
   return Storage.get(STORAGE_KEYS.HIDE_NO_LIFT) === 'true';
 }
+
+/** Повертає true якщо увімкнено відображення доступності на карті. */
+export function isShowMapAccessibilityEnabled() {
+  return Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) === 'true';
+}
+

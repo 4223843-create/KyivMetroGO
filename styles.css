@@ -266,7 +266,19 @@ z-index: var(--z-fullscreen-sheet);
   top: 0;
   z-index: 10;
   background-color: var(--bg-card);
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 8px;
+  /* Примусово виносимо шапку на окремий композитний шар.
+     Без цього на iOS/WebKit елемент, що скролиться (.sheet-body),
+     може промальовуватись поверх сусіда з коректним z-index —
+     саме це й було причиною "накладання" при гортанні виходів. */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
 }
+
 .sheet-handle {
   width: 40px; height: 3px;
   border-radius: 2px;
@@ -325,6 +337,9 @@ z-index: var(--z-fullscreen-sheet);
 
 /* ══ SHEET BODY — скролиться ══ */
 .sheet-body {
+  position: relative;
+  isolation: isolate; /* весь вміст, що скролиться, замкнений у власному стек-контексті —
+                          нічого всередині (навіть з високим z-index) не може "виїхати" поверх шапки */
   overflow-y: auto;
   flex: 1;
   padding: 0 16px 32px; /* Прибрали відступ зверху, щоб текст підходив впритул */
@@ -2269,7 +2284,7 @@ svg [role="button"]:focus:not(:focus-visible) {
   letter-spacing: 0.04em;
   position: absolute;
   left: 50%;
-  top: 40px;
+  top: 18px;
   transform: translateX(-50%);
   white-space: nowrap;
   pointer-events: none;
@@ -2825,7 +2840,7 @@ svg [role="button"]:focus:not(:focus-visible) {
   letter-spacing: 0.04em;
   position: absolute;
   left: 50%;
-  top: 40px;
+  top: 18px;
   transform: translateX(-50%);
   white-space: nowrap;
   pointer-events: none;
@@ -4137,4 +4152,10 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .pos-lift-mark svg {
   width: 20px;
   height: 20px;
+}
+
+.map-accessibility-icon {
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 5;
 }

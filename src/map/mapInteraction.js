@@ -7,6 +7,7 @@ import { getCheckins }            from '../domain/checkin.js';
 import { bus }                    from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { getSlugByLower }         from '../data/stations.js';
+import { isShowMapAccessibilityEnabled } from '../features/settings.js';
 
 const inner = document.getElementById('mapInner');
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -254,6 +255,7 @@ export function syncMapWithCheckins() {
     // лишається більшим за розмір Set, і станція ніколи не отримує
     // is-visited-full, навіть якщо реально відмічені всі виходи.
     visitedExitsBySlug[entry.slug].add(`${entry.dir}|${entry.wagon}|${entry.doors}`);
+
   }
 
   // Set для O(1) lookup замість O(V) array.some()
@@ -296,7 +298,73 @@ export function syncMapWithCheckins() {
   });
 
   applyVisitedHatchOverlays();
+  updateMapAccessibilityIcons();
 }
 
-bus.on('map:sync-checkins',       syncMapWithCheckins);
-bus.on('data:stations-hydrated',  invalidateStationZoneCache);
+bus.on('map:sync-checkins', syncMapWithCheckins);
+bus.on('data:stations-hydrated', () => {
+  invalidateStationZoneCache();
+  updateMapAccessibilityIcons();
+});
+/**
+ * Малює або видаляє знаки візочків біля станцій з ліфтами на SVG-карті.
+ */
+/**
+ * Малює або видаляє знаки візочків біля станцій з ліфтами на SVG-карті.
+ */
+export function updateMapAccessibilityIcons() {
+  if (!inner || !state.stationsData) return;
+
+  // Очищаємо попередні іконки
+  inner.querySelectorAll('.map-accessibility-icon').forEach(el => el.remove());
+
+  if (!isShowMapAccessibilityEnabled()) return;
+
+  const svgEl = inner.querySelector('svg');
+  if (!svgEl) return;
+
+  const processedSlugs = new Set();
+
+  _getStationZoneEls().forEach(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    const slug  = getSlugByLower(rawId);
+    if (!slug || processedSlugs.has(slug)) return;
+
+    const stData = state.stationsData[slug];
+    const hasLift = stData?.directions?.some(d =>
+      d.exits?.some(e => e.positions?.some(p => p.isLift))
+    );
+
+    if (!hasLift) return;
+    processedSlugs.add(slug);
+
+    try {
+      const bbox = el.getBBox();
+      if (!bbox || bbox.width <= 0) return;
+
+      // Зменшено розмір іконки вдвічі (0.22 замість 0.45)
+      const size = round(Math.min(bbox.width, bbox.height) * 0.3);
+      const gap  = round(size * 0.4);
+
+      const x = round(bbox.x - size - gap);
+      const y = round(bbox.y + (bbox.height - size) / 2);
+
+      const iconGroup = document.createElementNS(SVG_NS, 'svg');
+      iconGroup.setAttribute('x', String(x));
+      iconGroup.setAttribute('y', String(y));
+      iconGroup.setAttribute('width', String(size));
+      iconGroup.setAttribute('height', String(size));
+      iconGroup.setAttribute('viewBox', '0 0 24 24');
+      iconGroup.setAttribute('class', 'map-accessibility-icon');
+      iconGroup.setAttribute('fill', 'currentColor');
+      iconGroup.setAttribute('aria-hidden', 'true');
+      iconGroup.innerHTML = `<path d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/>`;
+
+      svgEl.appendChild(iconGroup);
+    } catch (err) {
+      // Ігноруємо помилки BBox
+    }
+  });
+}
+
+bus.on('map:update-accessibility', updateMapAccessibilityIcons);
