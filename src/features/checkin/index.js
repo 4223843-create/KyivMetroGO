@@ -81,9 +81,10 @@ export function updateCheckinDock() {
   if (!btn) return;
   btn.hidden    = !isCheckinMode();
   _checkinCount = null;
-  btn.innerHTML = getCheckinCount() > 0
+  const icon = getCheckinCount() > 0
     ? Icons.dockPinFilled
     : Icons.dockPinEmpty;
+  btn.innerHTML = `<div class="drop-item-icon">${icon}</div>`;
 }
 
 // ══ ПРИКРІПЛЕННЯ КНОПОК CHECK-IN ═════════════════════════════
@@ -205,9 +206,7 @@ export function openCheckinSheet() {
 
       const coloredPin = Icons.dockPinFilled
         .replace(/currentColor/g, color)
-        .replace('translateY(-3px)', 'translateY(0)')
-        .replace('width="26" height="26"', 'width="20" height="20"')
-        .replace('opacity="0.5"', '');
+        .replace('width="26" height="26"', 'width="20" height="20"');
       const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-3px;">${coloredPin}</span>`;
 
       listHtml = `

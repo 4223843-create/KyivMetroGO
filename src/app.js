@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { App }       from '@capacitor/app';
 
 import { openFavSheet }    from './features/favorites/index.js';
-import { openCheckinSheet } from './features/checkin/index.js';
+import { openCheckinSheet, updateCheckinDock } from './features/checkin/index.js';
 import { openSearchSheet } from './features/search.js';
 import { openSettingsSheet, isEditModeEnabled } from './features/settings.js';
 import {
@@ -19,7 +19,6 @@ import { bus } from './core/eventBus.js';
 // ── Bottom bar ─────────────────────────────────────────────────
 document.getElementById('favListBtn')?.addEventListener('click', openFavSheet);
 document.getElementById('searchBtnTop')?.addEventListener('click', openSearchSheet);
-document.getElementById('checkinBtn')?.addEventListener('click', openCheckinSheet);
 
 // ── Dropdown меню ──────────────────────────────────────────────
 const menuBtn  = document.getElementById('menuBtn');
@@ -36,6 +35,7 @@ if (menuBtn && dropMenu) {
     e.preventDefault();
     e.stopPropagation();
     if (feedbackMenuItem) feedbackMenuItem.hidden = !isEditModeEnabled();
+    updateCheckinDock();
     const willShow = !dropMenu.classList.contains('show');
     dropMenu.classList.toggle('show', willShow);
     dropMenu.hidden = !willShow;
@@ -49,6 +49,12 @@ if (menuBtn && dropMenu) {
     e.preventDefault(); e.stopPropagation();
     closeDropMenu();
     openSettingsSheet();
+  });
+
+  document.getElementById('checkinBtn')?.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    closeDropMenu();
+    openCheckinSheet();
   });
 
   document.getElementById('feedbackItem')?.addEventListener('click', e => {

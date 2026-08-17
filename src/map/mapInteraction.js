@@ -344,7 +344,7 @@ export function updateMapAccessibilityIcons() {
 
       // Зменшено розмір іконки вдвічі (0.22 замість 0.45)
       const size = round(Math.min(bbox.width, bbox.height) * 0.3);
-      const gap  = round(size * 0.4);
+      const gap  = round(size * 1.1);
 
       const x = round(bbox.x - size - gap);
       const y = round(bbox.y + (bbox.height - size) / 2);

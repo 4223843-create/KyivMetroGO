@@ -3438,9 +3438,9 @@ export const Icons = {
 
   dockHeartFilled: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5 1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
 
-  dockPinEmpty: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);" opacity="0.5"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="var(--icon-color)" stroke="var(--icon-color)" stroke-width="0.5"/></svg>`,
+  dockPinEmpty: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26"><path d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,28.677 C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="var(--icon-color)" stroke="var(--icon-color)" stroke-width="0.5"/></svg>`,
 
-  dockPinFilled: `<svg viewBox="0 -1.5 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="transform: translateY(-3px);" opacity="0.5"><path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
+  dockPinFilled: `<svg viewBox="0 -1.5 32 32" xmlns="http://www.w3.org/2000/svg" width="26" height="26"><path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
 
 wheelchair: `<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/></svg>`,};
 </file>
@@ -3894,9 +3894,10 @@ export function updateCheckinDock() {
   if (!btn) return;
   btn.hidden    = !isCheckinMode();
   _checkinCount = null;
-  btn.innerHTML = getCheckinCount() > 0
+  const icon = getCheckinCount() > 0
     ? Icons.dockPinFilled
     : Icons.dockPinEmpty;
+  btn.innerHTML = `<div class="drop-item-icon">${icon}</div>`;
 }
 
 // ══ ПРИКРІПЛЕННЯ КНОПОК CHECK-IN ═════════════════════════════
@@ -4018,9 +4019,7 @@ export function openCheckinSheet() {
 
       const coloredPin = Icons.dockPinFilled
         .replace(/currentColor/g, color)
-        .replace('translateY(-3px)', 'translateY(0)')
-        .replace('width="26" height="26"', 'width="20" height="20"')
-        .replace('opacity="0.5"', '');
+        .replace('width="26" height="26"', 'width="20" height="20"');
       const pinInline = `<span style="display:inline-block;width:20px;height:20px;vertical-align:-3px;">${coloredPin}</span>`;
 
       listHtml = `
@@ -5848,7 +5847,7 @@ import { Capacitor } from '@capacitor/core';
 import { App }       from '@capacitor/app';
 
 import { openFavSheet }    from './features/favorites/index.js';
-import { openCheckinSheet } from './features/checkin/index.js';
+import { openCheckinSheet, updateCheckinDock } from './features/checkin/index.js';
 import { openSearchSheet } from './features/search.js';
 import { openSettingsSheet, isEditModeEnabled } from './features/settings.js';
 import {
@@ -5860,7 +5859,6 @@ import { bus } from './core/eventBus.js';
 // ── Bottom bar ─────────────────────────────────────────────────
 document.getElementById('favListBtn')?.addEventListener('click', openFavSheet);
 document.getElementById('searchBtnTop')?.addEventListener('click', openSearchSheet);
-document.getElementById('checkinBtn')?.addEventListener('click', openCheckinSheet);
 
 // ── Dropdown меню ──────────────────────────────────────────────
 const menuBtn  = document.getElementById('menuBtn');
@@ -5877,6 +5875,7 @@ if (menuBtn && dropMenu) {
     e.preventDefault();
     e.stopPropagation();
     if (feedbackMenuItem) feedbackMenuItem.hidden = !isEditModeEnabled();
+    updateCheckinDock();
     const willShow = !dropMenu.classList.contains('show');
     dropMenu.classList.toggle('show', willShow);
     dropMenu.hidden = !willShow;
@@ -5890,6 +5889,12 @@ if (menuBtn && dropMenu) {
     e.preventDefault(); e.stopPropagation();
     closeDropMenu();
     openSettingsSheet();
+  });
+
+  document.getElementById('checkinBtn')?.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    closeDropMenu();
+    openCheckinSheet();
   });
 
   document.getElementById('feedbackItem')?.addEventListener('click', e => {
@@ -6680,151 +6685,6 @@ bus.on('ui:confirm', (payload) => {
 });
 </file>
 
-<file path="src/core/storage.js">
-// ══ СХОВИЩЕ ДАНИХ ДОДАТКУ (НАТИВНЕ) ══
-// Відповідальність: збереження даних користувача через Capacitor Preferences.
-// Дані зберігаються надійно у системних сховищах iOS (UserDefaults) та Android (SharedPreferences).
-// Читання синхронне з in-memory кешу, запис — асинхронний у фоні.
-
-import { Preferences } from '@capacitor/preferences';
-
-export const STORAGE_KEYS = {
-  THEME:          'metro_theme',
-  FAVS:           'metro_favs',
-  EXIT_FAVS:      'metro_exit_favs',
-  EXIT_LABELS:    'metro_exit_labels',
-  LOCAL_EDITS:    'metro_local_edits',
-  FAV_ROWS_ORDER: 'metro_fav_rows_order',
-  CHECKINS:       'metro_checkins',
-  CHECKIN_MODE:       'metro_checkin_mode',
-  CHECKIN_BY_STATION: 'metro_checkin_by_station',
-  CHECKIN_BY_EXIT:    'metro_checkin_by_exit',
-  START_ON_FAV:   'metro_start_on_fav',
-  LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
-  CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
-  HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
-  FAV_ONLY_STREAK:     'metro_fav_only_streak',
-  EDIT_MODE:           'metro_edit_mode',
-  HIDE_NO_LIFT:        'metro_hide_no_lift',
-  DEV_MODE:     'metro_dev_mode',
-  DEV_LOG:      'metro_dev_log',
-  DEV_VERIFIED: 'metro_dev_verified',
-  DEV_NOTES:    'metro_dev_notes',
-  LOGO_STATE:     'metro_logo_state',
-  LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
-  CHECKIN_HATCH:  'metro_checkin_hatch',
-};
-
-const memoryCache = new Map();
-
-export const Storage = {
-  /**
-   * Наповнює in-memory кеш усіма відомими ключами з нативного сховища.
-   * Використовує Promise.all для паралельного та швидкого завантаження.
-   * @returns {Promise<void>}
-   */
-  async init() {
-    const keys = Object.values(STORAGE_KEYS);
-    
-    // Паралельно запитуємо всі ключі з нативного сховища
-    const promises = keys.map(key => Preferences.get({ key }));
-    const results = await Promise.all(promises);
-
-    results.forEach((res, index) => {
-      if (res.value !== null) {
-        memoryCache.set(keys[index], res.value);
-      }
-    });
-  },
-
-  /**
-   * Синхронне читання з кешу оперативної пам'яті.
-   * @param {string} key
-   * @returns {string|null}
-   */
-  get(key) {
-    return memoryCache.get(key) ?? null;
-  },
-
-  /**
-   * Записує значення в оперативну пам'ять миттєво,
-   * а в нативне сховище — асинхронно у фоні.
-   * @param {string} key
-   * @param {string} value
-   */
-  set(key, value) {
-    const valStr = String(value);
-    memoryCache.set(key, valStr);
-    
-    // Фоновий нативний запис, який не блокує головний потік UI
-    Promise.resolve().then(async () => {
-      await Preferences.set({ key, value: valStr });
-    });
-  },
-
-  /**
-   * Видаляє ключ з кешу та нативного сховища.
-   * @param {string} key
-   */
-  remove(key) {
-    memoryCache.delete(key);
-    
-    Promise.resolve().then(async () => {
-      await Preferences.remove({ key });
-    });
-  },
-
-  /**
-   * Відновлює дані з бекап-об'єкта.
-   * На відміну від set(), виконує гарантований await — безпечно перед reload().
-   * Очищає всі відомі ключі, потім паралельно записує нові значення.
-   *
-   * @param {Record<string, string>} data — розібраний і валідований бекап
-   * @returns {Promise<void>}
-   */
-  async restoreFromBackup(data) {
-    const APP_PREFIX = 'metro_';
-
-    // 1. Очистити кеш і Preferences для всіх відомих ключів
-    const clearOps = Object.values(STORAGE_KEYS).map(key => {
-      memoryCache.delete(key);
-      return Preferences.remove({ key });
-    });
-    await Promise.all(clearOps);
-
-    // 2. Записати нові значення — тільки metro_* рядки, без службових роздільників
-    const setOps = [];
-    for (const [key, value] of Object.entries(data)) {
-      if (!key.startsWith(APP_PREFIX)) continue;
-      if (key.startsWith('═'))         continue;  // роздільники dev-логу
-      if (typeof value !== 'string')   continue;  // _dev_change_log — масив
-      memoryCache.set(key, value);
-      setOps.push(Preferences.set({ key, value }));
-    }
-    await Promise.all(setOps);
-  },
-};
-
-// ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ (ДЛЯ ВЕБ-ВЕРСІЇ) ══
-// На нативному Android Storage event між вкладками ніколи не тригериться
-// (WebView — єдиний процес, вкладок немає). Реєструємо тільки на вебі.
-import { Capacitor } from '@capacitor/core';
-
-if (!Capacitor.isNativePlatform()) {
-  const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
-
-  window.addEventListener('storage', (e) => {
-    if (_VALID_KEYS.has(e.key)) {
-      if (e.newValue === null) {
-        memoryCache.delete(e.key);
-      } else {
-        memoryCache.set(e.key, e.newValue);
-      }
-    }
-  });
-}
-</file>
-
 <file path="src/features/devmode.js">
 // ══ FEATURE: РЕЖИМ РОЗРОБНИКА (DEV MODE) ══
 // Відповідальність: перегляд і верифікація даних позицій безпосередньо у UI станції.
@@ -7596,311 +7456,6 @@ export function openSearchSheet() {
 }
 </file>
 
-<file path="src/map/mapInteraction.js">
-// ══ ВЗАЄМОДІЯ З КАРТОЮ ══
-// Відповідальність: обробка кліків на SVG-зони станцій,
-// накладання та зняття heatmap-штрихування для відвіданих виходів (check-in).
-
-import { state }                  from '../core/state.js';
-import { getCheckins }            from '../domain/checkin.js';
-import { bus }                    from '../core/eventBus.js';
-import { STORAGE_KEYS, Storage }  from '../core/storage.js';
-import { getSlugByLower }         from '../data/stations.js';
-
-const inner = document.getElementById('mapInner');
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
-const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
-const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
-const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
-const HATCH_STEP_PX  = 8;
-
-/**
- * Обробляє клік або Enter/Space на SVG-зоні карти.
- * Знаходить slug за id елемента і емітує 'station:open'.
- * @param {MouseEvent|KeyboardEvent} e
- */
-export function handleMapInteraction(e) {
-  if (!state.stationsData) return;
-  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
-
-  const zone = e.target.closest('[id]');
-  if (!zone?.id) return;
-
-  const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
-  const slug  = getSlugByLower(rawId);
-  if (slug) { e.preventDefault(); bus.emit('station:open', { slug }); }
-}
-
-inner?.addEventListener('click',   handleMapInteraction);
-inner?.addEventListener('keydown', handleMapInteraction);
-
-function removeVisitedHatchOverlays(root = inner) {
-  root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
-}
-
-function round(value) {
-  return Math.round(value * 100) / 100;
-}
-
-const _hatchLineCache = new WeakMap();
-
-// Кеш зон станцій (будується один раз після renderMapZones)
-let _stationZoneEls = null;
-function _getStationZoneEls() {
-  // Повертаємо кеш, ТІЛЬКИ якщо він не порожній
-  if (_stationZoneEls && _stationZoneEls.length > 0) return _stationZoneEls;
-  
-  const els = [...inner.querySelectorAll('[id]')].filter(el => {
-    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    return !!getSlugByLower(rawId);
-  });
-  
-  // Кешуємо тільки тоді, коли станції реально знайшлися на карті
-  if (els.length > 0) {
-    _stationZoneEls = els;
-  }
-  
-  return els;
-}
-
-/** Скидає кеш зон станцій (викликати після повторного renderMapZones). */
-export function invalidateStationZoneCache() { _stationZoneEls = null; }
-
-let _clipIdCounter = 0;
-
-let _hatchRafId = null;
-
-/**
- * Планує накладання heatmap-штрихування на відвідані зони карти.
- * Дедублюється через requestAnimationFrame — безпечно викликати кілька разів поспіль.
- * @param {Element} [root] — за замовчуванням mapInner
- */
-export function applyVisitedHatchOverlays(root = inner) {
-  if (!root) return;
-  if (_hatchRafId !== null) return;
-  _hatchRafId = requestAnimationFrame(() => {
-    _hatchRafId = null;
-    _doApplyHatch(root);
-  });
-}
-
-function _doApplyHatch(root) {
-  removeVisitedHatchOverlays(root);
-
-  const isHatchEnabled = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
-  if (!isHatchEnabled) return;
-
-  const targets = [...root.querySelectorAll('.is-visited-partial, .is-visited-full')]
-    .filter(el => el.closest('.is-visited-partial, .is-visited-full') === el);
-
-  if (!targets.length) return;
-
-  const globalScale = _getGlobalSvgScale();
-
-  targets.forEach(target => {
-    const shapes = _getValidGeometry(target);
-    if (!shapes.length) return;
-
-    const isFull = target.classList.contains('is-visited-full');
-
-    const overlay = document.createElementNS(SVG_NS, 'g');
-    overlay.classList.add(HATCH_OVERLAY_CLASS, isFull ? 'ci-hatch-full' : 'ci-hatch-partial');
-    overlay.setAttribute('aria-hidden', 'true');
-    overlay.setAttribute('focusable', 'false');
-    overlay.dataset.hatchFor = target.id || '';
-
-    shapes.forEach(shape => _appendShapeHatch(shape, overlay, isFull, globalScale));
-    if (!overlay.childElementCount) return;
-
-    if (target instanceof SVGGElement) {
-      target.appendChild(overlay);
-    } else {
-      target.parentNode?.insertBefore(overlay, target.nextSibling);
-    }
-  });
-}
-
-function _getGlobalSvgScale() {
-  const ref = inner.querySelector('path, polygon, rect');
-  if (!ref) return 1;
-  const ctm      = ref.getScreenCTM?.();
-  const rawScale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
-  const scale    = (Number.isFinite(rawScale) && rawScale > 0) ? rawScale : 1;
-
-  // Квантуємо масштаб до «сходинок» по 1%, щоб усі фігури в одному
-  // проході рендеру завжди бачили однакове значення scale (інакше різні
-  // фігури можуть лишитись на різних історичних cStep через 2%-допуск
-  // кешу нижче — окрема причина розсинхрону штрихування).
-  const QUANT = 0.01;
-  return Math.round(scale / QUANT) * QUANT;
-}
-
-const _geometryCache = new WeakMap();
-
-function _getValidGeometry(target) {
-  if (_geometryCache.has(target)) return _geometryCache.get(target);
-
-  const geometry = target.matches(HATCH_GEOMETRY_SELECTOR)
-    ? [target]
-    : [...target.querySelectorAll(HATCH_GEOMETRY_SELECTOR)];
-
-  // getBBox() тільки при першому зверненні до target — кешуємо через WeakMap
-  const valid = geometry.filter(shape => {
-    if (shape.closest(`.${HATCH_OVERLAY_CLASS}`)) return false;
-    try { const b = shape.getBBox(); return b.width > 0 && b.height > 0; }
-    catch { return false; }
-  });
-
-  // Запобіжник: не кешуємо порожній результат (якщо SVG ще не відмалювався)
-  if (valid.length > 0) {
-    _geometryCache.set(target, valid);
-  }
-  
-  return valid;
-}
-
-function _appendShapeHatch(shape, overlay, isFull, globalScale) {
-  const cached = _hatchLineCache.get(shape);
-  let lines, strokeWidth;
-
-  if (cached && cached.isFull === isFull && cached.scale === globalScale) {
-    // Cache hit: нуль getBBox(), нуль layout flush.
-    // Точне порівняння безпечне, бо globalScale тепер квантований.
-    ({ lines, strokeWidth } = cached);
-  } else {
-    // Cache miss: рахуємо один раз (один getBBox всередині buildHatchLines)
-    ({ lines, strokeWidth } = buildHatchLines(shape, isFull, globalScale));
-    _hatchLineCache.set(shape, { isFull, scale: globalScale, lines, strokeWidth });
-  }
-
-  if (!lines.length) return;
-
-  const shapeOverlay = document.createElementNS(SVG_NS, 'g');
-  const transform    = shape.getAttribute('transform');
-  if (transform) shapeOverlay.setAttribute('transform', transform);
-
-  // Монотонний лічильник замість Math.random()
-  const clipId   = `ci-clip-${_clipIdCounter++}`;
-  const defs     = document.createElementNS(SVG_NS, 'defs');
-  const clipPath = document.createElementNS(SVG_NS, 'clipPath');
-  clipPath.setAttribute('id', clipId);
-  const clipGeometry = shape.cloneNode(false);
-  clipGeometry.removeAttribute('id');
-  clipGeometry.removeAttribute('class');
-  clipGeometry.setAttribute('stroke-width', '1');
-  clipGeometry.setAttribute('stroke', 'black');
-  clipPath.appendChild(clipGeometry);
-  defs.appendChild(clipPath);
-  shapeOverlay.appendChild(defs);
-
-  const clippedGroup = document.createElementNS(SVG_NS, 'g');
-  clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
-  shapeOverlay.appendChild(clippedGroup);
-  overlay.appendChild(shapeOverlay);
-
-  lines.forEach(d => {
-    const line = document.createElementNS(SVG_NS, 'path');
-    line.classList.add(HATCH_LINE_CLASS);
-    line.setAttribute('d', d);
-    line.setAttribute('stroke-width', String(strokeWidth));
-    clippedGroup.appendChild(line);
-  });
-}
-
-// Оновлена сигнатура: приймає globalScale, щоб не викликати getScreenCTM()
-function buildHatchLines(sourceShape, isFull, scale) {
-  const box  = sourceShape.getBBox(); // єдиний getBBox() на shape
-  // scale передається ззовні — не потрібен getScreenCTM() тут
-  const step = HATCH_STEP_PX / scale;
-  const pad  = step * 2;
-
-  const minX = box.x - pad, maxX = box.x + box.width  + pad;
-  const minY = box.y - pad, maxY = box.y + box.height + pad;
-
-  const cStep    = step * Math.SQRT2;
-  const cMin_raw = isFull ? (minX + minY) : (minX - maxY);
-  const cMax     = isFull ? (maxX + maxY) : (maxX - minY);
-  const cMin     = Math.floor(cMin_raw / cStep) * cStep;
-
-  const lines = [];
-  for (let c = cMin; c <= cMax; c += cStep) {
-    const x1 = minX, x2 = maxX;
-    const y1 = isFull ? (c - x1) : (x1 - c);
-    const y2 = isFull ? (c - x2) : (x2 - c);
-    lines.push(`M ${round(x1)} ${round(y1)} L ${round(x2)} ${round(y2)}`);
-  }
-  return { lines, strokeWidth: round(step * 0.35) };
-}
-
-/**
- * Оновлює CSS-класи зон карти (.is-visited-full / .is-visited-partial) відповідно
- * до поточного стану check-in. Викликається при 'map:sync-checkins'.
- */
-export function syncMapWithCheckins() {
-  if (!inner || !state.stationsData) return;
-
-  const checkins = getCheckins();
-  const visitedExitsBySlug = {};
-
-  for (const entry of Object.values(checkins)) {
-    if (!entry.slug) continue;
-    if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
-    // Ключ ОБОВ'ЯЗКОВО включає напрямок (dir): два РІЗНІ фізичні виходи
-    // (на різних платформах/напрямках) можуть мати однаковий номер
-    // вагона/дверей — це нормально. Без dir у ключі такі виходи
-    // колапсують в один запис Set, totalOpenExits (без дедуплікації)
-    // лишається більшим за розмір Set, і станція ніколи не отримує
-    // is-visited-full, навіть якщо реально відмічені всі виходи.
-    visitedExitsBySlug[entry.slug].add(`${entry.dir}|${entry.wagon}|${entry.doors}`);
-  }
-
-  // Set для O(1) lookup замість O(V) array.some()
-  const visitedNameSet = new Set(
-    Object.keys(visitedExitsBySlug)
-      .map(slug => state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase())
-      .filter(Boolean)
-  );
-
-  removeVisitedHatchOverlays();
-
-  inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
-    .forEach(el => el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full'));
-
-  // Кешований список лише зон станцій (не всього SVG)
-  _getStationZoneEls().forEach(el => {
-    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    const slug  = getSlugByLower(rawId);
-    if (!slug || !visitedExitsBySlug[slug]) return;
-
-    const stData         = state.stationsData[slug];
-    const totalOpenExits = stData?.positions?.length
-      ? stData.positions.filter(p => !p.closed).length
-      : 1;
-
-    el.classList.add(visitedExitsBySlug[slug].size >= totalOpenExits
-      ? 'is-visited-full'
-      : 'is-visited-partial');
-  });
-
-  inner.querySelectorAll('text').forEach(txt => {
-    const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
-    if (cleanText.length <= 2) return;
-    // O(1) Set.has() замість O(V) array.some() з substring-matching
-    // Повна відповідність достатня: SVG text збігається з нормалізованою назвою
-    if (visitedNameSet.has(cleanText)) {
-      txt.classList.add('station-checked-in');
-      txt.querySelectorAll('tspan').forEach(t => t.classList.add('station-checked-in'));
-    }
-  });
-
-  applyVisitedHatchOverlays();
-}
-
-bus.on('map:sync-checkins',       syncMapWithCheckins);
-bus.on('data:stations-hydrated',  invalidateStationZoneCache);
-</file>
-
 <file path="src/sheets/aboutSheet.js">
 // ══ ABOUT SHEET ══
 
@@ -8306,6 +7861,525 @@ export function openAboutSheet() {
 }
 </file>
 
+<file path="src/core/storage.js">
+// ══ СХОВИЩЕ ДАНИХ ДОДАТКУ (НАТИВНЕ) ══
+// Відповідальність: збереження даних користувача через Capacitor Preferences.
+// Дані зберігаються надійно у системних сховищах iOS (UserDefaults) та Android (SharedPreferences).
+// Читання синхронне з in-memory кешу, запис — асинхронний у фоні.
+
+import { Preferences } from '@capacitor/preferences';
+
+export const STORAGE_KEYS = {
+  THEME:          'metro_theme',
+  FAVS:           'metro_favs',
+  EXIT_FAVS:      'metro_exit_favs',
+  EXIT_LABELS:    'metro_exit_labels',
+  LOCAL_EDITS:    'metro_local_edits',
+  FAV_ROWS_ORDER: 'metro_fav_rows_order',
+  CHECKINS:       'metro_checkins',
+  CHECKIN_MODE:       'metro_checkin_mode',
+  CHECKIN_BY_STATION: 'metro_checkin_by_station',
+  CHECKIN_BY_EXIT:    'metro_checkin_by_exit',
+  START_ON_FAV:   'metro_start_on_fav',
+  LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
+  CHECKIN_HINT_SEEN:   'metro_checkin_hint_seen',
+  HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
+  FAV_ONLY_STREAK:     'metro_fav_only_streak',
+  EDIT_MODE:           'metro_edit_mode',
+  HIDE_NO_LIFT:        'metro_hide_no_lift',
+  SHOW_MAP_ACCESSIBILITY:  'metro_show_map_accessibility',
+  DEV_MODE:     'metro_dev_mode',
+  DEV_LOG:      'metro_dev_log',
+  DEV_VERIFIED: 'metro_dev_verified',
+  DEV_NOTES:    'metro_dev_notes',
+  LOGO_STATE:     'metro_logo_state',
+  LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
+  CHECKIN_HATCH:  'metro_checkin_hatch',
+};
+
+const memoryCache = new Map();
+
+export const Storage = {
+  /**
+   * Наповнює in-memory кеш усіма відомими ключами з нативного сховища.
+   * Використовує Promise.all для паралельного та швидкого завантаження.
+   * @returns {Promise<void>}
+   */
+  async init() {
+    const keys = Object.values(STORAGE_KEYS);
+    
+    // Паралельно запитуємо всі ключі з нативного сховища
+    const promises = keys.map(key => Preferences.get({ key }));
+    const results = await Promise.all(promises);
+
+    results.forEach((res, index) => {
+      if (res.value !== null) {
+        memoryCache.set(keys[index], res.value);
+      }
+    });
+  },
+
+  /**
+   * Синхронне читання з кешу оперативної пам'яті.
+   * @param {string} key
+   * @returns {string|null}
+   */
+  get(key) {
+    return memoryCache.get(key) ?? null;
+  },
+
+  /**
+   * Записує значення в оперативну пам'ять миттєво,
+   * а в нативне сховище — асинхронно у фоні.
+   * @param {string} key
+   * @param {string} value
+   */
+  set(key, value) {
+    const valStr = String(value);
+    memoryCache.set(key, valStr);
+    
+    // Фоновий нативний запис, який не блокує головний потік UI
+    Promise.resolve().then(async () => {
+      await Preferences.set({ key, value: valStr });
+    });
+  },
+
+  /**
+   * Видаляє ключ з кешу та нативного сховища.
+   * @param {string} key
+   */
+  remove(key) {
+    memoryCache.delete(key);
+    
+    Promise.resolve().then(async () => {
+      await Preferences.remove({ key });
+    });
+  },
+
+  /**
+   * Відновлює дані з бекап-об'єкта.
+   * На відміну від set(), виконує гарантований await — безпечно перед reload().
+   * Очищає всі відомі ключі, потім паралельно записує нові значення.
+   *
+   * @param {Record<string, string>} data — розібраний і валідований бекап
+   * @returns {Promise<void>}
+   */
+  async restoreFromBackup(data) {
+    const APP_PREFIX = 'metro_';
+
+    // 1. Очистити кеш і Preferences для всіх відомих ключів
+    const clearOps = Object.values(STORAGE_KEYS).map(key => {
+      memoryCache.delete(key);
+      return Preferences.remove({ key });
+    });
+    await Promise.all(clearOps);
+
+    // 2. Записати нові значення — тільки metro_* рядки, без службових роздільників
+    const setOps = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (!key.startsWith(APP_PREFIX)) continue;
+      if (key.startsWith('═'))         continue;  // роздільники dev-логу
+      if (typeof value !== 'string')   continue;  // _dev_change_log — масив
+      memoryCache.set(key, value);
+      setOps.push(Preferences.set({ key, value }));
+    }
+    await Promise.all(setOps);
+  },
+};
+
+// ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ (ДЛЯ ВЕБ-ВЕРСІЇ) ══
+// На нативному Android Storage event між вкладками ніколи не тригериться
+// (WebView — єдиний процес, вкладок немає). Реєструємо тільки на вебі.
+import { Capacitor } from '@capacitor/core';
+
+if (!Capacitor.isNativePlatform()) {
+  const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
+
+  window.addEventListener('storage', (e) => {
+    if (_VALID_KEYS.has(e.key)) {
+      if (e.newValue === null) {
+        memoryCache.delete(e.key);
+      } else {
+        memoryCache.set(e.key, e.newValue);
+      }
+    }
+  });
+}
+</file>
+
+<file path="src/map/mapInteraction.js">
+// ══ ВЗАЄМОДІЯ З КАРТОЮ ══
+// Відповідальність: обробка кліків на SVG-зони станцій,
+// накладання та зняття heatmap-штрихування для відвіданих виходів (check-in).
+
+import { state }                  from '../core/state.js';
+import { getCheckins }            from '../domain/checkin.js';
+import { bus }                    from '../core/eventBus.js';
+import { STORAGE_KEYS, Storage }  from '../core/storage.js';
+import { getSlugByLower }         from '../data/stations.js';
+import { isShowMapAccessibilityEnabled } from '../features/settings.js';
+
+const inner = document.getElementById('mapInner');
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
+const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
+const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
+const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
+const HATCH_STEP_PX  = 8;
+
+/**
+ * Обробляє клік або Enter/Space на SVG-зоні карти.
+ * Знаходить slug за id елемента і емітує 'station:open'.
+ * @param {MouseEvent|KeyboardEvent} e
+ */
+export function handleMapInteraction(e) {
+  if (!state.stationsData) return;
+  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+
+  const zone = e.target.closest('[id]');
+  if (!zone?.id) return;
+
+  const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
+  const slug  = getSlugByLower(rawId);
+  if (slug) { e.preventDefault(); bus.emit('station:open', { slug }); }
+}
+
+inner?.addEventListener('click',   handleMapInteraction);
+inner?.addEventListener('keydown', handleMapInteraction);
+
+function removeVisitedHatchOverlays(root = inner) {
+  root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
+}
+
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
+const _hatchLineCache = new WeakMap();
+
+// Кеш зон станцій (будується один раз після renderMapZones)
+let _stationZoneEls = null;
+function _getStationZoneEls() {
+  // Повертаємо кеш, ТІЛЬКИ якщо він не порожній
+  if (_stationZoneEls && _stationZoneEls.length > 0) return _stationZoneEls;
+  
+  const els = [...inner.querySelectorAll('[id]')].filter(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    return !!getSlugByLower(rawId);
+  });
+  
+  // Кешуємо тільки тоді, коли станції реально знайшлися на карті
+  if (els.length > 0) {
+    _stationZoneEls = els;
+  }
+  
+  return els;
+}
+
+/** Скидає кеш зон станцій (викликати після повторного renderMapZones). */
+export function invalidateStationZoneCache() { _stationZoneEls = null; }
+
+let _clipIdCounter = 0;
+
+let _hatchRafId = null;
+
+/**
+ * Планує накладання heatmap-штрихування на відвідані зони карти.
+ * Дедублюється через requestAnimationFrame — безпечно викликати кілька разів поспіль.
+ * @param {Element} [root] — за замовчуванням mapInner
+ */
+export function applyVisitedHatchOverlays(root = inner) {
+  if (!root) return;
+  if (_hatchRafId !== null) return;
+  _hatchRafId = requestAnimationFrame(() => {
+    _hatchRafId = null;
+    _doApplyHatch(root);
+  });
+}
+
+function _doApplyHatch(root) {
+  removeVisitedHatchOverlays(root);
+
+  const isHatchEnabled = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
+  if (!isHatchEnabled) return;
+
+  const targets = [...root.querySelectorAll('.is-visited-partial, .is-visited-full')]
+    .filter(el => el.closest('.is-visited-partial, .is-visited-full') === el);
+
+  if (!targets.length) return;
+
+  const globalScale = _getGlobalSvgScale();
+
+  targets.forEach(target => {
+    const shapes = _getValidGeometry(target);
+    if (!shapes.length) return;
+
+    const isFull = target.classList.contains('is-visited-full');
+
+    const overlay = document.createElementNS(SVG_NS, 'g');
+    overlay.classList.add(HATCH_OVERLAY_CLASS, isFull ? 'ci-hatch-full' : 'ci-hatch-partial');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.setAttribute('focusable', 'false');
+    overlay.dataset.hatchFor = target.id || '';
+
+    shapes.forEach(shape => _appendShapeHatch(shape, overlay, isFull, globalScale));
+    if (!overlay.childElementCount) return;
+
+    if (target instanceof SVGGElement) {
+      target.appendChild(overlay);
+    } else {
+      target.parentNode?.insertBefore(overlay, target.nextSibling);
+    }
+  });
+}
+
+function _getGlobalSvgScale() {
+  const ref = inner.querySelector('path, polygon, rect');
+  if (!ref) return 1;
+  const ctm      = ref.getScreenCTM?.();
+  const rawScale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
+  const scale    = (Number.isFinite(rawScale) && rawScale > 0) ? rawScale : 1;
+
+  // Квантуємо масштаб до «сходинок» по 1%, щоб усі фігури в одному
+  // проході рендеру завжди бачили однакове значення scale (інакше різні
+  // фігури можуть лишитись на різних історичних cStep через 2%-допуск
+  // кешу нижче — окрема причина розсинхрону штрихування).
+  const QUANT = 0.01;
+  return Math.round(scale / QUANT) * QUANT;
+}
+
+const _geometryCache = new WeakMap();
+
+function _getValidGeometry(target) {
+  if (_geometryCache.has(target)) return _geometryCache.get(target);
+
+  const geometry = target.matches(HATCH_GEOMETRY_SELECTOR)
+    ? [target]
+    : [...target.querySelectorAll(HATCH_GEOMETRY_SELECTOR)];
+
+  // getBBox() тільки при першому зверненні до target — кешуємо через WeakMap
+  const valid = geometry.filter(shape => {
+    if (shape.closest(`.${HATCH_OVERLAY_CLASS}`)) return false;
+    try { const b = shape.getBBox(); return b.width > 0 && b.height > 0; }
+    catch { return false; }
+  });
+
+  // Запобіжник: не кешуємо порожній результат (якщо SVG ще не відмалювався)
+  if (valid.length > 0) {
+    _geometryCache.set(target, valid);
+  }
+  
+  return valid;
+}
+
+function _appendShapeHatch(shape, overlay, isFull, globalScale) {
+  const cached = _hatchLineCache.get(shape);
+  let lines, strokeWidth;
+
+  if (cached && cached.isFull === isFull && cached.scale === globalScale) {
+    // Cache hit: нуль getBBox(), нуль layout flush.
+    // Точне порівняння безпечне, бо globalScale тепер квантований.
+    ({ lines, strokeWidth } = cached);
+  } else {
+    // Cache miss: рахуємо один раз (один getBBox всередині buildHatchLines)
+    ({ lines, strokeWidth } = buildHatchLines(shape, isFull, globalScale));
+    _hatchLineCache.set(shape, { isFull, scale: globalScale, lines, strokeWidth });
+  }
+
+  if (!lines.length) return;
+
+  const shapeOverlay = document.createElementNS(SVG_NS, 'g');
+  const transform    = shape.getAttribute('transform');
+  if (transform) shapeOverlay.setAttribute('transform', transform);
+
+  // Монотонний лічильник замість Math.random()
+  const clipId   = `ci-clip-${_clipIdCounter++}`;
+  const defs     = document.createElementNS(SVG_NS, 'defs');
+  const clipPath = document.createElementNS(SVG_NS, 'clipPath');
+  clipPath.setAttribute('id', clipId);
+  const clipGeometry = shape.cloneNode(false);
+  clipGeometry.removeAttribute('id');
+  clipGeometry.removeAttribute('class');
+  clipGeometry.setAttribute('stroke-width', '1');
+  clipGeometry.setAttribute('stroke', 'black');
+  clipPath.appendChild(clipGeometry);
+  defs.appendChild(clipPath);
+  shapeOverlay.appendChild(defs);
+
+  const clippedGroup = document.createElementNS(SVG_NS, 'g');
+  clippedGroup.setAttribute('clip-path', `url(#${clipId})`);
+  shapeOverlay.appendChild(clippedGroup);
+  overlay.appendChild(shapeOverlay);
+
+  lines.forEach(d => {
+    const line = document.createElementNS(SVG_NS, 'path');
+    line.classList.add(HATCH_LINE_CLASS);
+    line.setAttribute('d', d);
+    line.setAttribute('stroke-width', String(strokeWidth));
+    clippedGroup.appendChild(line);
+  });
+}
+
+// Оновлена сигнатура: приймає globalScale, щоб не викликати getScreenCTM()
+function buildHatchLines(sourceShape, isFull, scale) {
+  const box  = sourceShape.getBBox(); // єдиний getBBox() на shape
+  // scale передається ззовні — не потрібен getScreenCTM() тут
+  const step = HATCH_STEP_PX / scale;
+  const pad  = step * 2;
+
+  const minX = box.x - pad, maxX = box.x + box.width  + pad;
+  const minY = box.y - pad, maxY = box.y + box.height + pad;
+
+  const cStep    = step * Math.SQRT2;
+  const cMin_raw = isFull ? (minX + minY) : (minX - maxY);
+  const cMax     = isFull ? (maxX + maxY) : (maxX - minY);
+  const cMin     = Math.floor(cMin_raw / cStep) * cStep;
+
+  const lines = [];
+  for (let c = cMin; c <= cMax; c += cStep) {
+    const x1 = minX, x2 = maxX;
+    const y1 = isFull ? (c - x1) : (x1 - c);
+    const y2 = isFull ? (c - x2) : (x2 - c);
+    lines.push(`M ${round(x1)} ${round(y1)} L ${round(x2)} ${round(y2)}`);
+  }
+  return { lines, strokeWidth: round(step * 0.35) };
+}
+
+/**
+ * Оновлює CSS-класи зон карти (.is-visited-full / .is-visited-partial) відповідно
+ * до поточного стану check-in. Викликається при 'map:sync-checkins'.
+ */
+export function syncMapWithCheckins() {
+  if (!inner || !state.stationsData) return;
+
+  const checkins = getCheckins();
+  const visitedExitsBySlug = {};
+
+  for (const entry of Object.values(checkins)) {
+    if (!entry.slug) continue;
+    if (!visitedExitsBySlug[entry.slug]) visitedExitsBySlug[entry.slug] = new Set();
+    // Ключ ОБОВ'ЯЗКОВО включає напрямок (dir): два РІЗНІ фізичні виходи
+    // (на різних платформах/напрямках) можуть мати однаковий номер
+    // вагона/дверей — це нормально. Без dir у ключі такі виходи
+    // колапсують в один запис Set, totalOpenExits (без дедуплікації)
+    // лишається більшим за розмір Set, і станція ніколи не отримує
+    // is-visited-full, навіть якщо реально відмічені всі виходи.
+    visitedExitsBySlug[entry.slug].add(`${entry.dir}|${entry.wagon}|${entry.doors}`);
+
+  }
+
+  // Set для O(1) lookup замість O(V) array.some()
+  const visitedNameSet = new Set(
+    Object.keys(visitedExitsBySlug)
+      .map(slug => state.stationsData[slug]?.name?.replace(/[\s\n\r]/g, '').toLowerCase())
+      .filter(Boolean)
+  );
+
+  removeVisitedHatchOverlays();
+
+  inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
+    .forEach(el => el.classList.remove('station-checked-in', 'is-visited', 'is-visited-partial', 'is-visited-full'));
+
+  // Кешований список лише зон станцій (не всього SVG)
+  _getStationZoneEls().forEach(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    const slug  = getSlugByLower(rawId);
+    if (!slug || !visitedExitsBySlug[slug]) return;
+
+    const stData         = state.stationsData[slug];
+    const totalOpenExits = stData?.positions?.length
+      ? stData.positions.filter(p => !p.closed).length
+      : 1;
+
+    el.classList.add(visitedExitsBySlug[slug].size >= totalOpenExits
+      ? 'is-visited-full'
+      : 'is-visited-partial');
+  });
+
+  inner.querySelectorAll('text').forEach(txt => {
+    const cleanText = txt.textContent.replace(/[\s\n\r]/g, '').toLowerCase();
+    if (cleanText.length <= 2) return;
+    // O(1) Set.has() замість O(V) array.some() з substring-matching
+    // Повна відповідність достатня: SVG text збігається з нормалізованою назвою
+    if (visitedNameSet.has(cleanText)) {
+      txt.classList.add('station-checked-in');
+      txt.querySelectorAll('tspan').forEach(t => t.classList.add('station-checked-in'));
+    }
+  });
+
+  applyVisitedHatchOverlays();
+  updateMapAccessibilityIcons();
+}
+
+bus.on('map:sync-checkins', syncMapWithCheckins);
+bus.on('data:stations-hydrated', () => {
+  invalidateStationZoneCache();
+  updateMapAccessibilityIcons();
+});
+/**
+ * Малює або видаляє знаки візочків біля станцій з ліфтами на SVG-карті.
+ */
+/**
+ * Малює або видаляє знаки візочків біля станцій з ліфтами на SVG-карті.
+ */
+export function updateMapAccessibilityIcons() {
+  if (!inner || !state.stationsData) return;
+
+  // Очищаємо попередні іконки
+  inner.querySelectorAll('.map-accessibility-icon').forEach(el => el.remove());
+
+  if (!isShowMapAccessibilityEnabled()) return;
+
+  const svgEl = inner.querySelector('svg');
+  if (!svgEl) return;
+
+  const processedSlugs = new Set();
+
+  _getStationZoneEls().forEach(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    const slug  = getSlugByLower(rawId);
+    if (!slug || processedSlugs.has(slug)) return;
+
+    const stData = state.stationsData[slug];
+    const hasLift = stData?.directions?.some(d =>
+      d.exits?.some(e => e.positions?.some(p => p.isLift))
+    );
+
+    if (!hasLift) return;
+    processedSlugs.add(slug);
+
+    try {
+      const bbox = el.getBBox();
+      if (!bbox || bbox.width <= 0) return;
+
+      // Зменшено розмір іконки вдвічі (0.22 замість 0.45)
+      const size = round(Math.min(bbox.width, bbox.height) * 0.3);
+      const gap  = round(size * 1.1);
+
+      const x = round(bbox.x - size - gap);
+      const y = round(bbox.y + (bbox.height - size) / 2);
+
+      const iconGroup = document.createElementNS(SVG_NS, 'svg');
+      iconGroup.setAttribute('x', String(x));
+      iconGroup.setAttribute('y', String(y));
+      iconGroup.setAttribute('width', String(size));
+      iconGroup.setAttribute('height', String(size));
+      iconGroup.setAttribute('viewBox', '0 0 24 24');
+      iconGroup.setAttribute('class', 'map-accessibility-icon');
+      iconGroup.setAttribute('fill', 'currentColor');
+      iconGroup.setAttribute('aria-hidden', 'true');
+      iconGroup.innerHTML = `<path d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/>`;
+
+      svgEl.appendChild(iconGroup);
+    } catch (err) {
+      // Ігноруємо помилки BBox
+    }
+  });
+}
+
+bus.on('map:update-accessibility', updateMapAccessibilityIcons);
+</file>
+
 <file path="src/sheets/stationSheet.js">
 import { state }                   from '../core/state.js';
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
@@ -8675,15 +8749,6 @@ export function openSettingsSheet() {
     settingsSheet.appendChild(tpl.content.cloneNode(true));
     document.body.appendChild(settingsSheet);
 
-    // ── Закрити ──
-    document.getElementById('settingsClose').addEventListener('click', () => {
-      animateSheetClose(settingsSheet, () => {
-        settingsSheet.classList.remove('sheet-open');
-        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-          sheetOverlay.classList.remove('overlay-visible');
-      });
-    });
-
     // ── Тема ──
     document.getElementById('settingsThemeSeg')?.querySelectorAll('.settings-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => applyTheme(btn.dataset.themeVal));
@@ -8719,6 +8784,9 @@ export function openSettingsSheet() {
       });
     }
 
+
+
+
     const hideNoLiftToggle = document.getElementById('settingsHideNoLiftToggle');
     if (hideNoLiftToggle) {
       hideNoLiftToggle.checked = isHideNoLiftEnabled();
@@ -8727,6 +8795,25 @@ export function openSettingsSheet() {
         bus.emit('station:refresh');
       });
     }
+
+    // ── Доступність на карті (ВИПРАВЛЕНО: винесено з закриття) ──
+    const showMapAccToggle = document.getElementById('settingsShowMapAccessibilityToggle');
+    if (showMapAccToggle) {
+      showMapAccToggle.checked = isShowMapAccessibilityEnabled();
+      showMapAccToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY, String(e.target.checked));
+        bus.emit('map:update-accessibility');
+      });
+    }
+
+    // ── Закрити ──
+    document.getElementById('settingsClose').addEventListener('click', () => {
+      animateSheetClose(settingsSheet, () => {
+        settingsSheet.classList.remove('sheet-open');
+        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
+          sheetOverlay.classList.remove('overlay-visible');
+      });
+    });
 
     // ── Check-in головний ──
     const checkinToggle = document.getElementById('settingsCheckinToggle');
@@ -9018,6 +9105,9 @@ export function openSettingsSheet() {
     if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
     if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
     if (clearLocalBtn)   clearLocalBtn.disabled   = !hasAnyData;
+
+    const ma = document.getElementById('settingsShowMapAccessibilityToggle');
+    if (ma) ma.checked = isShowMapAccessibilityEnabled();
   }
 
   syncToggles();
@@ -9030,6 +9120,11 @@ export function openSettingsSheet() {
 /** Повертає true якщо увімкнено приховування виходів без ліфтів. */
 export function isHideNoLiftEnabled() {
   return Storage.get(STORAGE_KEYS.HIDE_NO_LIFT) === 'true';
+}
+
+/** Повертає true якщо увімкнено відображення доступності на карті. */
+export function isShowMapAccessibilityEnabled() {
+  return Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) === 'true';
 }
 </file>
 
@@ -9248,7 +9343,6 @@ document.documentElement.setAttribute('data-theme', actual);
     </div> <div id="mapViewport" class="map-viewport is-loading">
       <div id="mapInner" class="map-inner"></div>
     </div> </main>
-<button id="checkinBtn" class="dock-btn dock-btn-checkin" aria-label="Check-in" hidden></button>
 
 <nav class="bottom-nav-dock">
 <button id="favListBtn" class="dock-btn" aria-label="Вибране">
@@ -9277,7 +9371,9 @@ document.documentElement.setAttribute('data-theme', actual);
           <path fill-rule="evenodd" d="M6.77208,0.683772 C6.90819,0.27543 7.29033,0 7.72076,0 L8.27924,0 C8.70967,0 9.09181,0.27543 9.22792,0.683772 L9.75342,2.26026 C10.125,2.37363 10.4812,2.52208 10.8183,2.70177 L12.3051,1.9584 C12.6901,1.7659 13.155,1.84136 13.4594,2.14572 L13.8543,2.54062 C14.1587,2.84498 14.2341,3.30995 14.0416,3.69494 L13.2983,5.1817 C13.4779,5.51878 13.6264,5.87503 13.7397,6.24658 L15.3162,6.77208 C15.7246,6.90819 16,7.29033 16,7.72076 L16,8.27924 C16,8.70967 15.7246,9.09181 15.3162,9.22792 L13.7397,9.75342 C13.6264,10.125 13.4779,10.4812 13.2983,10.8183 L14.0416,12.3051 C14.2341,12.69 14.1587,13.155 13.8543,13.4594 L13.4594,13.8543 C13.155,14.1586 12.6901,14.2341 12.3051,14.0416 L10.8183,13.2982 C10.4812,13.4779 10.125,13.6264 9.75342,13.7397 L9.22792,15.3162 C9.09181,15.7246 8.70967,16 8.27924,16 L7.72076,16 C7.29033,16 6.90819,15.7246 6.77208,15.3162 L6.24658,13.7397 C5.87503,13.6264 5.51879,13.4779 5.18172,13.2983 L3.69491,14.0417 C3.30992,14.2342 2.84495,14.1587 2.54059,13.8543 L2.14568,13.4594 C1.84132,13.1551 1.76587,12.6901 1.95836,12.3051 L2.70176,10.8183 C2.52208,10.4812 2.37363,10.125 2.26026,9.75342 L0.683772,9.22792 C0.27543,9.09181 0,8.70967 0,8.27924 L0,7.72076 C0,7.29033 0.27543,6.90819 0.683772,6.77208 L2.26026,6.24658 C2.37363,5.87502 2.52208,5.51876 2.70176,5.18167 L1.95837,3.69488 C1.76587,3.30989 1.84133,2.84492 2.14569,2.54056 L2.54059,2.14565 C2.84495,1.84129 3.30993,1.76584 3.69491,1.95833 L5.18172,2.70174 C5.5188,2.52207 5.87504,2.37362 6.24658,2.26026 L6.77208,0.683772 Z M8,12 C10.2091,12 12,10.2091 12,8 C12,5.79086 10.2091,4 8,4 C5.79086,4 4,5.79086 4,8 C4,10.2091 5.79086,12 8,12 Z"/>
         </svg>
       </div>
-    </button>        <button class="drop-item" id="feedbackItem">
+    </button>
+    <button class="drop-item" id="checkinBtn" aria-label="Check-in" hidden></button>
+    <button class="drop-item" id="feedbackItem">
       <div class="drop-item-icon">
         <svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
           <path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/>
@@ -9396,7 +9492,7 @@ document.documentElement.setAttribute('data-theme', actual);
               <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" stroke="currentColor" stroke-width="0.5"/>
             </svg>
           </div>
-          <p class="about-card-text">Відмічайте виходи, якими скористались. Переглядайте статистику <span style="font-variant: small-caps;">Check&#8209;in</span>&#8209;ів</p>
+          <p class="about-card-text">Відмічайте виходи, якими скористались. Переглядайте статистику <span style="font-variant: small-caps;">Check&#8209;in</span>&#8209;ів<span class="about-card-note">Потребує активації в налаштуваннях</span></p>
         </div>
 
         <div class="about-card">
@@ -9405,7 +9501,7 @@ document.documentElement.setAttribute('data-theme', actual);
               <path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/>
             </svg>
           </div>
-          <p class="about-card-text">Виправляйте неточності та підписуйте виходи з&nbsp;метро</p>
+          <p class="about-card-text">Виправляйте неточності та підписуйте виходи з&nbsp;метро<span class="about-card-note">Потребує активації в налаштуваннях</span></p>
         </div>
 
 <div class="about-card about-support-card" style="padding-top: 16px;">
@@ -9599,73 +9695,97 @@ document.documentElement.setAttribute('data-theme', actual);
 
 
 
+        <!-- ══ КАРТКА «ДАНІ» ══ -->
         <div class="settings-card">
-  <div class="settings-card-header">Дані</div>
-  <div class="settings-rule"></div>
+          <div class="settings-card-header">Дані</div>
+          <div class="settings-rule"></div>
 
-  <div class="settings-row">
-    <div class="settings-label-wrap">
-      <span class="settings-label">Режим редагування</span>
-      <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон-двері</span>
-    </div>
-    <label class="ios-toggle">
-      <input type="checkbox" id="settingsEditModeToggle">
-      <span class="ios-toggle-slider"></span>
-    </label>
-  </div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Режим редагування</span>
+              <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон-двері</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsEditModeToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
 
-  <!-- Автоприховується разом із роздільником, якщо "Режим редагування" вимкнено -->
-  <div id="settingsLocalFbRow" class="is-hidden">
-    <div class="settings-rule"></div>
-    <div class="settings-row">
-      <div class="settings-label-wrap">
-        <span class="settings-label">Локальні зміни</span>
-        <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
-      </div>
-      <label class="ios-toggle">
-        <input type="checkbox" id="settingsLocalFeedbackToggle">
-        <span class="ios-toggle-slider"></span>
-      </label>
-    </div>
-  </div>
+          <!-- Автоприховується разом із роздільником, якщо "Режим редагування" вимкнено -->
+          <div id="settingsLocalFbRow" class="is-hidden">
+            <div class="settings-rule"></div>
+            <div class="settings-row">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Локальні зміни</span>
+                <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsLocalFeedbackToggle">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
 
-  <div class="settings-rule"></div>
-  <div class="clear-data-row" id="clearDataRow">
-    <span class="settings-label">Очистити дані</span>
-    <span class="clear-data-chevron" id="clearDataChevron" style="display: flex; align-items: center; justify-content: center; width: 18px; color: #ABABAB; font-size: 16px;">&#8964;</span>
-  </div>
-  <div class="clear-data-dropdown" id="clearDataDropdown">
-    <div class="clear-data-separator"></div>
-    <div class="clear-data-item" id="settingsClearFavs">Вибране</div>
-    <div class="clear-data-item" id="settingsClearCheckin">Чекіни</div>
-    <div class="clear-data-item" id="settingsClearLocalEdits">Всі локальні зміни</div>
-  </div>
-  <div class="settings-rule"></div>
-  <div class="settings-row">
-    <span class="settings-label">Резервна копія</span>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
-      <div class="settings-divider-v"></div>
-      <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
-    </div>
-  </div>
-</div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Приховати підказки</span>
+              <span class="settings-sublabel" style="text-align: left;">Не показувати навчальні інфоблоки у картках станцій</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsHideInfoToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
 
-<!-- Картка Доступність -->
-<div class="settings-card">
-  <div class="settings-card-header">Доступність</div>
-  <div class="settings-rule"></div>
-  <div class="settings-row">
-    <div class="settings-label-wrap">
-      <span class="settings-label">Приховати виходи без ліфтів</span>
-      <span class="settings-sublabel" style="text-align: left;">Застосовується, якщо на станції доступні ліфти</span>
-    </div>
-    <label class="ios-toggle">
-      <input type="checkbox" id="settingsHideNoLiftToggle">
-      <span class="ios-toggle-slider"></span>
-    </label>
-  </div>
-</div>
+          <div class="settings-rule"></div>
+          <div class="clear-data-row" id="clearDataRow">
+            <span class="settings-label">Очистити дані</span>
+            <span class="clear-data-chevron" id="clearDataChevron" style="display: flex; align-items: center; justify-content: center; width: 18px; color: #ABABAB; font-size: 16px;">&#8964;</span>
+          </div>
+          <div class="clear-data-dropdown" id="clearDataDropdown">
+            <div class="clear-data-separator"></div>
+            <div class="clear-data-item" id="settingsClearFavs">Вибране</div>
+            <div class="clear-data-item" id="settingsClearCheckin">Чекіни</div>
+            <div class="clear-data-item" id="settingsClearLocalEdits">Всі локальні зміни</div>
+          </div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <span class="settings-label">Резервна копія</span>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
+              <div class="settings-divider-v"></div>
+              <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ КАРТКА «ДОСТУПНІСТЬ» ══ -->
+        <div class="settings-card">
+          <div class="settings-card-header">Доступність</div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Приховати виходи без ліфтів</span>
+              <span class="settings-sublabel" style="text-align: left;">Застосовується, якщо на станції доступні ліфти.</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsHideNoLiftToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Відображати доступність на карті</span>
+              <span class="settings-sublabel" style="text-align: left;">Показує знак візочка біля станцій з ліфтами на схемі метро</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsShowMapAccessibilityToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+        </div>
 
       </div>
     </div>
@@ -9974,27 +10094,6 @@ button { font-family: inherit; }
   /* Dock завжди симетричний: серце — центр — лупа */
 }
 /* Кнопка Check-in: фіксована строго вгорі по центру */
-.dock-btn-checkin {
-  position: fixed;
-  top: calc(12px + env(safe-area-inset-top)); /* 12px від верху + врахування "чубчика" iPhone */
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: var(--z-bottom-sheet); /* вище оверлея, щоб клік не поглинався */
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent !important;
-  border: none !important;
-  cursor: pointer;
-}
-
-.dock-btn-checkin:active {
-  transform: translateX(-50%) !important;
-  opacity: 0.6;
-}
-
 .dock-btn {
   width: 44px;
   height: 44px;
@@ -11967,6 +12066,15 @@ margin: 0 0 4px 0;
   color: var(--text-muted);
 }
 
+.about-card-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
 
 
 
@@ -12521,6 +12629,15 @@ svg [role="button"]:focus:not(:focus-visible) {
   line-height: 1.4;
   flex: 1;
   color: var(--text-muted);
+}
+
+.about-card-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-muted);
+  opacity: 0.6;
 }
 
 
@@ -13954,19 +14071,20 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 /* ══ ЛІФТ (окремий вихід-ліфт під основним виходом) ══ */
+/* ══ ЛІФТ (окремий вихід-ліфт під основним виходом) ══ */
 .position-row {
   position: relative;
 }
 
 .pos-lift-mark {
   position: absolute;
-  left: calc(25% - 35px);
+  left: calc(25% - 34px);
   top: 50%;
   transform: translate(-50%, -50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: var(--text-muted) !important;
   pointer-events: none;
   width: 24px;
   height: 24px;
@@ -13975,6 +14093,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .pos-lift-mark svg {
   width: 20px;
   height: 20px;
+  fill: var(--text-muted) !important;
+}
+
+/* ══ Значки візочків на самій SVG-карті (біля станцій з ліфтами) ══ */
+.map-accessibility-icon {
+  color: var(--icon-color);
 }
 </file>
 
