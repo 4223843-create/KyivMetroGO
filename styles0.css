@@ -258,32 +258,6 @@ z-index: var(--z-fullscreen-sheet);
   backface-visibility: hidden;
 }
 
-/* Extend the header hatch over the body’s existing 18px top padding without
-   changing either element's layout geometry. */
-#stationSheet .sheet-handle-bar {
-  position: relative;
-  z-index: 10;
-}
-
-#stationSheet .sheet-handle-bar::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  height: 18px;
-  background-color: inherit;
-  background-image: inherit;
-  background-position: inherit;
-  pointer-events: none;
-  z-index: 10;
-}
-
-/* The mask covers scrolling body content; keep the title itself above it. */
-#stationSheet .sheet-station-title {
-  z-index: 11;
-}
-
 .sheet-handle {
   width: 40px; height: 3px;
   border-radius: 2px;
@@ -345,7 +319,6 @@ z-index: var(--z-fullscreen-sheet);
   position: relative;
   isolation: isolate; /* весь вміст, що скролиться, замкнений у власному стек-контексті —
                           нічого всередині (навіть з високим z-index) не може "виїхати" поверх шапки */
-  contain: paint;
   overflow-y: auto;
   flex: 1;
   min-height: 0; /* без цього flex-елемент у колонці не стискається до вільного місця

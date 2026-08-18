@@ -1,24 +1,53 @@
-The previous array-index-based synchronization variant was terrible and broke synchronization on multiple other stations because exit indices are not structurally aligned across the entire dataset. I have manually rolled back the code of `src/domain/checkin.js` to its original state. Let's design a completely different, safer, and non-destructive solution.
+MASTER BUG FIX PROMPT: Station Title Clipping & Hatched Mask in Bottom Sheet (KyivMetroGO)
 
-### THE LOGICAL ARCHITECTURE WE MUST PRESERVE
-We must strictly adhere to the original two business rules of the app without relying on fragile array indices:
-- Rule 1 (One-to-one): Every real passenger direction has exactly one real exit. Tapping any pin must check in all pins from all real passenger directions (e.g., Vokzalna).
-- Rule 2 (By label): If at least one real passenger direction has more than one exit, only sync exits whose `exit.label` matches the label of the clicked exit (case-insensitive, whitespace-normalized). If the clicked exit has no label, do not sync (save the clicked pin only).
+CONTEXT & HTML STRUCTURE (index.html):
+  <div id="stationSheet" class="station-sheet">
+    <div class="sheet-handle-bar">   <!-- Fixed header (52px high) -->
+      <button class="fav-btn-bar">...</button>
+      <div class="sheet-handle"></div>
+      <span class="sheet-station-title" id="stationTitleMain">Хрещатик</span>
+      <button id="sheetCheckinBtn" class="sheet-action-btn" hidden></button>
+      <button id="sheetClose" class="sheet-close-btn">✕</button>
+    </div>
+    <div id="sheetBody" class="sheet-body">...</div> <!-- Internal scroll container -->
+  </div>
 
-### THE TWO GENUINE BUGS TO FIX
-1. The `allHaveOneExit` bug: The original code evaluated `station.directions.every(...)` blindly, which included service directions (like `__long_transfer__` or empty technical tracks). Because service tracks don't have exactly 1 exit, `allHaveOneExit` incorrectly evaluated to `false`, silently breaking Rule 1 for many stations. We must isolate "Real Directions" first. A "Real Direction" is a non-service track containing at least one exit with at least one active, non-closed position.
-2. The empty `dir` bug on terminal stations ("Heroiv Dnipra"): Due to a split-block DOM rendering layout on terminal tracks, the UI layer extracts an empty string (`dir = ""`) when clicking a wagon pill. 
+EXACT GEOMETRY & CURRENT BUG MECHANICS:
+1. `.sheet-handle-bar` is the fixed header. It has a diagonal hatched background pattern (`background-image: url(...)`) and a height of 52px (Y-range: 0px to 52px).
+2. `.sheet-station-title` ("Хрещатик") is absolutely positioned inside `.sheet-handle-bar` at `top: 40px`. With font size and line height, the rendered text spans from Y = 40px to Y = ~62px.
+3. `#sheetBody` starts immediately below the header at Y = 52px. It has a solid background (`background-color: var(--bg-sheet)`) and `padding-top: 18px`.
+4. As a result, the first actual content text inside `#sheetBody` ("попередня Театральна") sits at Y = 70px (52px + 18px padding).
+5. THE BUG: Because `#sheetBody`'s solid background starts at Y = 52px, it renders OVER the lower half of `.sheet-station-title` (from Y = 52px to 62px), slicing the station name "Хрещатик" horizontally in half! Furthermore, when the user scrolls, scrolling content protrudes over the title text.
 
-### NEW IMPLEMENTATION ALGORITHM (Strictly inside toggleCheckin)
-Go back to the original `toggleCheckin` signature and structure. Before making any sync decisions, execute these steps:
+STRICT CONSTRAINTS (CRITICAL - DO NOT VIOLATE):
+- DO NOT shift, move, or offset any panels or content blocks up or down! At rest, the first content block ("попередня Театральна") MUST remain at Y = 70px.
+- DO NOT change `min-height` or `flex-basis` of `.sheet-handle-bar` (must remain 52px).
+- DO NOT change `top: 40px` or font size/line-height of `.sheet-station-title`.
+- DO NOT use flat `box-shadow` hacks on `.sheet-handle-bar` (e.g., `box-shadow: 0 18px 0 var(--bg-sheet)`). Flat shadows create a solid grey band that breaks the diagonal hatched SVG pattern.
+- DO NOT alter the visual spacing/margins between the station title and the content below.
 
-1. DEDUCE MISSING DIRECTION: If the incoming `dir` argument is empty (`""` or missing), find the valid track name dynamically. Scan all available station directions and exits using `exitContainsPin(ex, wagon, doors)`. Once the clicked pin is found, override `dir` with that direction's real name (`d.from`).
-2. FILTER REAL DIRECTIONS: Build a clean array of purely "Real Directions" and their "Real Exits". A direction is real if its normalized name is NOT `"__long_transfer__"` and it contains at least one exit with at least one non-closed position.
-3. FIND THE SOURCE LABEL: Within the resolved clicked direction, identify the exact clicked exit block using `exitContainsPin` and extract its normalized `label` (if any).
-4. EVALUATE SYNC RULES AGAINST REAL DATA ONLY:
-   - Check if `realDirs.every(d => d.realExits.length === 1)`. If true (Rule 1), add all active positions from the single exit of every real direction to the `targets` Map.
-   - Otherwise, if the clicked exit has a valid normalized label, execute Rule 2: loop through all real directions, find exits with a matching normalized label, and add their non-closed positions to the `targets` Map.
-5. ALWAYS preserve the primary clicked pin under its corrected direction name in the `targets` Map as a final fallback.
-6. Evaluate `willCheckIn` strictly against the primary clicked pin's target ID to avoid partial-sync toggle deadlocks, then apply mutations to the database.
+FAILED APPROACHES (ALREADY REJECTED):
+1. Expanding header height to 68px: Pushed the entire content block down and created an unwanted empty gap.
+2. Using solid `box-shadow`: Cut off the diagonal hatched background with a flat solid rectangle.
+3. Shifting `.sheet-station-title` up to `top: 25px`: Ruined the vertical alignment of the title inside the header.
 
-Provide the clean, complete rewrite of the `toggleCheckin` function inside `src/domain/checkin.js`. Do not modify other exports.
+REQUIRED TECHNICAL SOLUTION:
+We must extend the DIAGONAL HATCHED BACKGROUND of `.sheet-handle-bar` downward by 18px (from Y = 52px to Y = 70px) into the empty `padding-top` space of `#sheetBody` without changing layout geometry.
+
+Implementation Steps in `styles.css`:
+1. Ensure `.sheet-handle-bar` has `position: relative` and `z-index: 10`.
+2. Add a pseudo-element mask `#stationSheet .sheet-handle-bar::after` that extends the hatched pattern downward by 18px:
+   ```css
+   #stationSheet .sheet-handle-bar::after {
+     content: '';
+     position: absolute;
+     top: 100%;
+     left: 0;
+     right: 0;
+     height: 18px;
+     background-color: inherit;
+     background-image: inherit;
+     background-position: inherit;
+     pointer-events: none;
+     z-index: 10;
+   }
