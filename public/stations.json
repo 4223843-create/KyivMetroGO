@@ -337,7 +337,7 @@
               "label": "",
               "positions": [
                 {
-                  "wagon": "2",
+                  "wagon": "3",
                   "doors": "4"
                 }
               ]
@@ -380,7 +380,7 @@
               "positions": [
                 {
                   "wagon": "4",
-                  "doors": "1"
+                  "doors": "1-2"
                 }
               ]
             }
@@ -519,7 +519,7 @@
               "positions": [
                 {
                   "wagon": "2",
-                  "doors": "1-3"
+                  "doors": "1"
                 }
               ]
             },
@@ -1587,8 +1587,8 @@
               "label": "",
               "positions": [
                 {
-                  "wagon": "4",
-                  "doors": "3"
+                  "wagon": "2",
+                  "doors": "2-3"
                 }
               ]
             }
@@ -1601,8 +1601,8 @@
               "label": "",
               "positions": [
                 {
-                  "wagon": "2",
-                  "doors": "3"
+                  "wagon": "4",
+                  "doors": "1-2"
                 }
               ]
             }
@@ -1628,8 +1628,8 @@
               "label": "ескалатор",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "1"
+                  "wagon": "1",
+                  "doors": "2"
                 }
               ]
             },
@@ -1652,8 +1652,8 @@
               "label": "ескалатор",
               "positions": [
                 {
-                  "wagon": "4",
-                  "doors": "3"
+                  "wagon": "3",
+                  "doors": "4"
                 }
               ]
             },
@@ -1661,8 +1661,8 @@
               "label": "ліфт",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "5",
+                  "doors": "4",
                   "isLift": true
                 }
               ]
@@ -1686,29 +1686,15 @@
           "from": "попередня Деміївська",
           "exits": [
             {
-              "label": "вул. Васильківська",
-              "positions": [
-                {
-                  "wagon": "1",
-                  "doors": "2"
-                }
-              ]
-            },
-            {
-              "label": "Голосіївська площа",
+              "label": "",
               "positions": [
                 {
                   "wagon": "5",
                   "doors": "2"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
+                },
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "5",
+                  "doors": "4",
                   "isLift": true
                 }
               ]
@@ -1719,29 +1705,15 @@
           "from": "попередня Васильківська",
           "exits": [
             {
-              "label": "вул. Васильківська",
-              "positions": [
-                {
-                  "wagon": "4",
-                  "doors": "3"
-                }
-              ]
-            },
-            {
-              "label": "Голосіївська площа",
+              "label": "",
               "positions": [
                 {
                   "wagon": "1",
                   "doors": "2"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
+                },
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "1",
+                  "doors": "1",
                   "isLift": true
                 }
               ]
@@ -1770,6 +1742,11 @@
                 {
                   "wagon": "1",
                   "doors": "2"
+                },
+                {
+                  "wagon": "1",
+                  "doors": "2",
+                  "isLift": true
                 }
               ]
             },
@@ -1779,14 +1756,9 @@
                 {
                   "wagon": "5",
                   "doors": "3"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
+                },
                 {
-                  "wagon": "3",
+                  "wagon": "5",
                   "doors": "3",
                   "isLift": true
                 }
@@ -1803,6 +1775,11 @@
                 {
                   "wagon": "5",
                   "doors": "3"
+                },
+                {
+                  "wagon": "5",
+                  "doors": "3",
+                  "isLift": true
                 }
               ]
             },
@@ -1812,15 +1789,10 @@
                 {
                   "wagon": "1",
                   "doors": "2"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
+                },
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "1",
+                  "doors": "2",
                   "isLift": true
                 }
               ]
@@ -1856,8 +1828,8 @@
               "label": "ліфт",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "1",
+                  "doors": "2",
                   "isLift": true
                 }
               ]
@@ -1880,8 +1852,8 @@
               "label": "ліфт",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "5",
+                  "doors": "3-4",
                   "isLift": true
                 }
               ]
@@ -1927,7 +1899,7 @@
               "positions": [
                 {
                   "wagon": "3",
-                  "doors": "3",
+                  "doors": "2-3",
                   "isLift": true
                 }
               ]
@@ -1959,8 +1931,8 @@
               "label": "ліфт",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "4",
+                  "doors": "2-3",
                   "isLift": true
                 }
               ]
@@ -1990,24 +1962,24 @@
                 {
                   "wagon": "1",
                   "doors": "1-2"
+                },
+                {
+                  "wagon": "1",
+                  "doors": "1-2",
+                  "isLift": true
                 }
               ]
             },
             {
-              "label": "ТРЦ Respublica Park",
+              "label": "ТРЦ “Магелан”, будинок-соти",
               "positions": [
                 {
                   "wagon": "5",
                   "doors": "3-4"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
+                },
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "5",
+                  "doors": "3-4",
                   "isLift": true
                 }
               ]
@@ -2666,7 +2638,7 @@
           "from": "попередня Харківська",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
                   "wagon": "3",
@@ -2675,11 +2647,11 @@
               ]
             },
             {
-              "label": "ліфт",
+              "label": "",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "4",
+                  "doors": "4",
                   "isLift": true
                 }
               ]
@@ -2690,7 +2662,7 @@
           "from": "попередня Бориспільська",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
                   "wagon": "3",
@@ -2699,11 +2671,11 @@
               ]
             },
             {
-              "label": "ліфт",
+              "label": "",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "2",
+                  "doors": "2",
                   "isLift": true
                 }
               ]
@@ -2727,7 +2699,7 @@
           "from": "попередня Вирлиця",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
                   "wagon": "5",
@@ -2736,10 +2708,10 @@
               ]
             },
             {
-              "label": "ліфт",
+              "label": "",
               "positions": [
                 {
-                  "wagon": "3",
+                  "wagon": "5",
                   "doors": "3",
                   "isLift": true
                 }
@@ -2751,7 +2723,7 @@
           "from": "попередня Червоний&nbsp;Хутір",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
                   "wagon": "1",
@@ -2760,7 +2732,7 @@
               ]
             },
             {
-              "label": "ліфт",
+              "label": "",
               "positions": [
                 {
                   "wagon": "3",
@@ -2793,20 +2765,20 @@
           "from": "вихід праворуч",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "1"
+                  "doors": "1"в
                 }
               ]
             },
             {
-              "label": "ліфт",
+              "label": "",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "5",
+                  "doors": "1",
                   "isLift": true
                 }
               ]
