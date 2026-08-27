@@ -54,18 +54,57 @@ function favTargetHtml(wStr, dStr, color) {
   </div>`;
 }
 
-function renderPositions(positions, color, multiRow) {
+function renderPositions(positions, color, multiRow, exit = null) {
   positions = positions.filter(p => !p.closed);
   if (!positions.length) return '';
 
+  // Об'єднання позицій, якщо ліфт і звичайний вихід збігаються по вагону й дверима
+  const processedPositions = [];
+  const liftWagonDoors = new Set();
+
+  positions.forEach(p => {
+    if (p.isLift) {
+      const hasMatchingNonLift = positions.some(other =>
+        !other.isLift &&
+        String(other.wagon).trim() === String(p.wagon).trim() &&
+        String(other.doors).trim() === String(p.doors).trim()
+      );
+      if (hasMatchingNonLift) {
+        liftWagonDoors.add(`${String(p.wagon).trim()}:${String(p.doors).trim()}`);
+      }
+    }
+  });
+
+  positions.forEach(p => {
+    const key = `${String(p.wagon).trim()}:${String(p.doors).trim()}`;
+    if (p.isLift) {
+      processedPositions.push({ ...p, _isCombined: liftWagonDoors.has(key) });
+    } else if (!liftWagonDoors.has(key)) {
+      processedPositions.push(p);
+    }
+  });
+
+  const getLiftIcon = (p) => {
+    if (!p.isLift) return '';
+    const label = (exit?.label || p.exit || '').toLowerCase();
+    const isHoist = label.includes('підйомник');
+    if (isHoist) {
+      return `<span class="pos-lift-mark" aria-label="Підйомник">${Icons.wheelchair}</span>`;
+    }
+    if (p._isCombined) {
+      return `<span class="pos-lift-mark" aria-label="Ескалатор та ліфт">${Icons.escalator}</span>`;
+    }
+    return `<span class="pos-lift-mark" aria-label="Ліфт">${Icons.elevator}</span>`;
+  };
+
   // Один вихід
-  if (positions.length === 1) {
-    const p       = positions[0];
+  if (processedPositions.length === 1) {
+    const p       = processedPositions[0];
     const isMulti = String(p.wagon).includes(',');
     const edited  = p._edited
       ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
       : '';
-    const lift    = p.isLift ? `<span class="pos-lift-mark" aria-label="Ліфт">${Icons.wheelchair}</span>` : '';
+    const lift    = getLiftIcon(p);
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${p.isLift ? 'position-row-lift' : ''}">
       ${edited}${favTargetHtml(p.wagon, p.doors, color)}${lift}
     </div>`;
@@ -73,27 +112,32 @@ function renderPositions(positions, color, multiRow) {
 
   // Кілька виходів в одному рядку (Хрещатик)
   if (multiRow) {
-    const editedPos = positions.find(p => p._edited);
+    const editedPos = processedPositions.find(p => p._edited);
     const edited    = editedPos
       ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${Icons.pencil}</span>`
       : '';
     const spacer  = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
-    const targets = positions.map((p, i) => {
-      const lift = p.isLift ? `<span class="pos-lift-mark" aria-label="Ліфт">${Icons.wheelchair}</span>` : '';
+    const targets = processedPositions.map((p, i) => {
+      const lift = getLiftIcon(p);
       return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}${lift}`;
     }).join('');
     return `<div class="position-row position-row-multi">${edited}${targets}${spacer}</div>`;
   }
 
   // Кілька виходів у окремих рядках
-  return positions.map(p => {
+  return processedPositions.map(p => {
     const isMulti = String(p.wagon).includes(',');
-    const lift    = p.isLift ? `<span class="pos-lift-mark" aria-label="Ліфт">${Icons.wheelchair}</span>` : '';
+    const lift    = getLiftIcon(p);
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${p.isLift ? 'position-row-lift' : ''}">
       ${favTargetHtml(p.wagon, p.doors, color)}${lift}
     </div>`;
   }).join('');
 }
+
+
+
+
+
 
 function renderExitLabel(exit) {
   if (!exit.label) return '';

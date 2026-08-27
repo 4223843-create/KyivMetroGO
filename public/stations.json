@@ -79,7 +79,7 @@
         }
       ]
     },
-    {
+   {
       "slug": "R.Sviatoshyn",
       "name": "Святошин",
       "line": "red",
@@ -99,6 +99,16 @@
                 {
                   "wagon": "1",
                   "doors": "1"
+                },
+                {
+                  "wagon": "1",
+                  "doors": "1",
+                  "isEscalator": true
+                },
+                {
+                  "wagon": "1",
+                  "doors": "1",
+                  "isLift": true
                 }
               ]
             },
@@ -108,14 +118,9 @@
                 {
                   "wagon": "5",
                   "doors": "3"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
+                },
                 {
-                  "wagon": "3",
+                  "wagon": "5",
                   "doors": "3",
                   "isLift": true
                 }
@@ -132,6 +137,11 @@
                 {
                   "wagon": "5",
                   "doors": "3-4"
+                },
+                {
+                  "wagon": "5",
+                  "doors": "3-4",
+                  "isLift": true
                 }
               ]
             },
@@ -141,15 +151,10 @@
                 {
                   "wagon": "1",
                   "doors": "1"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
+                },
                 {
-                  "wagon": "3",
-                  "doors": "3",
+                  "wagon": "1",
+                  "doors": "1",
                   "isLift": true
                 }
               ]
@@ -337,7 +342,7 @@
               "label": "",
               "positions": [
                 {
-                  "wagon": "3",
+                  "wagon": "2",
                   "doors": "4"
                 }
               ]
