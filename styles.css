@@ -4156,13 +4156,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   flex-shrink: 0;
 }
 
-/* ══ ЛІФТ (окремий вихід-ліфт під основним виходом) ══ */
-/* ══ ЛІФТ (окремий вихід-ліфт під основним виходом) ══ */
+/* ══ ЛІФТ ТА ЕСКАЛАТОР ══ */
 .position-row {
   position: relative;
 }
 
-.pos-lift-mark {
+.pos-lift-marks-wrap {
   position: absolute;
   left: calc(25% - 34px);
   top: 50%;
@@ -4170,10 +4169,20 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted) !important;
+  gap: 4px;
   pointer-events: none;
-  width: 24px;
-  height: 24px;
+  z-index: 1;
+}
+
+.pos-lift-mark {
+  position: static !important;
+  transform: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted) !important;
+  width: 22px;
+  height: 22px;
 }
 
 .pos-lift-mark svg {
@@ -4185,4 +4194,84 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 /* ══ Значки візочків на самій SVG-карті (біля станцій з ліфтами) ══ */
 .map-accessibility-icon {
   color: var(--icon-color);
+}
+
+.pos-lift-marks-wrap {
+  position: absolute;
+  left: calc(25% - 34px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pos-lift-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted) !important;
+  width: 22px;
+  height: 22px;
+}
+
+.pos-lift-mark svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-muted) !important;
+}
+
+/* ══ ДЕКІЛЬКА ІКОНОК (ЛІФТ + ЕСКАЛАТОР) ══ */
+.pos-lift-marks-wrap {
+  position: absolute;
+  left: calc(25% - 34px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pos-lift-marks-wrap .pos-lift-mark {
+  position: static !important;
+  transform: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted) !important;
+  width: 22px;
+  height: 22px;
+}
+
+.pos-lift-marks-wrap .pos-lift-mark svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-muted) !important;
+}
+
+/* Збільшення ескалатора на 50% */
+.pos-escalator-mark {
+  width: 32px !important;
+  height: 32px !important;
+}
+.pos-escalator-mark svg {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.pos-elevator-mark {
+  width: 22px !important;
+  height: 22px !important;
+}
+.pos-elevator-mark svg {
+  width: 20px !important;
+  height: 20px !important;
+  fill: none !important;
+  stroke: var(--text-muted) !important;
 }

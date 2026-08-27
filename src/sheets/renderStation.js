@@ -54,82 +54,95 @@ function favTargetHtml(wStr, dStr, color) {
   </div>`;
 }
 
-function renderPositions(positions, color, multiRow, exit = null) {
-  positions = positions.filter(p => !p.closed);
-  if (!positions.length) return '';
-
-  // Об'єднання позицій, якщо ліфт і звичайний вихід збігаються по вагону й дверима
-  const processedPositions = [];
-  const liftWagonDoors = new Set();
+function groupPositions(positions) {
+  const grouped = [];
+  const map = new Map();
 
   positions.forEach(p => {
-    if (p.isLift) {
-      const hasMatchingNonLift = positions.some(other =>
-        !other.isLift &&
-        String(other.wagon).trim() === String(p.wagon).trim() &&
-        String(other.doors).trim() === String(p.doors).trim()
-      );
-      if (hasMatchingNonLift) {
-        liftWagonDoors.add(`${String(p.wagon).trim()}:${String(p.doors).trim()}`);
+    if (p.closed) return;
+    const key = `${String(p.wagon).trim()}:${String(p.doors).trim()}`;
+    if (!map.has(key)) {
+      const item = {
+        ...p,
+        isEscalator: !!p.isEscalator,
+        isLift: !!p.isLift,
+      };
+      map.set(key, item);
+      grouped.push(item);
+    } else {
+      const existing = map.get(key);
+      if (p.isEscalator) existing.isEscalator = true;
+      if (p.isLift) existing.isLift = true;
+      if (p._edited) {
+        existing._edited = true;
+        existing._slug = p._slug;
+        existing._posIdx = p._posIdx;
       }
     }
   });
 
-  positions.forEach(p => {
-    const key = `${String(p.wagon).trim()}:${String(p.doors).trim()}`;
-    if (p.isLift) {
-      processedPositions.push({ ...p, _isCombined: liftWagonDoors.has(key) });
-    } else if (!liftWagonDoors.has(key)) {
-      processedPositions.push(p);
-    }
-  });
+  return grouped;
+}
 
-  const getLiftIcon = (p) => {
-    if (!p.isLift) return '';
+function renderIcons(p, exit) {
+  let iconsHtml = '';
+
+  if (p.isEscalator) {
+    iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" aria-label="Ескалатор">${Icons.escalator}</span>`;
+  }
+
+  if (p.isLift) {
     const label = (exit?.label || p.exit || '').toLowerCase();
     const isHoist = label.includes('підйомник');
-    if (isHoist) {
-      return `<span class="pos-lift-mark" aria-label="Підйомник">${Icons.wheelchair}</span>`;
-    }
-    if (p._isCombined) {
-      return `<span class="pos-lift-mark" aria-label="Ескалатор та ліфт">${Icons.escalator}</span>`;
-    }
-    return `<span class="pos-lift-mark" aria-label="Ліфт">${Icons.elevator}</span>`;
-  };
+    const icon = isHoist ? Icons.wheelchair : Icons.elevator;
+    const ariaLabel = isHoist ? 'Підйомник' : 'Ліфт';
+    const markClass = isHoist ? 'pos-hoist-mark' : 'pos-elevator-mark';
+    iconsHtml += `<span class="pos-lift-mark ${markClass}" aria-label="${ariaLabel}">${icon}</span>`;
+  }
 
-  // Один вихід
-  if (processedPositions.length === 1) {
-    const p       = processedPositions[0];
-    const isMulti = String(p.wagon).includes(',');
-    const edited  = p._edited
+  if (!iconsHtml) return '';
+  return `<div class="pos-lift-marks-wrap">${iconsHtml}</div>`;
+}
+
+function renderPositions(positions, color, multiRow, exit = null) {
+  const grouped = groupPositions(positions);
+  if (!grouped.length) return '';
+
+  if (grouped.length === 1) {
+    const p          = grouped[0];
+    const isMulti    = String(p.wagon).includes(',');
+    const edited     = p._edited
       ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
       : '';
-    const lift    = getLiftIcon(p);
-    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${p.isLift ? 'position-row-lift' : ''}">
-      ${edited}${favTargetHtml(p.wagon, p.doors, color)}${lift}
+    const icons      = renderIcons(p, exit);
+    const hasSpecial = p.isLift || p.isEscalator;
+
+    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
+      ${edited}${favTargetHtml(p.wagon, p.doors, color)}${icons}
     </div>`;
   }
 
-  // Кілька виходів в одному рядку (Хрещатик)
   if (multiRow) {
-    const editedPos = processedPositions.find(p => p._edited);
+    const editedPos = grouped.find(p => p._edited);
     const edited    = editedPos
       ? `<span class="pos-edited-mark" data-slug="${editedPos._slug}" data-idx="${editedPos._posIdx}">${Icons.pencil}</span>`
       : '';
     const spacer  = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
-    const targets = processedPositions.map((p, i) => {
-      const lift = getLiftIcon(p);
-      return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}${lift}`;
+    const targets = grouped.map((p, i) => {
+      const icons = renderIcons(p, exit);
+      return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}${icons}`;
     }).join('');
+
     return `<div class="position-row position-row-multi">${edited}${targets}${spacer}</div>`;
   }
 
-  // Кілька виходів у окремих рядках
-  return processedPositions.map(p => {
-    const isMulti = String(p.wagon).includes(',');
-    const lift    = getLiftIcon(p);
-    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${p.isLift ? 'position-row-lift' : ''}">
-      ${favTargetHtml(p.wagon, p.doors, color)}${lift}
+  return grouped.map(p => {
+    const isMulti    = String(p.wagon).includes(',');
+    const icons      = renderIcons(p, exit);
+    const hasSpecial = p.isLift || p.isEscalator;
+
+    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
+      ${favTargetHtml(p.wagon, p.doors, color)}${icons}
     </div>`;
   }).join('');
 }
@@ -171,9 +184,9 @@ export function renderDirections(s, color) {
 
     const mainHtml = mainDirs.map(dir => {
       const exitsHtml = dir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift)) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator)) || [];
         if (!visiblePos.length) return '';
-        return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true)}`;
+        return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true, exit)}`;
       }).join('');
 
       if (!exitsHtml) return '';
@@ -221,9 +234,9 @@ export function renderDirections(s, color) {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
-      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift)) || [];
+      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator)) || [];
       if (!visiblePos.length) return '';
-      return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false)}`;
+      return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
 
     if (fromLower === 'вихід праворуч' || fromLower === 'кінцева') {
