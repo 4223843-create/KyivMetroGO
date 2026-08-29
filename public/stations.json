@@ -1455,7 +1455,7 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "4"
+                  "doors": "3"
                 }
               ]
             }
@@ -1469,7 +1469,7 @@
               "positions": [
                 {
                   "wagon": "4",
-                  "doors": "4"
+                  "doors": "3"
                 }
               ]
             },
@@ -1478,7 +1478,7 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "3"
+                  "doors": "2"
                 }
               ]
             }
@@ -2192,7 +2192,7 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "2"
+                  "doors": "3"
                 }
               ]
             },
