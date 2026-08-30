@@ -4266,12 +4266,19 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 .pos-elevator-mark {
-  width: 22px !important;
-  height: 22px !important;
+  width: 26px !important;
+  height: 26px !important;
 }
+
 .pos-elevator-mark svg {
-  width: 20px !important;
-  height: 20px !important;
+  width: 24px !important;
+  height: 24px !important;
   fill: none !important;
   stroke: var(--text-muted) !important;
+}
+
+/* Значок підйомника (часткова доступність) — клікабельний, показує підказку */
+.pos-hoist-mark {
+  pointer-events: auto;
+  cursor: pointer;
 }

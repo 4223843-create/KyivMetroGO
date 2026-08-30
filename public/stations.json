@@ -1,5 +1,5 @@
 {
-  "version": "20260811",
+  "version": "20260831",
   "stations": [
     {
       "slug": "R.Akademmistechko",
@@ -115,6 +115,11 @@
               "label": "ліфт",
               "positions": [
                 {
+                  "doors": "3",
+                  "wagon": "3",
+                  "isEscalator": true
+                },
+                {
                   "wagon": "3",
                   "doors": "3",
                   "isLift": true
@@ -147,6 +152,11 @@
             {
               "label": "ліфт",
               "positions": [
+                {
+                  "doors": "3",
+                  "wagon": "3",
+                  "isEscalator": true
+                },
                 {
                   "wagon": "3",
                   "doors": "3",
@@ -766,7 +776,8 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
+                  "doors": "1",
+                  "isHoist": true
                 }
               ]
             },
@@ -776,16 +787,6 @@
                 {
                   "wagon": "5",
                   "doors": "4"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
-                {
-                  "wagon": "3",
-                  "doors": "3",
-                  "isLift": true
                 }
               ]
             }
@@ -799,7 +800,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "4"
+                  "doors": "4",
+                  "isHoist": true
                 }
               ]
             },
@@ -809,16 +811,6 @@
                 {
                   "wagon": "1",
                   "doors": "1"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
-                {
-                  "wagon": "3",
-                  "doors": "3",
-                  "isLift": true
                 }
               ]
             }
@@ -854,17 +846,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "4"
-                }
-              ]
-            },
-            {
-              "label": "підйомник",
-              "positions": [
-                {
-                  "wagon": "3",
-                  "doors": "3",
-                  "isLift": true
+                  "doors": "4",
+                  "isHoist": true
                 }
               ]
             }
@@ -887,17 +870,8 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
-                {
-                  "wagon": "3",
-                  "doors": "3",
-                  "isLift": true
+                  "doors": "1",
+                  "isHoist": true
                 }
               ]
             }
@@ -980,11 +954,12 @@
           "from": "кінцева",
           "exits": [
             {
-              "label": "автостанція",
+              "label": "автостанція „Лісова“",
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
+                  "doors": "1",
+                  "isHoist": true
                 }
               ]
             },
@@ -994,16 +969,6 @@
                 {
                   "wagon": "5",
                   "doors": "4"
-                }
-              ]
-            },
-            {
-              "label": "підйомник",
-              "positions": [
-                {
-                  "wagon": "3",
-                  "doors": "3",
-                  "isLift": true
                 }
               ]
             }
@@ -1625,20 +1590,16 @@
           "from": "попередня Либідська",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
+                  "doors": "2",
                   "wagon": "1",
-                  "doors": "2"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
+                  "isEscalator": true
+                },
                 {
-                  "wagon": "3",
                   "doors": "3",
+                  "wagon": "3",
                   "isLift": true
                 }
               ]
@@ -1649,20 +1610,16 @@
           "from": "попередня Голосіївська",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "4"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
-                {
-                  "wagon": "5",
                   "doors": "4",
+                  "wagon": "3",
+                  "isEscalator": true
+                },
+                {
+                  "doors": "4",
+                  "wagon": "5",
                   "isLift": true
                 }
               ]
@@ -1822,20 +1779,16 @@
           "from": "попередня Васильківська",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
-                  "wagon": "1",
-                  "doors": "2"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
-                {
-                  "wagon": "1",
                   "doors": "2",
+                  "wagon": "1",
+                  "isEscalator": true
+                },
+                {
+                  "doors": "2",
+                  "wagon": "1",
                   "isLift": true
                 }
               ]
@@ -1846,20 +1799,16 @@
           "from": "попередня Іподром",
           "exits": [
             {
-              "label": "ескалатор",
+              "label": "",
               "positions": [
                 {
-                  "wagon": "5",
-                  "doors": "3-4"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
-                {
-                  "wagon": "5",
                   "doors": "3-4",
+                  "wagon": "5",
+                  "isEscalator": true
+                },
+                {
+                  "doors": "3-4",
+                  "wagon": "5",
                   "isLift": true
                 }
               ]

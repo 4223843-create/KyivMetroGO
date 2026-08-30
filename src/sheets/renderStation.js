@@ -3,7 +3,7 @@ import { state }               from '../core/state.js';
 import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
-import { isHideNoLiftEnabled } from '../features/settings.js';
+import { isHideNoLiftEnabled, isShowHoistsEnabled } from '../features/settings.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -66,6 +66,7 @@ function groupPositions(positions) {
         ...p,
         isEscalator: !!p.isEscalator,
         isLift: !!p.isLift,
+        isHoist: !!p.isHoist,
       };
       map.set(key, item);
       grouped.push(item);
@@ -73,6 +74,7 @@ function groupPositions(positions) {
       const existing = map.get(key);
       if (p.isEscalator) existing.isEscalator = true;
       if (p.isLift) existing.isLift = true;
+      if (p.isHoist) existing.isHoist = true;
       if (p._edited) {
         existing._edited = true;
         existing._slug = p._slug;
@@ -84,20 +86,19 @@ function groupPositions(positions) {
   return grouped;
 }
 
-function renderIcons(p, exit) {
+function renderIcons(p) {
   let iconsHtml = '';
 
   if (p.isEscalator) {
     iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" aria-label="Ескалатор">${Icons.escalator}</span>`;
   }
 
-  if (p.isLift) {
-    const label = (exit?.label || p.exit || '').toLowerCase();
-    const isHoist = label.includes('підйомник');
-    const icon = isHoist ? Icons.wheelchair : Icons.elevator;
-    const ariaLabel = isHoist ? 'Підйомник' : 'Ліфт';
-    const markClass = isHoist ? 'pos-hoist-mark' : 'pos-elevator-mark';
-    iconsHtml += `<span class="pos-lift-mark ${markClass}" aria-label="${ariaLabel}">${icon}</span>`;
+  if (p.isHoist) {
+    if (isShowHoistsEnabled()) {
+      iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" aria-label="Підйомник">${Icons.wheelchair}</span>`;
+    }
+  } else if (p.isLift) {
+    iconsHtml += `<span class="pos-lift-mark pos-elevator-mark" aria-label="Ліфт">${Icons.elevator}</span>`;
   }
 
   if (!iconsHtml) return '';
@@ -115,7 +116,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
       ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
       : '';
     const icons      = renderIcons(p, exit);
-    const hasSpecial = p.isLift || p.isEscalator;
+    const hasSpecial = p.isLift || p.isEscalator || p.isHoist;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
       ${edited}${favTargetHtml(p.wagon, p.doors, color)}${icons}
@@ -139,7 +140,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
   return grouped.map(p => {
     const isMulti    = String(p.wagon).includes(',');
     const icons      = renderIcons(p, exit);
-    const hasSpecial = p.isLift || p.isEscalator;
+    const hasSpecial = p.isLift || p.isEscalator || p.isHoist;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
       ${favTargetHtml(p.wagon, p.doors, color)}${icons}
@@ -173,7 +174,7 @@ export function renderDirections(s, color) {
   const hideNoLift = isHideNoLiftEnabled();
   const hasLift = s.directions?.some(dir =>
     dir.exits?.some(exit =>
-      exit.positions?.some(p => p.isLift)
+      exit.positions?.some(p => p.isLift || (p.isHoist && isShowHoistsEnabled()))
     )
   );
   const filterLiftOnly = hideNoLift && hasLift;
@@ -184,7 +185,7 @@ export function renderDirections(s, color) {
 
     const mainHtml = mainDirs.map(dir => {
       const exitsHtml = dir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator)) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator || (p.isHoist && isShowHoistsEnabled()))) || [];
         if (!visiblePos.length) return '';
         return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true, exit)}`;
       }).join('');
@@ -199,7 +200,7 @@ export function renderDirections(s, color) {
     let longHtml = '';
     if (longDir) {
       const rows = longDir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift)) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
         if (!visiblePos.length) return '';
         const posRows = visiblePos.map(p =>
           `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
@@ -234,7 +235,7 @@ export function renderDirections(s, color) {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
-      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator)) || [];
+      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator || (p.isHoist && isShowHoistsEnabled()))) || [];
       if (!visiblePos.length) return '';
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';

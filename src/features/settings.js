@@ -126,6 +126,17 @@ export function openSettingsSheet() {
       });
     }
 
+    // ── Показувати підйомники на станціях ──
+    const showHoistsToggle = document.getElementById('settingsShowHoistsToggle');
+    if (showHoistsToggle) {
+      showHoistsToggle.checked = isShowHoistsEnabled();
+      showHoistsToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.SHOW_HOISTS, String(e.target.checked));
+        bus.emit('station:refresh');
+        bus.emit('map:update-accessibility');
+      });
+    }
+
     // ── Закрити ──
     document.getElementById('settingsClose').addEventListener('click', () => {
       animateSheetClose(settingsSheet, () => {
@@ -428,6 +439,9 @@ export function openSettingsSheet() {
 
     const ma = document.getElementById('settingsShowMapAccessibilityToggle');
     if (ma) ma.checked = isShowMapAccessibilityEnabled();
+
+    const sh = document.getElementById('settingsShowHoistsToggle');
+    if (sh) sh.checked = isShowHoistsEnabled();
   }
 
   syncToggles();
@@ -447,3 +461,7 @@ export function isShowMapAccessibilityEnabled() {
   return Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) === 'true';
 }
 
+/** Повертає true якщо увімкнено показ підйомників на станціях. За замовчуванням — увімкнено. */
+export function isShowHoistsEnabled() {
+  return Storage.get(STORAGE_KEYS.SHOW_HOISTS) !== 'false';
+}

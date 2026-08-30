@@ -24,6 +24,7 @@ export const STORAGE_KEYS = {
   EDIT_MODE:           'metro_edit_mode',
   HIDE_NO_LIFT:        'metro_hide_no_lift',
   SHOW_MAP_ACCESSIBILITY:  'metro_show_map_accessibility',
+  SHOW_HOISTS:             'metro_show_hoists',
   DEV_MODE:     'metro_dev_mode',
   DEV_LOG:      'metro_dev_log',
   DEV_VERIFIED: 'metro_dev_verified',

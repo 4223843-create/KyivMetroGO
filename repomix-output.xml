@@ -3239,6 +3239,28 @@ function _showEditModeLockToast(row) {
   }, 2500);
 }
 
+// ── Тост «підйомник — часткова доступність» ────────────────────
+function _showHoistInfoToast(el) {
+  document.querySelectorAll('.hoist-info-toast').forEach(t => t.remove());
+  const rect  = el.getBoundingClientRect();
+  const toast = document.createElement('div');
+  toast.className = 'dev-mode-toast dev-mode-toast-open hoist-info-toast';
+  toast.style.cssText = `
+    position: fixed;
+    top: ${rect.top - 45}px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: auto;
+    z-index: 10000;
+  `;
+  toast.textContent = 'Забезпечує часткову доступність';
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.remove('dev-mode-toast-open');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
 
 // ── Ядро: toggle exit fav ─────────────────────────────────────
 function _triggerExitFav(favTarget, slug, lineColor) {
@@ -3344,7 +3366,15 @@ export function bindSheetGestures(sheetBody, getCtx) {
   sheetBody.addEventListener('click', e => {
     const { slug, lineColor } = getCtx();
 
-    // 1. Pencil (відредагована позиція → відкрити feedback)
+    // 1. Значок підйомника → показати текст про часткову доступність
+    const hoistMark = e.target.closest('.pos-hoist-mark');
+    if (hoistMark) {
+      e.stopPropagation();
+      _showHoistInfoToast(hoistMark);
+      return;
+    }
+
+    // 2. Pencil (відредагована позиція → відкрити feedback)
     const pencil = e.target.closest('.pos-edited-mark');
     if (pencil) {
       e.stopPropagation();
@@ -3358,10 +3388,10 @@ export function bindSheetGestures(sheetBody, getCtx) {
       return;
     }
 
-    // 2. Скасувати exit-replace confirm
+    // 3. Скасувати exit-replace confirm
     if (e.target.closest('.exit-replace-confirm')) return;
 
-    // 3. Nav-label → відкрити іншу станцію
+    // 4. Nav-label → відкрити іншу станцію
     const navLabel = e.target.closest('.nav-link');
     if (navLabel) {
       const target = slugByName(navLabel.dataset.name || '');
@@ -3369,7 +3399,7 @@ export function bindSheetGestures(sheetBody, getCtx) {
       return;
     }
 
-    // 4. Double-tap на .fav-tap-target
+    // 5. Double-tap на .fav-tap-target
     const favTarget = e.target.closest('.fav-tap-target');
     if (!favTarget) return;
     // Ігноруємо кліки по службових елементах всередині target
@@ -6137,7 +6167,7 @@ import { state }               from '../core/state.js';
 import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
-import { isHideNoLiftEnabled } from '../features/settings.js';
+import { isHideNoLiftEnabled, isShowHoistsEnabled } from '../features/settings.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -6200,6 +6230,7 @@ function groupPositions(positions) {
         ...p,
         isEscalator: !!p.isEscalator,
         isLift: !!p.isLift,
+        isHoist: !!p.isHoist,
       };
       map.set(key, item);
       grouped.push(item);
@@ -6207,6 +6238,7 @@ function groupPositions(positions) {
       const existing = map.get(key);
       if (p.isEscalator) existing.isEscalator = true;
       if (p.isLift) existing.isLift = true;
+      if (p.isHoist) existing.isHoist = true;
       if (p._edited) {
         existing._edited = true;
         existing._slug = p._slug;
@@ -6218,20 +6250,19 @@ function groupPositions(positions) {
   return grouped;
 }
 
-function renderIcons(p, exit) {
+function renderIcons(p) {
   let iconsHtml = '';
 
   if (p.isEscalator) {
     iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" aria-label="Ескалатор">${Icons.escalator}</span>`;
   }
 
-  if (p.isLift) {
-    const label = (exit?.label || p.exit || '').toLowerCase();
-    const isHoist = label.includes('підйомник');
-    const icon = isHoist ? Icons.wheelchair : Icons.elevator;
-    const ariaLabel = isHoist ? 'Підйомник' : 'Ліфт';
-    const markClass = isHoist ? 'pos-hoist-mark' : 'pos-elevator-mark';
-    iconsHtml += `<span class="pos-lift-mark ${markClass}" aria-label="${ariaLabel}">${icon}</span>`;
+  if (p.isHoist) {
+    if (isShowHoistsEnabled()) {
+      iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" aria-label="Підйомник">${Icons.wheelchair}</span>`;
+    }
+  } else if (p.isLift) {
+    iconsHtml += `<span class="pos-lift-mark pos-elevator-mark" aria-label="Ліфт">${Icons.elevator}</span>`;
   }
 
   if (!iconsHtml) return '';
@@ -6249,7 +6280,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
       ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
       : '';
     const icons      = renderIcons(p, exit);
-    const hasSpecial = p.isLift || p.isEscalator;
+    const hasSpecial = p.isLift || p.isEscalator || p.isHoist;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
       ${edited}${favTargetHtml(p.wagon, p.doors, color)}${icons}
@@ -6273,7 +6304,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
   return grouped.map(p => {
     const isMulti    = String(p.wagon).includes(',');
     const icons      = renderIcons(p, exit);
-    const hasSpecial = p.isLift || p.isEscalator;
+    const hasSpecial = p.isLift || p.isEscalator || p.isHoist;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
       ${favTargetHtml(p.wagon, p.doors, color)}${icons}
@@ -6307,7 +6338,7 @@ export function renderDirections(s, color) {
   const hideNoLift = isHideNoLiftEnabled();
   const hasLift = s.directions?.some(dir =>
     dir.exits?.some(exit =>
-      exit.positions?.some(p => p.isLift)
+      exit.positions?.some(p => p.isLift || (p.isHoist && isShowHoistsEnabled()))
     )
   );
   const filterLiftOnly = hideNoLift && hasLift;
@@ -6318,7 +6349,7 @@ export function renderDirections(s, color) {
 
     const mainHtml = mainDirs.map(dir => {
       const exitsHtml = dir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator)) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator || (p.isHoist && isShowHoistsEnabled()))) || [];
         if (!visiblePos.length) return '';
         return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true, exit)}`;
       }).join('');
@@ -6333,7 +6364,7 @@ export function renderDirections(s, color) {
     let longHtml = '';
     if (longDir) {
       const rows = longDir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift)) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
         if (!visiblePos.length) return '';
         const posRows = visiblePos.map(p =>
           `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
@@ -6368,7 +6399,7 @@ export function renderDirections(s, color) {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
-      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator)) || [];
+      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator || (p.isHoist && isShowHoistsEnabled()))) || [];
       if (!visiblePos.length) return '';
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
@@ -6711,124 +6742,6 @@ if (Capacitor.isNativePlatform()) {
     }
   });
 }
-</file>
-
-<file path="src/ui/icons.js">
-// ══ ІКОНКИ ══ Єдине сховище SVG-рядків. Чистий ES-модуль без залежностей.
-// Використовуй через Icons.назва — не вбудовуй SVG безпосередньо у код.
-
-export const Icons = { pencil: `<svg aria-hidden="true" focusable="false"
-viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg"
-fill="currentColor"><path
-d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z
-M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z
-M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8
-C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
-
-  undo: `<svg aria-hidden="true" focusable="false"
-  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-  stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-  stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9
-  9 0 0 0-6 2.3L3 13"/></svg>`,
-
-  info: `<svg aria-hidden="true" focusable="false"
-  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42"
-  fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28
-  3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25
-  0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469
-  1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47
-  0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343
-  1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0
-  17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5
-  8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437
-  7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03
-  5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937
-  4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187
-  13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate
-  (-65.818 -42.216)scale(.26458)"/></svg>`,
-
-  search: `<svg aria-hidden="true" focusable="false"
-  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-  stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-  stroke-linejoin="round" opacity="0.7"><circle cx="11" cy="11"
-  r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
-
-  heartPath: `M12.5 0.658c-1.739 0-3.251 0.992-4
-  2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343
-  0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924
-  9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598
-  7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091
-  0-2.481-2.019-4.5-4.5-4.5z`,
-
-  heartOutlinePath: `M12.5 0.658c-1.739 0-3.251 0.992-4
-  2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343
-  0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924
-  9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598
-  7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091
-  0-2.481-2.019-4.5-4.5-4.5zM15.889 5.98l-0.113 0.37c-0.809 3.246-5.946
-  7.727-7.276
-  8.843-1.282-1.083-6.122-5.337-7.285-8.872l-0.1-0.316c-0.077-0.311-0.115-0.588-0.115-0.847
-  0-1.93 1.57-3.5 3.5-3.5s3.5 1.571 3.5 3.5v0.252h1v-0.252c0-1.93 1.57-3.5
-  3.5-3.5s3.5 1.57 3.5 3.5c0 0.258-0.038 0.527-0.111 0.822z`,
-
-  dockHeartEmpty: `<svg xmlns="http://www.w3.org/2000/svg" width="24"
-  height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor"
-  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
-  opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5
-  1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
-
-  dockHeartFilled: `<svg xmlns="http://www.w3.org/2000/svg" width="24"
-  height="24" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor"
-  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
-  opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5
-  1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
-
-  dockPinEmpty: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"
-  width="26" height="26"><path
-  d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z
-  M16,28.677
-  C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z
-  M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z
-  M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z"
-  fill="var(--icon-color)" stroke="var
-  (--icon-color)" stroke-width="0.5"/></svg>`,
-
-  dockPinFilled: `<svg viewBox="0 -1.5 32 32"
-  xmlns="http://www.w3.org/2000/svg" width="26" height="26"><path
-  fill-rule="evenodd" clip-rule="evenodd"
-  d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z
-  M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z"
-  fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
-
-  wheelchair: `<svg aria-hidden="true" focusable="false"
-  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-  fill="currentColor"><path
-  d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/></svg>`,
-
-elevator: `<svg aria-hidden="true" focusable="false"
-xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path
-fill="currentColor" d="M4.5 3.5 2 8.5h5zM4.5 20.5 2 15.5h5z"/><g
-transform="translate(25, 2) scale(-0.75, 0.75)"><path fill="none"
-stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
-3.764M17 23.5c-1 0-1.75-1.5-1.75-1.5c-.75-1.5-.75-2.5-.75-4v-1.5h-3.207M6
-23.5a5.5 5.5 0 1 1 0-11a5.5 5.5 0 0 1 0 11Zm5.35-19s-1.6-1-1.6-2.25a1.747
-1.747 0 1 1 3.496 0c0 1.25-1.596 2.25-1.596 2.25z"/></g></svg>`,
-
-escalator: `<svg aria-hidden="true" focusable="false"
-xmlns="http://www.w3.org/2000/svg" viewBox="0 0 883 468"
-fill="currentColor"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
-0,6.4 -2.1,29.2 -3.6,38.1 -5.4,33.1 -18.8,65.8 -40,96.7 l -6.3,9.3 h 306.1
-l -0.7,10.8 c -1.7,26.6 -7.4,55.4 -14.8,74.8 -6.2,16.1 -16.7,35.4 -29.3,53.6
-l -5.3,7.8 h 305.9 v 2.9 c
-0,5.6 -2.1,23.7 -4.1,36.1 -5.1,30.4 -18.6,65.4 -37.9,98 -3.8,6.6 -7,12.1 -7,12.4
-0,0.4 49.5,0.6 110,0.6 h 110 v -25 h -89 c -48.9,0 -89,-0.2 -89,-0.5 0,-0.3
-1.4,-3.3 3,-6.6 4.1,-7.9 12.1,-28.3 15.4,-38.6 9.6,-30.6 13.8,-61.7
-12.8,-95.1 l -0.2,-8.2 h -142.5 c -78.4,0 -142.5,-0.2 -142.5,-0.5 0,-0.3
-1.6,-3.8 3.6,-7.8 8.4,-16.7 16,-38.8 19.9,-58.2 3.7,-18.1 4.7,-28.8 5.2,-54.3
-l 0.6,-26.2 h -142.7 c -78.4,0 -142.6,-0.2 -142.6,-0.4 0,-0.1 2.2,-5
-4.9,-10.7 10.1,-21.5 17.9,-47.5 21.7-71.9 1.8-11.8 3.2-56.5 2-61.5
-l -0.6,-2.5 h -143.4 c -78.8,0 -33,23.8 -33,23.8 z"/></svg>`,};
 </file>
 
 <file path="src/features/devmode.js">
@@ -8007,6 +7920,128 @@ export function openAboutSheet() {
 }
 </file>
 
+<file path="src/ui/icons.js">
+// ══ ІКОНКИ ══ Єдине сховище SVG-рядків. Чистий ES-модуль без залежностей.
+// Використовуй через Icons.назва — не вбудовуй SVG безпосередньо у код.
+
+export const Icons = { pencil: `<svg aria-hidden="true" focusable="false"
+viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg"
+fill="currentColor"><path
+d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z
+M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z
+M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8
+C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
+
+  undo: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+  stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9
+  9 0 0 0-6 2.3L3 13"/></svg>`,
+
+  info: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42"
+  fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28
+  3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25
+  0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469
+  1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47
+  0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343
+  1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0
+  17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5
+  8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437
+  7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03
+  5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937
+  4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187
+  13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate
+  (-65.818 -42.216)scale(.26458)"/></svg>`,
+
+  search: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+  stroke-linejoin="round" opacity="0.7"><circle cx="11" cy="11"
+  r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+
+  heartPath: `M12.5 0.658c-1.739 0-3.251 0.992-4
+  2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343
+  0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924
+  9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598
+  7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091
+  0-2.481-2.019-4.5-4.5-4.5z`,
+
+  heartOutlinePath: `M12.5 0.658c-1.739 0-3.251 0.992-4
+  2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343
+  0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924
+  9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598
+  7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091
+  0-2.481-2.019-4.5-4.5-4.5zM15.889 5.98l-0.113 0.37c-0.809 3.246-5.946
+  7.727-7.276
+  8.843-1.282-1.083-6.122-5.337-7.285-8.872l-0.1-0.316c-0.077-0.311-0.115-0.588-0.115-0.847
+  0-1.93 1.57-3.5 3.5-3.5s3.5 1.571 3.5 3.5v0.252h1v-0.252c0-1.93 1.57-3.5
+  3.5-3.5s3.5 1.57 3.5 3.5c0 0.258-0.038 0.527-0.111 0.822z`,
+
+  dockHeartEmpty: `<svg xmlns="http://www.w3.org/2000/svg" width="24"
+  height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+  opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5
+  1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
+
+  dockHeartFilled: `<svg xmlns="http://www.w3.org/2000/svg" width="24"
+  height="24" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor"
+  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+  opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5
+  1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
+
+  dockPinEmpty: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"
+  width="26" height="26"><path
+  d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z
+  M16,28.677
+  C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z
+  M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z
+  M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z"
+  fill="var(--icon-color)" stroke="var
+  (--icon-color)" stroke-width="0.5"/></svg>`,
+
+  dockPinFilled: `<svg viewBox="0 -1.5 32 32"
+  xmlns="http://www.w3.org/2000/svg" width="26" height="26"><path
+  fill-rule="evenodd" clip-rule="evenodd"
+  d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z
+  M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z"
+  fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
+
+  wheelchair: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+  fill="currentColor"><path
+  d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/></svg>`,
+
+elevator: `<svg aria-hidden="true" focusable="false"
+xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g
+transform="translate(24, 1) scale(-0.85, 0.85)"><path fill="none"
+stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
+3.764M17 23.5c-1 0-1.75-1.5-1.75-1.5c-.75-1.5-.75-2.5-.75-4v-1.5h-3.207M23
+14c-.265 0-.66.275-.993.553a4.9 4.9 0 0 0-1.088 1.276c-.214.367-.419.813-.419
+1.171c0-.358-.205-.804-.42-1.171a4.9 4.9 0 0 0-1.087-1.276C18.661 14.275
+18.265 14 18 14m5-4c-.265 0-.66-.275-.993-.553a4.9 4.9 0 0
+1-1.088-1.276C20.705 7.804 20.5 7.358 20.5 7c0 .358-.205.804-.42
+1.171c-.285.49-.659.918-1.087 1.276c-.332.278-.728.553-.993.553M6 23.5a5.5
+5.5 0 1 1 0-11a5.5 5.5 0 0 1 0 11Zm5.35-19s-1.6-1-1.6-2.25a1.747 1.747 0 1 1
+3.496 0c0 1.25-1.596 2.25-1.596 2.25z"/></g></svg>`,
+
+escalator: `<svg aria-hidden="true" focusable="false"
+xmlns="http://www.w3.org/2000/svg" viewBox="0 0 883 468"
+fill="currentColor"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
+0,6.4 -2.1,29.2 -3.6,38.1 -5.4,33.1 -18.8,65.8 -40,96.7 l -6.3,9.3 h 306.1
+l -0.7,10.8 c -1.7,26.6 -7.4,55.4 -14.8,74.8 -6.2,16.1 -16.7,35.4 -29.3,53.6
+l -5.3,7.8 h 305.9 v 2.9 c
+0,5.6 -2.1,23.7 -4.1,36.1 -5.1,30.4 -18.6,65.4 -37.9,98 -3.8,6.6 -7,12.1 -7,12.4
+0,0.4 49.5,0.6 110,0.6 h 110 v -25 h -89 c -48.9,0 -89,-0.2 -89,-0.5 0,-0.3
+1.4,-3.3 3,-6.6 4.1,-7.9 12.1,-28.3 15.4,-38.6 9.6,-30.6 13.8,-61.7
+12.8,-95.1 l -0.2,-8.2 h -142.5 c -78.4,0 -142.5,-0.2 -142.5,-0.5 0,-0.3
+1.6,-3.8 3.6,-7.8 8.4,-16.7 16,-38.8 19.9,-58.2 3.7,-18.1 4.7,-28.8 5.2,-54.3
+l 0.6,-26.2 h -142.7 c -78.4,0 -142.6,-0.2 -142.6,-0.4 0,-0.1 2.2,-5
+4.9,-10.7 10.1,-21.5 17.9,-47.5 21.7-71.9 1.8-11.8 3.2-56.5 2-61.5
+l -0.6,-2.5 h -143.4 c -78.8,0 -33,23.8 -33,23.8 z"/></svg>`,};
+</file>
+
 <file path="src/core/storage.js">
 // ══ СХОВИЩЕ ДАНИХ ДОДАТКУ (НАТИВНЕ) ══
 // Відповідальність: збереження даних користувача через Capacitor Preferences.
@@ -8034,6 +8069,7 @@ export const STORAGE_KEYS = {
   EDIT_MODE:           'metro_edit_mode',
   HIDE_NO_LIFT:        'metro_hide_no_lift',
   SHOW_MAP_ACCESSIBILITY:  'metro_show_map_accessibility',
+  SHOW_HOISTS:             'metro_show_hoists',
   DEV_MODE:     'metro_dev_mode',
   DEV_LOG:      'metro_dev_log',
   DEV_VERIFIED: 'metro_dev_verified',
@@ -8391,7 +8427,7 @@ import { getCheckins }            from '../domain/checkin.js';
 import { bus }                    from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { getSlugByLower }         from '../data/stations.js';
-import { isShowMapAccessibilityEnabled } from '../features/settings.js';
+import { isShowMapAccessibilityEnabled, isShowHoistsEnabled } from '../features/settings.js';
 
 const inner = document.getElementById('mapInner');
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -8716,7 +8752,7 @@ export function updateMapAccessibilityIcons() {
 
     const stData = state.stationsData[slug];
     const hasLift = stData?.directions?.some(d =>
-      d.exits?.some(e => e.positions?.some(p => p.isLift))
+      d.exits?.some(e => e.positions?.some(p => p.isLift || (p.isHoist && isShowHoistsEnabled())))
     );
 
     if (!hasLift) return;
@@ -9928,6 +9964,17 @@ document.documentElement.setAttribute('data-theme', actual);
             </div>
             <label class="ios-toggle">
               <input type="checkbox" id="settingsShowMapAccessibilityToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Показувати підйомники на станціях</span>
+              <span class="settings-sublabel" style="text-align: left;">Позначає виходи зі значком крісла там, де доступний лише підйомник</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsShowHoistsToggle">
               <span class="ios-toggle-slider"></span>
             </label>
           </div>
@@ -14363,6 +14410,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   height: 20px !important;
   fill: none !important;
   stroke: var(--text-muted) !important;
+}
+
+/* Значок підйомника (часткова доступність) — клікабельний, показує підказку */
+.pos-hoist-mark {
+  pointer-events: auto;
+  cursor: pointer;
 }
 </file>
 

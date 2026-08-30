@@ -125,6 +125,28 @@ function _showEditModeLockToast(row) {
   }, 2500);
 }
 
+// ── Тост «підйомник — часткова доступність» ────────────────────
+function _showHoistInfoToast(el) {
+  document.querySelectorAll('.hoist-info-toast').forEach(t => t.remove());
+  const rect  = el.getBoundingClientRect();
+  const toast = document.createElement('div');
+  toast.className = 'dev-mode-toast dev-mode-toast-open hoist-info-toast';
+  toast.style.cssText = `
+    position: fixed;
+    top: ${rect.top - 45}px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: auto;
+    z-index: 10000;
+  `;
+  toast.textContent = 'Забезпечує часткову доступність';
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.remove('dev-mode-toast-open');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
 
 // ── Ядро: toggle exit fav ─────────────────────────────────────
 function _triggerExitFav(favTarget, slug, lineColor) {
@@ -230,7 +252,15 @@ export function bindSheetGestures(sheetBody, getCtx) {
   sheetBody.addEventListener('click', e => {
     const { slug, lineColor } = getCtx();
 
-    // 1. Pencil (відредагована позиція → відкрити feedback)
+    // 1. Значок підйомника → показати текст про часткову доступність
+    const hoistMark = e.target.closest('.pos-hoist-mark');
+    if (hoistMark) {
+      e.stopPropagation();
+      _showHoistInfoToast(hoistMark);
+      return;
+    }
+
+    // 2. Pencil (відредагована позиція → відкрити feedback)
     const pencil = e.target.closest('.pos-edited-mark');
     if (pencil) {
       e.stopPropagation();
@@ -244,10 +274,10 @@ export function bindSheetGestures(sheetBody, getCtx) {
       return;
     }
 
-    // 2. Скасувати exit-replace confirm
+    // 3. Скасувати exit-replace confirm
     if (e.target.closest('.exit-replace-confirm')) return;
 
-    // 3. Nav-label → відкрити іншу станцію
+    // 4. Nav-label → відкрити іншу станцію
     const navLabel = e.target.closest('.nav-link');
     if (navLabel) {
       const target = slugByName(navLabel.dataset.name || '');
@@ -255,7 +285,7 @@ export function bindSheetGestures(sheetBody, getCtx) {
       return;
     }
 
-    // 4. Double-tap на .fav-tap-target
+    // 5. Double-tap на .fav-tap-target
     const favTarget = e.target.closest('.fav-tap-target');
     if (!favTarget) return;
     // Ігноруємо кліки по службових елементах всередині target
