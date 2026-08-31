@@ -92,7 +92,7 @@ C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
 elevator: `<svg aria-hidden="true" focusable="false"
 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g
 transform="translate(24, 1) scale(-0.85, 0.85)"><path fill="none"
-stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
 stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
 3.764M17 23.5c-1 0-1.75-1.5-1.75-1.5c-.75-1.5-.75-2.5-.75-4v-1.5h-3.207M23
 14c-.265 0-.66.275-.993.553a4.9 4.9 0 0 0-1.088 1.276c-.214.367-.419.813-.419
