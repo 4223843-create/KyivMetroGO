@@ -4259,6 +4259,8 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .pos-escalator-mark {
   width: 32px !important;
   height: 32px !important;
+  pointer-events: auto;
+  cursor: pointer;
 }
 .pos-escalator-mark svg {
   width: 30px !important;
@@ -4268,6 +4270,8 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .pos-elevator-mark {
   width: 26px !important;
   height: 26px !important;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .pos-elevator-mark svg {
