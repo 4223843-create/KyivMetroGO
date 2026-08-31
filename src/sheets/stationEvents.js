@@ -125,26 +125,26 @@ function _showEditModeLockToast(row) {
   }, 2500);
 }
 
-// ── Тост «підйомник — часткова доступність» ────────────────────
-function _showHoistInfoToast(el) {
-  document.querySelectorAll('.hoist-info-toast').forEach(t => t.remove());
+// ── Тост над іконкою (ліфт / ескалатор / підйомник) — прямо над самим значком ──
+function _showIconLabelToast(el, text) {
+  document.querySelectorAll('.icon-info-toast').forEach(t => t.remove());
   const rect  = el.getBoundingClientRect();
   const toast = document.createElement('div');
-  toast.className = 'dev-mode-toast dev-mode-toast-open hoist-info-toast';
+  toast.className = 'dev-mode-toast dev-mode-toast-open icon-info-toast';
   toast.style.cssText = `
     position: fixed;
-    top: ${rect.top - 45}px;
-    left: 50%;
+    top: ${rect.top - 38}px;
+    left: ${rect.left + rect.width / 2}px;
     transform: translateX(-50%);
     bottom: auto;
     z-index: 10000;
   `;
-  toast.textContent = 'Забезпечує часткову доступність';
+  toast.textContent = text;
   document.body.appendChild(toast);
   setTimeout(() => {
     toast.classList.remove('dev-mode-toast-open');
     setTimeout(() => toast.remove(), 300);
-  }, 2500);
+  }, 2000);
 }
 
 
@@ -256,7 +256,23 @@ export function bindSheetGestures(sheetBody, getCtx) {
     const hoistMark = e.target.closest('.pos-hoist-mark');
     if (hoistMark) {
       e.stopPropagation();
-      _showHoistInfoToast(hoistMark);
+      _showIconLabelToast(hoistMark, 'Забезпечує часткову доступність');
+      return;
+    }
+
+    // 1b. Значок ліфта → показати підпис "Ліфт"
+    const elevatorMark = e.target.closest('.pos-elevator-mark');
+    if (elevatorMark) {
+      e.stopPropagation();
+      _showIconLabelToast(elevatorMark, 'Ліфт');
+      return;
+    }
+
+    // 1c. Значок ескалатора → показати підпис "Ескалатор"
+    const escalatorMark = e.target.closest('.pos-escalator-mark');
+    if (escalatorMark) {
+      e.stopPropagation();
+      _showIconLabelToast(escalatorMark, 'Ескалатор');
       return;
     }
 
