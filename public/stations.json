@@ -1,5 +1,5 @@
 {
-  "version": "20260901",
+  "version": "20260902",
   "stations": [
     {
       "slug": "R.Akademmistechko",
@@ -1824,7 +1824,8 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
+                  "doors": "1",
+                  "isEscalator": true
                 }
               ]
             },
@@ -1833,7 +1834,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "4"
+                  "doors": "4",
+                  "isEscalator": true
                 }
               ]
             },
@@ -1857,7 +1859,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "4"
+                  "doors": "4",
+                  "isEscalator": true
                 }
               ]
             },
@@ -1866,7 +1869,8 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
+                  "doors": "1",
+                  "isEscalator": true
                 }
               ]
             },
@@ -2647,17 +2651,9 @@
               "label": "",
               "positions": [
                 {
-                  "wagon": "5",
-                  "doors": "3"
-                }
-              ]
-            },
-            {
-              "label": "",
-              "positions": [
-                {
-                  "wagon": "5",
                   "doors": "3",
+                  "wagon": "5",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
@@ -2671,17 +2667,9 @@
               "label": "",
               "positions": [
                 {
+                  "doors": "2",
                   "wagon": "1",
-                  "doors": "2"
-                }
-              ]
-            },
-            {
-              "label": "",
-              "positions": [
-                {
-                  "wagon": "3",
-                  "doors": "3",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
@@ -2713,20 +2701,10 @@
               "label": "",
               "positions": [
                 {
-                  "wagon": "5",
                   "doors": "1",
-                  "isEscalator": true
-                }
-              ]
-            },
-            {
-              "label": "",
-              "positions": [
-                {
                   "wagon": "5",
-                  "doors": "1",
-                  "isLift": true,
-                  "isEscalator": true
+                  "isEscalator": true,
+                  "isLift": true
                 }
               ]
             }
