@@ -1,5 +1,5 @@
 {
-  "version": "20260831",
+  "version": "20260901",
   "stations": [
     {
       "slug": "R.Akademmistechko",
@@ -98,7 +98,9 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
+                  "doors": "1",
+                  "isEscalator": true,
+                  "isLift": true
                 }
               ]
             },
@@ -107,21 +109,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "3"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
-                {
                   "doors": "3",
-                  "wagon": "3",
-                  "isEscalator": true
-                },
-                {
-                  "wagon": "3",
-                  "doors": "3",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
@@ -136,7 +125,9 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "3-4"
+                  "doors": "3-4",
+                  "isEscalator": true,
+                  "isLift": true
                 }
               ]
             },
@@ -145,21 +136,8 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
-                }
-              ]
-            },
-            {
-              "label": "ліфт",
-              "positions": [
-                {
-                  "doors": "3",
-                  "wagon": "3",
-                  "isEscalator": true
-                },
-                {
-                  "wagon": "3",
-                  "doors": "3",
+                  "doors": "1",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
@@ -777,7 +755,8 @@
                 {
                   "wagon": "1",
                   "doors": "1",
-                  "isHoist": true
+                  "isHoist": true,
+                  "isEscalator": true
                 }
               ]
             },
@@ -786,7 +765,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "4"
+                  "doors": "4",
+                  "isEscalator": true
                 }
               ]
             }
@@ -801,7 +781,8 @@
                 {
                   "wagon": "5",
                   "doors": "4",
-                  "isHoist": true
+                  "isHoist": true,
+                  "isEscalator": true
                 }
               ]
             },
@@ -810,7 +791,8 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
+                  "doors": "1",
+                  "isEscalator": true
                 }
               ]
             }
@@ -837,7 +819,8 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1"
+                  "doors": "1",
+                  "isEscalator": true
                 }
               ]
             },
@@ -847,7 +830,8 @@
                 {
                   "wagon": "5",
                   "doors": "4",
-                  "isHoist": true
+                  "isHoist": true,
+                  "isEscalator": true
                 }
               ]
             }
@@ -861,7 +845,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "4"
+                  "doors": "4",
+                  "isEscalator": true
                 }
               ]
             },
@@ -871,7 +856,8 @@
                 {
                   "wagon": "1",
                   "doors": "1",
-                  "isHoist": true
+                  "isHoist": true,
+                  "isEscalator": true
                 }
               ]
             }
@@ -954,12 +940,13 @@
           "from": "кінцева",
           "exits": [
             {
-              "label": "автостанція „Лісова“",
+              "label": "автостанція",
               "positions": [
                 {
                   "wagon": "1",
                   "doors": "1",
-                  "isHoist": true
+                  "isHoist": true,
+                  "isEscalator": true
                 }
               ]
             },
@@ -968,7 +955,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "4"
+                  "doors": "4",
+                  "isEscalator": true
                 }
               ]
             }
@@ -2726,7 +2714,8 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "1"
+                  "doors": "1",
+                  "isEscalator": true
                 }
               ]
             },
@@ -2736,7 +2725,8 @@
                 {
                   "wagon": "5",
                   "doors": "1",
-                  "isLift": true
+                  "isLift": true,
+                  "isEscalator": true
                 }
               ]
             }
