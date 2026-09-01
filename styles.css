@@ -3782,6 +3782,15 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
 
+/* Тост над іконкою ліфта/ескалатора/підйомника — вузький, з переносом рядків,
+   щоб довге "Забезпечує часткову доступність" не вилазило за межі екрана */
+.icon-info-toast {
+  white-space: normal;
+  width: 104px;
+  text-align: center;
+  line-height: 1.3;
+}
+
 .dev-mode-toast.dev-mode-toast-open {
   opacity: 1;
   transform: translateY(0);
