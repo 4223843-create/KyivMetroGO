@@ -6,6 +6,7 @@
 import { Capacitor } from '@capacitor/core';
 import { App }       from '@capacitor/app';
 
+import { STORAGE_KEYS, Storage } from './core/storage.js';
 import { openFavSheet }    from './features/favorites/index.js';
 import { openCheckinSheet, updateCheckinDock } from './features/checkin/index.js';
 import { openSearchSheet } from './features/search.js';
@@ -100,5 +101,29 @@ if (Capacitor.isNativePlatform()) {
     if (document.querySelectorAll('.station-sheet.sheet-open').length > 0) {
       closeAllSheets(true);
     }
+  });
+}
+
+// ── «Вибране при запуску» — і при поверненні з фону ─────────────
+// bootstrap() (main.js) виконує це лише один раз, при справжньому холодному
+// старті. Але стандартний сценарій на iOS — згорнути застосунок (не закрити),
+// а потім розгорнути; JS-контекст при цьому не перестворюється, тож bootstrap()
+// повторно не запускається. Тому додатково слухаємо повернення з фону:
+// нативно — подію 'resume' з @capacitor/app, у вебі/PWA — visibilitychange.
+// Відкриваємо тільки якщо жодної шторки ще не відкрито, щоб не перебивати
+// поточний перегляд станції/пошуку/налаштувань.
+const sheetOverlay = document.getElementById('sheetOverlay');
+
+function _maybeOpenFavOnResume() {
+  if (Storage.get(STORAGE_KEYS.START_ON_FAV) !== 'true') return;
+  if (sheetOverlay?.classList.contains('overlay-visible')) return;
+  openFavSheet();
+}
+
+if (Capacitor.isNativePlatform()) {
+  App.addListener('resume', _maybeOpenFavOnResume);
+} else {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') _maybeOpenFavOnResume();
   });
 }
