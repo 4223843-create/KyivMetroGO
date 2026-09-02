@@ -1,5 +1,5 @@
 {
-  "version": "20260902",
+  "version": "20260903",
   "stations": [
     {
       "slug": "R.Akademmistechko",
@@ -815,7 +815,7 @@
           "from": "попередня Лівобережна",
           "exits": [
             {
-              "label": "ТЦ „Дитячий світ“",
+              "label": "парк Перемога, ТЦ „Дитячий світ“",
               "positions": [
                 {
                   "wagon": "1",
@@ -940,7 +940,7 @@
           "from": "кінцева",
           "exits": [
             {
-              "label": "автостанція „Лісова“",
+              "label": "автостанція",
               "positions": [
                 {
                   "wagon": "1",
@@ -1048,7 +1048,7 @@
               ]
             },
             {
-              "label": "Мінський ринок, ТЦ Dream yellow",
+              "label": "Мінський ринок",
               "positions": [
                 {
                   "wagon": "1",
@@ -1098,7 +1098,7 @@
           "from": "попередня Мінська",
           "exits": [
             {
-              "label": "Dream Town",
+              "label": "Dream yellow",
               "positions": [
                 {
                   "wagon": "5",
@@ -1865,7 +1865,7 @@
               ]
             },
             {
-              "label": "до Льодового стадіону, автостанції „„Південна“",
+              "label": "до Льодового стадіону, автостанції „Південна“",
               "positions": [
                 {
                   "wagon": "1",
@@ -2590,15 +2590,6 @@
               "label": "",
               "positions": [
                 {
-                  "wagon": "3",
-                  "doors": "3"
-                }
-              ]
-            },
-            {
-              "label": "",
-              "positions": [
-                {
                   "wagon": "4",
                   "doors": "4",
                   "isLift": true
@@ -2610,15 +2601,6 @@
         {
           "from": "попередня Бориспільська",
           "exits": [
-            {
-              "label": "",
-              "positions": [
-                {
-                  "wagon": "3",
-                  "doors": "3"
-                }
-              ]
-            },
             {
               "label": "",
               "positions": [
