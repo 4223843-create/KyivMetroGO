@@ -2592,6 +2592,7 @@
                 {
                   "wagon": "4",
                   "doors": "4",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
@@ -2607,6 +2608,7 @@
                 {
                   "wagon": "2",
                   "doors": "2",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
