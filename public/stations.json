@@ -1772,9 +1772,9 @@
                 {
                   "doors": "2",
                   "wagon": "1",
-                  "isEscalator": true
+                  "isEscalator": true,
                   "isLift": true
-                },
+                }
               ]
             }
           ]
@@ -1788,9 +1788,9 @@
                 {
                   "doors": "3",
                   "wagon": "5",
-                  "isEscalator": true
+                  "isEscalator": true,
                   "isLift": true
-                },
+                }
               ]
             }
           ]
@@ -1812,7 +1812,7 @@
           "from": "попередня Виставковий&nbsp;центр",
           "exits": [
             {
-              "label": “іподром, Льодовий стадіон",
+"label": "іподром, Льодовий стадіон",
               "positions": [
                 {
                   "wagon": "1",
@@ -1901,10 +1901,10 @@
                 {
                   "wagon": "1",
                   "doors": "2",
-                  "isEscalator": true
+                  "isEscalator": true,
                   "isLift": true
-                },
-                ]
+                }
+              ]
             },
             {
               "label": "Будинок соти, Одеський ринок, ТРЦ “Магелан”, Одеська площа",
@@ -1912,10 +1912,10 @@
                 {
                   "wagon": "5",
                   "doors": "3",
-                  "isEscalator": true
-                 "isLift": true
-                },
-                ]
+                  "isEscalator": true,
+                  "isLift": true
+                }
+              ]
             }
           ]
         }
