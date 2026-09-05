@@ -134,7 +134,7 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
   });
 
   // ── Event delegation: posEl (stepper, кнопки позицій) ─
-  posEl.addEventListener('click', e => _searchLineFilterWrap(e, stationHidden, afterRender));
+  posEl.addEventListener('click', e => _handlePosClick(e, stationHidden, afterRender));
 
   // ── Event delegation: label inputs ────────────────────
   posEl.addEventListener('change', e => {
