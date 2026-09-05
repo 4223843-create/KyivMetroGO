@@ -1371,7 +1371,7 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "1"
+                  "doors": "3"
                 }
               ]
             }
@@ -1431,7 +1431,7 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "2"
+                  "doors": "1"
                 }
               ]
             }
@@ -1581,8 +1581,8 @@
               "label": "",
               "positions": [
                 {
-                  "doors": "2",
-                  "wagon": "1",
+                  "doors": "3",
+                  "wagon": "1-2",
                   "isEscalator": true
                 },
                 {
@@ -1635,7 +1635,7 @@
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "2",
+                  "doors": "3",
                   "isEscalator": true
                 },
                 {
@@ -1684,7 +1684,7 @@
           "from": "попередня Голосіївська",
           "exits": [
             {
-              "label": "Інститут раку",
+              "label": "Васильківська площа",
               "positions": [
                 {
                   "wagon": "1",
@@ -1699,7 +1699,7 @@
               ]
             },
             {
-              "label": "Інститут рослин",
+              "label": "ТЦ „Васильківський“",
               "positions": [
                 {
                   "wagon": "5",
@@ -1719,7 +1719,7 @@
           "from": "попередня Виставковий&nbsp;центр",
           "exits": [
             {
-              "label": "Інститут раку",
+              "label": "Васильківська площа",
               "positions": [
                 {
                   "wagon": "5",
@@ -1734,7 +1734,7 @@
               ]
             },
             {
-              "label": "Інститут рослин",
+              "label": "ТЦ „Васильківський“",
               "positions": [
                 {
                   "wagon": "1",
@@ -1773,12 +1773,8 @@
                   "doors": "2",
                   "wagon": "1",
                   "isEscalator": true
-                },
-                {
-                  "doors": "2",
-                  "wagon": "1",
                   "isLift": true
-                }
+                },
               ]
             }
           ]
@@ -1790,15 +1786,11 @@
               "label": "",
               "positions": [
                 {
-                  "doors": "3-4",
+                  "doors": "3",
                   "wagon": "5",
                   "isEscalator": true
-                },
-                {
-                  "doors": "3-4",
-                  "wagon": "5",
                   "isLift": true
-                }
+                },
               ]
             }
           ]
@@ -1820,17 +1812,17 @@
           "from": "попередня Виставковий&nbsp;центр",
           "exits": [
             {
-              "label": "до Центрального іподрому",
+              "label": “іподром, Льодовий стадіон",
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1",
+                  "doors": "2",
                   "isEscalator": true
                 }
               ]
             },
             {
-              "label": "до Льодового стадіону, автостанції „Південна“",
+              "label": "автостанція „Південна“",
               "positions": [
                 {
                   "wagon": "5",
@@ -1844,7 +1836,7 @@
               "positions": [
                 {
                   "wagon": "3",
-                  "doors": "2-3",
+                  "doors": "2",
                   "isLift": true
                 }
               ]
@@ -1855,7 +1847,7 @@
           "from": "попередня Теремки",
           "exits": [
             {
-              "label": "до Центрального іподрому",
+              "label": "іподром, Льодовий стадіон",
               "positions": [
                 {
                   "wagon": "5",
@@ -1865,11 +1857,11 @@
               ]
             },
             {
-              "label": "до Льодового стадіону, автостанції „Південна“",
+              "label": "автостанція „Південна“",
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1",
+                  "doors": "2",
                   "isEscalator": true
                 }
               ]
@@ -1878,7 +1870,7 @@
               "label": "ліфт",
               "positions": [
                 {
-                  "wagon": "4",
+                  "wagon": "3",
                   "doors": "2-3",
                   "isLift": true
                 }
@@ -1908,30 +1900,22 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1-2",
+                  "doors": "2",
                   "isEscalator": true
-                },
-                {
-                  "wagon": "1",
-                  "doors": "1-2",
                   "isLift": true
-                }
-              ]
+                },
+                ]
             },
             {
-              "label": "ТРЦ “Магелан”, будинок-соти",
+              "label": "Будинок соти, Одеський ринок, ТРЦ “Магелан”, Одеська площа",
               "positions": [
                 {
                   "wagon": "5",
-                  "doors": "3-4",
+                  "doors": "3",
                   "isEscalator": true
+                 "isLift": true
                 },
-                {
-                  "wagon": "5",
-                  "doors": "3-4",
-                  "isLift": true
-                }
-              ]
+                ]
             }
           ]
         }
@@ -2247,7 +2231,7 @@
               "positions": [
                 {
                   "wagon": "1",
-                  "doors": "1-2"
+                  "doors": "1"
                 }
               ]
             }
@@ -2419,12 +2403,21 @@
           "h": 6.3
         }
       ],
-      "directions": [
+          "directions": [
         {
           "from": "попередня Славутич",
           "exits": [
             {
-              "label": "",
+              "label": "до ТЦ „Arcadia“",
+              "positions": [
+                {
+                  "wagon": "1",
+                  "doors": "1"
+                }
+              ]
+            },
+            {
+              "label": "до Дніпровської набережної",
               "positions": [
                 {
                   "wagon": "5",
@@ -2438,7 +2431,16 @@
           "from": "попередня Позняки",
           "exits": [
             {
-              "label": "",
+              "label": "до ТЦ „Arcadia“",
+              "positions": [
+                {
+                  "wagon": "5",
+                  "doors": "4"
+                }
+              ]
+            },
+            {
+              "label": "до Дніпровської набережної",
               "positions": [
                 {
                   "wagon": "1",
@@ -2474,7 +2476,7 @@
               ]
             },
             {
-              "label": "ТЦ Познякoff, ТРЦ Piramida",
+              "label": "ТЦ Познякoff, ТРЦ Piramida, трамвайна зупинка",
               "positions": [
                 {
                   "wagon": "5",
@@ -2497,7 +2499,7 @@
               ]
             },
             {
-              "label": "ТЦ Познякoff, ТРЦ Piramida",
+              "label": "ТЦ Познякoff, ТРЦ Piramida, трамвайна зупинка",
               "positions": [
                 {
                   "wagon": "1",
