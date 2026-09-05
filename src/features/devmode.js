@@ -29,6 +29,10 @@ import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
+import {
+  initGoogleDriveAuth, requestDriveAuth, getDriveAccessToken,
+  downloadDevDataFromDrive, uploadDevDataToDrive
+} from '../services/googleDrive.js';
 
 // ── Активація / деактивація ──────────────────────────
 /** Повертає true якщо режим розробника активний. */
@@ -395,10 +399,74 @@ export function updateDevModeIndicator(aboutSheet, active) {
   const container = aboutSheet.querySelector('#aboutDevBtnContainer');
   if (!container) return;
   container.innerHTML = '';
+
   if (active) {
-    container.innerHTML = DEV_MINI_SVG;
+    container.innerHTML = `
+      <div style="margin: 14px 0; text-align: center;">
+        <button type="button" id="devGoogleDriveBtn" class="confirm-main-btn confirm-btn-save" style="padding: 10px 18px; font-size: 13px; margin: 0 auto; display: inline-flex; align-items: center; gap: 8px;">
+          <>
+        </button>
+        <div id="devDriveStatus" style="font-size: 12px; color: var(--text-muted); margin-top: 6px;"></div>
+      </div>
+    `;
+
+    const syncBtn = container.querySelector('#devGoogleDriveBtn');
+    const statusEl = container.querySelector('#devDriveStatus');
+
+    syncBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      initGoogleDriveAuth(
+        async (token) => {
+          syncBtn.textContent = '🔄 Синхронізація...';
+          syncBtn.disabled = true;
+          statusEl.textContent = 'Зчитування даних із хмари...';
+
+          // 1. Підтягуємо нотатки з хмари
+          const cloudData = await downloadDevDataFromDrive();
+          if (cloudData) {
+            if (cloudData.notes) Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(cloudData.notes));
+            if (cloudData.verified) Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
+          }
+
+          // 2. Відправляємо локальний стан
+          await syncDevStateToCloud();
+
+          syncBtn.textContent = '✓ Синхронізовано';
+          statusEl.textContent = 'Нотатки та фото оновлено з Google Drive';
+          
+          setTimeout(() => {
+            syncBtn.disabled = false;
+            syncBtn.textContent = '🔄 Оновити синхронізацію';
+          }, 2500);
+
+          bus.emit('station:refresh');
+        },
+        (err) => {
+          statusEl.textContent = 'Помилка авторизації Google';
+          console.error(err);
+        }
+      );
+
+      requestDriveAuth();
+    });
+
     setupDevDataClear(container);
   }
+}
+
+export async function syncDevStateToCloud() {
+  const token = getDriveAccessToken();
+  if (!token) return;
+
+  const payload = {
+    notes: JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}'),
+    verified: JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}'),
+    log: getDevLog(),
+    updatedAt: Date.now(),
+  };
+
+  await uploadDevDataToDrive(payload);
 }
 
 // ── Лічильник тапів на футері ─────────────────────────
@@ -437,6 +505,23 @@ export function setupDevModeTapCounter(aboutSheet) {
     }
   });
 }
+
+// Автоматично ініціалізуємо SDK
+initGoogleDriveAuth(
+  async (token) => {
+    showDevModeToast(true);
+    // Після входу завантажуємо та об'єднуємо нотатки
+    const cloudData = await downloadDevDataFromDrive();
+    if (cloudData?.notes) {
+      Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(cloudData.notes));
+    }
+    if (cloudData?.verified) {
+      Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
+    }
+    bus.emit('station:refresh');
+  },
+  (err) => console.error(err)
+);
 
 // ── Очищення даних розробника ─────────────────────────
 function setupDevDataClear(container) {
