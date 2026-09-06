@@ -86,6 +86,7 @@ src/
     mapInteraction.js
   services/
     backup.js
+    googleDrive.js
   sheets/
     aboutSheet.js
     renderStation.js
@@ -907,6 +908,130 @@ This section contains the contents of the repository's files.
 
 </body>
 </html>
+</file>
+
+<file path="src/services/googleDrive.js">
+// ══ GOOGLE DRIVE SYNC SERVICE (appDataFolder) ══
+
+const CLIENT_ID = '107053151946-9aorgec5m7lnr5bnco6kb4f2urninooc.apps.googleusercontent.com';
+const SCOPE     = 'https://www.googleapis.com/auth/drive.appdata';
+const FILE_NAME = 'dev_data_backup.json';
+
+const DRIVE_API  = 'https://www.googleapis.com/drive/v3/files';
+const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3/files';
+
+let _tokenClient = null;
+let _accessToken = null;
+
+/**
+ * Ініціалізація клієнта авторизації Google
+ */
+export function initGoogleDriveAuth(onSuccess, onError) {
+  if (typeof google === 'undefined' || !google.accounts?.oauth2) {
+    console.warn('[GoogleDrive] Google Identity Services SDK не завантажено');
+    return;
+  }
+
+  _tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPE,
+    callback: (response) => {
+      if (response.error) {
+        console.error('[GoogleDrive] Auth error:', response);
+        onError?.(response);
+        return;
+      }
+      _accessToken = response.access_token;
+      onSuccess?.(_accessToken);
+    },
+  });
+}
+
+/**
+ * Запит на вхід та отримання токена
+ */
+export function requestDriveAuth() {
+  if (!_tokenClient) {
+    initGoogleDriveAuth();
+  }
+  _tokenClient?.requestAccessToken({ prompt: 'consent' });
+}
+
+export function getDriveAccessToken() {
+  return _accessToken;
+}
+
+/**
+ * Пошук ID файла бекапу в appDataFolder
+ */
+async function _findBackupFile() {
+  if (!_accessToken) return null;
+  try {
+    const res = await fetch(`${DRIVE_API}?spaces=appDataFolder&q=name='${FILE_NAME}'`, {
+      headers: { Authorization: `Bearer ${_accessToken}` },
+    });
+    const data = await res.json();
+    return data.files?.[0]?.id || null;
+  } catch (err) {
+    console.error('[GoogleDrive] Помилка пошуку файлу:', err);
+    return null;
+  }
+}
+
+/**
+ * Завантаження даних з Google Drive
+ */
+export async function downloadDevDataFromDrive() {
+  if (!_accessToken) return null;
+  const fileId = await _findBackupFile();
+  if (!fileId) return null;
+
+  try {
+    const res = await fetch(`${DRIVE_API}/${fileId}?alt=media`, {
+      headers: { Authorization: `Bearer ${_accessToken}` },
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('[GoogleDrive] Помилка завантаження даних:', err);
+    return null;
+  }
+}
+
+/**
+ * Відправка локальних даних Dev Mode у Google Drive
+ */
+export async function uploadDevDataToDrive(payload) {
+  if (!_accessToken) return;
+
+  const fileId = await _findBackupFile();
+  const fileBlob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+
+  try {
+    if (fileId) {
+      await fetch(`${UPLOAD_API}/${fileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${_accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: fileBlob,
+      });
+    } else {
+      const metadata = { name: FILE_NAME, parents: ['appDataFolder'] };
+      const formData = new FormData();
+      formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      formData.append('file', fileBlob);
+
+      await fetch(`${UPLOAD_API}?uploadType=multipart`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${_accessToken}` },
+        body: formData,
+      });
+    }
+  } catch (err) {
+    console.error('[GoogleDrive] Помилка збереження даних:', err);
+  }
+}
 </file>
 
 <file path="src/utils/stringMatchers.js">
@@ -3476,479 +3601,6 @@ bus.on('data:stations-hydrated', ({ stationsData }) => {
 });
 </file>
 
-<file path="src/features/feedback/fbEvents.js">
-// ══ FEEDBACK EVENTS ══
-// Відповідальність: event delegation + sheet lifecycle.
-// Правило: не генерує HTML, не робить fetch.
-//          Читає DOM → оновлює fbState → викликає callbacks.
-
-import { state as appState }         from '../../core/state.js';
-import { bus }                       from '../../core/eventBus.js';
-import { STORAGE_KEYS, Storage }     from '../../core/storage.js';
-import { getLocalEdits, saveExitLabel,
-         clearAllLocalEdits, invalidateLocalEditsCache,
-         applyLocalEdits, applyExitLabels }  from '../../data/localEdits.js';
-import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
-import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
-import { renderFeedbackPositions, renderResetBtn,
-         stationListHtml }                              from './fbRenderer.js';
-import { initKinematicSwipe } from '../../ui/swipe.js';
-import { Icons }              from '../../ui/icons.js';
-
-// ── Внутрішні DOM-хелпери ────────────────────────────────────
-
-/** Закриває всі відкриті підказки «+1» та info-панель */
-export function closeAllHints() {
-  document.getElementById('feedbackInfoPanel')?.classList.remove('fb-info-open');
-  document.querySelectorAll('.fb-add-doors-hint.fb-hint-open')
-    .forEach(h => h.classList.remove('fb-hint-open'));
-  document.querySelectorAll('.fb-add-doors-info.is-active')
-    .forEach(b => b.classList.remove('is-active'));
-}
-
-// ── Dirty-tracking ───────────────────────────────────────────
-
-/**
- * Перераховує isDirty, синхронізує кнопку «Застосувати».
- * Єдина точка запису fbState.isDirty.
- */
-export function markFeedbackDirty() {
-  if (!fbState.slug) return;
-
-  const changedLabels = [...document.querySelectorAll('.fb-exit-label-input')]
-    .filter(inp => inp.dataset.changed === 'true')
-    .map(inp => inp.id);
-
-  fbState.isDirty = computeIsDirty(changedLabels);
-  bus.emit('feedback:dirty-changed', { isDirty: fbState.isDirty });
-
-  const sendBtn = document.getElementById('fbSend');
-  if (sendBtn) {
-    sendBtn.textContent = 'Застосувати';
-    sendBtn.style.color = '';
-    sendBtn.disabled    = !fbState.isDirty;
-  }
-}
-
-// ── Основний bind ─────────────────────────────────────────────
-
-/**
- * Прив'язує всі listeners до feedbackSheet.
- * Викликається ОДИН РАЗ після createElement.
- *
- * @param {HTMLElement} sheet
- * @param {{\n * onClose:  () => void,
- * onSubmit: () => void,
- * }} callbacks
- */
-export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
-  const posEl         = document.getElementById('fbPositions');
-  const sendBtn       = document.getElementById('fbSend');
-  const stationHidden = document.getElementById('fbStation');
-  const lineHidden    = document.getElementById('fbLine');
-  const lineFilter    = document.getElementById('fbLineFilter');
-  const stationList   = document.getElementById('fbStationList');
-
-  const afterRender = () => markFeedbackDirty();
-
-  // ── Вибір лінії ──────────────────────────────────────
-  lineFilter.addEventListener('click', e => {
-    const btn = e.target.closest('.search-line-btn');
-    if (!btn) return;
-
-    const line = btn.dataset.line;
-    lineFilter.querySelectorAll('.search-line-btn').forEach(b => b.classList.remove('is-active'));
-    btn.classList.add('is-active');
-    lineHidden.value     = line;
-    stationHidden.value  = '';
-    posEl.innerHTML      = '';
-    sendBtn.disabled     = true;
-    fbState.isDirty      = false;
-    closeAllHints();
-
-    stationList.innerHTML = stationListHtml(line);
-    stationList.hidden    = false;
-
-    renderResetBtn({
-      onReset: _handleReset.bind(null, afterRender),
-    });
-  });
-
-  // ── Вибір станції ─────────────────────────────────────
-  stationList.addEventListener('click', e => {
-    const item = e.target.closest('.fb-station-item');
-    if (!item) return;
-
-    stationHidden.value = item.dataset.slug;
-    stationList.hidden  = true;
-    document.getElementById('fbLineFilterWrap').hidden = true;
-    document.getElementById('fbChangeStation').hidden  = false;
-    fbState.isDirty = false;
-    closeAllHints();
-    renderFeedbackPositions(stationHidden.value, { onAfterRender: afterRender });
-  });
-
-  // ── «Змінити станцію» ─────────────────────────────────
-  document.getElementById('fbChangeStation').addEventListener('click', () => {
-    document.getElementById('fbLineFilterWrap').hidden = false;
-    document.getElementById('fbChangeStation').hidden  = true;
-    document.getElementById('fbStationTitle').hidden   = true;
-    
-    const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
-    document.getElementById('fbSheetTitle').textContent = isLocal ? 'Локальні зміни' : 'Запропонувати зміни';
-    
-    const introText = document.getElementById('fbMainIntroText');
-    if (introText) {
-      introText.innerHTML = isLocal
-        ? 'Правки застосовуватимуться лише локально. Ви можете змінити це в налаштуваннях'
-        : 'Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику';
-    }
-    
-    document.getElementById('fbSheetTitle').hidden     = false;
-
-    stationHidden.value  = '';
-    posEl.innerHTML      = '';
-    stationList.hidden   = false;
-    sendBtn.disabled     = true;
-  });
-
-  // ── Event delegation: posEl (stepper, кнопки позицій) ─
-  posEl.addEventListener('click', e => _searchLineFilterWrap(e, stationHidden, afterRender));
-
-  // ── Event delegation: label inputs ────────────────────
-  posEl.addEventListener('change', e => {
-    const input = e.target.closest('.fb-exit-label-input');
-    if (!input) return;
-    _handleLabelChange(input, stationHidden.value);
-    afterRender();
-  });
-
-  // ── Submit ────────────────────────────────────────────
-  sendBtn.addEventListener('click', onSubmit);
-
-  // ── Закрити ───────────────────────────────────────────
-  document.getElementById('feedbackClose').addEventListener('click', onClose);
-
-  // ── Swipe — один раз, getter щоб завжди брати актуальний body ─
-  initKinematicSwipe(
-    sheet,
-    () => document.getElementById('feedbackBody'),
-    onClose,
-  );
-}
-
-// ── Приватні обробники ────────────────────────────────────────
-
-/** Delegation: клік у зоні posEl */
-function _handlePosClick(e, stationHidden, afterRender) {
-  const slug = stationHidden.value;
-  if (!slug) return;
-
-  // Відновити закритий вихід
-  const restoreBtn = e.target.closest('.fb-restore-exit');
-  if (restoreBtn) {
-    e.preventDefault(); e.stopPropagation();
-    _handleRestore(restoreBtn.dataset.idx, slug, afterRender);
-    return;
-  }
-
-  // Закрити / прибрати вихід
-  const closeBtn = e.target.closest('.fb-close-exit');
-  if (closeBtn) {
-    _handleCloseExit(parseInt(closeBtn.dataset.idx), slug, afterRender);
-    return;
-  }
-
-  // Скасувати другі двері
-  const cancelExtraBtn = e.target.closest('.fb-cancel-extra-btn');
-  if (cancelExtraBtn) {
-    _cancelExtra(cancelExtraBtn.dataset.idx);
-    afterRender();
-    return;
-  }
-
-  // Скасувати треті двері
-  const cancelThirdBtn = e.target.closest('.fb-cancel-third-btn');
-  if (cancelThirdBtn) {
-    _cancelThird(cancelThirdBtn.dataset.idx);
-    afterRender();
-    return;
-  }
-
-  // Stepper ±
-  const stepBtn = e.target.closest('.fb-step');
-  if (stepBtn) {
-    _handleStep(stepBtn);
-    afterRender();
-    return;
-  }
-
-  // Info-підказка
-  const infoBtn = e.target.closest('.fb-add-doors-info');
-  if (infoBtn) {
-    const hint   = document.getElementById(`fbHint${infoBtn.dataset.idx}`);
-    if (!hint) return;
-    const isOpen = hint.classList.contains('fb-hint-open');
-    closeAllHints();
-    if (!isOpen) { hint.classList.add('fb-hint-open'); infoBtn.classList.add('is-active'); }
-    return;
-  }
-
-  // Редагувати / додати опис виходу
-  const labelBtn = e.target.closest('.fb-exit-label-edit-btn, .fb-add-desc-btn');
-  if (labelBtn) {
-    _toggleLabelInput(labelBtn.dataset.itemIdx);
-    return;
-  }
-
-  // Додати новий вихід
-  const addExitBtn = e.target.closest('.fb-add-exit-btn');
-  if (addExitBtn) {
-    _handleAddExit(addExitBtn.dataset.dir, slug, afterRender);
-    return;
-  }
-
-  // Показати другі двері
-  const addDoorsBtn = e.target.closest('.fb-add-doors-link');
-  if (addDoorsBtn) {
-    _handleAddDoors(addDoorsBtn.dataset.idx);
-    afterRender();
-  }
-}
-
-// ── Атомарні обробники ─────────────────────────────────────────
-
-function _handleRestore(idx, slug, afterRender) {
-  const edits = getLocalEdits();
-  if (edits[slug]?.[idx]) {
-    delete edits[slug][idx];
-    if (!Object.keys(edits[slug]).length) delete edits[slug];
-    if (!Object.keys(edits).length)       clearAllLocalEdits();
-    else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
-  }
-  invalidateLocalEditsCache();
-  if (fbState.current[idx]) fbState.current[idx].isClosed = false;
-  applyLocalEdits(appState.stationsData);
-  bus.emit('station:refresh');
-  renderFeedbackPositions(slug, { onAfterRender: afterRender });
-  renderResetBtn({ onReset: () => _handleReset(afterRender) });
-}
-
-function _handleCloseExit(idx, slug, afterRender) {
-  if (fbState.current[idx]?.isNew) {
-    delete fbState.current[idx];
-    delete fbState.labels[idx];
-    delete fbState.original[idx];
-    const edits = getLocalEdits();
-    if (edits[slug]?.[idx]) {
-      delete edits[slug][idx];
-      if (!Object.keys(edits[slug]).length) delete edits[slug];
-      if (!Object.keys(edits).length)       clearAllLocalEdits();
-      else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
-    }
-    renderFeedbackPositions(slug, { onAfterRender: afterRender });
-    renderResetBtn({ onReset: () => _handleReset(afterRender) });
-    return;
-  }
-
-  const exWrap = document.getElementById(`fbExtraWrap${idx}`);
-  if (exWrap && !exWrap.classList.contains('is-hidden')) {
-    document.getElementById(`fbW${idx}`).textContent = document.getElementById(`fbW_ex${idx}`).textContent;
-    document.getElementById(`fbD${idx}`).textContent = document.getElementById(`fbD_ex${idx}`).textContent;
-    document.getElementById(`fbW_ex${idx}`).textContent = '-';
-    document.getElementById(`fbD_ex${idx}`).textContent = '-';
-    exWrap.classList.add('is-hidden');
-    document.getElementById(`fbAddDoorsRow${idx}`)?.classList.remove('is-hidden');
-    document.getElementById(`fbItemInner${idx}`)?.classList.remove('has-extra-doors');
-    syncCurrentFromDOM(idx);
-    afterRender();
-    return;
-  }
-
-  const p = appState.stationsData[fbState.slug]?.positions[idx];
-  if (!p) return;
-  saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
-  applyLocalEdits(appState.stationsData);
-  invalidateLocalEditsCache();
-  fbState.current[idx].isClosed = true;
-  bus.emit('station:refresh');
-  renderFeedbackPositions(slug, { onAfterRender: afterRender });
-  renderResetBtn({ onReset: () => _handleReset(afterRender) });
-}
-
-function _cancelExtra(idx) {
-  document.getElementById(`fbW_ex${idx}`).textContent = '-';
-  document.getElementById(`fbD_ex${idx}`).textContent = '-';
-  document.getElementById(`fbExtraWrap${idx}`).classList.add('is-hidden');
-
-  const w2 = document.getElementById(`fbExtraWrap2_${idx}`);
-  if (w2) {
-    document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
-    document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
-    w2.classList.add('is-hidden');
-  }
-
-  document.getElementById(`fbAddDoorsRow${idx}`)?.classList.remove('is-hidden');
-  document.getElementById(`fbItemInner${idx}`)?.classList.remove('has-extra-doors');
-  syncCurrentFromDOM(parseInt(idx));
-}
-
-function _cancelThird(idx) {
-  document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
-  document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
-  document.getElementById(`fbExtraWrap2_${idx}`).classList.add('is-hidden');
-
-  const addBtn = document.getElementById(`fbAddBtn${idx}`);
-  if (addBtn?.dataset.canHaveThird === '1') {
-    document.getElementById(`fbAddDoorsRow${idx}`)?.classList.remove('is-hidden');
-  }
-  syncCurrentFromDOM(parseInt(idx));
-}
-
-function _handleStep(btn) {
-  const id  = btn.dataset.id;
-  const el  = document.getElementById(id);
-  if (!el) return;
-
-  const isExtra = id.includes('_ex');
-  const idx     = parseInt(id.replace(/[^0-9]/g, ''));
-
-  if (isExtra) {
-    const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
-    const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
-    const adj   = getAdjacentDoors(mainW, mainD);
-
-    let curW = document.getElementById(`fbW_ex${idx}`).textContent;
-    let curD = document.getElementById(`fbD_ex${idx}`).textContent;
-
-    if (curW === '-' || curD === '-') {
-      curW = adj[0].w; curD = adj[0].d;
-    } else {
-      curW = parseInt(curW); curD = parseInt(curD);
-      const curIdx = adj.findIndex(a => a.w === curW && a.d === curD);
-      const step   = btn.classList.contains('fb-step-up') ? 1 : -1;
-      const nextI  = curIdx === -1 ? 0 : (curIdx + step + adj.length) % adj.length;
-      curW = adj[nextI].w; curD = adj[nextI].d;
-    }
-
-    document.getElementById(`fbW_ex${idx}`).textContent = curW;
-    document.getElementById(`fbD_ex${idx}`).textContent = curD;
-
-    const ex2W  = document.getElementById(`fbW_ex2_${idx}`);
-    const ex2D  = document.getElementById(`fbD_ex2_${idx}`);
-    const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
-    if (ex2W && ex2D && wrap2 && !wrap2.classList.contains('is-hidden')) {
-      const adj3     = getAdjacentDoors(curW, curD);
-      const validAdj = adj3.filter(a => !(a.w === mainW && a.d === mainD));
-      if (validAdj.length) { ex2W.textContent = validAdj[0].w; ex2D.textContent = validAdj[0].d; }
-    }
-  } else {
-    const min = parseInt(btn.dataset.min);
-    const max = parseInt(btn.dataset.max);
-    let val   = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
-    el.textContent = Math.max(min, Math.min(max, val));
-  }
-
-  syncCurrentFromDOM(idx);
-}
-
-function _handleLabelChange(input, slug) {
-  input.dataset.changed = 'true';
-  const wrapId = input.id.replace('fbLabelInput', '');
-  if (slug && wrapId !== '') saveExitLabel(slug, parseInt(wrapId), input.value);
-
-  const wrap = document.getElementById(`fbLabelWrap${wrapId}`);
-  const row  = wrap?.previousElementSibling;
-  if (!row?.classList.contains('fb-exit-label-row')) return;
-
-  const textSpan = row.querySelector('.fb-exit-label-text');
-  if (textSpan) textSpan.textContent = input.value.trim();
-
-  const editBtn = row.querySelector('.fb-exit-label-edit-btn, .fb-add-desc-btn');
-  if (!editBtn) return;
-  if (input.value.trim()) {
-    editBtn.className = 'fb-exit-label-edit-btn';
-    editBtn.innerHTML = Icons.pencil;
-    editBtn.setAttribute('aria-label', 'Редагувати');
-    editBtn.removeAttribute('style');
-  } else {
-    editBtn.className   = 'fb-add-desc-btn';
-    editBtn.textContent = 'додати опис';
-  }
-
-  if (appState.stationsData) applyExitLabels(appState.stationsData);
-  bus.emit('station:refresh');
-}
-
-function _toggleLabelInput(itemIdx) {
-  const wrap  = document.getElementById(`fbLabelWrap${itemIdx}`);
-  const input = document.getElementById(`fbLabelInput${itemIdx}`);
-  if (!wrap || !input) return;
-
-  const isOpen = wrap.classList.contains('label-input-open');
-  document.querySelectorAll('.fb-exit-label-input-wrap.label-input-open').forEach(w => {
-    if (w !== wrap) w.classList.remove('label-input-open');
-  });
-
-  if (!isOpen) {
-    wrap.classList.add('label-input-open');
-    setTimeout(() => input.focus(), 250);
-  } else {
-    wrap.classList.remove('label-input-open');
-  }
-}
-
-function _handleAddExit(dir, slug, afterRender) {
-  const newIdx   = Object.keys(fbState.current).length;
-  const sameDir  = Object.values(fbState.current).filter(s => s.dir === dir && !s.isNew);
-  const { w, d } = sameDir.length
-    ? getOppositeDoors(sameDir[0].wMain, sameDir[0].dMain)
-    : { w: 1, d: 1 };
-
-  fbState.current[newIdx] = {
-    wMain: w, dMain: d, wEx: '-', dEx: '-', wEx2: '-', dEx2: '-',
-    hasExtra: false, hasThird: false, isClosed: false, isNew: true, dir,
-  };
-  fbState.labels[newIdx] = '';
-
-  renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
-  setTimeout(() =>
-    document.querySelector(`.fb-add-desc-btn[data-item-idx="${newIdx}"]`)?.click(), 100);
-}
-
-function _handleAddDoors(idx) {
-  document.getElementById(`fbExtraWrap${idx}`)?.classList.remove('is-hidden');
-  document.getElementById(`fbAddDoorsRow${idx}`)?.classList.add('is-hidden');
-  document.getElementById(`fbItemInner${idx}`)?.classList.add('has-extra-doors');
-
-  const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
-  const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
-  const adj   = getAdjacentDoors(mainW, mainD);
-
-  document.getElementById(`fbW_ex${idx}`).textContent = adj[0].w;
-  document.getElementById(`fbD_ex${idx}`).textContent = adj[0].d;
-  syncCurrentFromDOM(parseInt(idx));
-}
-
-function _handleReset(afterRender) {
-  bus.emit('ui:confirm', {
-    message: 'Скинути всі локальні зміни та повернутись до стандартних даних?',
-    onYes: async () => {
-      clearAllLocalEdits();
-      bus.emit('data:reload-stations', {
-        onDone: () => {
-          document.getElementById('fbResetWrap').innerHTML =
-            '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
-          renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
-        },
-      });
-    },
-    onNo:     () => {},
-    onCancel: () => {},
-  });
-}
-</file>
-
 <file path="src/features/feedback/fbRenderer.js">
 // ══ FEEDBACK RENDERER ══
 // Відповідальність: state → HTML-рядок.
@@ -5138,6 +4790,479 @@ bus.on('checkin:updated', () => {
   bus.emit('map:sync-checkins');
   bus.emit('station:refresh'); // Оновлюємо станцію на льоту, щоб підсвітити дзеркальні піни
 });
+</file>
+
+<file path="src/features/feedback/fbEvents.js">
+// ══ FEEDBACK EVENTS ══
+// Відповідальність: event delegation + sheet lifecycle.
+// Правило: не генерує HTML, не робить fetch.
+//          Читає DOM → оновлює fbState → викликає callbacks.
+
+import { state as appState }         from '../../core/state.js';
+import { bus }                       from '../../core/eventBus.js';
+import { STORAGE_KEYS, Storage }     from '../../core/storage.js';
+import { getLocalEdits, saveExitLabel,
+         clearAllLocalEdits, invalidateLocalEditsCache,
+         applyLocalEdits, applyExitLabels }  from '../../data/localEdits.js';
+import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
+import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
+import { renderFeedbackPositions, renderResetBtn,
+         stationListHtml }                              from './fbRenderer.js';
+import { initKinematicSwipe } from '../../ui/swipe.js';
+import { Icons }              from '../../ui/icons.js';
+
+// ── Внутрішні DOM-хелпери ────────────────────────────────────
+
+/** Закриває всі відкриті підказки «+1» та info-панель */
+export function closeAllHints() {
+  document.getElementById('feedbackInfoPanel')?.classList.remove('fb-info-open');
+  document.querySelectorAll('.fb-add-doors-hint.fb-hint-open')
+    .forEach(h => h.classList.remove('fb-hint-open'));
+  document.querySelectorAll('.fb-add-doors-info.is-active')
+    .forEach(b => b.classList.remove('is-active'));
+}
+
+// ── Dirty-tracking ───────────────────────────────────────────
+
+/**
+ * Перераховує isDirty, синхронізує кнопку «Застосувати».
+ * Єдина точка запису fbState.isDirty.
+ */
+export function markFeedbackDirty() {
+  if (!fbState.slug) return;
+
+  const changedLabels = [...document.querySelectorAll('.fb-exit-label-input')]
+    .filter(inp => inp.dataset.changed === 'true')
+    .map(inp => inp.id);
+
+  fbState.isDirty = computeIsDirty(changedLabels);
+  bus.emit('feedback:dirty-changed', { isDirty: fbState.isDirty });
+
+  const sendBtn = document.getElementById('fbSend');
+  if (sendBtn) {
+    sendBtn.textContent = 'Застосувати';
+    sendBtn.style.color = '';
+    sendBtn.disabled    = !fbState.isDirty;
+  }
+}
+
+// ── Основний bind ─────────────────────────────────────────────
+
+/**
+ * Прив'язує всі listeners до feedbackSheet.
+ * Викликається ОДИН РАЗ після createElement.
+ *
+ * @param {HTMLElement} sheet
+ * @param {{\n * onClose:  () => void,
+ * onSubmit: () => void,
+ * }} callbacks
+ */
+export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
+  const posEl         = document.getElementById('fbPositions');
+  const sendBtn       = document.getElementById('fbSend');
+  const stationHidden = document.getElementById('fbStation');
+  const lineHidden    = document.getElementById('fbLine');
+  const lineFilter    = document.getElementById('fbLineFilter');
+  const stationList   = document.getElementById('fbStationList');
+
+  const afterRender = () => markFeedbackDirty();
+
+  // ── Вибір лінії ──────────────────────────────────────
+  lineFilter.addEventListener('click', e => {
+    const btn = e.target.closest('.search-line-btn');
+    if (!btn) return;
+
+    const line = btn.dataset.line;
+    lineFilter.querySelectorAll('.search-line-btn').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    lineHidden.value     = line;
+    stationHidden.value  = '';
+    posEl.innerHTML      = '';
+    sendBtn.disabled     = true;
+    fbState.isDirty      = false;
+    closeAllHints();
+
+    stationList.innerHTML = stationListHtml(line);
+    stationList.hidden    = false;
+
+    renderResetBtn({
+      onReset: _handleReset.bind(null, afterRender),
+    });
+  });
+
+  // ── Вибір станції ─────────────────────────────────────
+  stationList.addEventListener('click', e => {
+    const item = e.target.closest('.fb-station-item');
+    if (!item) return;
+
+    stationHidden.value = item.dataset.slug;
+    stationList.hidden  = true;
+    document.getElementById('fbLineFilterWrap').hidden = true;
+    document.getElementById('fbChangeStation').hidden  = false;
+    fbState.isDirty = false;
+    closeAllHints();
+    renderFeedbackPositions(stationHidden.value, { onAfterRender: afterRender });
+  });
+
+  // ── «Змінити станцію» ─────────────────────────────────
+  document.getElementById('fbChangeStation').addEventListener('click', () => {
+    document.getElementById('fbLineFilterWrap').hidden = false;
+    document.getElementById('fbChangeStation').hidden  = true;
+    document.getElementById('fbStationTitle').hidden   = true;
+    
+    const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+    document.getElementById('fbSheetTitle').textContent = isLocal ? 'Локальні зміни' : 'Запропонувати зміни';
+    
+    const introText = document.getElementById('fbMainIntroText');
+    if (introText) {
+      introText.innerHTML = isLocal
+        ? 'Правки застосовуватимуться лише локально. Ви можете змінити це в налаштуваннях'
+        : 'Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику';
+    }
+    
+    document.getElementById('fbSheetTitle').hidden     = false;
+
+    stationHidden.value  = '';
+    posEl.innerHTML      = '';
+    stationList.hidden   = false;
+    sendBtn.disabled     = true;
+  });
+
+  // ── Event delegation: posEl (stepper, кнопки позицій) ─
+  posEl.addEventListener('click', e => _handlePosClick(e, stationHidden, afterRender));
+
+  // ── Event delegation: label inputs ────────────────────
+  posEl.addEventListener('change', e => {
+    const input = e.target.closest('.fb-exit-label-input');
+    if (!input) return;
+    _handleLabelChange(input, stationHidden.value);
+    afterRender();
+  });
+
+  // ── Submit ────────────────────────────────────────────
+  sendBtn.addEventListener('click', onSubmit);
+
+  // ── Закрити ───────────────────────────────────────────
+  document.getElementById('feedbackClose').addEventListener('click', onClose);
+
+  // ── Swipe — один раз, getter щоб завжди брати актуальний body ─
+  initKinematicSwipe(
+    sheet,
+    () => document.getElementById('feedbackBody'),
+    onClose,
+  );
+}
+
+// ── Приватні обробники ────────────────────────────────────────
+
+/** Delegation: клік у зоні posEl */
+function _handlePosClick(e, stationHidden, afterRender) {
+  const slug = stationHidden.value;
+  if (!slug) return;
+
+  // Відновити закритий вихід
+  const restoreBtn = e.target.closest('.fb-restore-exit');
+  if (restoreBtn) {
+    e.preventDefault(); e.stopPropagation();
+    _handleRestore(restoreBtn.dataset.idx, slug, afterRender);
+    return;
+  }
+
+  // Закрити / прибрати вихід
+  const closeBtn = e.target.closest('.fb-close-exit');
+  if (closeBtn) {
+    _handleCloseExit(parseInt(closeBtn.dataset.idx), slug, afterRender);
+    return;
+  }
+
+  // Скасувати другі двері
+  const cancelExtraBtn = e.target.closest('.fb-cancel-extra-btn');
+  if (cancelExtraBtn) {
+    _cancelExtra(cancelExtraBtn.dataset.idx);
+    afterRender();
+    return;
+  }
+
+  // Скасувати треті двері
+  const cancelThirdBtn = e.target.closest('.fb-cancel-third-btn');
+  if (cancelThirdBtn) {
+    _cancelThird(cancelThirdBtn.dataset.idx);
+    afterRender();
+    return;
+  }
+
+  // Stepper ±
+  const stepBtn = e.target.closest('.fb-step');
+  if (stepBtn) {
+    _handleStep(stepBtn);
+    afterRender();
+    return;
+  }
+
+  // Info-підказка
+  const infoBtn = e.target.closest('.fb-add-doors-info');
+  if (infoBtn) {
+    const hint   = document.getElementById(`fbHint${infoBtn.dataset.idx}`);
+    if (!hint) return;
+    const isOpen = hint.classList.contains('fb-hint-open');
+    closeAllHints();
+    if (!isOpen) { hint.classList.add('fb-hint-open'); infoBtn.classList.add('is-active'); }
+    return;
+  }
+
+  // Редагувати / додати опис виходу
+  const labelBtn = e.target.closest('.fb-exit-label-edit-btn, .fb-add-desc-btn');
+  if (labelBtn) {
+    _toggleLabelInput(labelBtn.dataset.itemIdx);
+    return;
+  }
+
+  // Додати новий вихід
+  const addExitBtn = e.target.closest('.fb-add-exit-btn');
+  if (addExitBtn) {
+    _handleAddExit(addExitBtn.dataset.dir, slug, afterRender);
+    return;
+  }
+
+  // Показати другі двері
+  const addDoorsBtn = e.target.closest('.fb-add-doors-link');
+  if (addDoorsBtn) {
+    _handleAddDoors(addDoorsBtn.dataset.idx);
+    afterRender();
+  }
+}
+
+// ── Атомарні обробники ─────────────────────────────────────────
+
+function _handleRestore(idx, slug, afterRender) {
+  const edits = getLocalEdits();
+  if (edits[slug]?.[idx]) {
+    delete edits[slug][idx];
+    if (!Object.keys(edits[slug]).length) delete edits[slug];
+    if (!Object.keys(edits).length)       clearAllLocalEdits();
+    else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
+  }
+  invalidateLocalEditsCache();
+  if (fbState.current[idx]) fbState.current[idx].isClosed = false;
+  applyLocalEdits(appState.stationsData);
+  bus.emit('station:refresh');
+  renderFeedbackPositions(slug, { onAfterRender: afterRender });
+  renderResetBtn({ onReset: () => _handleReset(afterRender) });
+}
+
+function _handleCloseExit(idx, slug, afterRender) {
+  if (fbState.current[idx]?.isNew) {
+    delete fbState.current[idx];
+    delete fbState.labels[idx];
+    delete fbState.original[idx];
+    const edits = getLocalEdits();
+    if (edits[slug]?.[idx]) {
+      delete edits[slug][idx];
+      if (!Object.keys(edits[slug]).length) delete edits[slug];
+      if (!Object.keys(edits).length)       clearAllLocalEdits();
+      else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
+    }
+    renderFeedbackPositions(slug, { onAfterRender: afterRender });
+    renderResetBtn({ onReset: () => _handleReset(afterRender) });
+    return;
+  }
+
+  const exWrap = document.getElementById(`fbExtraWrap${idx}`);
+  if (exWrap && !exWrap.classList.contains('is-hidden')) {
+    document.getElementById(`fbW${idx}`).textContent = document.getElementById(`fbW_ex${idx}`).textContent;
+    document.getElementById(`fbD${idx}`).textContent = document.getElementById(`fbD_ex${idx}`).textContent;
+    document.getElementById(`fbW_ex${idx}`).textContent = '-';
+    document.getElementById(`fbD_ex${idx}`).textContent = '-';
+    exWrap.classList.add('is-hidden');
+    document.getElementById(`fbAddDoorsRow${idx}`)?.classList.remove('is-hidden');
+    document.getElementById(`fbItemInner${idx}`)?.classList.remove('has-extra-doors');
+    syncCurrentFromDOM(idx);
+    afterRender();
+    return;
+  }
+
+  const p = appState.stationsData[fbState.slug]?.positions[idx];
+  if (!p) return;
+  saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
+  applyLocalEdits(appState.stationsData);
+  invalidateLocalEditsCache();
+  fbState.current[idx].isClosed = true;
+  bus.emit('station:refresh');
+  renderFeedbackPositions(slug, { onAfterRender: afterRender });
+  renderResetBtn({ onReset: () => _handleReset(afterRender) });
+}
+
+function _cancelExtra(idx) {
+  document.getElementById(`fbW_ex${idx}`).textContent = '-';
+  document.getElementById(`fbD_ex${idx}`).textContent = '-';
+  document.getElementById(`fbExtraWrap${idx}`).classList.add('is-hidden');
+
+  const w2 = document.getElementById(`fbExtraWrap2_${idx}`);
+  if (w2) {
+    document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
+    document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
+    w2.classList.add('is-hidden');
+  }
+
+  document.getElementById(`fbAddDoorsRow${idx}`)?.classList.remove('is-hidden');
+  document.getElementById(`fbItemInner${idx}`)?.classList.remove('has-extra-doors');
+  syncCurrentFromDOM(parseInt(idx));
+}
+
+function _cancelThird(idx) {
+  document.getElementById(`fbW_ex2_${idx}`).textContent = '-';
+  document.getElementById(`fbD_ex2_${idx}`).textContent = '-';
+  document.getElementById(`fbExtraWrap2_${idx}`).classList.add('is-hidden');
+
+  const addBtn = document.getElementById(`fbAddBtn${idx}`);
+  if (addBtn?.dataset.canHaveThird === '1') {
+    document.getElementById(`fbAddDoorsRow${idx}`)?.classList.remove('is-hidden');
+  }
+  syncCurrentFromDOM(parseInt(idx));
+}
+
+function _handleStep(btn) {
+  const id  = btn.dataset.id;
+  const el  = document.getElementById(id);
+  if (!el) return;
+
+  const isExtra = id.includes('_ex');
+  const idx     = parseInt(id.replace(/[^0-9]/g, ''));
+
+  if (isExtra) {
+    const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+    const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+    const adj   = getAdjacentDoors(mainW, mainD);
+
+    let curW = document.getElementById(`fbW_ex${idx}`).textContent;
+    let curD = document.getElementById(`fbD_ex${idx}`).textContent;
+
+    if (curW === '-' || curD === '-') {
+      curW = adj[0].w; curD = adj[0].d;
+    } else {
+      curW = parseInt(curW); curD = parseInt(curD);
+      const curIdx = adj.findIndex(a => a.w === curW && a.d === curD);
+      const step   = btn.classList.contains('fb-step-up') ? 1 : -1;
+      const nextI  = curIdx === -1 ? 0 : (curIdx + step + adj.length) % adj.length;
+      curW = adj[nextI].w; curD = adj[nextI].d;
+    }
+
+    document.getElementById(`fbW_ex${idx}`).textContent = curW;
+    document.getElementById(`fbD_ex${idx}`).textContent = curD;
+
+    const ex2W  = document.getElementById(`fbW_ex2_${idx}`);
+    const ex2D  = document.getElementById(`fbD_ex2_${idx}`);
+    const wrap2 = document.getElementById(`fbExtraWrap2_${idx}`);
+    if (ex2W && ex2D && wrap2 && !wrap2.classList.contains('is-hidden')) {
+      const adj3     = getAdjacentDoors(curW, curD);
+      const validAdj = adj3.filter(a => !(a.w === mainW && a.d === mainD));
+      if (validAdj.length) { ex2W.textContent = validAdj[0].w; ex2D.textContent = validAdj[0].d; }
+    }
+  } else {
+    const min = parseInt(btn.dataset.min);
+    const max = parseInt(btn.dataset.max);
+    let val   = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
+    el.textContent = Math.max(min, Math.min(max, val));
+  }
+
+  syncCurrentFromDOM(idx);
+}
+
+function _handleLabelChange(input, slug) {
+  input.dataset.changed = 'true';
+  const wrapId = input.id.replace('fbLabelInput', '');
+  if (slug && wrapId !== '') saveExitLabel(slug, parseInt(wrapId), input.value);
+
+  const wrap = document.getElementById(`fbLabelWrap${wrapId}`);
+  const row  = wrap?.previousElementSibling;
+  if (!row?.classList.contains('fb-exit-label-row')) return;
+
+  const textSpan = row.querySelector('.fb-exit-label-text');
+  if (textSpan) textSpan.textContent = input.value.trim();
+
+  const editBtn = row.querySelector('.fb-exit-label-edit-btn, .fb-add-desc-btn');
+  if (!editBtn) return;
+  if (input.value.trim()) {
+    editBtn.className = 'fb-exit-label-edit-btn';
+    editBtn.innerHTML = Icons.pencil;
+    editBtn.setAttribute('aria-label', 'Редагувати');
+    editBtn.removeAttribute('style');
+  } else {
+    editBtn.className   = 'fb-add-desc-btn';
+    editBtn.textContent = 'додати опис';
+  }
+
+  if (appState.stationsData) applyExitLabels(appState.stationsData);
+  bus.emit('station:refresh');
+}
+
+function _toggleLabelInput(itemIdx) {
+  const wrap  = document.getElementById(`fbLabelWrap${itemIdx}`);
+  const input = document.getElementById(`fbLabelInput${itemIdx}`);
+  if (!wrap || !input) return;
+
+  const isOpen = wrap.classList.contains('label-input-open');
+  document.querySelectorAll('.fb-exit-label-input-wrap.label-input-open').forEach(w => {
+    if (w !== wrap) w.classList.remove('label-input-open');
+  });
+
+  if (!isOpen) {
+    wrap.classList.add('label-input-open');
+    setTimeout(() => input.focus(), 250);
+  } else {
+    wrap.classList.remove('label-input-open');
+  }
+}
+
+function _handleAddExit(dir, slug, afterRender) {
+  const newIdx   = Object.keys(fbState.current).length;
+  const sameDir  = Object.values(fbState.current).filter(s => s.dir === dir && !s.isNew);
+  const { w, d } = sameDir.length
+    ? getOppositeDoors(sameDir[0].wMain, sameDir[0].dMain)
+    : { w: 1, d: 1 };
+
+  fbState.current[newIdx] = {
+    wMain: w, dMain: d, wEx: '-', dEx: '-', wEx2: '-', dEx2: '-',
+    hasExtra: false, hasThird: false, isClosed: false, isNew: true, dir,
+  };
+  fbState.labels[newIdx] = '';
+
+  renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
+  setTimeout(() =>
+    document.querySelector(`.fb-add-desc-btn[data-item-idx="${newIdx}"]`)?.click(), 100);
+}
+
+function _handleAddDoors(idx) {
+  document.getElementById(`fbExtraWrap${idx}`)?.classList.remove('is-hidden');
+  document.getElementById(`fbAddDoorsRow${idx}`)?.classList.add('is-hidden');
+  document.getElementById(`fbItemInner${idx}`)?.classList.add('has-extra-doors');
+
+  const mainW = parseInt(document.getElementById(`fbW${idx}`).textContent);
+  const mainD = parseInt(document.getElementById(`fbD${idx}`).textContent);
+  const adj   = getAdjacentDoors(mainW, mainD);
+
+  document.getElementById(`fbW_ex${idx}`).textContent = adj[0].w;
+  document.getElementById(`fbD_ex${idx}`).textContent = adj[0].d;
+  syncCurrentFromDOM(parseInt(idx));
+}
+
+function _handleReset(afterRender) {
+  bus.emit('ui:confirm', {
+    message: 'Скинути всі локальні зміни та повернутись до стандартних даних?',
+    onYes: async () => {
+      clearAllLocalEdits();
+      bus.emit('data:reload-stations', {
+        onDone: () => {
+          document.getElementById('fbResetWrap').innerHTML =
+            '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
+          renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
+        },
+      });
+    },
+    onNo:     () => {},
+    onCancel: () => {},
+  });
+}
 </file>
 
 <file path="src/map/mapGestures.js">
@@ -6785,491 +6910,6 @@ if (Capacitor.isNativePlatform()) {
 }
 </file>
 
-<file path="src/features/devmode.js">
-// ══ FEATURE: РЕЖИМ РОЗРОБНИКА (DEV MODE) ══
-// Відповідальність: перегляд і верифікація даних позицій безпосередньо у UI станції.
-// Активується прихованим жестом (5 тапів на футері About-шторки).
-//
-// Публічне API:
-//   isDevMode()                          → boolean
-//   toggleDevMode()                      → boolean
-//   getDevLog()                          → LogEntry[]
-//   appendDevLog(entry)                  → void
-//   isVerified(slug, posIdx)             → boolean
-//   toggleDevVerified(slug, posIdx)      → boolean
-//   getDevNote(slug, posIdx)             → string
-//   setDevNote(slug, posIdx, text)       → void
-//   attachDevModeUI(container, slug)     → void
-//   showDevModeToast(active)             → void
-//   updateDevModeIndicator(sheet, active)→ void
-//   setupDevModeTapCounter(aboutSheet)   → void
-
-
-const DEV_CHECK_SVG = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M14.83 4.89l1.34.94-5.81 8.38H9.02L5.78 9.67l1.34-1.25 2.57 2.4z"/></svg>`;
-
-const DEV_NOTE_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 12h14M5 16h6"/></svg>`;
-
-const DEV_PHOTO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" width="26" height="20"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="3,22.3 11,14.3 22.5,25.9 "/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="17.4,20.9 22,16.3 28.9,23.2 "/></svg>`;
-
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
-import { state }                  from '../core/state.js';
-import { PhotoStorage }           from '../data/photoStorage.js';
-import { bus }        from '../core/eventBus.js';
-import { LINE_COLOR } from '../core/constants.js';
-import { renderFeedbackPositions } from './feedback/fbRenderer.js';
-
-// ── Активація / деактивація ──────────────────────────
-/** Повертає true якщо режим розробника активний. */
-export function isDevMode() {
-  return Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
-}
-
-/** Перемикає режим розробника. Повертає новий стан. */
-export function toggleDevMode() {
-  const next = !isDevMode();
-  Storage.set(STORAGE_KEYS.DEV_MODE, String(next));
-  return next;
-}
-
-// ── Лог змін ────────────────────────────────────────
-/** @returns {object[]} масив записів про всі зміни позицій у dev-режимі */
-export function getDevLog() {
-  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_LOG) || '[]'); }
-  catch(e) { return []; }
-}
-
-/**
- * Додає запис до dev-лога.
- * @param {{ station:string, slug:string, dir:string, exit:string, posIdx:number, field:string, from:*, to:* }} entry
- */
-export function appendDevLog(entry) {
-  const log = getDevLog();
-  log.push({ ts: Date.now(), ...entry });
-  Storage.set(STORAGE_KEYS.DEV_LOG, JSON.stringify(log));
-}
-
-// ── Верифіковані позиції ─────────────────────────────
-/**
- * @param {string} slug
- * @param {number} posIdx
- * @returns {boolean} true якщо позицію верифіковано в dev-режимі
- */
-export function isVerified(slug, posIdx) {
-  try {
-    const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
-    return !!(v[slug]?.[posIdx]);
-  } catch(e) { return false; }
-}
-
-/**
- * Перемикає прапор верифікації позиції.
- * @param {string} slug
- * @param {number} posIdx
- * @returns {boolean} новий стан верифікації
- */
-export function toggleDevVerified(slug, posIdx) {
-  try {
-    const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
-    if (!v[slug]) v[slug] = {};
-    const nowOn = !v[slug][posIdx];
-    if (nowOn) v[slug][posIdx] = true;
-    else {
-      delete v[slug][posIdx];
-      if (!Object.keys(v[slug]).length) delete v[slug];
-    }
-    Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(v));
-    return nowOn;
-  } catch(e) { return false; }
-}
-
-// ── Нотатки ──────────────────────────────────────────
-/**
- * Повертає нотатку розробника для позиції або порожній рядок.
- * @param {string} slug
- * @param {number} posIdx
- * @returns {string}
- */
-export function getDevNote(slug, posIdx) {
-  try {
-    const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-    return notes[slug]?.[posIdx] || '';
-  } catch(e) { return ''; }
-}
-
-/**
- * Зберігає або видаляє нотатку розробника для позиції.
- * Порожній text — видаляє запис.
- * @param {string} slug
- * @param {number} posIdx
- * @param {string} text
- */
-export function setDevNote(slug, posIdx, text) {
-  try {
-    const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-    if (!notes[slug]) notes[slug] = {};
-    if (text) notes[slug][posIdx] = text;
-    else {
-      delete notes[slug][posIdx];
-      if (!Object.keys(notes[slug]).length) delete notes[slug];
-    }
-    Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(notes));
-  } catch(e) {}
-}
-
-// ── UI: кнопки в картці станції ──────────────────────
-/**
- * Вставляє кнопки dev-режиму (верифікація, нотатка, фото) у картку станції.
- * Нічого не робить якщо isDevMode() === false.
- * @param {HTMLElement} container — зазвичай sheetBody
- * @param {string}      slug
- */
-export function attachDevModeUI(container, slug) {
-  if (!isDevMode()) return;
-  const lineColor = LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)';
-
-  const defaultColor   = 'var(--border)';
-  const defaultOpacity = '1';
-
-  container.querySelectorAll('.position-row').forEach((row, posIdx) => {
-    if (row.querySelector('.dev-check-btn')) return;
-
-    row.dataset.devPosIdx = posIdx;
-    row.dataset.devSlug   = slug;
-    const photoId = `${slug}_${posIdx}`;
-
-    // ── Кнопка «Перевірено» ──
-    const checkBtn = document.createElement('button');
-    checkBtn.className = 'dev-check-btn';
-    checkBtn.type = 'button';
-    checkBtn.innerHTML = DEV_CHECK_SVG;
-
-    if (isVerified(slug, posIdx)) {
-      checkBtn.style.color   = lineColor;
-      checkBtn.style.opacity = '1';
-    } else {
-      checkBtn.style.color   = defaultColor;
-      checkBtn.style.opacity = defaultOpacity;
-    }
-
-    // ── Кнопка «Нотатка» ──
-    const noteBtn = document.createElement('button');
-    noteBtn.className = 'dev-note-btn';
-    noteBtn.type = 'button';
-    noteBtn.innerHTML = DEV_NOTE_SVG;
-
-    if (getDevNote(slug, posIdx)) {
-      noteBtn.style.color   = lineColor;
-      noteBtn.style.opacity = '1';
-    } else {
-      noteBtn.style.color   = defaultColor;
-      noteBtn.style.opacity = defaultOpacity;
-    }
-
-    // ── Кнопка «Фото» ──
-    const photoBtn = document.createElement('button');
-    photoBtn.className = 'dev-photo-btn';
-    photoBtn.type = 'button';
-    photoBtn.innerHTML = DEV_PHOTO_SVG;
-    photoBtn.style.color   = defaultColor;
-    photoBtn.style.opacity = defaultOpacity;
-
-    row.prepend(photoBtn, noteBtn, checkBtn);
-
-    PhotoStorage.loadPhoto(photoId).then(hasPhoto => {
-      if (hasPhoto) {
-        photoBtn.style.color   = lineColor;
-        photoBtn.style.opacity = '1';
-      }
-    }).catch(() => {});
-
-    checkBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      const nowVerified = toggleDevVerified(slug, posIdx);
-      checkBtn.style.color   = nowVerified ? lineColor : defaultColor;
-      checkBtn.style.opacity = nowVerified ? '1' : defaultOpacity;
-    });
-
-    noteBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor, defaultOpacity);
-    });
-
-    photoBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
-    });
-  });
-}
-
-// ── UI: панель нотатки ───────────────────────────────
-function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor, defaultOpacity) {
-  const next = row.nextElementSibling;
-
-  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'note') {
-    next.classList.remove('panel-open');
-    setTimeout(() => next.remove(), 280);
-    return;
-  }
-
-  document.querySelectorAll('.dev-note-panel').forEach(p => {
-    p.classList.remove('panel-open');
-    setTimeout(() => p.remove(), 280);
-  });
-
-  const existingNote = getDevNote(slug, posIdx);
-  const panel = document.createElement('div');
-  panel.className = 'dev-note-panel';
-  panel.dataset.type = 'note';
-  
-  // Додаємо третю кнопку "Видалити" з червоним підсвічуванням (confirm-btn-discard)
-  // Вона рендериться тільки якщо нотатка фізично вже існує в базі
-  panel.innerHTML = `
-    <textarea class="dev-note-textarea">${existingNote}</textarea> 
-    <div class="dev-note-actions"> 
-      <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button> 
-      <button type="button" class="dev-note-cancel confirm-btn-neutral">Скасувати</button> 
-      ${existingNote ? `<button type="button" class="dev-note-delete confirm-btn-discard">Видалити</button>` : ''}
-    </div>`;
-    
-  row.after(panel);
-  requestAnimationFrame(() => panel.classList.add('panel-open'));
-
-  const textarea = panel.querySelector('.dev-note-textarea');
-  setTimeout(() => textarea.focus(), 60);
-
-  // 1. ЗБЕРЕГТИ: Оновлює або створює вміст
-  panel.querySelector('.dev-note-save').addEventListener('click', e => {
-    e.stopPropagation();
-    const text = textarea.value.trim();
-    setDevNote(slug, posIdx, text);
-    noteBtn.style.color   = text ? lineColor : defaultColor;
-    noteBtn.style.opacity = text ? '1' : defaultOpacity;
-    panel.classList.remove('panel-open');
-    setTimeout(() => panel.remove(), 280);
-  });
-
-  // 2. СКАСУВАТИ: Просто закриває панель. Старі дані в Storage взагалі не чіпаємо!
-  panel.querySelector('.dev-note-cancel').addEventListener('click', e => {
-    e.stopPropagation();
-    panel.classList.remove('panel-open');
-    setTimeout(() => panel.remove(), 280);
-  });
-
-  // 3. ВИДАЛИТИ: Повністю очищує нотатку та гасить колір іконки олівця
-  const deleteBtn = panel.querySelector('.dev-note-delete');
-  if (deleteBtn) {
-    deleteBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      setDevNote(slug, posIdx, '');
-      noteBtn.style.color   = defaultColor;
-      noteBtn.style.opacity = defaultOpacity;
-      panel.classList.remove('panel-open');
-      setTimeout(() => panel.remove(), 280);
-    });
-  }
-}
-
-// ── UI: панель фото ───────────────────────────────────
-async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity) {
-  const next = row.nextElementSibling;
-
-  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'photo') {
-    next.classList.remove('panel-open');
-    setTimeout(() => next.remove(), 280);
-    return;
-  }
-
-  document.querySelectorAll('.dev-note-panel').forEach(p => {
-    p.classList.remove('panel-open');
-    setTimeout(() => p.remove(), 280);
-  });
-
-  const photoId = `${slug}_${posIdx}`;
-const existingPhoto = await PhotoStorage.loadPhoto(photoId);
-  const panel = document.createElement('div');
-  panel.className = 'dev-note-panel';
-  panel.dataset.type = 'photo';
-  panel.innerHTML = `<div style="text-align: center; margin-top: 8px;"> ${existingPhoto  ?`<img src="${existingPhoto}" style="max-width: 100%; max-height: 200px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border);" id="devPhotoThumb"/>` :`<p style="font-size: 13px; color: var(--text-muted); margin: 10px 0;">Фото не прикріплено</p>`} </div> <div class="dev-note-actions"> <button type="button" class="dev-photo-upload confirm-main-btn confirm-btn-save"> ${existingPhoto ? 'Змінити' : 'Вибрати'} </button> <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button> ${existingPhoto ? `<button type="button" class="dev-photo-clear confirm-main-btn confirm-btn-discard">Видалити</button>`: ''} </div> <input type="file" accept="image/*" class="dev-photo-input" style="display: none;" />`;
-
-  row.after(panel);
-  requestAnimationFrame(() => panel.classList.add('panel-open'));
-
-  panel.querySelector('.dev-photo-back').addEventListener('click', e => {
-    e.stopPropagation();
-    panel.classList.remove('panel-open');
-    setTimeout(() => panel.remove(), 280);
-  });
-
-  const thumb = panel.querySelector('#devPhotoThumb');
-  if (thumb) thumb.addEventListener('click', () => showDevPhotoFullscreen(existingPhoto));
-
-  const fileInput = panel.querySelector('.dev-photo-input');
-  panel.querySelector('.dev-photo-upload').addEventListener('click', e => {
-    e.stopPropagation();
-    fileInput.click();
-  });
-
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      await PhotoStorage.savePhoto(photoId, ev.target.result);
-      photoBtn.style.color   = lineColor;
-      photoBtn.style.opacity = '1';
-      panel.classList.remove('panel-open');
-      setTimeout(() => {
-        panel.remove();
-        toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
-      }, 280);
-    };
-    reader.readAsDataURL(file);
-  });
-
-  const clearBtn = panel.querySelector('.dev-photo-clear');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', async e => {
-      e.stopPropagation();
-await PhotoStorage.removePhoto(photoId);
-      photoBtn.style.color   = defaultColor;
-      photoBtn.style.opacity = defaultOpacity;
-      panel.classList.remove('panel-open');
-      setTimeout(() => panel.remove(), 280);
-    });
-  }
-}
-
-// ── Повноекранний перегляд фото ───────────────────────
-function showDevPhotoFullscreen(src) {
-  let overlay = document.getElementById('devPhotoOverlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'devPhotoOverlay';
-    overlay.className = 'dev-photo-overlay';
-    overlay.innerHTML = `<img src="" />`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', () => overlay.classList.remove('open'));
-  }
-  overlay.querySelector('img').src = src;
-  requestAnimationFrame(() => overlay.classList.add('open'));
-}
-
-// ── UI: тост активації ────────────────────────────────
-/**
- * Показує тимчасовий тост про стан dev-режиму.
- * @param {boolean} active
- */
-export function showDevModeToast(active) {
-  document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
-  const toast = document.createElement('div');
-  toast.className = 'dev-mode-toast';
-  toast.textContent = active ? 'Режим розробника увімкнено' : 'Режим розробника вимкнено';
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('dev-mode-toast-open'));
-  setTimeout(() => {
-    toast.classList.remove('dev-mode-toast-open');
-    setTimeout(() => toast.remove(), 400);
-  }, 2500);
-}
-
-const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
-
-/**
- * Оновлює SVG-іконку dev-режиму у About-шторці.
- * @param {HTMLElement} aboutSheet
- * @param {boolean}     active
- */
-export function updateDevModeIndicator(aboutSheet, active) {
-  const container = aboutSheet.querySelector('#aboutDevBtnContainer');
-  if (!container) return;
-  container.innerHTML = '';
-  if (active) {
-    container.innerHTML = DEV_MINI_SVG;
-    setupDevDataClear(container);
-  }
-}
-
-// ── Лічильник тапів на футері ─────────────────────────
-/**
- * Ініціалізує лічильник прихованих тапів на футері About-шторки.
- * 5 тапів поспіль — перемикають dev-режим.
- * @param {HTMLElement} aboutSheet
- */
-export function setupDevModeTapCounter(aboutSheet) {
-  let tapCount = 0;
-  let tapTimer = null;
-  let lastTapTime = 0;
-
-  const footer = aboutSheet.querySelector('.about-footer');
-  if (!footer) return;
-
-  footer.style.pointerEvents = 'auto';
-  updateDevModeIndicator(aboutSheet, isDevMode());
-
-  footer.addEventListener('click', (e) => {
-    const now = Date.now();
-    if (now - lastTapTime < 50) return;
-    lastTapTime = now;
-
-    tapCount++;
-    clearTimeout(tapTimer);
-
-    if (tapCount >= 5) {
-      tapCount = 0;
-      const nowActive = toggleDevMode();
-      showDevModeToast(nowActive);
-      updateDevModeIndicator(aboutSheet, nowActive);
-      bus.emit('station:refresh');
-    } else {
-      tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
-    }
-  });
-}
-
-// ── Очищення даних розробника ─────────────────────────
-function setupDevDataClear(container) {
-  let clearTaps = 0;
-  let tapTimer = null;
-
-  container.onclick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    clearTaps++;
-    clearTimeout(tapTimer);
-
-    if (clearTaps === 1) showDevModeToast(true);
-
-    tapTimer = setTimeout(() => {
-      if (clearTaps >= 5) {
-        document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
-        // Прямий виклик — без typeof guard
-        bus.emit('ui:confirm', {
-        message:  'Очистити всі дані режиму розробника?',
-
-          onYes:    async () => {
-            Storage.remove(STORAGE_KEYS.DEV_LOG);
-            Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
-            Storage.remove(STORAGE_KEYS.DEV_NOTES);
-            await PhotoStorage.clearAllPhotos().catch(err =>
-              console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
-            );
-            setTimeout(() => location.reload(), 180);
-          },
-            onNo:     null,
-            onCancel: null,
-            labelYes: 'Очистити',
-            labelNo:  'Скасувати',
-            styleYes: 'confirm-btn-discard',
-            styleNo:  'confirm-btn-neutral',
-          });
-      }
-      clearTaps = 0;
-    }, 400); 
-  };
-}
-</file>
-
 <file path="src/features/search.js">
 // ══ FEATURE: ПОШУК СТАНЦІЙ — UI-ШАР ══
 // Відповідальність: рендеринг результатів пошуку та управління шторкою.
@@ -7961,6 +7601,576 @@ export function openAboutSheet() {
 }
 </file>
 
+<file path="src/features/devmode.js">
+// ══ FEATURE: РЕЖИМ РОЗРОБНИКА (DEV MODE) ══
+// Відповідальність: перегляд і верифікація даних позицій безпосередньо у UI станції.
+// Активується прихованим жестом (5 тапів на футері About-шторки).
+//
+// Публічне API:
+//   isDevMode()                          → boolean
+//   toggleDevMode()                      → boolean
+//   getDevLog()                          → LogEntry[]
+//   appendDevLog(entry)                  → void
+//   isVerified(slug, posIdx)             → boolean
+//   toggleDevVerified(slug, posIdx)      → boolean
+//   getDevNote(slug, posIdx)             → string
+//   setDevNote(slug, posIdx, text)       → void
+//   attachDevModeUI(container, slug)     → void
+//   showDevModeToast(active)             → void
+//   updateDevModeIndicator(sheet, active)→ void
+//   setupDevModeTapCounter(aboutSheet)   → void
+
+
+const DEV_CHECK_SVG = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M14.83 4.89l1.34.94-5.81 8.38H9.02L5.78 9.67l1.34-1.25 2.57 2.4z"/></svg>`;
+
+const DEV_NOTE_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 12h14M5 16h6"/></svg>`;
+
+const DEV_PHOTO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" width="26" height="20"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="3,22.3 11,14.3 22.5,25.9 "/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="17.4,20.9 22,16.3 28.9,23.2 "/></svg>`;
+
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { state }                  from '../core/state.js';
+import { PhotoStorage }           from '../data/photoStorage.js';
+import { bus }        from '../core/eventBus.js';
+import { LINE_COLOR } from '../core/constants.js';
+import { renderFeedbackPositions } from './feedback/fbRenderer.js';
+import {
+  initGoogleDriveAuth, requestDriveAuth, getDriveAccessToken,
+  downloadDevDataFromDrive, uploadDevDataToDrive
+} from '../services/googleDrive.js';
+
+// ── Активація / деактивація ──────────────────────────
+/** Повертає true якщо режим розробника активний. */
+export function isDevMode() {
+  return Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
+}
+
+/** Перемикає режим розробника. Повертає новий стан. */
+export function toggleDevMode() {
+  const next = !isDevMode();
+  Storage.set(STORAGE_KEYS.DEV_MODE, String(next));
+  return next;
+}
+
+// ── Лог змін ────────────────────────────────────────
+/** @returns {object[]} масив записів про всі зміни позицій у dev-режимі */
+export function getDevLog() {
+  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_LOG) || '[]'); }
+  catch(e) { return []; }
+}
+
+/**
+ * Додає запис до dev-лога.
+ * @param {{ station:string, slug:string, dir:string, exit:string, posIdx:number, field:string, from:*, to:* }} entry
+ */
+export function appendDevLog(entry) {
+  const log = getDevLog();
+  log.push({ ts: Date.now(), ...entry });
+  Storage.set(STORAGE_KEYS.DEV_LOG, JSON.stringify(log));
+}
+
+// ── Верифіковані позиції ─────────────────────────────
+/**
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {boolean} true якщо позицію верифіковано в dev-режимі
+ */
+export function isVerified(slug, posIdx) {
+  try {
+    const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
+    return !!(v[slug]?.[posIdx]);
+  } catch(e) { return false; }
+}
+
+/**
+ * Перемикає прапор верифікації позиції.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {boolean} новий стан верифікації
+ */
+export function toggleDevVerified(slug, posIdx) {
+  try {
+    const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
+    if (!v[slug]) v[slug] = {};
+    const nowOn = !v[slug][posIdx];
+    if (nowOn) v[slug][posIdx] = true;
+    else {
+      delete v[slug][posIdx];
+      if (!Object.keys(v[slug]).length) delete v[slug];
+    }
+    Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(v));
+    return nowOn;
+  } catch(e) { return false; }
+}
+
+// ── Нотатки ──────────────────────────────────────────
+/**
+ * Повертає нотатку розробника для позиції або порожній рядок.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @returns {string}
+ */
+export function getDevNote(slug, posIdx) {
+  try {
+    const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
+    return notes[slug]?.[posIdx] || '';
+  } catch(e) { return ''; }
+}
+
+/**
+ * Зберігає або видаляє нотатку розробника для позиції.
+ * Порожній text — видаляє запис.
+ * @param {string} slug
+ * @param {number} posIdx
+ * @param {string} text
+ */
+export function setDevNote(slug, posIdx, text) {
+  try {
+    const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
+    if (!notes[slug]) notes[slug] = {};
+    if (text) notes[slug][posIdx] = text;
+    else {
+      delete notes[slug][posIdx];
+      if (!Object.keys(notes[slug]).length) delete notes[slug];
+    }
+    Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(notes));
+  } catch(e) {}
+}
+
+// ── UI: кнопки в картці станції ──────────────────────
+/**
+ * Вставляє кнопки dev-режиму (верифікація, нотатка, фото) у картку станції.
+ * Нічого не робить якщо isDevMode() === false.
+ * @param {HTMLElement} container — зазвичай sheetBody
+ * @param {string}      slug
+ */
+export function attachDevModeUI(container, slug) {
+  if (!isDevMode()) return;
+  const lineColor = LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)';
+
+  const defaultColor   = 'var(--border)';
+  const defaultOpacity = '1';
+
+  container.querySelectorAll('.position-row').forEach((row, posIdx) => {
+    if (row.querySelector('.dev-check-btn')) return;
+
+    row.dataset.devPosIdx = posIdx;
+    row.dataset.devSlug   = slug;
+    const photoId = `${slug}_${posIdx}`;
+
+    // ── Кнопка «Перевірено» ──
+    const checkBtn = document.createElement('button');
+    checkBtn.className = 'dev-check-btn';
+    checkBtn.type = 'button';
+    checkBtn.innerHTML = DEV_CHECK_SVG;
+
+    if (isVerified(slug, posIdx)) {
+      checkBtn.style.color   = lineColor;
+      checkBtn.style.opacity = '1';
+    } else {
+      checkBtn.style.color   = defaultColor;
+      checkBtn.style.opacity = defaultOpacity;
+    }
+
+    // ── Кнопка «Нотатка» ──
+    const noteBtn = document.createElement('button');
+    noteBtn.className = 'dev-note-btn';
+    noteBtn.type = 'button';
+    noteBtn.innerHTML = DEV_NOTE_SVG;
+
+    if (getDevNote(slug, posIdx)) {
+      noteBtn.style.color   = lineColor;
+      noteBtn.style.opacity = '1';
+    } else {
+      noteBtn.style.color   = defaultColor;
+      noteBtn.style.opacity = defaultOpacity;
+    }
+
+    // ── Кнопка «Фото» ──
+    const photoBtn = document.createElement('button');
+    photoBtn.className = 'dev-photo-btn';
+    photoBtn.type = 'button';
+    photoBtn.innerHTML = DEV_PHOTO_SVG;
+    photoBtn.style.color   = defaultColor;
+    photoBtn.style.opacity = defaultOpacity;
+
+    row.prepend(photoBtn, noteBtn, checkBtn);
+
+    PhotoStorage.loadPhoto(photoId).then(hasPhoto => {
+      if (hasPhoto) {
+        photoBtn.style.color   = lineColor;
+        photoBtn.style.opacity = '1';
+      }
+    }).catch(() => {});
+
+    checkBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const nowVerified = toggleDevVerified(slug, posIdx);
+      checkBtn.style.color   = nowVerified ? lineColor : defaultColor;
+      checkBtn.style.opacity = nowVerified ? '1' : defaultOpacity;
+    });
+
+    noteBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor, defaultOpacity);
+    });
+
+    photoBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
+    });
+  });
+}
+
+// ── UI: панель нотатки ───────────────────────────────
+function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor, defaultOpacity) {
+  const next = row.nextElementSibling;
+
+  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'note') {
+    next.classList.remove('panel-open');
+    setTimeout(() => next.remove(), 280);
+    return;
+  }
+
+  document.querySelectorAll('.dev-note-panel').forEach(p => {
+    p.classList.remove('panel-open');
+    setTimeout(() => p.remove(), 280);
+  });
+
+  const existingNote = getDevNote(slug, posIdx);
+  const panel = document.createElement('div');
+  panel.className = 'dev-note-panel';
+  panel.dataset.type = 'note';
+  
+  // Додаємо третю кнопку "Видалити" з червоним підсвічуванням (confirm-btn-discard)
+  // Вона рендериться тільки якщо нотатка фізично вже існує в базі
+  panel.innerHTML = `
+    <textarea class="dev-note-textarea">${existingNote}</textarea> 
+    <div class="dev-note-actions"> 
+      <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button> 
+      <button type="button" class="dev-note-cancel confirm-btn-neutral">Скасувати</button> 
+      ${existingNote ? `<button type="button" class="dev-note-delete confirm-btn-discard">Видалити</button>` : ''}
+    </div>`;
+    
+  row.after(panel);
+  requestAnimationFrame(() => panel.classList.add('panel-open'));
+
+  const textarea = panel.querySelector('.dev-note-textarea');
+  setTimeout(() => textarea.focus(), 60);
+
+  // 1. ЗБЕРЕГТИ: Оновлює або створює вміст
+  panel.querySelector('.dev-note-save').addEventListener('click', e => {
+    e.stopPropagation();
+    const text = textarea.value.trim();
+    setDevNote(slug, posIdx, text);
+    noteBtn.style.color   = text ? lineColor : defaultColor;
+    noteBtn.style.opacity = text ? '1' : defaultOpacity;
+    panel.classList.remove('panel-open');
+    setTimeout(() => panel.remove(), 280);
+  });
+
+  // 2. СКАСУВАТИ: Просто закриває панель. Старі дані в Storage взагалі не чіпаємо!
+  panel.querySelector('.dev-note-cancel').addEventListener('click', e => {
+    e.stopPropagation();
+    panel.classList.remove('panel-open');
+    setTimeout(() => panel.remove(), 280);
+  });
+
+  // 3. ВИДАЛИТИ: Повністю очищує нотатку та гасить колір іконки олівця
+  const deleteBtn = panel.querySelector('.dev-note-delete');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      setDevNote(slug, posIdx, '');
+      noteBtn.style.color   = defaultColor;
+      noteBtn.style.opacity = defaultOpacity;
+      panel.classList.remove('panel-open');
+      setTimeout(() => panel.remove(), 280);
+    });
+  }
+}
+
+// ── UI: панель фото ───────────────────────────────────
+async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity) {
+  const next = row.nextElementSibling;
+
+  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'photo') {
+    next.classList.remove('panel-open');
+    setTimeout(() => next.remove(), 280);
+    return;
+  }
+
+  document.querySelectorAll('.dev-note-panel').forEach(p => {
+    p.classList.remove('panel-open');
+    setTimeout(() => p.remove(), 280);
+  });
+
+  const photoId = `${slug}_${posIdx}`;
+const existingPhoto = await PhotoStorage.loadPhoto(photoId);
+  const panel = document.createElement('div');
+  panel.className = 'dev-note-panel';
+  panel.dataset.type = 'photo';
+  panel.innerHTML = `<div style="text-align: center; margin-top: 8px;"> ${existingPhoto  ?`<img src="${existingPhoto}" style="max-width: 100%; max-height: 200px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border);" id="devPhotoThumb"/>` :`<p style="font-size: 13px; color: var(--text-muted); margin: 10px 0;">Фото не прикріплено</p>`} </div> <div class="dev-note-actions"> <button type="button" class="dev-photo-upload confirm-main-btn confirm-btn-save"> ${existingPhoto ? 'Змінити' : 'Вибрати'} </button> <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button> ${existingPhoto ? `<button type="button" class="dev-photo-clear confirm-main-btn confirm-btn-discard">Видалити</button>`: ''} </div> <input type="file" accept="image/*" class="dev-photo-input" style="display: none;" />`;
+
+  row.after(panel);
+  requestAnimationFrame(() => panel.classList.add('panel-open'));
+
+  panel.querySelector('.dev-photo-back').addEventListener('click', e => {
+    e.stopPropagation();
+    panel.classList.remove('panel-open');
+    setTimeout(() => panel.remove(), 280);
+  });
+
+  const thumb = panel.querySelector('#devPhotoThumb');
+  if (thumb) thumb.addEventListener('click', () => showDevPhotoFullscreen(existingPhoto));
+
+  const fileInput = panel.querySelector('.dev-photo-input');
+  panel.querySelector('.dev-photo-upload').addEventListener('click', e => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      await PhotoStorage.savePhoto(photoId, ev.target.result);
+      photoBtn.style.color   = lineColor;
+      photoBtn.style.opacity = '1';
+      panel.classList.remove('panel-open');
+      setTimeout(() => {
+        panel.remove();
+        toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
+      }, 280);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const clearBtn = panel.querySelector('.dev-photo-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async e => {
+      e.stopPropagation();
+await PhotoStorage.removePhoto(photoId);
+      photoBtn.style.color   = defaultColor;
+      photoBtn.style.opacity = defaultOpacity;
+      panel.classList.remove('panel-open');
+      setTimeout(() => panel.remove(), 280);
+    });
+  }
+}
+
+// ── Повноекранний перегляд фото ───────────────────────
+function showDevPhotoFullscreen(src) {
+  let overlay = document.getElementById('devPhotoOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'devPhotoOverlay';
+    overlay.className = 'dev-photo-overlay';
+    overlay.innerHTML = `<img src="" />`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', () => overlay.classList.remove('open'));
+  }
+  overlay.querySelector('img').src = src;
+  requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+// ── UI: тост активації ────────────────────────────────
+/**
+ * Показує тимчасовий тост про стан dev-режиму.
+ * @param {boolean} active
+ */
+export function showDevModeToast(active) {
+  document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = 'dev-mode-toast';
+  toast.textContent = active ? 'Режим розробника увімкнено' : 'Режим розробника вимкнено';
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('dev-mode-toast-open'));
+  setTimeout(() => {
+    toast.classList.remove('dev-mode-toast-open');
+    setTimeout(() => toast.remove(), 400);
+  }, 2500);
+}
+
+const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
+
+/**
+ * Оновлює SVG-іконку dev-режиму у About-шторці.
+ * @param {HTMLElement} aboutSheet
+ * @param {boolean}     active
+ */
+export function updateDevModeIndicator(aboutSheet, active) {
+  const container = aboutSheet.querySelector('#aboutDevBtnContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (active) {
+    container.innerHTML = `
+      <div style="margin: 14px 0; text-align: center;">
+        <button type="button" id="devGoogleDriveBtn" class="confirm-main-btn confirm-btn-save" style="padding: 10px 18px; font-size: 13px; margin: 0 auto; display: inline-flex; align-items: center; gap: 8px;">
+          <>
+        </button>
+        <div id="devDriveStatus" style="font-size: 12px; color: var(--text-muted); margin-top: 6px;"></div>
+      </div>
+    `;
+
+    const syncBtn = container.querySelector('#devGoogleDriveBtn');
+    const statusEl = container.querySelector('#devDriveStatus');
+
+    syncBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      initGoogleDriveAuth(
+        async (token) => {
+          syncBtn.textContent = '🔄 Синхронізація...';
+          syncBtn.disabled = true;
+          statusEl.textContent = 'Зчитування даних із хмари...';
+
+          // 1. Підтягуємо нотатки з хмари
+          const cloudData = await downloadDevDataFromDrive();
+          if (cloudData) {
+            if (cloudData.notes) Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(cloudData.notes));
+            if (cloudData.verified) Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
+          }
+
+          // 2. Відправляємо локальний стан
+          await syncDevStateToCloud();
+
+          syncBtn.textContent = '✓ Синхронізовано';
+          statusEl.textContent = 'Нотатки та фото оновлено з Google Drive';
+          
+          setTimeout(() => {
+            syncBtn.disabled = false;
+            syncBtn.textContent = '🔄 Оновити синхронізацію';
+          }, 2500);
+
+          bus.emit('station:refresh');
+        },
+        (err) => {
+          statusEl.textContent = 'Помилка авторизації Google';
+          console.error(err);
+        }
+      );
+
+      requestDriveAuth();
+    });
+
+    setupDevDataClear(container);
+  }
+}
+
+export async function syncDevStateToCloud() {
+  const token = getDriveAccessToken();
+  if (!token) return;
+
+  const payload = {
+    notes: JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}'),
+    verified: JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}'),
+    log: getDevLog(),
+    updatedAt: Date.now(),
+  };
+
+  await uploadDevDataToDrive(payload);
+}
+
+// ── Лічильник тапів на футері ─────────────────────────
+/**
+ * Ініціалізує лічильник прихованих тапів на футері About-шторки.
+ * 5 тапів поспіль — перемикають dev-режим.
+ * @param {HTMLElement} aboutSheet
+ */
+export function setupDevModeTapCounter(aboutSheet) {
+  let tapCount = 0;
+  let tapTimer = null;
+  let lastTapTime = 0;
+
+  const footer = aboutSheet.querySelector('.about-footer');
+  if (!footer) return;
+
+  footer.style.pointerEvents = 'auto';
+  updateDevModeIndicator(aboutSheet, isDevMode());
+
+  footer.addEventListener('click', (e) => {
+    const now = Date.now();
+    if (now - lastTapTime < 50) return;
+    lastTapTime = now;
+
+    tapCount++;
+    clearTimeout(tapTimer);
+
+    if (tapCount >= 5) {
+      tapCount = 0;
+      const nowActive = toggleDevMode();
+      showDevModeToast(nowActive);
+      updateDevModeIndicator(aboutSheet, nowActive);
+      bus.emit('station:refresh');
+    } else {
+      tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
+    }
+  });
+}
+
+// Автоматично ініціалізуємо SDK
+initGoogleDriveAuth(
+  async (token) => {
+    showDevModeToast(true);
+    // Після входу завантажуємо та об'єднуємо нотатки
+    const cloudData = await downloadDevDataFromDrive();
+    if (cloudData?.notes) {
+      Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(cloudData.notes));
+    }
+    if (cloudData?.verified) {
+      Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
+    }
+    bus.emit('station:refresh');
+  },
+  (err) => console.error(err)
+);
+
+// ── Очищення даних розробника ─────────────────────────
+function setupDevDataClear(container) {
+  let clearTaps = 0;
+  let tapTimer = null;
+
+  container.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    clearTaps++;
+    clearTimeout(tapTimer);
+
+    if (clearTaps === 1) showDevModeToast(true);
+
+    tapTimer = setTimeout(() => {
+      if (clearTaps >= 5) {
+        document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
+        // Прямий виклик — без typeof guard
+        bus.emit('ui:confirm', {
+        message:  'Очистити всі дані режиму розробника?',
+
+          onYes:    async () => {
+            Storage.remove(STORAGE_KEYS.DEV_LOG);
+            Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
+            Storage.remove(STORAGE_KEYS.DEV_NOTES);
+            await PhotoStorage.clearAllPhotos().catch(err =>
+              console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
+            );
+            setTimeout(() => location.reload(), 180);
+          },
+            onNo:     null,
+            onCancel: null,
+            labelYes: 'Очистити',
+            labelNo:  'Скасувати',
+            styleYes: 'confirm-btn-discard',
+            styleNo:  'confirm-btn-neutral',
+          });
+      }
+      clearTaps = 0;
+    }, 400); 
+  };
+}
+</file>
+
 <file path="src/sheets/stationSheet.js">
 import { state }                   from '../core/state.js';
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
@@ -8189,128 +8399,6 @@ export function refreshCurrentStation() {
 }
 </file>
 
-<file path="src/ui/icons.js">
-// ══ ІКОНКИ ══ Єдине сховище SVG-рядків. Чистий ES-модуль без залежностей.
-// Використовуй через Icons.назва — не вбудовуй SVG безпосередньо у код.
-
-export const Icons = { pencil: `<svg aria-hidden="true" focusable="false"
-viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg"
-fill="currentColor"><path
-d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z
-M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z
-M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8
-C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
-
-  undo: `<svg aria-hidden="true" focusable="false"
-  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-  stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-  stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9
-  9 0 0 0-6 2.3L3 13"/></svg>`,
-
-  info: `<svg aria-hidden="true" focusable="false"
-  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42"
-  fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28
-  3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25
-  0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469
-  1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47
-  0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343
-  1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0
-  17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5
-  8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437
-  7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03
-  5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937
-  4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187
-  13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate
-  (-65.818 -42.216)scale(.26458)"/></svg>`,
-
-  search: `<svg aria-hidden="true" focusable="false"
-  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-  stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-  stroke-linejoin="round" opacity="0.7"><circle cx="11" cy="11"
-  r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
-
-  heartPath: `M12.5 0.658c-1.739 0-3.251 0.992-4
-  2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343
-  0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924
-  9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598
-  7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091
-  0-2.481-2.019-4.5-4.5-4.5z`,
-
-  heartOutlinePath: `M12.5 0.658c-1.739 0-3.251 0.992-4
-  2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343
-  0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924
-  9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598
-  7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091
-  0-2.481-2.019-4.5-4.5-4.5zM15.889 5.98l-0.113 0.37c-0.809 3.246-5.946
-  7.727-7.276
-  8.843-1.282-1.083-6.122-5.337-7.285-8.872l-0.1-0.316c-0.077-0.311-0.115-0.588-0.115-0.847
-  0-1.93 1.57-3.5 3.5-3.5s3.5 1.571 3.5 3.5v0.252h1v-0.252c0-1.93 1.57-3.5
-  3.5-3.5s3.5 1.57 3.5 3.5c0 0.258-0.038 0.527-0.111 0.822z`,
-
-  dockHeartEmpty: `<svg xmlns="http://www.w3.org/2000/svg" width="24"
-  height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor"
-  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
-  opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5
-  1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
-
-  dockHeartFilled: `<svg xmlns="http://www.w3.org/2000/svg" width="24"
-  height="24" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor"
-  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
-  opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5
-  1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
-
-  dockPinEmpty: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"
-  width="26" height="26"><path
-  d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z
-  M16,28.677
-  C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z
-  M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z
-  M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z"
-  fill="var(--icon-color)" stroke="var
-  (--icon-color)" stroke-width="0.5"/></svg>`,
-
-  dockPinFilled: `<svg viewBox="0 -1.5 32 32"
-  xmlns="http://www.w3.org/2000/svg" width="26" height="26"><path
-  fill-rule="evenodd" clip-rule="evenodd"
-  d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z
-  M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z"
-  fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
-
-  wheelchair: `<svg aria-hidden="true" focusable="false"
-  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-  fill="currentColor"><path
-  d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/></svg>`,
-
-elevator: `<svg aria-hidden="true" focusable="false"
-xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g
-transform="translate(24, 1) scale(-0.85, 0.85)"><path fill="none"
-stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
-stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
-3.764M17 23.5c-1 0-1.75-1.5-1.75-1.5c-.75-1.5-.75-2.5-.75-4v-1.5h-3.207M23
-14c-.265 0-.66.275-.993.553a4.9 4.9 0 0 0-1.088 1.276c-.214.367-.419.813-.419
-1.171c0-.358-.205-.804-.42-1.171a4.9 4.9 0 0 0-1.087-1.276C18.661 14.275
-18.265 14 18 14m5-4c-.265 0-.66-.275-.993-.553a4.9 4.9 0 0
-1-1.088-1.276C20.705 7.804 20.5 7.358 20.5 7c0 .358-.205.804-.42
-1.171c-.285.49-.659.918-1.087 1.276c-.332.278-.728.553-.993.553M6 23.5a5.5
-5.5 0 1 1 0-11a5.5 5.5 0 0 1 0 11Zm5.35-19s-1.6-1-1.6-2.25a1.747 1.747 0 1 1
-3.496 0c0 1.25-1.596 2.25-1.596 2.25z"/></g></svg>`,
-
-escalator: `<svg aria-hidden="true" focusable="false"
-xmlns="http://www.w3.org/2000/svg" viewBox="0 0 883 468"
-fill="currentColor"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
-0,6.4 -2.1,29.2 -3.6,38.1 -5.4,33.1 -18.8,65.8 -40,96.7 l -6.3,9.3 h 306.1
-l -0.7,10.8 c -1.7,26.6 -7.4,55.4 -14.8,74.8 -6.2,16.1 -16.7,35.4 -29.3,53.6
-l -5.3,7.8 h 305.9 v 2.9 c
-0,5.6 -2.1,23.7 -4.1,36.1 -5.1,30.4 -18.6,65.4 -37.9,98 -3.8,6.6 -7,12.1 -7,12.4
-0,0.4 49.5,0.6 110,0.6 h 110 v -25 h -89 c -48.9,0 -89,-0.2 -89,-0.5 0,-0.3
-1.4,-3.3 3,-6.6 4.1,-7.9 12.1,-28.3 15.4,-38.6 9.6,-30.6 13.8,-61.7
-12.8,-95.1 l -0.2,-8.2 h -142.5 c -78.4,0 -142.5,-0.2 -142.5,-0.5 0,-0.3
-1.6,-3.8 3.6,-7.8 8.4,-16.7 16,-38.8 19.9,-58.2 3.7,-18.1 4.7,-28.8 5.2,-54.3
-l 0.6,-26.2 h -142.7 c -78.4,0 -142.6,-0.2 -142.6,-0.4 0,-0.1 2.2,-5
-4.9,-10.7 10.1,-21.5 17.9,-47.5 21.7-71.9 1.8-11.8 3.2-56.5 2-61.5
-l -0.6,-2.5 h -143.4 c -78.8,0 -33,23.8 -33,23.8 z"/></svg>`,};
-</file>
-
 <file path="src/core/storage.js">
 // ══ СХОВИЩЕ ДАНИХ ДОДАТКУ (НАТИВНЕ) ══
 // Відповідальність: збереження даних користувача через Capacitor Preferences.
@@ -8456,6 +8544,128 @@ if (!Capacitor.isNativePlatform()) {
     }
   });
 }
+</file>
+
+<file path="src/ui/icons.js">
+// ══ ІКОНКИ ══ Єдине сховище SVG-рядків. Чистий ES-модуль без залежностей.
+// Використовуй через Icons.назва — не вбудовуй SVG безпосередньо у код.
+
+export const Icons = { pencil: `<svg aria-hidden="true" focusable="false"
+viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg"
+fill="currentColor"><path
+d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z
+M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z
+M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8
+C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
+
+  undo: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+  stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9
+  9 0 0 0-6 2.3L3 13"/></svg>`,
+
+  info: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42"
+  fill="currentColor"><path d="m312.043 291.275-2.063 8.438q-9.28
+  3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25
+  0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469
+  1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47
+  0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343
+  1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0
+  17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5
+  8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437
+  7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03
+  5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937
+  4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187
+  13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate
+  (-65.818 -42.216)scale(.26458)"/></svg>`,
+
+  search: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+  stroke-linejoin="round" opacity="0.7"><circle cx="11" cy="11"
+  r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+
+  heartPath: `M12.5 0.658c-1.739 0-3.251 0.992-4
+  2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343
+  0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924
+  9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598
+  7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091
+  0-2.481-2.019-4.5-4.5-4.5z`,
+
+  heartOutlinePath: `M12.5 0.658c-1.739 0-3.251 0.992-4
+  2.439-0.749-1.447-2.261-2.439-4-2.439-2.481 0-4.5 2.019-4.5 4.5 0 0.343
+  0.048 0.699 0.154 1.118l0.109 0.351c1.432 4.354 7.659 9.393 7.924
+  9.604l0.313 0.252 0.313-0.252c0.282-0.227 6.926-5.598
+  7.927-9.614l0.112-0.368c0.101-0.402 0.148-0.749 0.148-1.091
+  0-2.481-2.019-4.5-4.5-4.5zM15.889 5.98l-0.113 0.37c-0.809 3.246-5.946
+  7.727-7.276
+  8.843-1.282-1.083-6.122-5.337-7.285-8.872l-0.1-0.316c-0.077-0.311-0.115-0.588-0.115-0.847
+  0-1.93 1.57-3.5 3.5-3.5s3.5 1.571 3.5 3.5v0.252h1v-0.252c0-1.93 1.57-3.5
+  3.5-3.5s3.5 1.57 3.5 3.5c0 0.258-0.038 0.527-0.111 0.822z`,
+
+  dockHeartEmpty: `<svg xmlns="http://www.w3.org/2000/svg" width="24"
+  height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+  opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5
+  1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
+
+  dockHeartFilled: `<svg xmlns="http://www.w3.org/2000/svg" width="24"
+  height="24" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor"
+  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+  opacity="0.7"><path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5
+  1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/></svg>`,
+
+  dockPinEmpty: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"
+  width="26" height="26"><path
+  d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z
+  M16,28.677
+  C13.71,26.629,6,19.202,6,12C6,6.486,10.486,2,16,2s10,4.486,10,10C26,19.202,18.29,26.629,16,28.677z
+  M16,6c-3.314,0-6,2.686-6,6 s2.686,6,6,6s6-2.686,6-6S19.314,6,16,6z
+  M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z"
+  fill="var(--icon-color)" stroke="var
+  (--icon-color)" stroke-width="0.5"/></svg>`,
+
+  dockPinFilled: `<svg viewBox="0 -1.5 32 32"
+  xmlns="http://www.w3.org/2000/svg" width="26" height="26"><path
+  fill-rule="evenodd" clip-rule="evenodd"
+  d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z
+  M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z"
+  fill="currentColor" stroke="currentColor" stroke-width="0.5"/></svg>`,
+
+  wheelchair: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+  fill="currentColor"><path
+  d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/></svg>`,
+
+elevator: `<svg aria-hidden="true" focusable="false"
+xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g
+transform="translate(24, 1) scale(-0.85, 0.85)"><path fill="none"
+stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
+3.764M17 23.5c-1 0-1.75-1.5-1.75-1.5c-.75-1.5-.75-2.5-.75-4v-1.5h-3.207M23
+14c-.265 0-.66.275-.993.553a4.9 4.9 0 0 0-1.088 1.276c-.214.367-.419.813-.419
+1.171c0-.358-.205-.804-.42-1.171a4.9 4.9 0 0 0-1.087-1.276C18.661 14.275
+18.265 14 18 14m5-4c-.265 0-.66-.275-.993-.553a4.9 4.9 0 0
+1-1.088-1.276C20.705 7.804 20.5 7.358 20.5 7c0 .358-.205.804-.42
+1.171c-.285.49-.659.918-1.087 1.276c-.332.278-.728.553-.993.553M6 23.5a5.5
+5.5 0 1 1 0-11a5.5 5.5 0 0 1 0 11Zm5.35-19s-1.6-1-1.6-2.25a1.747 1.747 0 1 1
+3.496 0c0 1.25-1.596 2.25-1.596 2.25z"/></g></svg>`,
+
+escalator: `<svg aria-hidden="true" focusable="false"
+xmlns="http://www.w3.org/2000/svg" viewBox="0 0 883 468"
+fill="currentColor"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
+0,6.4 -2.1,29.2 -3.6,38.1 -5.4,33.1 -18.8,65.8 -40,96.7 l -6.3,9.3 h 306.1
+l -0.7,10.8 c -1.7,26.6 -7.4,55.4 -14.8,74.8 -6.2,16.1 -16.7,35.4 -29.3,53.6
+l -5.3,7.8 h 305.9 v 2.9 c
+0,5.6 -2.1,23.7 -4.1,36.1 -5.1,30.4 -18.6,65.4 -37.9,98 -3.8,6.6 -7,12.1 -7,12.4
+0,0.4 49.5,0.6 110,0.6 h 110 v -25 h -89 c -48.9,0 -89,-0.2 -89,-0.5 0,-0.3
+1.4,-3.3 3,-6.6 4.1,-7.9 12.1,-28.3 15.4,-38.6 9.6,-30.6 13.8,-61.7
+12.8,-95.1 l -0.2,-8.2 h -142.5 c -78.4,0 -142.5,-0.2 -142.5,-0.5 0,-0.3
+1.6,-3.8 3.6,-7.8 8.4,-16.7 16,-38.8 19.9,-58.2 3.7,-18.1 4.7,-28.8 5.2,-54.3
+l 0.6,-26.2 h -142.7 c -78.4,0 -142.6,-0.2 -142.6,-0.4 0,-0.1 2.2,-5
+4.9,-10.7 10.1,-21.5 17.9,-47.5 21.7-71.9 1.8-11.8 3.2-56.5 2-61.5
+l -0.6,-2.5 h -143.4 c -78.8,0 -33,23.8 -33,23.8 z"/></svg>`};
 </file>
 
 <file path="src/map/mapInteraction.js">
@@ -9471,726 +9681,6 @@ async function bootstrap() {
 
 bootstrap();
 registerServiceWorker();
-</file>
-
-<file path="index.html">
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>KyivMetroGO</title>
-  
-<style id="critical-theme">
-    html, body { background: #000000; } /* Темна за замовчуванням */
-    
-    /* Якщо примусово увімкнена світла: */
-    html[data-theme="light"], 
-    html[data-theme="light"] body { background: #e5e5ea; }
-    
-    /* Якщо системна світла І користувач не вибрав примусово темну: */
-    @media (prefers-color-scheme: light) { 
-      html:not([data-theme="dark"]), 
-      html:not([data-theme="dark"]) body { background: #e5e5ea; } 
-    }
-
-    /* Лоадер має висіти НАД картою, а не штовхати її */
-    .loader-container {
-      position: fixed;
-      inset: 0; /* Розтягуємо на весь екран (top:0; left:0; right:0; bottom:0) */
-      z-index: 9999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #000000; /* Закриваємо карту фоном, поки вона крива */
-    }
-    
-    /* Підтримуємо світлу тему для фону лоадера */
-    html[data-theme="light"] .loader-container { background: #e5e5ea; }
-    @media (prefers-color-scheme: light) { 
-      html:not([data-theme="dark"]) .loader-container { background: #e5e5ea; } 
-    }
-
-    .loader-container.hidden {
-      display: none;
-    }
-    
-    .loader-container svg {
-      width: 120px; /* Фіксуємо розмір, бо інакше флекс розтягне його на весь екран */
-      height: 120px;
-    }
-    /* Базовий колір пелюсток SVG — JS одразу перезаписує, але до старту анімації */
-    .loader-container .st4 { fill: #1a1a1a; }
-    @media (prefers-color-scheme: light) {
-      .loader-container .st4 { fill: #c8c8cc; }
-    }
-    [data-theme="light"] .loader-container .st4 { fill: #c8c8cc; }
-    [data-theme="dark"]  .loader-container .st4 { fill: #1a1a1a; }
-</style>
-<script>
-    /* Миттєво застосовуємо збережену тему ДО малювання сторінки браузером */
-    const t = localStorage.getItem('metro_theme') || 'system';
-const actual = t === 'system'
-  ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-  : t;
-document.documentElement.setAttribute('data-theme', actual);
-</script>
-
-<link rel="stylesheet" href="styles.css">
-
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="icon-96x96.png">
-  <link rel="apple-touch-icon" href="icon-192x192.png">
-  
-  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-</head>
-<body id="map-page">
-
-<main class="container">
-  
-  <div class="loader-container" id="startupLoader">
-    <svg version="1.1" viewBox="0 0 36.31892 37.081547" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-          <clipPath clipPathUnits="userSpaceOnUse" id="loaderClipPath">
-            <rect style="fill:#040000;fill-opacity:1;stroke-width:6.38362;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:15.1" width="52.837963" height="47.786671" x="121.2369" y="117.18448" ry="1.3288821" />
-          </clipPath>
-        </defs>
-        <g transform="translate(-162.85484,-126.18087)">
-          <g transform="translate(32.460036,2.9988233)" clip-path="url(#loaderClipPath)">
-            <g id="loaderPetals" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
-              <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
-              <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
-              <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
-              <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 8,-2 8,-4.9 z" />
-              <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z" />
-              <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z" />
-              <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z" />
-              <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 -3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
-              <path class="st4" d="m 227.95,217.46 c 2.1,-0.9 4.2,-1.3 4.8,1.4 0.5,2.5 -0.6,5.3 -1.7,6 -1.5,0.3 -4.1,-1 -5.5,-3 -1.4,-2.4 0.3,-3.6 2.4,-4.4 z" />
-              <path class="st4" d="m 212.05,255.66 c -0.9,-2.1 -1.3,-4.2 1.4,-4.7 2.5,-0.5 5.4,0.6 6,1.7 0.3,1.5 -1,4.1 -3.1,5.4 -2.2,1.4 -3.5,-0.3 -4.3,-2.4 z" />
-              <path class="st4" d="m 250.75,271.96 c 2.1,-0.9 3.9,-2.1 2.4,-4.4 -1.4,-2.1 -4.2,-3.3 -5.5,-3 -1.3,0.8 -2.2,3.6 -1.7,6 0.6,2.7 2.7,2.3 4.8,1.4 z" />
-              <path class="st4" d="m 212.05,233.26 c 0.9,-2.1 2.1,-3.9 4.4,-2.4 2.2,1.4 3.4,4.2 3.1,5.4 -0.8,1.3 -3.6,2.2 -6,1.7 -2.8,-0.6 -2.4,-2.6 -1.5,-4.7 z" />
-              <path class="st4" d="m 228.35,271.46 c -2.1,-0.9 -3.9,-2.1 -2.4,-4.4 1.4,-2.1 4.2,-3.3 5.5,-3 1.3,0.8 2.2,3.6 1.7,6 -0.6,2.7 -2.7,2.3 -4.8,1.4 z" />
-              <path class="st4" d="m 250.55,217.46 c 2.1,0.9 3.9,2.1 2.4,4.4 -1.4,2.1 -4.2,3.3 -5.5,3 -1.3,-0.8 -2.2,-3.6 -1.7,-6 0.6,-2.7 2.7,-2.3 4.8,-1.4 z" />
-              <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z" />
-              <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z" />
-            </g>
-<path id="loaderCenter" class="st16" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" />
-          </g>
-        </g>
-      </svg>
-    </div> <div id="mapViewport" class="map-viewport is-loading">
-      <div id="mapInner" class="map-inner"></div>
-    </div> </main>
-
-<nav class="bottom-nav-dock">
-<button id="favListBtn" class="dock-btn" aria-label="Вибране">
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.7">
-    <path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5 1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/>
-  </svg>
-</button>
-
-  <button id="menuBtn" class="dock-btn dock-btn-center" aria-label="Меню">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" opacity="0.7">
-      <circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/>
-    </svg>
-  </button>
-
-  <button id="searchBtnTop" class="dock-btn" aria-label="Пошук">
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7">
-      <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-    </svg>
-  </button>
-</nav>
-
-  <div id="dropMenu" class="drop-menu" hidden>
-<button class="drop-item" id="settingsItem">
-      <div class="drop-item-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" style="transform: scale(0.95);">
-          <path fill-rule="evenodd" d="M6.77208,0.683772 C6.90819,0.27543 7.29033,0 7.72076,0 L8.27924,0 C8.70967,0 9.09181,0.27543 9.22792,0.683772 L9.75342,2.26026 C10.125,2.37363 10.4812,2.52208 10.8183,2.70177 L12.3051,1.9584 C12.6901,1.7659 13.155,1.84136 13.4594,2.14572 L13.8543,2.54062 C14.1587,2.84498 14.2341,3.30995 14.0416,3.69494 L13.2983,5.1817 C13.4779,5.51878 13.6264,5.87503 13.7397,6.24658 L15.3162,6.77208 C15.7246,6.90819 16,7.29033 16,7.72076 L16,8.27924 C16,8.70967 15.7246,9.09181 15.3162,9.22792 L13.7397,9.75342 C13.6264,10.125 13.4779,10.4812 13.2983,10.8183 L14.0416,12.3051 C14.2341,12.69 14.1587,13.155 13.8543,13.4594 L13.4594,13.8543 C13.155,14.1586 12.6901,14.2341 12.3051,14.0416 L10.8183,13.2982 C10.4812,13.4779 10.125,13.6264 9.75342,13.7397 L9.22792,15.3162 C9.09181,15.7246 8.70967,16 8.27924,16 L7.72076,16 C7.29033,16 6.90819,15.7246 6.77208,15.3162 L6.24658,13.7397 C5.87503,13.6264 5.51879,13.4779 5.18172,13.2983 L3.69491,14.0417 C3.30992,14.2342 2.84495,14.1587 2.54059,13.8543 L2.14568,13.4594 C1.84132,13.1551 1.76587,12.6901 1.95836,12.3051 L2.70176,10.8183 C2.52208,10.4812 2.37363,10.125 2.26026,9.75342 L0.683772,9.22792 C0.27543,9.09181 0,8.70967 0,8.27924 L0,7.72076 C0,7.29033 0.27543,6.90819 0.683772,6.77208 L2.26026,6.24658 C2.37363,5.87502 2.52208,5.51876 2.70176,5.18167 L1.95837,3.69488 C1.76587,3.30989 1.84133,2.84492 2.14569,2.54056 L2.54059,2.14565 C2.84495,1.84129 3.30993,1.76584 3.69491,1.95833 L5.18172,2.70174 C5.5188,2.52207 5.87504,2.37362 6.24658,2.26026 L6.77208,0.683772 Z M8,12 C10.2091,12 12,10.2091 12,8 C12,5.79086 10.2091,4 8,4 C5.79086,4 4,5.79086 4,8 C4,10.2091 5.79086,12 8,12 Z"/>
-        </svg>
-      </div>
-    </button>
-    <button class="drop-item" id="checkinBtn" aria-label="Check-in" hidden></button>
-    <button class="drop-item" id="feedbackItem">
-      <div class="drop-item-icon">
-        <svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-          <path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/>
-        </svg>
-      </div>
-    </button>
-    <button class="drop-item" id="aboutItem">
-      <div class="drop-item-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
-          <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
-        </svg>
-      </div>
-    </button>
-  </div>
-
-  <div id="sheetOverlay" class="sheet-overlay"></div>
-
-  <div id="stationSheet" class="station-sheet">
-    <div class="sheet-handle-bar">
-      <button class="fav-btn-bar" aria-label="Вибране"></button>
-      <div class="sheet-handle"></div>
-      <span class="sheet-station-title" id="stationTitleMain"></span>
-      <button id="sheetCheckinBtn" class="sheet-action-btn" aria-label="Журнал check-in" hidden></button>
-      <button id="sheetClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
-    </div>
-    <div id="sheetBody" class="sheet-body"></div>
-  </div>
-
-  <div id="favSheet" class="station-sheet">
-    <div class="sheet-handle-bar">
-      <div class="sheet-handle"></div>
-      <span class="sheet-sheet-title">Вибрані станції та виходи</span>
-      <button id="favClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
-    </div>
-    <div id="favBody" class="sheet-body"></div>
-  </div>
-
-  <template id="tpl-search-sheet">
-    <div class="sheet-handle-bar">
-      <div class="sheet-handle"></div>
-      <span class="sheet-sheet-title">Пошук</span>
-      <button class="sheet-close-btn" id="searchClose" aria-label="Закрити">✕</button>
-    </div>
-    <div class="search-input-wrap">
-      <input type="text" id="searchInput" class="search-input" autocomplete="off">
-    </div>
-    <div id="searchLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
-      <button class="search-line-btn is-active" data-line="">всі</button>
-      <button class="search-line-btn" data-line="red">червона</button>
-      <button class="search-line-btn" data-line="blue">синя</button>
-      <button class="search-line-btn" data-line="green">зелена</button>
-    </div>
-<div class="sheet-body" style="padding-top: 0;">
-      <div id="searchResults" class="search-results" aria-live="polite" aria-atomic="true"></div>
-    </div>
-  </template>
-
-  <template id="tpl-about-sheet">
-    <div class="sheet-handle-bar">
-    <button id="aboutDevBtnContainer" aria-label="Режим розробника"></button>
-    <div class="sheet-handle"></div>
-    <span class="sheet-sheet-title about-version-title">KyivMetroGO</span>
-    <button class="sheet-close-btn" id="aboutClose" aria-label="Закрити">✕</button>
-  </div>
-
-<div class="sheet-body">
-
-      <div class="about-content">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" id="aboutLogoImg">
-    <g style="fill: var(--line-green); fill-opacity:1">
-      <g style="fill: var(--line-green); fill-opacity:1">
-        <path d="M49.904 120.033h10v10h-10z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
-        <path d="M59.82 120.033h10v10h-10z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
-        <path d="M69.736 120.033h10v10h-10z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
-      </g>
-    </g>
-    <g style="fill: var(--line-blue); fill-opacity:1">
-      <path d="M62.836 114.963H82.78v8H62.836z" style="fill: var(--line-blue); fill-opacity:1; stroke-width:.127791" transform="matrix(.50098 0 0 1.25 -28.48 -140.705)"/>
-    </g>
-    <g style="fill: var(--line-green); fill-opacity:1">
-      <path d="M144.141 82.952h14.995v2.314h-14.995z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.0595893" transform="matrix(.33374 0 0 2.16109 -40.118 -176.267)"/>
-    </g>
-    <g style="fill: var(--line-green); fill-opacity:1">
-      <path d="M144.141 82.952h14.995v2.314h-14.995z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.0595893" transform="matrix(.33374 0 0 6.48327 -35.122 -529.802)"/>
-    </g>
-    <path d="M96.983 35h5v5h-5z" style="fill: var(--line-blue); fill-opacity:1; stroke-width:.0505852" transform="matrix(1.00085 0 0 1 -84.074 -32)"/>
-    <path d="M91.983 40h5v15h-5z" style="fill: var(--line-blue); fill-opacity:1; stroke-width:.0876163" transform="matrix(1.00085 0 0 1 -84.074 -32)"/>
-  </svg>
-  
-  <p style="text-align: center;">Заощадження часопростору у київському&nbsp;метро</p>      
-
-       <div class="about-card">
-          <div class="about-card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 5" style="width: 52px !important; max-width: none !important; height: auto; border-radius: 4px; display: block; transform: translateY(-1px);">
-              <path fill="currentColor" d="M0 0h10v5H0z"/>
-              <path fill="var(--bg-card)" transform="translate(-112.36 -152.57) scale(.26458)" d="m433.82 582.27v8.6389h1.2917v-9.7222h-7.1944v9.7222h1.3056v-8.6389zm5.5972 4.8611v-2.0694h2.375v5.8472h1.2917v-6.875h-4.9583v3.0417c0 2.6667-0.5 2.9861-1.2639 2.9861v0.84722c0.125 0.0417 0.44445 0.0695 0.65278 0.0695 1.1667 0 1.9028-0.65278 1.9028-3.8472zm11.681-5.9444-2.5556 5.1389-2.5556-5.1389h-1.4028l3.3472 6.6667-1.6806 3.0556h1.4028l4.8472-9.7222zm7.9861 1.0833v-1.0833h-4.9722v9.7222h1.3056v-8.6389z"/>
-            </svg>
-          </div>
-          <p class="about-card-text">Натисніть на станцію, і отримаєте вагон та двері, які&nbsp;будуть якнайближче до&nbsp;виходу з&nbsp;підземки</p>
-        </div>
-
-        <div class="about-card">
-          <div class="about-card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 22" fill="currentColor" style="width: 30px !important; max-width: none !important; height: auto; display: block; transform: translateY(-3px);">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-          </div>
-          <p class="about-card-text" style="margin: 0;">
-            Для швидкого доступу додавайте станції та окремі виходи до&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span>
-          </p>
-        </div>
-
-        <div class="about-card">
-          <div class="about-card-icon">
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="width: 34px !important; max-width: none !important; height: auto; display: block; transform: translateY(2px);">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" stroke="currentColor" stroke-width="0.5"/>
-            </svg>
-          </div>
-          <p class="about-card-text">Відмічайте виходи, якими скористались. Переглядайте статистику <span style="font-variant: small-caps;">Check&#8209;in</span>&#8209;ів<span class="about-card-note">Потребує активації в налаштуваннях</span></p>
-        </div>
-
-        <div class="about-card">
-          <div class="about-card-icon">
-            <svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="width: 30px !important; max-width: none !important; height: auto; display: block; transform: translateY(-1px);">
-              <path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/>
-            </svg>
-          </div>
-          <p class="about-card-text">Виправляйте неточності та підписуйте виходи з&nbsp;метро<span class="about-card-note">Потребує активації в налаштуваннях</span></p>
-        </div>
-
-<div class="about-card about-support-card" style="padding-top: 16px;">
-  <div class="about-support-cols" style="display: flex; width: 100%;">
-    
-    <div class="about-support-col" style="display: flex; flex-direction: column;">
-      <div class="about-support-platform-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48A5.84 5.84 0 0 0 12 1.5c-.73 0-1.42.14-2.06.39L8.46.41c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.29 1.3A5.92 5.92 0 0 0 6 7h12a5.92 5.92 0 0 0-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/>
-        </svg>
-      </div>
-      <div style="text-align: center; margin-bottom: 8px;">
-        <div class="about-support-text" style="margin-bottom: 0;">ранній доступ<br>до-Android-версії</div>
-      </div>
-      <div style="position: relative; width: 100%; max-width: 140px; margin: 0 auto;">
-        <button type="button" id="btnInfoAndroid" style="background: none; border: none; color: var(--text-muted); opacity: 0.8; transition: color 0.2s, opacity 0.2s;">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
-            <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
-          </svg>
-        </button>
-        <form class="about-beta-form" id="aboutBetaForm" style="margin-bottom: 0; width: 100%;">
-          <div class="about-input-group">
-            <input type="text" name="username" placeholder="" class="about-beta-input" autocomplete="username" inputmode="email" spellcheck="false">
-            <span class="about-gmail-domain">@gmail.com</span>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div class="about-support-divider"></div>
-
-    <div class="about-support-col" style="display: flex; flex-direction: column;">
-      <div class="about-support-platform-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-        </svg>
-      </div>
-      <div style="text-align: center; margin-bottom: 8px;">
-        <div class="about-support-text" style="margin-bottom: 0;">підтримати реліз<br>на iOS</div>
-      </div>
-      <div style="position: relative; width: 100%; max-width: 140px; margin: 0 auto; margin-top: auto; margin-bottom: 0;">
-        <button type="button" id="btnInfoIOS" style="background: none; border: none; color: var(--text-muted); opacity: 0.8; transition: color 0.2s, opacity 0.2s;">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
-            <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
-          </svg>
-        </button>
-
-        <a href="https://send.monobank.ua/ПОСИЛАННЯ" target="_blank" rel="noopener" class="about-donate-btn-mono about-colored-btn about-btn-mono-fixed" style="margin: 0 !important; width: 100% !important;">mono</a>
-      </div>
-    </div>
-  </div> <p class="settings-hint" id="hintAndroid" hidden style="width: 100%; margin-top: 12px; margin-bottom: 0; padding: 0; font-size: 11px; text-align: left; line-height: 1.4; color: var(--text-muted);">
-    Для першого етапу тестування<br>потрібні <strong>12&nbsp;користувачів</strong> —<br>це правило Google Play
-</p>
-
-<p class="settings-hint" id="hintIOS" hidden style="width: 100%; margin-top: 8px; margin-bottom: 0; font-size: 11px; text-align: right; line-height: 1.4; color: var(--text-muted);">
-  Для релізу в App&nbsp;Store потрібна<br>ліцензія Apple&nbsp;Developer<br>(<strong>$99&nbsp;на&nbsp;рік</strong>)
-  </p>
-
-</div>
-
-<div class="bug-report-container">
-          <button type="button" id="bugToggleBtn" class="bug-toggle-btn">Звʼязатись з розробником</button>
-          
-          <div id="bugFormWrap" class="bug-form-wrap" hidden>
-            <textarea id="bugTextarea" class="bug-textarea" rows="3" placeholder="питання, скарги, пропозиції"></textarea>
-            <div class="bug-actions">
-              <button type="button" id="bugSubmitBtn" class="confirm-main-btn confirm-btn-save">Відправити</button>
-              <button type="button" id="bugCancelBtn" class="confirm-main-btn confirm-btn-neutral">Скасувати</button>
-            </div>
-            <div id="bugResultMsg" class="bug-result-msg"></div>
-          </div>
-        </div>
-
-      </div> </div> <div class="about-footer-wrap">
-      <p class="about-footer">Зроблено з любовʼю до Києва</p>
-    </div>
-  </template>
-
-  <template id="tpl-feedback-sheet">
-    <div class="sheet-handle-bar">
-      <div class="sheet-handle"></div>
-      <span class="sheet-sheet-title" id="fbSheetTitle">Запропонувати зміни</span>
-      <span class="sheet-station-title" id="fbStationTitle" hidden></span>
-      <button class="sheet-close-btn" id="feedbackClose" aria-label="Закрити">✕</button>
-    </div>
-    <div class="sheet-body" id="feedbackBody">
-      <p class="fb-main-intro-text" id="fbMainIntroText">Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
-
-      <div id="fbStationList" class="fb-station-list" hidden></div>
-
-      <input type="hidden" id="fbLine" value="">
-      <input type="hidden" id="fbStation" value="">
-
-      <div id="fbPositions"></div>
-
-      <div class="fb-footer-sticky">
-        <div id="fbLineFilterWrap">
-          <div id="fbLineFilter" class="search-line-filter fb-line-filter" role="group" aria-label="Фільтр по гілці">
-            <button class="search-line-btn is-active" data-line="">Всі</button>
-            <button class="search-line-btn" data-line="red">Червона</button>
-            <button class="search-line-btn" data-line="blue">Синя</button>
-            <button class="search-line-btn" data-line="green">Зелена</button>
-          </div>
-        </div>
-        <button id="fbChangeStation" class="fb-change-station-btn" hidden>Обрати іншу станцію</button>
-        <button id="fbSend" class="fb-send-btn" disabled>Застосувати</button>
-        <div id="fbResult"></div><div id="fbResetWrap"></div>
-      </div>
-    </div>
-  </template>
-
-<template id="tpl-settings-sheet">
-    <div class="sheet-handle-bar">
-      <div class="sheet-handle"></div>
-      <span class="sheet-sheet-title">Налаштування</span>
-      <button class="sheet-close-btn" id="settingsClose" aria-label="Закрити">✕</button>
-    </div>
-    <div class="sheet-body">
-      <div class="settings-content">
-
-        <div class="settings-card">
-          <div class="settings-card-header">Вигляд</div>
-          <div class="settings-rule"></div>
-          
-          <div class="settings-row">
-            <span class="settings-label">Тема</span>
-            <div class="settings-seg" id="settingsThemeSeg">
-              <button type="button" class="settings-seg-btn" data-theme-val="system">системна</button>
-              <button type="button" class="settings-seg-btn" data-theme-val="light">світла</button>
-              <button type="button" class="settings-seg-btn" data-theme-val="dark">темна</button>
-            </div>
-          </div>
-          
-          <div class="settings-rule"></div>
-          
-          <div class="settings-row">
-            <span class="settings-label">При запуску</span>
-            <div class="settings-seg" id="settingsStartSeg">
-              <button type="button" class="settings-seg-btn" data-start-val="false">карта</button>
-              <button type="button" class="settings-seg-btn" data-start-val="true">вибране</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-card">
-          <div class="settings-card-header-row" style="flex-direction: column; align-items: stretch;">
-            <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; position: relative; min-height: 32px;">
-              <span class="settings-card-header" style="padding: 0; position: absolute; left: 50%; transform: translateX(-50%);">Check-in</span>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinToggle">
-                <span class="ios-toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-          <div id="settingsCheckinCollapsible">
-            <div class="settings-rule"></div>
-            <div class="settings-row" id="checkinExitsRow" style="flex-direction: column; align-items: stretch; gap: 6px;">
-              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                <span class="settings-label">Статистика</span>
-                <div class="settings-seg" id="settingsCheckinStatSeg">
-                  <button type="button" class="settings-seg-btn" data-stat-val="station">по станціям</button>
-                  <button type="button" class="settings-seg-btn" data-stat-val="exits">по виходам</button>
-                </div>
-              </div>
-              <span class="settings-sublabel">Впливає на відсоток охоплення та кола статистики</span>
-            </div>
-            <div class="settings-rule"></div>
-            <div class="settings-row" id="checkinByExitRow">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Чекіни по виходам</span>
-                <span class="settings-sublabel" style="text-align: left;">Інакше чекін залежатиме від попередньої станції</span>
-              </div>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinByExitToggle">
-                <span class="ios-toggle-slider"></span>
-              </label>
-            </div>
-            <div class="settings-rule"></div>
-            <div class="settings-row" id="checkinHatchRow">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Штриховка відвіданих станцій</span>
-                <span class="settings-sublabel" style="text-align: left;">Чекін штрихує станцію на карті</span>
-              </div>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinHatchToggle">
-                <span class="ios-toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-
-
-        <!-- ══ КАРТКА «ДАНІ» ══ -->
-        <div class="settings-card">
-          <div class="settings-card-header">Дані</div>
-          <div class="settings-rule"></div>
-
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Режим редагування</span>
-              <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон-двері</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsEditModeToggle">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-
-          <!-- Автоприховується разом із роздільником, якщо "Режим редагування" вимкнено -->
-          <div id="settingsLocalFbRow" class="is-hidden">
-            <div class="settings-rule"></div>
-            <div class="settings-row">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Локальні зміни</span>
-                <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
-              </div>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsLocalFeedbackToggle">
-                <span class="ios-toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          <div class="settings-rule"></div>
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Приховати підказки</span>
-              <span class="settings-sublabel" style="text-align: left;">Не показувати навчальні інфоблоки у картках станцій</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsHideInfoToggle">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="settings-rule"></div>
-          <div class="clear-data-row" id="clearDataRow">
-            <span class="settings-label">Очистити дані</span>
-            <span class="clear-data-chevron" id="clearDataChevron" style="display: flex; align-items: center; justify-content: center; width: 18px; color: #ABABAB; font-size: 16px;">&#8964;</span>
-          </div>
-          <div class="clear-data-dropdown" id="clearDataDropdown">
-            <div class="clear-data-separator"></div>
-            <div class="clear-data-item" id="settingsClearFavs">Вибране</div>
-            <div class="clear-data-item" id="settingsClearCheckin">Чекіни</div>
-            <div class="clear-data-item" id="settingsClearLocalEdits">Всі локальні зміни</div>
-          </div>
-          <div class="settings-rule"></div>
-          <div class="settings-row">
-            <span class="settings-label">Резервна копія</span>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-              <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
-              <div class="settings-divider-v"></div>
-              <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ══ КАРТКА «ДОСТУПНІСТЬ» ══ -->
-        <div class="settings-card">
-          <div class="settings-card-header">Доступність</div>
-          <div class="settings-rule"></div>
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Приховати виходи без ліфтів</span>
-              <span class="settings-sublabel" style="text-align: left;">Застосовується, якщо на станції доступні ліфти.</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsHideNoLiftToggle">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-          <div class="settings-rule"></div>
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Відображати доступність на карті</span>
-              <span class="settings-sublabel" style="text-align: left;">Показує знак візочка біля станцій з ліфтами на схемі метро</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsShowMapAccessibilityToggle">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-          <div class="settings-rule"></div>
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Показувати підйомники на станціях</span>
-              <span class="settings-sublabel" style="text-align: left;">Позначає виходи зі значком крісла там, де доступний лише підйомник</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsShowHoistsToggle">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </template>
-<script>
-  (function startLoader() {
-    const viewport = document.getElementById("mapViewport");
-const center = document.getElementById("loaderCenter");
-    const petalGroup = document.getElementById("loaderPetals");    if (!viewport || !center || !petalGroup) return;
-
-    const petalNodes = Array.from(petalGroup.querySelectorAll("path"));
-
-    // Отримуємо координати центру (для сортування пелюсток)
-    const centerBox = center.getBoundingClientRect();
-    const centerX = centerBox.left + centerBox.width / 2;
-    const centerY = centerBox.top + centerBox.height / 2;
-
-    // Сортуємо пелюстки за годинниковою стрілкою
-    const petals = petalNodes.map(petal => {
-      const box = petal.getBoundingClientRect();
-      const x = box.left + box.width / 2;
-      const y = box.top + box.height / 2;
-      let angle = Math.atan2(y - centerY, x - centerX) * 180 / Math.PI;
-      let adjustedAngle = (angle + 90 + 360) % 360;
-      return { element: petal, angle: adjustedAngle };
-    })
-    .sort((a, b) => a.angle - b.angle)
-    .map(p => p.element);
-
-    petals.forEach(p => p.style.transition = "fill 0.15s ease");
-    center.style.transition = "none";
-
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const COLORS = {
-      red:   "#c8523a",
-      blue:  "#5b9bd5",
-      green: "#5aaa6a",
-      base:  isLight ? "#c8c8cc" : "#1a1a1a"
-    };
-
-    const SESSION_SCHEMES = [
-      { center: COLORS.red,   petalColors: [COLORS.blue, COLORS.green] },
-      { center: COLORS.blue,  petalColors: [COLORS.red, COLORS.green]  },
-      { center: COLORS.green, petalColors: [COLORS.red, COLORS.blue]   }
-    ];
-
-    let sessionIndex = 0;
-    try {
-      sessionIndex = parseInt(localStorage.getItem('appLoaderThemeIndex')) || 0;
-      localStorage.setItem('appLoaderThemeIndex', (sessionIndex + 1) % SESSION_SCHEMES.length);
-    } catch (e) {}
-
-    const currentScheme = SESSION_SCHEMES[sessionIndex];
-    petals.forEach(p => p.style.fill = COLORS.base);
-    center.style.fill = currentScheme.center;
-
-    function hexToRgb(hex) {
-      const n = parseInt(hex.slice(1), 16);
-      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-    }
-
-    function lerp(a, b, t) {
-      return Math.round(a + (b - a) * t);
-    }
-
-    function mixColors(colorHex, baseHex, t) {
-      const [r1, g1, b1] = hexToRgb(colorHex);
-      const [r2, g2, b2] = hexToRgb(baseHex);
-      return `rgb(${lerp(r2, r1, t)},${lerp(g2, g1, t)},${lerp(b2, b1, t)})`;
-    }
-
-    const TAIL_LENGTH   = 5;
-    const ANIMATION_SPEED = 90;
-    const HEARTBEAT_SPEED = 20;
-    const BPM           = 60;
-    const CYCLE         = 60 / BPM;
-    const MIN_INTENSITY = 0.35;
-    const MAX_INTENSITY = 0.85;
-
-    function gauss(t, center, width, height) {
-      return height * Math.exp(-Math.pow((t - center) / width, 2));
-    }
-
-    const startTimestamp = Date.now();
-    let tail = [];
-    let loaderTimeout = null;
-
-    function getRandomPetal() {
-      return Math.floor(Math.random() * petals.length);
-    }
-
-    function getRandomInterval() {
-      return 300 + Math.random() * 400;
-    }
-
-    function animatePetal(petalIndex) {
-      const colorIndex = Math.floor(Math.random() * currentScheme.petalColors.length);
-      const petalColor = currentScheme.petalColors[colorIndex];
-      tail.unshift({ petalIndex, color: petalColor, intensity: 1.0 });
-      if (tail.length > TAIL_LENGTH) tail.length = TAIL_LENGTH;
-
-      petals.forEach(p => p.style.fill = COLORS.base);
-      tail.forEach((segment, i) => {
-        const t = 1 - (i / TAIL_LENGTH) * 0.85;
-        petals[segment.petalIndex].style.fill = mixColors(segment.color, COLORS.base, t);
-      });
-    }
-
-    function animateLoader() {
-      if (!viewport.classList.contains('is-loading')) {
-        if (loaderTimeout) clearTimeout(loaderTimeout);
-        return;
-      }
-
-      const randomPetal = getRandomPetal();
-      const nextInterval = getRandomInterval();
-      
-      animatePetal(randomPetal);
-
-      loaderTimeout = setTimeout(animateLoader, nextInterval);
-    }
-
-    function animateCenterHeartbeat() {
-      if (!viewport.classList.contains('is-loading')) return;
-
-      const phase = ((Date.now() - startTimestamp) / 1000 % CYCLE) / CYCLE;
-      const wave = Math.min(1.0, gauss(phase, 0.15, 0.045, 1.0) + gauss(phase, 0.30, 0.060, 0.55) + gauss(phase, 0.22, 0.035, 0.20));
-      const intensity = MIN_INTENSITY + wave * (MAX_INTENSITY - MIN_INTENSITY);
-
-      center.style.fill = mixColors(currentScheme.center, COLORS.base, intensity);
-      setTimeout(animateCenterHeartbeat, HEARTBEAT_SPEED);
-    }
-
-    animateCenterHeartbeat();
-    setTimeout(animateLoader, 200);
-  })();
-</script>
-<script>
-  // Цей радар зловить помилку ДО запуску модулів і покаже її на екрані
-  window.addEventListener('error', function(e) {
-    alert('CRASH: ' + (e.message || e.error));
-    document.getElementById('startupLoader').style.display = 'none';
-  });
-  window.addEventListener('unhandledrejection', function(e) {
-    alert('PROMISE CRASH: ' + e.reason);
-    document.getElementById('startupLoader').style.display = 'none';
-  });
-</script>
-
-<script type="module" src="/src/main.js"></script>
-</body>
-</html>
 </file>
 
 <file path="styles.css">
@@ -14491,6 +13981,727 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   pointer-events: auto;
   cursor: pointer;
 }
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>KyivMetroGO</title>
+  
+<style id="critical-theme">
+    html, body { background: #000000; } /* Темна за замовчуванням */
+    
+    /* Якщо примусово увімкнена світла: */
+    html[data-theme="light"], 
+    html[data-theme="light"] body { background: #e5e5ea; }
+    
+    /* Якщо системна світла І користувач не вибрав примусово темну: */
+    @media (prefers-color-scheme: light) { 
+      html:not([data-theme="dark"]), 
+      html:not([data-theme="dark"]) body { background: #e5e5ea; } 
+    }
+
+    /* Лоадер має висіти НАД картою, а не штовхати її */
+    .loader-container {
+      position: fixed;
+      inset: 0; /* Розтягуємо на весь екран (top:0; left:0; right:0; bottom:0) */
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000000; /* Закриваємо карту фоном, поки вона крива */
+    }
+    
+    /* Підтримуємо світлу тему для фону лоадера */
+    html[data-theme="light"] .loader-container { background: #e5e5ea; }
+    @media (prefers-color-scheme: light) { 
+      html:not([data-theme="dark"]) .loader-container { background: #e5e5ea; } 
+    }
+
+    .loader-container.hidden {
+      display: none;
+    }
+    
+    .loader-container svg {
+      width: 120px; /* Фіксуємо розмір, бо інакше флекс розтягне його на весь екран */
+      height: 120px;
+    }
+    /* Базовий колір пелюсток SVG — JS одразу перезаписує, але до старту анімації */
+    .loader-container .st4 { fill: #1a1a1a; }
+    @media (prefers-color-scheme: light) {
+      .loader-container .st4 { fill: #c8c8cc; }
+    }
+    [data-theme="light"] .loader-container .st4 { fill: #c8c8cc; }
+    [data-theme="dark"]  .loader-container .st4 { fill: #1a1a1a; }
+</style>
+<script>
+    /* Миттєво застосовуємо збережену тему ДО малювання сторінки браузером */
+    const t = localStorage.getItem('metro_theme') || 'system';
+const actual = t === 'system'
+  ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  : t;
+document.documentElement.setAttribute('data-theme', actual);
+</script>
+
+<link rel="stylesheet" href="styles.css">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-96x96.png">
+  <link rel="apple-touch-icon" href="icon-192x192.png">
+  
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body id="map-page">
+
+<main class="container">
+  
+  <div class="loader-container" id="startupLoader">
+    <svg version="1.1" viewBox="0 0 36.31892 37.081547" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+          <clipPath clipPathUnits="userSpaceOnUse" id="loaderClipPath">
+            <rect style="fill:#040000;fill-opacity:1;stroke-width:6.38362;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:15.1" width="52.837963" height="47.786671" x="121.2369" y="117.18448" ry="1.3288821" />
+          </clipPath>
+        </defs>
+        <g transform="translate(-162.85484,-126.18087)">
+          <g transform="translate(32.460036,2.9988233)" clip-path="url(#loaderClipPath)">
+            <g id="loaderPetals" transform="matrix(0.60937788,0,0,0.62637748,2.7606092,-11.401414)">
+              <path class="st4" d="m 239.25,232.16 c 2.9,0 5.7,-2.9 5,-8 -0.6,-4.8 -3.3,-8.9 -5,-9.3 -1.9,0.5 -4.4,4.7 -5,9.3 -0.5,5.1 2.1,8 5,8 z" />
+              <path class="st4" d="m 226.85,244.46 c 0,-2.9 -2.9,-5.6 -8,-4.9 -4.9,0.6 -9,3.3 -9.4,4.9 0.5,1.9 4.7,4.4 9.4,4.9 5.1,0.6 8,-2 8,-4.9 z" />
+              <path class="st4" d="m 239.25,256.76 c -2.9,0 -5.6,2.9 -5,8 0.6,4.8 3.3,8.9 5,9.3 1.9,-0.5 4.4,-4.7 5,-9.3 0.6,-5.1 -2.1,-8 -5,-8 z" />
+              <path class="st4" d="m 251.65,244.46 c 0,-2.9 2.9,-5.6 8,-4.9 4.9,0.6 9,3.3 9.4,4.9 -0.5,1.9 -4.7,4.4 -9.4,4.9 -5.1,0.6 8,-2 8,-4.9 z" />
+              <path class="st4" d="m 230.45,235.76 c 2.1,-2 2,-6 -2.2,-9.1 -3.9,-3 -8.7,-4 -10.2,-3.1 -1,1.7 0.2,6.4 3.1,10.1 3.4,4 7.3,4.1 9.3,2.1 z" />
+              <path class="st4" d="m 230.45,253.16 c -2.1,-2 -6,-1.9 -9.2,2.2 -3,3.9 -4,8.7 -3.1,10.1 1.7,1 6.5,-0.2 10.2,-3.1 4,-3.3 4.2,-7.2 2.1,-9.2 z" />
+              <path class="st4" d="m 248.05,253.16 c 2.1,-2 6,-1.9 9.2,2.2 3,3.9 4,8.7 3.1,10.1 -1.7,1 -6.5,-0.2 -10.2,-3.1 -4,-3.3 -4.2,-7.2 -2.1,-9.2 z" />
+              <path class="st4" d="m 248.05,235.76 c -2.1,-2 -2,-6 2.2,-9.1 -3.9,-3 8.7,-4 10.2,-3.1 1,1.7 -0.2,6.4 -3.1,10.1 -3.4,4 -7.3,4.1 -9.3,2.1 z" />
+              <path class="st4" d="m 227.95,217.46 c 2.1,-0.9 4.2,-1.3 4.8,1.4 0.5,2.5 -0.6,5.3 -1.7,6 -1.5,0.3 -4.1,-1 -5.5,-3 -1.4,-2.4 0.3,-3.6 2.4,-4.4 z" />
+              <path class="st4" d="m 212.05,255.66 c -0.9,-2.1 -1.3,-4.2 1.4,-4.7 2.5,-0.5 5.4,0.6 6,1.7 0.3,1.5 -1,4.1 -3.1,5.4 -2.2,1.4 -3.5,-0.3 -4.3,-2.4 z" />
+              <path class="st4" d="m 250.75,271.96 c 2.1,-0.9 3.9,-2.1 2.4,-4.4 -1.4,-2.1 -4.2,-3.3 -5.5,-3 -1.3,0.8 -2.2,3.6 -1.7,6 0.6,2.7 2.7,2.3 4.8,1.4 z" />
+              <path class="st4" d="m 212.05,233.26 c 0.9,-2.1 2.1,-3.9 4.4,-2.4 2.2,1.4 3.4,4.2 3.1,5.4 -0.8,1.3 -3.6,2.2 -6,1.7 -2.8,-0.6 -2.4,-2.6 -1.5,-4.7 z" />
+              <path class="st4" d="m 228.35,271.46 c -2.1,-0.9 -3.9,-2.1 -2.4,-4.4 1.4,-2.1 4.2,-3.3 5.5,-3 1.3,0.8 2.2,3.6 1.7,6 -0.6,2.7 -2.7,2.3 -4.8,1.4 z" />
+              <path class="st4" d="m 250.55,217.46 c 2.1,0.9 3.9,2.1 2.4,4.4 -1.4,2.1 -4.2,3.3 -5.5,3 -1.3,-0.8 -2.2,-3.6 -1.7,-6 0.6,-2.7 2.7,-2.3 4.8,-1.4 z" />
+              <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z" />
+              <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z" />
+            </g>
+<path id="loaderCenter" class="st16" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" />
+          </g>
+        </g>
+      </svg>
+    </div> <div id="mapViewport" class="map-viewport is-loading">
+      <div id="mapInner" class="map-inner"></div>
+    </div> </main>
+
+<nav class="bottom-nav-dock">
+<button id="favListBtn" class="dock-btn" aria-label="Вибране">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.7">
+    <path d="m3.25 9.75c3 3.5 4.75 4.5 4.75 4.5s1.75-1 4.75-4.5 1-7-1.5-7-3.25 3-3.25 3-.75-3-3.25-3-4.5 3.5-1.5 7z"/>
+  </svg>
+</button>
+
+  <button id="menuBtn" class="dock-btn dock-btn-center" aria-label="Меню">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" opacity="0.7">
+      <circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/>
+    </svg>
+  </button>
+
+  <button id="searchBtnTop" class="dock-btn" aria-label="Пошук">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7">
+      <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+  </button>
+</nav>
+
+  <div id="dropMenu" class="drop-menu" hidden>
+<button class="drop-item" id="settingsItem">
+      <div class="drop-item-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" style="transform: scale(0.95);">
+          <path fill-rule="evenodd" d="M6.77208,0.683772 C6.90819,0.27543 7.29033,0 7.72076,0 L8.27924,0 C8.70967,0 9.09181,0.27543 9.22792,0.683772 L9.75342,2.26026 C10.125,2.37363 10.4812,2.52208 10.8183,2.70177 L12.3051,1.9584 C12.6901,1.7659 13.155,1.84136 13.4594,2.14572 L13.8543,2.54062 C14.1587,2.84498 14.2341,3.30995 14.0416,3.69494 L13.2983,5.1817 C13.4779,5.51878 13.6264,5.87503 13.7397,6.24658 L15.3162,6.77208 C15.7246,6.90819 16,7.29033 16,7.72076 L16,8.27924 C16,8.70967 15.7246,9.09181 15.3162,9.22792 L13.7397,9.75342 C13.6264,10.125 13.4779,10.4812 13.2983,10.8183 L14.0416,12.3051 C14.2341,12.69 14.1587,13.155 13.8543,13.4594 L13.4594,13.8543 C13.155,14.1586 12.6901,14.2341 12.3051,14.0416 L10.8183,13.2982 C10.4812,13.4779 10.125,13.6264 9.75342,13.7397 L9.22792,15.3162 C9.09181,15.7246 8.70967,16 8.27924,16 L7.72076,16 C7.29033,16 6.90819,15.7246 6.77208,15.3162 L6.24658,13.7397 C5.87503,13.6264 5.51879,13.4779 5.18172,13.2983 L3.69491,14.0417 C3.30992,14.2342 2.84495,14.1587 2.54059,13.8543 L2.14568,13.4594 C1.84132,13.1551 1.76587,12.6901 1.95836,12.3051 L2.70176,10.8183 C2.52208,10.4812 2.37363,10.125 2.26026,9.75342 L0.683772,9.22792 C0.27543,9.09181 0,8.70967 0,8.27924 L0,7.72076 C0,7.29033 0.27543,6.90819 0.683772,6.77208 L2.26026,6.24658 C2.37363,5.87502 2.52208,5.51876 2.70176,5.18167 L1.95837,3.69488 C1.76587,3.30989 1.84133,2.84492 2.14569,2.54056 L2.54059,2.14565 C2.84495,1.84129 3.30993,1.76584 3.69491,1.95833 L5.18172,2.70174 C5.5188,2.52207 5.87504,2.37362 6.24658,2.26026 L6.77208,0.683772 Z M8,12 C10.2091,12 12,10.2091 12,8 C12,5.79086 10.2091,4 8,4 C5.79086,4 4,5.79086 4,8 C4,10.2091 5.79086,12 8,12 Z"/>
+        </svg>
+      </div>
+    </button>
+    <button class="drop-item" id="checkinBtn" aria-label="Check-in" hidden></button>
+    <button class="drop-item" id="feedbackItem">
+      <div class="drop-item-icon">
+        <svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+          <path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/>
+        </svg>
+      </div>
+    </button>
+    <button class="drop-item" id="aboutItem">
+      <div class="drop-item-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
+          <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
+        </svg>
+      </div>
+    </button>
+  </div>
+
+  <div id="sheetOverlay" class="sheet-overlay"></div>
+
+  <div id="stationSheet" class="station-sheet">
+    <div class="sheet-handle-bar">
+      <button class="fav-btn-bar" aria-label="Вибране"></button>
+      <div class="sheet-handle"></div>
+      <span class="sheet-station-title" id="stationTitleMain"></span>
+      <button id="sheetCheckinBtn" class="sheet-action-btn" aria-label="Журнал check-in" hidden></button>
+      <button id="sheetClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
+    </div>
+    <div id="sheetBody" class="sheet-body"></div>
+  </div>
+
+  <div id="favSheet" class="station-sheet">
+    <div class="sheet-handle-bar">
+      <div class="sheet-handle"></div>
+      <span class="sheet-sheet-title">Вибрані станції та виходи</span>
+      <button id="favClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
+    </div>
+    <div id="favBody" class="sheet-body"></div>
+  </div>
+
+  <template id="tpl-search-sheet">
+    <div class="sheet-handle-bar">
+      <div class="sheet-handle"></div>
+      <span class="sheet-sheet-title">Пошук</span>
+      <button class="sheet-close-btn" id="searchClose" aria-label="Закрити">✕</button>
+    </div>
+    <div class="search-input-wrap">
+      <input type="text" id="searchInput" class="search-input" autocomplete="off">
+    </div>
+    <div id="searchLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
+      <button class="search-line-btn is-active" data-line="">всі</button>
+      <button class="search-line-btn" data-line="red">червона</button>
+      <button class="search-line-btn" data-line="blue">синя</button>
+      <button class="search-line-btn" data-line="green">зелена</button>
+    </div>
+<div class="sheet-body" style="padding-top: 0;">
+      <div id="searchResults" class="search-results" aria-live="polite" aria-atomic="true"></div>
+    </div>
+  </template>
+
+  <template id="tpl-about-sheet">
+    <div class="sheet-handle-bar">
+    <button id="aboutDevBtnContainer" aria-label="Режим розробника"></button>
+    <div class="sheet-handle"></div>
+    <span class="sheet-sheet-title about-version-title">KyivMetroGO</span>
+    <button class="sheet-close-btn" id="aboutClose" aria-label="Закрити">✕</button>
+  </div>
+
+<div class="sheet-body">
+
+      <div class="about-content">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" id="aboutLogoImg">
+    <g style="fill: var(--line-green); fill-opacity:1">
+      <g style="fill: var(--line-green); fill-opacity:1">
+        <path d="M49.904 120.033h10v10h-10z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
+        <path d="M59.82 120.033h10v10h-10z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
+        <path d="M69.736 120.033h10v10h-10z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
+      </g>
+    </g>
+    <g style="fill: var(--line-blue); fill-opacity:1">
+      <path d="M62.836 114.963H82.78v8H62.836z" style="fill: var(--line-blue); fill-opacity:1; stroke-width:.127791" transform="matrix(.50098 0 0 1.25 -28.48 -140.705)"/>
+    </g>
+    <g style="fill: var(--line-green); fill-opacity:1">
+      <path d="M144.141 82.952h14.995v2.314h-14.995z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.0595893" transform="matrix(.33374 0 0 2.16109 -40.118 -176.267)"/>
+    </g>
+    <g style="fill: var(--line-green); fill-opacity:1">
+      <path d="M144.141 82.952h14.995v2.314h-14.995z" style="fill: var(--line-green); fill-opacity:1; stroke-width:.0595893" transform="matrix(.33374 0 0 6.48327 -35.122 -529.802)"/>
+    </g>
+    <path d="M96.983 35h5v5h-5z" style="fill: var(--line-blue); fill-opacity:1; stroke-width:.0505852" transform="matrix(1.00085 0 0 1 -84.074 -32)"/>
+    <path d="M91.983 40h5v15h-5z" style="fill: var(--line-blue); fill-opacity:1; stroke-width:.0876163" transform="matrix(1.00085 0 0 1 -84.074 -32)"/>
+  </svg>
+  
+  <p style="text-align: center;">Заощадження часопростору у київському&nbsp;метро</p>      
+
+       <div class="about-card">
+          <div class="about-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 5" style="width: 52px !important; max-width: none !important; height: auto; border-radius: 4px; display: block; transform: translateY(-1px);">
+              <path fill="currentColor" d="M0 0h10v5H0z"/>
+              <path fill="var(--bg-card)" transform="translate(-112.36 -152.57) scale(.26458)" d="m433.82 582.27v8.6389h1.2917v-9.7222h-7.1944v9.7222h1.3056v-8.6389zm5.5972 4.8611v-2.0694h2.375v5.8472h1.2917v-6.875h-4.9583v3.0417c0 2.6667-0.5 2.9861-1.2639 2.9861v0.84722c0.125 0.0417 0.44445 0.0695 0.65278 0.0695 1.1667 0 1.9028-0.65278 1.9028-3.8472zm11.681-5.9444-2.5556 5.1389-2.5556-5.1389h-1.4028l3.3472 6.6667-1.6806 3.0556h1.4028l4.8472-9.7222zm7.9861 1.0833v-1.0833h-4.9722v9.7222h1.3056v-8.6389z"/>
+            </svg>
+          </div>
+          <p class="about-card-text">Натисніть на станцію, і отримаєте вагон та двері, які&nbsp;будуть якнайближче до&nbsp;виходу з&nbsp;підземки</p>
+        </div>
+
+        <div class="about-card">
+          <div class="about-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 22" fill="currentColor" style="width: 30px !important; max-width: none !important; height: auto; display: block; transform: translateY(-3px);">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </div>
+          <p class="about-card-text" style="margin: 0;">
+            Для швидкого доступу додавайте станції та окремі виходи до&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span>
+          </p>
+        </div>
+
+        <div class="about-card">
+          <div class="about-card-icon">
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="width: 34px !important; max-width: none !important; height: auto; display: block; transform: translateY(2px);">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" stroke="currentColor" stroke-width="0.5"/>
+            </svg>
+          </div>
+          <p class="about-card-text">Відмічайте виходи, якими скористались. Переглядайте статистику <span style="font-variant: small-caps;">Check&#8209;in</span>&#8209;ів<span class="about-card-note">Потребує активації в налаштуваннях</span></p>
+        </div>
+
+        <div class="about-card">
+          <div class="about-card-icon">
+            <svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="width: 30px !important; max-width: none !important; height: auto; display: block; transform: translateY(-1px);">
+              <path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/>
+            </svg>
+          </div>
+          <p class="about-card-text">Виправляйте неточності та підписуйте виходи з&nbsp;метро<span class="about-card-note">Потребує активації в налаштуваннях</span></p>
+        </div>
+
+<div class="about-card about-support-card" style="padding-top: 16px;">
+  <div class="about-support-cols" style="display: flex; width: 100%;">
+    
+    <div class="about-support-col" style="display: flex; flex-direction: column;">
+      <div class="about-support-platform-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48A5.84 5.84 0 0 0 12 1.5c-.73 0-1.42.14-2.06.39L8.46.41c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.29 1.3A5.92 5.92 0 0 0 6 7h12a5.92 5.92 0 0 0-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/>
+        </svg>
+      </div>
+      <div style="text-align: center; margin-bottom: 8px;">
+        <div class="about-support-text" style="margin-bottom: 0;">ранній доступ<br>до-Android-версії</div>
+      </div>
+      <div style="position: relative; width: 100%; max-width: 140px; margin: 0 auto;">
+        <button type="button" id="btnInfoAndroid" style="background: none; border: none; color: var(--text-muted); opacity: 0.8; transition: color 0.2s, opacity 0.2s;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
+            <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
+          </svg>
+        </button>
+        <form class="about-beta-form" id="aboutBetaForm" style="margin-bottom: 0; width: 100%;">
+          <div class="about-input-group">
+            <input type="text" name="username" placeholder="" class="about-beta-input" autocomplete="username" inputmode="email" spellcheck="false">
+            <span class="about-gmail-domain">@gmail.com</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="about-support-divider"></div>
+
+    <div class="about-support-col" style="display: flex; flex-direction: column;">
+      <div class="about-support-platform-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+        </svg>
+      </div>
+      <div style="text-align: center; margin-bottom: 8px;">
+        <div class="about-support-text" style="margin-bottom: 0;">підтримати реліз<br>на iOS</div>
+      </div>
+      <div style="position: relative; width: 100%; max-width: 140px; margin: 0 auto; margin-top: auto; margin-bottom: 0;">
+        <button type="button" id="btnInfoIOS" style="background: none; border: none; color: var(--text-muted); opacity: 0.8; transition: color 0.2s, opacity 0.2s;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
+            <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
+          </svg>
+        </button>
+
+        <a href="https://send.monobank.ua/ПОСИЛАННЯ" target="_blank" rel="noopener" class="about-donate-btn-mono about-colored-btn about-btn-mono-fixed" style="margin: 0 !important; width: 100% !important;">mono</a>
+      </div>
+    </div>
+  </div> <p class="settings-hint" id="hintAndroid" hidden style="width: 100%; margin-top: 12px; margin-bottom: 0; padding: 0; font-size: 11px; text-align: left; line-height: 1.4; color: var(--text-muted);">
+    Для першого етапу тестування<br>потрібні <strong>12&nbsp;користувачів</strong> —<br>це правило Google Play
+</p>
+
+<p class="settings-hint" id="hintIOS" hidden style="width: 100%; margin-top: 8px; margin-bottom: 0; font-size: 11px; text-align: right; line-height: 1.4; color: var(--text-muted);">
+  Для релізу в App&nbsp;Store потрібна<br>ліцензія Apple&nbsp;Developer<br>(<strong>$99&nbsp;на&nbsp;рік</strong>)
+  </p>
+
+</div>
+
+<div class="bug-report-container">
+          <button type="button" id="bugToggleBtn" class="bug-toggle-btn">Звʼязатись з розробником</button>
+          
+          <div id="bugFormWrap" class="bug-form-wrap" hidden>
+            <textarea id="bugTextarea" class="bug-textarea" rows="3" placeholder="питання, скарги, пропозиції"></textarea>
+            <div class="bug-actions">
+              <button type="button" id="bugSubmitBtn" class="confirm-main-btn confirm-btn-save">Відправити</button>
+              <button type="button" id="bugCancelBtn" class="confirm-main-btn confirm-btn-neutral">Скасувати</button>
+            </div>
+            <div id="bugResultMsg" class="bug-result-msg"></div>
+          </div>
+        </div>
+
+      </div> </div> <div class="about-footer-wrap">
+      <p class="about-footer">Зроблено з любовʼю до Києва</p>
+    </div>
+  </template>
+
+  <template id="tpl-feedback-sheet">
+    <div class="sheet-handle-bar">
+      <div class="sheet-handle"></div>
+      <span class="sheet-sheet-title" id="fbSheetTitle">Запропонувати зміни</span>
+      <span class="sheet-station-title" id="fbStationTitle" hidden></span>
+      <button class="sheet-close-btn" id="feedbackClose" aria-label="Закрити">✕</button>
+    </div>
+    <div class="sheet-body" id="feedbackBody">
+      <p class="fb-main-intro-text" id="fbMainIntroText">Правки застосуються&nbsp;локально та надійдуть&nbsp;розробнику</p>
+
+      <div id="fbStationList" class="fb-station-list" hidden></div>
+
+      <input type="hidden" id="fbLine" value="">
+      <input type="hidden" id="fbStation" value="">
+
+      <div id="fbPositions"></div>
+
+      <div class="fb-footer-sticky">
+        <div id="fbLineFilterWrap">
+          <div id="fbLineFilter" class="search-line-filter fb-line-filter" role="group" aria-label="Фільтр по гілці">
+            <button class="search-line-btn is-active" data-line="">Всі</button>
+            <button class="search-line-btn" data-line="red">Червона</button>
+            <button class="search-line-btn" data-line="blue">Синя</button>
+            <button class="search-line-btn" data-line="green">Зелена</button>
+          </div>
+        </div>
+        <button id="fbChangeStation" class="fb-change-station-btn" hidden>Обрати іншу станцію</button>
+        <button id="fbSend" class="fb-send-btn" disabled>Застосувати</button>
+        <div id="fbResult"></div><div id="fbResetWrap"></div>
+      </div>
+    </div>
+  </template>
+
+<template id="tpl-settings-sheet">
+    <div class="sheet-handle-bar">
+      <div class="sheet-handle"></div>
+      <span class="sheet-sheet-title">Налаштування</span>
+      <button class="sheet-close-btn" id="settingsClose" aria-label="Закрити">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="settings-content">
+
+        <div class="settings-card">
+          <div class="settings-card-header">Вигляд</div>
+          <div class="settings-rule"></div>
+          
+          <div class="settings-row">
+            <span class="settings-label">Тема</span>
+            <div class="settings-seg" id="settingsThemeSeg">
+              <button type="button" class="settings-seg-btn" data-theme-val="system">системна</button>
+              <button type="button" class="settings-seg-btn" data-theme-val="light">світла</button>
+              <button type="button" class="settings-seg-btn" data-theme-val="dark">темна</button>
+            </div>
+          </div>
+          
+          <div class="settings-rule"></div>
+          
+          <div class="settings-row">
+            <span class="settings-label">При запуску</span>
+            <div class="settings-seg" id="settingsStartSeg">
+              <button type="button" class="settings-seg-btn" data-start-val="false">карта</button>
+              <button type="button" class="settings-seg-btn" data-start-val="true">вибране</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-header-row" style="flex-direction: column; align-items: stretch;">
+            <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; position: relative; min-height: 32px;">
+              <span class="settings-card-header" style="padding: 0; position: absolute; left: 50%; transform: translateX(-50%);">Check-in</span>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsCheckinToggle">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div id="settingsCheckinCollapsible">
+            <div class="settings-rule"></div>
+            <div class="settings-row" id="checkinExitsRow" style="flex-direction: column; align-items: stretch; gap: 6px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <span class="settings-label">Статистика</span>
+                <div class="settings-seg" id="settingsCheckinStatSeg">
+                  <button type="button" class="settings-seg-btn" data-stat-val="station">по станціям</button>
+                  <button type="button" class="settings-seg-btn" data-stat-val="exits">по виходам</button>
+                </div>
+              </div>
+              <span class="settings-sublabel">Впливає на відсоток охоплення та кола статистики</span>
+            </div>
+            <div class="settings-rule"></div>
+            <div class="settings-row" id="checkinByExitRow">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Чекіни по виходам</span>
+                <span class="settings-sublabel" style="text-align: left;">Інакше чекін залежатиме від попередньої станції</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsCheckinByExitToggle">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-rule"></div>
+            <div class="settings-row" id="checkinHatchRow">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Штриховка відвіданих станцій</span>
+                <span class="settings-sublabel" style="text-align: left;">Чекін штрихує станцію на карті</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsCheckinHatchToggle">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+
+
+        <!-- ══ КАРТКА «ДАНІ» ══ -->
+        <div class="settings-card">
+          <div class="settings-card-header">Дані</div>
+          <div class="settings-rule"></div>
+
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Режим редагування</span>
+              <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон-двері</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsEditModeToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+
+          <!-- Автоприховується разом із роздільником, якщо "Режим редагування" вимкнено -->
+          <div id="settingsLocalFbRow" class="is-hidden">
+            <div class="settings-rule"></div>
+            <div class="settings-row">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Локальні зміни</span>
+                <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsLocalFeedbackToggle">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Приховати підказки</span>
+              <span class="settings-sublabel" style="text-align: left;">Не показувати навчальні інфоблоки у картках станцій</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsHideInfoToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-rule"></div>
+          <div class="clear-data-row" id="clearDataRow">
+            <span class="settings-label">Очистити дані</span>
+            <span class="clear-data-chevron" id="clearDataChevron" style="display: flex; align-items: center; justify-content: center; width: 18px; color: #ABABAB; font-size: 16px;">&#8964;</span>
+          </div>
+          <div class="clear-data-dropdown" id="clearDataDropdown">
+            <div class="clear-data-separator"></div>
+            <div class="clear-data-item" id="settingsClearFavs">Вибране</div>
+            <div class="clear-data-item" id="settingsClearCheckin">Чекіни</div>
+            <div class="clear-data-item" id="settingsClearLocalEdits">Всі локальні зміни</div>
+          </div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <span class="settings-label">Резервна копія</span>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
+              <div class="settings-divider-v"></div>
+              <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ КАРТКА «ДОСТУПНІСТЬ» ══ -->
+        <div class="settings-card">
+          <div class="settings-card-header">Доступність</div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Приховати виходи без ліфтів</span>
+              <span class="settings-sublabel" style="text-align: left;">Застосовується, якщо на станції доступні ліфти.</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsHideNoLiftToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Відображати доступність на карті</span>
+              <span class="settings-sublabel" style="text-align: left;">Показує знак візочка біля станцій з ліфтами на схемі метро</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsShowMapAccessibilityToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-rule"></div>
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Показувати підйомники на станціях</span>
+              <span class="settings-sublabel" style="text-align: left;">Позначає виходи зі значком крісла там, де доступний лише підйомник</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsShowHoistsToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </template>
+<script>
+  (function startLoader() {
+    const viewport = document.getElementById("mapViewport");
+const center = document.getElementById("loaderCenter");
+    const petalGroup = document.getElementById("loaderPetals");    if (!viewport || !center || !petalGroup) return;
+
+    const petalNodes = Array.from(petalGroup.querySelectorAll("path"));
+
+    // Отримуємо координати центру (для сортування пелюсток)
+    const centerBox = center.getBoundingClientRect();
+    const centerX = centerBox.left + centerBox.width / 2;
+    const centerY = centerBox.top + centerBox.height / 2;
+
+    // Сортуємо пелюстки за годинниковою стрілкою
+    const petals = petalNodes.map(petal => {
+      const box = petal.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      let angle = Math.atan2(y - centerY, x - centerX) * 180 / Math.PI;
+      let adjustedAngle = (angle + 90 + 360) % 360;
+      return { element: petal, angle: adjustedAngle };
+    })
+    .sort((a, b) => a.angle - b.angle)
+    .map(p => p.element);
+
+    petals.forEach(p => p.style.transition = "fill 0.15s ease");
+    center.style.transition = "none";
+
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const COLORS = {
+      red:   "#c8523a",
+      blue:  "#5b9bd5",
+      green: "#5aaa6a",
+      base:  isLight ? "#c8c8cc" : "#1a1a1a"
+    };
+
+    const SESSION_SCHEMES = [
+      { center: COLORS.red,   petalColors: [COLORS.blue, COLORS.green] },
+      { center: COLORS.blue,  petalColors: [COLORS.red, COLORS.green]  },
+      { center: COLORS.green, petalColors: [COLORS.red, COLORS.blue]   }
+    ];
+
+    let sessionIndex = 0;
+    try {
+      sessionIndex = parseInt(localStorage.getItem('appLoaderThemeIndex')) || 0;
+      localStorage.setItem('appLoaderThemeIndex', (sessionIndex + 1) % SESSION_SCHEMES.length);
+    } catch (e) {}
+
+    const currentScheme = SESSION_SCHEMES[sessionIndex];
+    petals.forEach(p => p.style.fill = COLORS.base);
+    center.style.fill = currentScheme.center;
+
+    function hexToRgb(hex) {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+
+    function lerp(a, b, t) {
+      return Math.round(a + (b - a) * t);
+    }
+
+    function mixColors(colorHex, baseHex, t) {
+      const [r1, g1, b1] = hexToRgb(colorHex);
+      const [r2, g2, b2] = hexToRgb(baseHex);
+      return `rgb(${lerp(r2, r1, t)},${lerp(g2, g1, t)},${lerp(b2, b1, t)})`;
+    }
+
+    const TAIL_LENGTH   = 5;
+    const ANIMATION_SPEED = 90;
+    const HEARTBEAT_SPEED = 20;
+    const BPM           = 60;
+    const CYCLE         = 60 / BPM;
+    const MIN_INTENSITY = 0.35;
+    const MAX_INTENSITY = 0.85;
+
+    function gauss(t, center, width, height) {
+      return height * Math.exp(-Math.pow((t - center) / width, 2));
+    }
+
+    const startTimestamp = Date.now();
+    let tail = [];
+    let loaderTimeout = null;
+
+    function getRandomPetal() {
+      return Math.floor(Math.random() * petals.length);
+    }
+
+    function getRandomInterval() {
+      return 300 + Math.random() * 400;
+    }
+
+    function animatePetal(petalIndex) {
+      const colorIndex = Math.floor(Math.random() * currentScheme.petalColors.length);
+      const petalColor = currentScheme.petalColors[colorIndex];
+      tail.unshift({ petalIndex, color: petalColor, intensity: 1.0 });
+      if (tail.length > TAIL_LENGTH) tail.length = TAIL_LENGTH;
+
+      petals.forEach(p => p.style.fill = COLORS.base);
+      tail.forEach((segment, i) => {
+        const t = 1 - (i / TAIL_LENGTH) * 0.85;
+        petals[segment.petalIndex].style.fill = mixColors(segment.color, COLORS.base, t);
+      });
+    }
+
+    function animateLoader() {
+      if (!viewport.classList.contains('is-loading')) {
+        if (loaderTimeout) clearTimeout(loaderTimeout);
+        return;
+      }
+
+      const randomPetal = getRandomPetal();
+      const nextInterval = getRandomInterval();
+      
+      animatePetal(randomPetal);
+
+      loaderTimeout = setTimeout(animateLoader, nextInterval);
+    }
+
+    function animateCenterHeartbeat() {
+      if (!viewport.classList.contains('is-loading')) return;
+
+      const phase = ((Date.now() - startTimestamp) / 1000 % CYCLE) / CYCLE;
+      const wave = Math.min(1.0, gauss(phase, 0.15, 0.045, 1.0) + gauss(phase, 0.30, 0.060, 0.55) + gauss(phase, 0.22, 0.035, 0.20));
+      const intensity = MIN_INTENSITY + wave * (MAX_INTENSITY - MIN_INTENSITY);
+
+      center.style.fill = mixColors(currentScheme.center, COLORS.base, intensity);
+      setTimeout(animateCenterHeartbeat, HEARTBEAT_SPEED);
+    }
+
+    animateCenterHeartbeat();
+    setTimeout(animateLoader, 200);
+  })();
+</script>
+<script>
+  // Цей радар зловить помилку ДО запуску модулів і покаже її на екрані
+  window.addEventListener('error', function(e) {
+    alert('CRASH: ' + (e.message || e.error));
+    document.getElementById('startupLoader').style.display = 'none';
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    alert('PROMISE CRASH: ' + e.reason);
+    document.getElementById('startupLoader').style.display = 'none';
+  });
+</script>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
 </file>
 
 </files>

@@ -30,8 +30,8 @@ import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
 import {
-  initGoogleDriveAuth, requestDriveAuth, getDriveAccessToken,
-  downloadDevDataFromDrive, uploadDevDataToDrive
+  initGoogleDriveAuth, requestDriveAuth, isDriveAuthorized,
+  downloadDevDataFromDrive, uploadDevDataToDrive,
 } from '../services/googleDrive.js';
 
 // ── Активація / деактивація ──────────────────────────
@@ -45,6 +45,18 @@ export function toggleDevMode() {
   const next = !isDevMode();
   Storage.set(STORAGE_KEYS.DEV_MODE, String(next));
   return next;
+}
+
+// ── Локальний таймстамп останньої зміни (для синхронізації) ──
+// Окремо від dev-логу: тут — лише "коли востаннє змінювались нотатки/
+// верифікація/фото", щоб syncDevDataWithDrive() могло чесно порівняти
+// "хто новіший" з updatedAt пейлоада на Google Drive.
+function _touchSyncTimestamp() {
+  Storage.set(STORAGE_KEYS.DEV_SYNC_LOCAL_TS, String(Date.now()));
+}
+
+function _getSyncTimestamp() {
+  return Number(Storage.get(STORAGE_KEYS.DEV_SYNC_LOCAL_TS) || 0);
 }
 
 // ── Лог змін ────────────────────────────────────────
@@ -94,6 +106,7 @@ export function toggleDevVerified(slug, posIdx) {
       if (!Object.keys(v[slug]).length) delete v[slug];
     }
     Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(v));
+    _touchSyncTimestamp();
     return nowOn;
   } catch(e) { return false; }
 }
@@ -129,6 +142,7 @@ export function setDevNote(slug, posIdx, text) {
       if (!Object.keys(notes[slug]).length) delete notes[slug];
     }
     Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(notes));
+    _touchSyncTimestamp();
   } catch(e) {}
 }
 
@@ -331,6 +345,7 @@ const existingPhoto = await PhotoStorage.loadPhoto(photoId);
     const reader = new FileReader();
     reader.onload = async (ev) => {
       await PhotoStorage.savePhoto(photoId, ev.target.result);
+      _touchSyncTimestamp();
       photoBtn.style.color   = lineColor;
       photoBtn.style.opacity = '1';
       panel.classList.remove('panel-open');
@@ -347,6 +362,7 @@ const existingPhoto = await PhotoStorage.loadPhoto(photoId);
     clearBtn.addEventListener('click', async e => {
       e.stopPropagation();
 await PhotoStorage.removePhoto(photoId);
+      _touchSyncTimestamp();
       photoBtn.style.color   = defaultColor;
       photoBtn.style.opacity = defaultOpacity;
       panel.classList.remove('panel-open');
@@ -371,21 +387,25 @@ function showDevPhotoFullscreen(src) {
 }
 
 // ── UI: тост активації ────────────────────────────────
-/**
- * Показує тимчасовий тост про стан dev-режиму.
- * @param {boolean} active
- */
-export function showDevModeToast(active) {
+function _showToast(text) {
   document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
   const toast = document.createElement('div');
   toast.className = 'dev-mode-toast';
-  toast.textContent = active ? 'Режим розробника увімкнено' : 'Режим розробника вимкнено';
+  toast.textContent = text;
   document.body.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('dev-mode-toast-open'));
   setTimeout(() => {
     toast.classList.remove('dev-mode-toast-open');
     setTimeout(() => toast.remove(), 400);
   }, 2500);
+}
+
+/**
+ * Показує тимчасовий тост про стан dev-режиму.
+ * @param {boolean} active
+ */
+export function showDevModeToast(active) {
+  _showToast(active ? 'Режим розробника увімкнено' : 'Режим розробника вимкнено');
 }
 
 const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
@@ -397,76 +417,124 @@ const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBo
  */
 export function updateDevModeIndicator(aboutSheet, active) {
   const container = aboutSheet.querySelector('#aboutDevBtnContainer');
+  const syncBtn   = aboutSheet.querySelector('#aboutDevSyncBtn');
   if (!container) return;
   container.innerHTML = '';
-
+  if (syncBtn) {
+    syncBtn.innerHTML = active ? DEV_SYNC_SVG : '';
+    syncBtn.classList.toggle('is-hidden', !active);
+  }
   if (active) {
-    container.innerHTML = `
-      <div style="margin: 14px 0; text-align: center;">
-        <button type="button" id="devGoogleDriveBtn" class="confirm-main-btn confirm-btn-save" style="padding: 10px 18px; font-size: 13px; margin: 0 auto; display: inline-flex; align-items: center; gap: 8px;">
-          <>
-        </button>
-        <div id="devDriveStatus" style="font-size: 12px; color: var(--text-muted); margin-top: 6px;"></div>
-      </div>
-    `;
-
-    const syncBtn = container.querySelector('#devGoogleDriveBtn');
-    const statusEl = container.querySelector('#devDriveStatus');
-
-    syncBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-
-      initGoogleDriveAuth(
-        async (token) => {
-          syncBtn.textContent = '🔄 Синхронізація...';
-          syncBtn.disabled = true;
-          statusEl.textContent = 'Зчитування даних із хмари...';
-
-          // 1. Підтягуємо нотатки з хмари
-          const cloudData = await downloadDevDataFromDrive();
-          if (cloudData) {
-            if (cloudData.notes) Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(cloudData.notes));
-            if (cloudData.verified) Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
-          }
-
-          // 2. Відправляємо локальний стан
-          await syncDevStateToCloud();
-
-          syncBtn.textContent = '✓ Синхронізовано';
-          statusEl.textContent = 'Нотатки та фото оновлено з Google Drive';
-          
-          setTimeout(() => {
-            syncBtn.disabled = false;
-            syncBtn.textContent = '🔄 Оновити синхронізацію';
-          }, 2500);
-
-          bus.emit('station:refresh');
-        },
-        (err) => {
-          statusEl.textContent = 'Помилка авторизації Google';
-          console.error(err);
-        }
-      );
-
-      requestDriveAuth();
-    });
-
+    container.innerHTML = DEV_MINI_SVG;
     setupDevDataClear(container);
+    if (syncBtn) setupDevSyncButton(syncBtn);
   }
 }
 
-export async function syncDevStateToCloud() {
-  const token = getDriveAccessToken();
-  if (!token) return;
+// ── Google Drive: збірка / застосування пейлоада ──────
+/**
+ * Збирає поточні нотатки, верифікацію й фото Dev Mode в один пейлоад
+ * для appDataFolder. updatedAt — це час ОСТАННЬОЇ РЕАЛЬНОЇ ПРАВКИ
+ * (_touchSyncTimestamp), а не момент синхронізації — інакше порівняння
+ * "хто новіший" між пристроями втратило б сенс.
+ * @returns {Promise<object>}
+ */
+async function _buildSyncPayload() {
+  let notes = {};
+  let verified = {};
+  try { notes    = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}'); } catch(e) {}
+  try { verified = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}'); } catch(e) {}
+  const photos = await PhotoStorage.getAllPhotos();
+  return { notes, verified, photos, updatedAt: _getSyncTimestamp() || Date.now() };
+}
 
-  const payload = {
-    notes: JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}'),
-    verified: JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}'),
-    log: getDevLog(),
-    updatedAt: Date.now(),
+/**
+ * Застосовує пейлоад, отриманий з Drive, поверх локальних даних Dev Mode.
+ * notes/verified — повна заміна (це прості довідники, останній updatedAt
+ * виграє цілком). photos — домішуються через bulkSavePhotos: існуючі id
+ * перезаписуються, фото, яких нема в пейлоаді, лишаються незайманими.
+ * @param {object} payload
+ */
+async function _applySyncPayload(payload) {
+  if (payload.notes)    Storage.set(STORAGE_KEYS.DEV_NOTES,    JSON.stringify(payload.notes));
+  if (payload.verified) Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(payload.verified));
+  if (payload.photos)   await PhotoStorage.bulkSavePhotos(payload.photos);
+}
+
+/**
+ * Повна синхронізація з Google Drive: якщо дані на Drive новіші за локальні
+ * (за updatedAt) — застосовує їх локально; в будь-якому разі після цього
+ * вивантажує актуальний (можливо, щойно застосований) стан назад у Drive,
+ * щоб обидва боки збіглись.
+ *
+ * Це просте правило "останній запис виграє цілком", не по-польове злиття —
+ * достатньо для персональних dev-нотаток одного розробника на кількох
+ * пристроях, але не розрахований на одночасне редагування з двох пристроїв.
+ *
+ * @returns {Promise<'downloaded'|'uploaded'>}
+ */
+export async function syncDevDataWithDrive() {
+  const remote  = await downloadDevDataFromDrive();
+  const localTs = _getSyncTimestamp();
+  const remoteIsNewer = remote && Number(remote.updatedAt || 0) > localTs;
+
+  if (remoteIsNewer) {
+    await _applySyncPayload(remote);
+    Storage.set(STORAGE_KEYS.DEV_SYNC_LOCAL_TS, String(remote.updatedAt));
+    bus.emit('station:refresh');
+  }
+
+  const payload = await _buildSyncPayload();
+  await uploadDevDataToDrive(payload);
+
+  return remoteIsNewer ? 'downloaded' : 'uploaded';
+}
+
+// ── UI: кнопка синхронізації в About-шторці ───────────
+const DEV_SYNC_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>`;
+
+/**
+ * Прив'язує клік по кнопці синхронізації: перший клік — вікно згоди Google
+ * (через initGoogleDriveAuth + requestDriveAuth), наступні — мовчки, якщо
+ * токен ще дійсний. Кнопка сама блокується на час запиту (dev-sync-busy),
+ * щоб подвійний тап не спричинив два паралельні sync.
+ * @param {HTMLElement} btn
+ */
+function setupDevSyncButton(btn) {
+  if (!btn) return;
+  let busy = false;
+
+  const runSync = async () => {
+    if (busy) return;
+    busy = true;
+    btn.classList.add('dev-sync-busy');
+    try {
+      const result = await syncDevDataWithDrive();
+      _showToast(result === 'downloaded' ? 'Отримано зміни з Drive' : 'Синхронізовано з Drive');
+    } catch (err) {
+      console.warn('[KyivMetroGO] Drive sync error:', err);
+      _showToast('Не вдалося синхронізувати');
+    } finally {
+      busy = false;
+      btn.classList.remove('dev-sync-busy');
+    }
   };
 
-  await uploadDevDataToDrive(payload);
+  initGoogleDriveAuth(
+    () => {}, // успіх авторизації сам по собі нічого не показує — чекаємо на runSync()
+    (err) => {
+      console.warn('[KyivMetroGO] Google auth error:', err);
+      busy = false;
+      btn.classList.remove('dev-sync-busy');
+      _showToast('Немає доступу до Google Drive');
+    }
+  );
+
+  btn.onclick = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    runSync();
+  };
 }
 
 // ── Лічильник тапів на футері ─────────────────────────
@@ -505,23 +573,6 @@ export function setupDevModeTapCounter(aboutSheet) {
     }
   });
 }
-
-// Автоматично ініціалізуємо SDK
-initGoogleDriveAuth(
-  async (token) => {
-    showDevModeToast(true);
-    // Після входу завантажуємо та об'єднуємо нотатки
-    const cloudData = await downloadDevDataFromDrive();
-    if (cloudData?.notes) {
-      Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(cloudData.notes));
-    }
-    if (cloudData?.verified) {
-      Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
-    }
-    bus.emit('station:refresh');
-  },
-  (err) => console.error(err)
-);
 
 // ── Очищення даних розробника ─────────────────────────
 function setupDevDataClear(container) {

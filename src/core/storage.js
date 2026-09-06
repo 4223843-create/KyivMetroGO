@@ -29,6 +29,7 @@ export const STORAGE_KEYS = {
   DEV_LOG:      'metro_dev_log',
   DEV_VERIFIED: 'metro_dev_verified',
   DEV_NOTES:    'metro_dev_notes',
+  DEV_SYNC_LOCAL_TS: 'metro_dev_sync_local_ts',
   LOGO_STATE:     'metro_logo_state',
   LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
   CHECKIN_HATCH:  'metro_checkin_hatch',
