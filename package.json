@@ -19,6 +19,7 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capawesome/capacitor-file-picker": "^8.0.2",
+    "firebase": "^12.19.0",
     "sortablejs": "^1.15.3"
   },
   "devDependencies": {

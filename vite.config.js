@@ -26,6 +26,26 @@ export default defineConfig({
     __BUILD_DATE__: JSON.stringify(buildDate),
   },
 
+  // Явна конфігурація dev-сервера. Без цього Vite сам вгадує порт для
+  // WebSocket'а гарячого перезавантаження (HMR) з location.port у браузері —
+  // і якщо сторінку відкрито не напряму (проксі, тунель, port-forwarding у
+  // хмарному середовищі розробки), вгадування ламається і виникає
+  // "Failed to construct 'WebSocket': ...localhost:undefined...".
+  // strictPort:true — щоб порт завжди був саме 5173, а не "перший вільний".
+  server: {
+    host:       true,
+    port:       5173,
+    strictPort: true,
+    hmr: {
+      // Якщо все ще падає в вашому середовищі — це означає, що назовні
+      // (у браузері) сервер видно на ІНШОМУ порту/хості, ніж 5173 напряму.
+      // Тоді розкоментуйте й підставте порт/хост, під яким Vite реально
+      // видно ззовні (наприклад, порт, який відкриває тунель чи проксі):
+      // clientPort: 443,
+      // host: 'your-public-preview-host',
+    },
+  },
+
   build: {
     target:        'es2018',
     sourcemap:     false,          // явно вимкнено для production — менший bundle, без витоку коду
