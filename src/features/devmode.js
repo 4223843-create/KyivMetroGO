@@ -544,3 +544,44 @@ export function setupDevModeTapCounter(aboutSheet) {
     }, 400);
   });
 }
+
+// ── Очищення даних розробника ─────────────────────────
+function setupDevDataClear(container) {
+  let clearTaps = 0;
+  let tapTimer = null;
+
+  container.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    clearTaps++;
+    clearTimeout(tapTimer);
+
+    if (clearTaps === 1) showDevModeToast(true);
+
+    tapTimer = setTimeout(() => {
+      if (clearTaps >= 5) {
+        document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
+        bus.emit('ui:confirm', {
+          message:  'Очистити всі дані режиму розробника?',
+          onYes:    async () => {
+            Storage.remove(STORAGE_KEYS.DEV_LOG);
+            Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
+            Storage.remove(STORAGE_KEYS.DEV_NOTES);
+            await PhotoStorage.clearAllPhotos().catch(err =>
+              console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
+            );
+            setTimeout(() => location.reload(), 180);
+          },
+          onNo:      null,
+          onCancel:  null,
+          labelYes:  'Очистити',
+          labelNo:   'Скасувати',
+          styleYes:  'confirm-btn-discard',
+          styleNo:   'confirm-btn-neutral',
+        });
+      }
+      clearTaps = 0;
+    }, 400); 
+  };
+}
