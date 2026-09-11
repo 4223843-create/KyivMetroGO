@@ -29,8 +29,7 @@ import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
-import { auth } from '../services/firebase.js';
-import { loginDev, uploadDevState, downloadDevState } from '../services/firebaseSync.js';
+import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState, downloadDevState } from '../services/firebaseSync.js';
 
 
 
@@ -49,8 +48,8 @@ export function toggleDevMode() {
 
 // ── Локальний таймстамп останньої зміни (для синхронізації) ──
 // Окремо від dev-логу: тут — лише "коли востаннє змінювались нотатки/
-// верифікація/фото", щоб syncDevDataWithDrive() могло чесно порівняти
-// "хто новіший" з updatedAt пейлоада на Google Drive.
+// верифікація/фото", щоб sync-логіка могла чесно порівняти "хто новіший"
+// з updatedAt документа у Firestore.
 function _touchSyncTimestamp() {
   Storage.set(STORAGE_KEYS.DEV_SYNC_LOCAL_TS, String(Date.now()));
   _scheduleAutoSync();
@@ -60,27 +59,78 @@ function _getSyncTimestamp() {
   return Number(Storage.get(STORAGE_KEYS.DEV_SYNC_LOCAL_TS) || 0);
 }
 
+// ── Реактивний стан авторизації Firebase ──────────────
+// auth.currentUser відновлюється з IndexedDB асинхронно — одразу після
+// getAuth() він майже завжди null, навіть для вже залогіненого розробника.
+// Тому весь UI орієнтується на цю підписку (onDevAuthChange), а не на
+// currentUser напряму: при першому відкритті шторки без цього кнопка
+// показувала б "не авторизовано", поки SDK не встигне відповісти.
+let _devUser         = null;
+let _devAuthResolved = false;
+let _lastAboutSheet  = null; // остання відкрита About-шторка — щоб перемалювати індикатор при зміні auth
+
+onDevAuthChange(user => {
+  _devUser         = user;
+  _devAuthResolved = true;
+  if (_lastAboutSheet?.isConnected) {
+    updateDevModeIndicator(_lastAboutSheet, isDevMode());
+  }
+});
+
+// ── Синхронізація: спільний "зайнятий"-прапорець ──────
+// Без цього автосинк (за таймером) і ручна кнопка могли одночасно вдарити
+// в Firestore — не критично для цілісності даних (обидва пишуть у той самий
+// документ), але непередбачувано щодо того, чий запит "виграє". Прапорець
+// гарантує, що в моменті синхронізується щось одне.
+let _syncInFlight = false;
+
+/**
+ * Повна синхронізація: якщо в хмарі дані новіші за локальні (за updatedAt) —
+ * застосовує їх локально, інакше — вивантажує локальний стан. Правило
+ * "останній запис виграє цілком", не по-польове злиття.
+ * @returns {Promise<'downloaded'|'uploaded'|'busy'>}
+ */
+async function _performFullSync() {
+  if (_syncInFlight) return 'busy';
+  _syncInFlight = true;
+  try {
+    const cloudData = await downloadDevState();
+    const localTs   = _getSyncTimestamp();
+    const remoteIsNewer = cloudData && Number(cloudData.updatedAt || 0) > localTs;
+
+    if (remoteIsNewer) {
+      if (cloudData.notes)    Storage.set(STORAGE_KEYS.DEV_NOTES,    JSON.stringify(cloudData.notes));
+      if (cloudData.verified) Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
+      Storage.set(STORAGE_KEYS.DEV_SYNC_LOCAL_TS, String(cloudData.updatedAt));
+      bus.emit('station:refresh');
+    }
+
+    const localNotes    = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}');
+    const localVerified = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
+    await uploadDevState(localNotes, localVerified);
+
+    return remoteIsNewer ? 'downloaded' : 'uploaded';
+  } finally {
+    _syncInFlight = false;
+  }
+}
+
 // ── Автосинхронізація після кожної правки ─────────────
-// Спрацьовує лише якщо Google Drive вже авторизовано в цій сесії (тобто
-// розробник хоч раз натиснув кнопку синхронізації й пройшов вікно згоди) —
-// інакше довелось би самим показувати вікно Google при кожній правці, а це
-// вже нав'язливо, не "непомітно". Дебаунс 1.5с — щоб кілька швидких правок
-// поспіль (наприклад, верифікація одразу кількох виходів) злились в один
-// мережевий запит, а не спричиняли чергу окремих.
+// Спрацьовує лише якщо розробник вже залогінений у Firebase — інакше
+// довелось би самим показувати форму входу при кожній правці, а це вже
+// нав'язливо. Дебаунс 1.5с — щоб кілька швидких правок поспіль злились
+// в один мережевий запит.
 const AUTO_SYNC_DEBOUNCE_MS = 1500;
 let _autoSyncTimer = null;
 
 function _scheduleAutoSync() {
-  // Якщо не авторизовані у Firebase — нічого не робимо
-  if (!auth.currentUser) return; 
-  
+  if (!_devUser) return;
+
   clearTimeout(_autoSyncTimer);
   _autoSyncTimer = setTimeout(async () => {
     try {
-      const localNotes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-      const localVerified = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
-      await uploadDevState(localNotes, localVerified);
-      console.log('[KyivMetroGO] Автосинхронізація Firebase успішна');
+      const result = await _performFullSync();
+      if (result !== 'busy') console.log('[KyivMetroGO] Автосинхронізація Firebase успішна:', result);
     } catch (err) {
       console.warn('[KyivMetroGO] Автосинхронізація Firebase не вдалась:', err);
     }
@@ -372,15 +422,20 @@ const existingPhoto = await PhotoStorage.loadPhoto(photoId);
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (ev) => {
-      await PhotoStorage.savePhoto(photoId, ev.target.result);
-      _touchSyncTimestamp();
-      photoBtn.style.color   = lineColor;
-      photoBtn.style.opacity = '1';
-      panel.classList.remove('panel-open');
-      setTimeout(() => {
-        panel.remove();
-        toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
-      }, 280);
+      try {
+        await PhotoStorage.savePhoto(photoId, ev.target.result);
+        _touchSyncTimestamp();
+        photoBtn.style.color   = lineColor;
+        photoBtn.style.opacity = '1';
+        panel.classList.remove('panel-open');
+        setTimeout(() => {
+          panel.remove();
+          toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
+        }, 280);
+      } catch (err) {
+        console.warn('[KyivMetroGO] Не вдалося зберегти фото:', err);
+        _showToast('Не вдалося зберегти фото');
+      }
     };
     reader.readAsDataURL(file);
   });
@@ -389,12 +444,17 @@ const existingPhoto = await PhotoStorage.loadPhoto(photoId);
   if (clearBtn) {
     clearBtn.addEventListener('click', async e => {
       e.stopPropagation();
-await PhotoStorage.removePhoto(photoId);
-      _touchSyncTimestamp();
-      photoBtn.style.color   = defaultColor;
-      photoBtn.style.opacity = defaultOpacity;
-      panel.classList.remove('panel-open');
-      setTimeout(() => panel.remove(), 280);
+      try {
+        await PhotoStorage.removePhoto(photoId);
+        _touchSyncTimestamp();
+        photoBtn.style.color   = defaultColor;
+        photoBtn.style.opacity = defaultOpacity;
+        panel.classList.remove('panel-open');
+        setTimeout(() => panel.remove(), 280);
+      } catch (err) {
+        console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
+        _showToast('Не вдалося видалити фото');
+      }
     });
   }
 }
@@ -439,86 +499,130 @@ export function showDevModeToast(active) {
 const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
 
 /**
- * Оновлює SVG-іконку dev-режиму у About-шторці.
+ * Оновлює SVG-іконку dev-режиму та блок Firebase-авторизації у About-шторці.
+ * Три стани: сесія ще не відома (isAuthResolved()===false) → нейтральний
+ * плейсхолдер; відома, юзера нема → інлайн-форма email/пароль; юзер є →
+ * кнопка синхронізації + вихід.
  * @param {HTMLElement} aboutSheet
  * @param {boolean}     active
  */
-
-
 export function updateDevModeIndicator(aboutSheet, active) {
   const container = aboutSheet.querySelector('#aboutDevBtnContainer');
   if (!container) return;
   container.innerHTML = '';
 
-  if (active) {
-    const isLogged = auth.currentUser !== null;
-    
+  if (!active) return;
+
+  if (!_devAuthResolved) {
+    // SDK ще не встиг відповісти, хто залогінений — не показуємо форму
+    // входу передчасно (інакше миготітиме "не авторизовано" й одразу зникає).
     container.innerHTML = `
-      <div style="margin: 14px 0; text-align: center;">
-        <button type="button" id="devFirebaseBtn" class="confirm-main-btn confirm-btn-save" style="padding: 10px 18px; font-size: 13px; margin: 0 auto; display: inline-flex; align-items: center; gap: 8px;">
-          ${isLogged ? '🔄 Синхронізувати з Firebase' : '🔥 Авторизація Firebase'}
-        </button>
-        <div id="devFirebaseStatus" style="font-size: 12px; color: var(--text-muted); margin-top: 6px;"></div>
-      </div>
-    `;
+      <div class="dev-auth-block">
+        <div class="dev-auth-status">Перевірка сесії…</div>
+      </div>`;
+    return;
+  }
 
-    const syncBtn = container.querySelector('#devFirebaseBtn');
-    const statusEl = container.querySelector('#devFirebaseStatus');
+  if (!_devUser) {
+    container.innerHTML = `
+      <div class="dev-auth-block">
+        <form class="dev-login-form" autocomplete="on">
+          <input type="email" class="dev-login-input" name="email" placeholder="Email розробника" autocomplete="username" required>
+          <input type="password" class="dev-login-input" name="password" placeholder="Пароль" autocomplete="current-password" required>
+          <button type="submit" class="confirm-main-btn confirm-btn-save">Увійти</button>
+        </form>
+        <div class="dev-auth-status"></div>
+      </div>`;
 
-    syncBtn?.addEventListener('click', async (e) => {
+    const form     = container.querySelector('.dev-login-form');
+    const statusEl = container.querySelector('.dev-auth-status');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
       e.stopPropagation();
+      const email = form.elements.email.value.trim();
+      const pass  = form.elements.password.value;
+      if (!email || !pass) return;
 
+      submitBtn.disabled  = true;
+      statusEl.textContent = 'Авторизація…';
       try {
-        if (!auth.currentUser) {
-          const email = prompt("Введіть email розробника:");
-          if (!email) return;
-          const pass = prompt("Введіть пароль:");
-          if (!pass) return;
-
-          statusEl.textContent = 'Авторизація...';
-          await loginDev(email, pass);
-          syncBtn.textContent = '🔄 Синхронізувати з Firebase';
-          statusEl.textContent = 'Успішний вхід. Натисніть ще раз для синхронізації.';
-          return;
-        }
-
-        syncBtn.textContent = '🔄 Синхронізація...';
-        syncBtn.disabled = true;
-        statusEl.textContent = 'Зчитування бази...';
-
-        const cloudData = await downloadDevState();
-        if (cloudData) {
-          if (cloudData.notes) Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(cloudData.notes));
-          if (cloudData.verified) Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
-        }
-
-        statusEl.textContent = 'Відправка бази...';
-        const localNotes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-        const localVerified = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
-        await uploadDevState(localNotes, localVerified);
-
-        syncBtn.textContent = '✓ Синхронізовано';
-        statusEl.textContent = 'Дані успішно оновлено';
-        
-        setTimeout(() => {
-          syncBtn.disabled = false;
-          syncBtn.textContent = '🔄 Синхронізувати з Firebase';
-        }, 3000);
-
-        bus.emit('station:refresh');
-
+        await loginDev(email, pass);
+        // Кнопку/форму перемалює onDevAuthChange автоматично.
       } catch (err) {
-        statusEl.textContent = 'Помилка: ' + err.message;
-        syncBtn.disabled = false;
+        statusEl.textContent = 'Помилка: ' + (err.message || err);
+        submitBtn.disabled = false;
       }
     });
 
+    // Клік деінде в контейнері (5-тап очищення) не має зачіпати саму форму
+    form.addEventListener('click', e => e.stopPropagation());
+
     setupDevDataClear(container);
+    return;
   }
+
+  // Юзер відомий і залогінений
+  container.innerHTML = `
+    <div class="dev-auth-block">
+      <button type="button" id="devFirebaseBtn" class="confirm-main-btn confirm-btn-save">
+        🔄 Синхронізувати з Firebase
+      </button>
+      <button type="button" id="devFirebaseLogout" class="dev-logout-link">Вийти (${_devUser.email})</button>
+      <div id="devFirebaseStatus" class="dev-auth-status"></div>
+    </div>`;
+
+  const syncBtn   = container.querySelector('#devFirebaseBtn');
+  const logoutBtn = container.querySelector('#devFirebaseLogout');
+  const statusEl  = container.querySelector('#devFirebaseStatus');
+
+  syncBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+
+    if (_syncInFlight) {
+      statusEl.textContent = 'Синхронізація вже триває…';
+      return;
+    }
+
+    syncBtn.textContent = '🔄 Синхронізація…';
+    syncBtn.disabled = true;
+    statusEl.textContent = '';
+
+    try {
+      const result = await _performFullSync();
+      syncBtn.textContent  = '✓ Синхронізовано';
+      statusEl.textContent = result === 'downloaded'
+        ? 'Отримано новіші дані з хмари'
+        : 'Дані успішно оновлено в хмарі';
+
+      setTimeout(() => {
+        syncBtn.disabled = false;
+        syncBtn.textContent = '🔄 Синхронізувати з Firebase';
+      }, 3000);
+    } catch (err) {
+      statusEl.textContent = 'Помилка: ' + (err.message || err);
+      syncBtn.disabled = false;
+      syncBtn.textContent = '🔄 Синхронізувати з Firebase';
+    }
+  });
+
+  logoutBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    try {
+      await logoutDev();
+      // Форму/кнопку перемалює onDevAuthChange автоматично.
+    } catch (err) {
+      statusEl.textContent = 'Помилка виходу: ' + (err.message || err);
+    }
+  });
+
+  setupDevDataClear(container);
 }
 
 // ── Активація Dev Mode прихованим жестом (5 тапів) ──
 export function setupDevModeTapCounter(aboutSheet) {
+  _lastAboutSheet = aboutSheet;
   // Відображаємо актуальний стан при відкритті шторки
   updateDevModeIndicator(aboutSheet, isDevMode());
 
