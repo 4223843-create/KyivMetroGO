@@ -47,7 +47,7 @@ export default defineConfig({
   },
 
   build: {
-    target:        'es2018',
+    target:        'esnext',
     sourcemap:     false,          // явно вимкнено для production — менший bundle, без витоку коду
     modulePreload: { polyfill: false },
     outDir:        'dist',
