@@ -1,11 +1,15 @@
 // ══ МЕНЮ РОЗРОБНИКА ══
 // Окрема повноекранна шторка, доступна плаваючою кнопкою зверху карти
 // (лише коли Dev Mode активний). Секції: авторизація/синхронізація Firebase,
-// узагальнені нотатки по всіх станціях, список непозначених-як-перевірені
-// виходів, і простий беклог ідей.
+// узагальнені нотатки по всіх станціях, список станцій з непозначеними
+// виходами (дизайн скопійовано зі списку станцій "Запропонувати зміни" —
+// кольорові кружечки ліній + фільтр по гілці), і простий беклог ідей.
+// Усі три розгортні секції (Нотатки/Потребують перевірки/Backlog)
+// пам'ятають стан згорнуто/розгорнуто між відкриттями (Storage).
 
 import { state }   from '../core/state.js';
 import { bus }     from '../core/eventBus.js';
+import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { pushSheetHistory }  from '../ui/system.js';
 import { animateSheetClose } from '../ui/animations.js';
@@ -17,7 +21,11 @@ import {
 
 const sheetOverlay = document.getElementById('sheetOverlay');
 
-// ── Допоміжне: один рядок "станція → вихід" клікабельний до відкриття станції ──
+// Активний фільтр по гілці для секції "Потребують перевірки" —
+// живе тільки на час відкритої шторки, не зберігається між сесіями.
+let _verifyLine = '';
+
+// ── Допоміжне: один рядок "станція → вихід" для секції "Нотатки" ──
 function _rowHtml(slug, stationName, descriptor, extra) {
   const parts = [descriptor.dirFrom, descriptor.exitLabel].filter(Boolean).join(' · ');
   return `<button type="button" class="dev-menu-row" data-slug="${slug}">
@@ -60,30 +68,42 @@ function _renderNotesSection(container) {
 }
 
 /**
- * Будує вміст секції "Потребують перевірки" — усі позиції всіх станцій,
- * яких немає в DEV_VERIFIED. Проходить кожну станцію зі state.stationsData.
+ * Будує вміст секції "Потребують перевірки" — дизайн один-в-один
+ * скопійований зі списку станцій "Запропонувати зміни" (stationListHtml
+ * у fbRenderer.js): кольоровий кружечок лінії (.search-item-line) + назва
+ * (.search-item), фільтр по гілці (.search-line-filter/.search-line-btn).
+ * На відміну від нотаток, тут один рядок = одна станція (не один рядок на
+ * вихід) — клік одразу відкриває станцію.
  */
 function _renderVerificationSection(container) {
   const stationsData = state.stationsData || {};
-  let html = '';
 
-  for (const slug of Object.keys(stationsData)) {
-    const station = stationsData[slug];
-    const color   = LINE_COLOR[station.line] || '#888888';
-    const descriptors = getPositionDescriptorsForStation(station, color);
+  const entries = Object.entries(stationsData)
+    .map(([slug, station]) => {
+      const color       = LINE_COLOR[station.line] || '#888888';
+      const descriptors = getPositionDescriptorsForStation(station, color);
+      const unverified   = descriptors.filter(d => !isVerified(slug, d.posIdx));
+      return { slug, station, color, count: unverified.length };
+    })
+    .filter(e => e.count > 0 && (_verifyLine === '' || e.station.line === _verifyLine))
+    .sort((a, b) => a.station.name.localeCompare(b.station.name, 'uk'));
 
-    const rows = descriptors
-      .filter(d => !isVerified(slug, d.posIdx))
-      .map(d => _rowHtml(slug, station.name, d))
-      .join('');
-
-    if (rows) html += `<div class="dev-menu-group">${rows}</div>`;
+  if (!entries.length) {
+    container.innerHTML = `<div class="dev-menu-empty">Усі виходи позначені як перевірені 🎉</div>`;
+    return;
   }
 
-  container.innerHTML = html || `<div class="dev-menu-empty">Усі виходи позначені як перевірені 🎉</div>`;
+  container.innerHTML = entries.map(({ slug, station, color, count }) => `
+    <div class="search-item dev-menu-verify-item" data-slug="${slug}">
+      <div class="search-item-line" style="background-color:${color}"></div>
+      <div class="search-item-text">
+        <div>${station.name}</div>
+        <div class="search-item-hint">${count} ${count === 1 ? 'вихід' : 'виходів'}</div>
+      </div>
+    </div>`).join('');
 }
 
-function _bindRowClicks(container) {
+function _bindNotesClicks(container) {
   container.querySelectorAll('.dev-menu-row').forEach(row => {
     row.addEventListener('click', () => {
       const slug = row.dataset.slug;
@@ -92,20 +112,81 @@ function _bindRowClicks(container) {
   });
 }
 
-function _renderAll(sheet) {
-  const notesEl  = sheet.querySelector('#devMenuNotes');
-  const verifyEl = sheet.querySelector('#devMenuVerify');
-  const backlogEl = sheet.querySelector('#devMenuBacklog');
-  const authEl   = sheet.querySelector('#devMenuAuth');
+function _bindVerifyClicks(container) {
+  container.querySelectorAll('.dev-menu-verify-item').forEach(row => {
+    row.addEventListener('click', () => {
+      const slug = row.dataset.slug;
+      if (slug) bus.emit('station:open', { slug });
+    });
+  });
+}
 
-  if (notesEl)  { _renderNotesSection(notesEl);  _bindRowClicks(notesEl); }
-  if (verifyEl) { _renderVerificationSection(verifyEl); _bindRowClicks(verifyEl); }
+function _bindVerifyLineFilter(sheet) {
+  const filter = sheet.querySelector('#devVerifyLineFilter');
+  if (!filter || filter.dataset.bound) return;
+  filter.dataset.bound = '1';
+
+  filter.addEventListener('click', e => {
+    const btn = e.target.closest('.search-line-btn');
+    if (!btn) return;
+    filter.querySelectorAll('.search-line-btn').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    _verifyLine = btn.dataset.line;
+
+    const verifyEl = sheet.querySelector('#devMenuVerify');
+    _renderVerificationSection(verifyEl);
+    _bindVerifyClicks(verifyEl);
+  });
+}
+
+// ── Розгортні секції (Нотатки / Потребують перевірки / Backlog) ──
+// Стан пам'ятається в Storage — при повторному відкритті шторки секції
+// лишаються в тому вигляді, в якому їх залишили минулого разу.
+function _getSectionsState() {
+  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_MENU_SECTIONS) || '{}'); }
+  catch(e) { return {}; }
+}
+
+function _setupCollapsibles(sheet) {
+  const sectionsState = _getSectionsState();
+
+  sheet.querySelectorAll('.dev-menu-collapsible').forEach(section => {
+    const key    = section.dataset.section;
+    const toggle = section.querySelector('.dev-menu-section-toggle');
+    if (!toggle || toggle.dataset.bound) return;
+    toggle.dataset.bound = '1';
+
+    // За замовчуванням (нема збереженого стану) — розгорнуто.
+    const collapsed = sectionsState[key] === false;
+    section.classList.toggle('is-collapsed', collapsed);
+
+    toggle.addEventListener('click', () => {
+      const nowCollapsed = !section.classList.contains('is-collapsed');
+      section.classList.toggle('is-collapsed', nowCollapsed);
+
+      const current = _getSectionsState();
+      current[key] = !nowCollapsed;
+      Storage.set(STORAGE_KEYS.DEV_MENU_SECTIONS, JSON.stringify(current));
+    });
+  });
+}
+
+function _renderAll(sheet) {
+  const notesEl   = sheet.querySelector('#devMenuNotes');
+  const verifyEl  = sheet.querySelector('#devMenuVerify');
+  const backlogEl = sheet.querySelector('#devMenuBacklog');
+  const authEl    = sheet.querySelector('#devMenuAuth');
+
+  if (notesEl)  { _renderNotesSection(notesEl);  _bindNotesClicks(notesEl); }
+  if (verifyEl) { _renderVerificationSection(verifyEl); _bindVerifyClicks(verifyEl); _bindVerifyLineFilter(sheet); }
   if (backlogEl && !backlogEl.dataset.bound) {
     backlogEl.value = getDevBacklog();
     backlogEl.addEventListener('input', () => setDevBacklog(backlogEl.value));
     backlogEl.dataset.bound = '1';
   }
   if (authEl) renderDevAuthSection(authEl);
+
+  _setupCollapsibles(sheet);
 }
 
 export function openDevMenuSheet() {

@@ -3477,6 +3477,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 /* ── Кнопки в ряд (Dev Mode) ── */
 .dev-check-btn,
+.dev-confirm-btn,
 .dev-note-btn,
 .dev-photo-btn {
   position: absolute;
@@ -3497,12 +3498,14 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 /* Відступи кнопок одна від одної */
-.dev-check-btn { left: 4px; }
-.dev-note-btn  { left: 32px; }
-.dev-photo-btn { left: 60px; }
+.dev-check-btn   { left: 4px; }
+.dev-confirm-btn { left: 32px; }
+.dev-note-btn    { left: 60px; }
+.dev-photo-btn   { left: 88px; }
 
 /* Робимо SVG блочними і ЗАБОРОНЯЄМО браузеру їх стискати */
 .dev-check-btn svg,
+.dev-confirm-btn svg,
 .dev-note-btn svg,
 .dev-photo-btn svg {
   display: block !important;
@@ -3516,6 +3519,28 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   width: 26px !important;
   height: 26px !important;
   transform: translateY(1px) !important; /* Опускаємо на 1px */
+}
+
+/* 1b. Лічильник підтверджень */
+.dev-confirm-btn svg {
+  width: 17px !important;
+  height: 17px !important;
+  transform: translateY(0) !important;
+}
+.dev-confirm-count {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 2px;
+  border-radius: 7px;
+  background: currentColor;
+  font-size: 9px;
+  font-weight: var(--fw-medium);
+  line-height: 13px;
+  text-align: center;
+  color: var(--bg);
 }
 
 /* 2. Нотатка: квадратна і масивна, робимо її найменшою */
@@ -3734,6 +3759,49 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   padding: 0 4px;
 }
 
+/* Заголовок розгортної секції — сам є кнопкою */
+.dev-menu-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dev-menu-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.dev-menu-collapsible.is-collapsed .dev-menu-chevron {
+  transform: rotate(-90deg);
+}
+
+.dev-menu-section-body {
+  overflow: hidden;
+}
+
+.dev-menu-collapsible.is-collapsed .dev-menu-section-body {
+  display: none;
+}
+
+/* .search-item скопійований з "Запропонувати зміни" — тут трохи інший
+   контекст (не у списку на всю ширину шторки), тож заокруглюємо картками */
+.dev-menu-verify-item {
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+}
+.dev-menu-verify-item:last-child {
+  border-bottom: 0.5px solid var(--border);
+}
+
 .dev-menu-empty {
   font-size: var(--fs-sm);
   color: var(--text-muted);
@@ -3803,6 +3871,51 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .dev-note-actions button.confirm-btn-discard {
   border-left: 3px solid var(--line-red);
   border-right: 3px solid var(--line-red);
+}
+
+/* ── Панель підтвердження/виправлення ── */
+.dev-confirm-count-line {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.dev-confirm-count-line b {
+  color: var(--text);
+}
+
+.dev-confirm-corrections {
+  margin-bottom: 8px;
+}
+.dev-confirm-correction-row {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  padding: 2px 0;
+}
+
+.dev-confirm-fix-wrap {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dev-confirm-fix-wrap.is-hidden {
+  display: none;
+}
+.dev-confirm-fix-wrap .fb-input-wrap {
+  justify-content: space-between;
+}
+.dev-confirm-save-fix {
+  height: 34px;
+  border-radius: 8px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  background: var(--bg-pill);
+  cursor: pointer;
+  border-left: 3px solid var(--line-green);
+  border-right: 3px solid var(--line-green);
+  font-family: inherit;
 }
 
 .confirm-btn-neutral {

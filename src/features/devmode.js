@@ -22,6 +22,8 @@ const DEV_CHECK_SVG = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/sv
 const DEV_NOTE_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 12h14M5 16h6"/></svg>`;
 
 const DEV_PHOTO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" width="26" height="20"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="3,22.3 11,14.3 22.5,25.9 "/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="17.4,20.9 22,16.3 28.9,23.2 "/></svg>`;
+// Лічильник підтверджень — кругла стрілка (те саме "оновити/повторно перевірити")
+const DEV_CONFIRM_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { state }                  from '../core/state.js';
@@ -105,15 +107,17 @@ async function _performFullSync() {
       if (cloudData.notes)              Storage.set(STORAGE_KEYS.DEV_NOTES,    JSON.stringify(cloudData.notes));
       if (cloudData.verified)           Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
       if (cloudData.backlog !== undefined) Storage.set(STORAGE_KEYS.DEV_BACKLOG, cloudData.backlog);
+      if (cloudData.confirmations)      Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(cloudData.confirmations));
       Storage.set(STORAGE_KEYS.DEV_SYNC_LOCAL_TS, String(cloudData.updatedAt));
       bus.emit('station:refresh');
       bus.emit('devmenu:refresh');
     }
 
-    const localNotes    = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}');
-    const localVerified = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
-    const localBacklog  = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
-    await uploadDevState(localNotes, localVerified, localBacklog);
+    const localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}');
+    const localVerified      = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
+    const localBacklog       = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
+    const localConfirmations = getAllDevConfirmations();
+    await uploadDevState(localNotes, localVerified, localBacklog, localConfirmations);
 
     return remoteIsNewer ? 'downloaded' : 'uploaded';
   } finally {
@@ -242,6 +246,58 @@ export function getAllDevVerified() {
   catch(e) { return {}; }
 }
 
+// ── Лічильник підтверджень + пропозиції виправлень ────
+// Окремо від isVerified (той — просто галочка "перевірено"): тут рахуємо,
+// СКІЛЬКИ РАЗІВ підтвердили, що дані на місці вірні, і, якщо не співпадає,
+// які саме виправлення (вагон/двері) пропонували і скільки разів кожне —
+// щоб було видно, чи є консенсус по конкретному новому значенню.
+function _readConfirmations() {
+  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_CONFIRMATIONS) || '{}'); }
+  catch(e) { return {}; }
+}
+
+function _writeConfirmations(data) {
+  Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(data));
+  _touchSyncTimestamp();
+}
+
+/** @returns {{confirmCount:number, corrections:Record<string,number>}} */
+export function getConfirmationData(slug, posIdx) {
+  const all = _readConfirmations();
+  return all[slug]?.[posIdx] || { confirmCount: 0, corrections: {} };
+}
+
+/** @returns {Record<string, Record<string,{confirmCount:number, corrections:Record<string,number>}>>} усі дані підтверджень */
+export function getAllDevConfirmations() {
+  return _readConfirmations();
+}
+
+/** Підтвердити, що дані на місці правильні. Повертає новий лічильник. */
+export function incrementConfirmCount(slug, posIdx) {
+  const all = _readConfirmations();
+  if (!all[slug]) all[slug] = {};
+  if (!all[slug][posIdx]) all[slug][posIdx] = { confirmCount: 0, corrections: {} };
+  all[slug][posIdx].confirmCount++;
+  _writeConfirmations(all);
+  return all[slug][posIdx].confirmCount;
+}
+
+/**
+ * Додає голос за виправлення (вагон/двері). Якщо таке саме виправлення вже
+ * пропонували раніше — просто збільшує його власний лічильник.
+ * @returns {number} новий лічильник саме для цього значення виправлення
+ */
+export function addCorrectionVote(slug, posIdx, wagon, doors) {
+  const all = _readConfirmations();
+  if (!all[slug]) all[slug] = {};
+  if (!all[slug][posIdx]) all[slug][posIdx] = { confirmCount: 0, corrections: {} };
+  const key = `${wagon}/${doors}`;
+  const corrections = all[slug][posIdx].corrections;
+  corrections[key] = (corrections[key] || 0) + 1;
+  _writeConfirmations(all);
+  return corrections[key];
+}
+
 /** @returns {string} поточний текст беклогу розробника */
 export function getDevBacklog() {
   return Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
@@ -298,6 +354,20 @@ export function attachDevModeUI(container, slug) {
       checkBtn.style.opacity = defaultOpacity;
     }
 
+    // ── Кнопка «Підтвердження» (лічильник) ──
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'dev-confirm-btn';
+    confirmBtn.type = 'button';
+
+    const renderConfirmBtn = () => {
+      const data = getConfirmationData(slug, posIdx);
+      confirmBtn.innerHTML = DEV_CONFIRM_SVG + (data.confirmCount > 0 ? `<span class="dev-confirm-count">${data.confirmCount}</span>` : '');
+      const hasAny = data.confirmCount > 0 || Object.keys(data.corrections).length > 0;
+      confirmBtn.style.color   = hasAny ? lineColor : defaultColor;
+      confirmBtn.style.opacity = hasAny ? '1' : defaultOpacity;
+    };
+    renderConfirmBtn();
+
     // ── Кнопка «Нотатка» ──
     const noteBtn = document.createElement('button');
     noteBtn.className = 'dev-note-btn';
@@ -320,7 +390,7 @@ export function attachDevModeUI(container, slug) {
     photoBtn.style.color   = defaultColor;
     photoBtn.style.opacity = defaultOpacity;
 
-    row.prepend(photoBtn, noteBtn, checkBtn);
+    row.prepend(photoBtn, noteBtn, confirmBtn, checkBtn);
 
     PhotoStorage.loadPhoto(photoId).then(hasPhoto => {
       if (hasPhoto) {
@@ -336,6 +406,11 @@ export function attachDevModeUI(container, slug) {
       checkBtn.style.opacity = nowVerified ? '1' : defaultOpacity;
     });
 
+    confirmBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleDevConfirmPanel(row, slug, posIdx, lineColor, renderConfirmBtn);
+    });
+
     noteBtn.addEventListener('click', e => {
       e.stopPropagation();
       toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor, defaultOpacity);
@@ -346,6 +421,111 @@ export function attachDevModeUI(container, slug) {
       toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
     });
   });
+}
+
+// ── UI: панель підтвердження / виправлення ────────────
+// Інтерфейс степера вагон/двері скопійований з "Запропонувати зміни"
+// (fb-input-wrap/fb-stepper/fb-step/fb-step-val у fbRenderer.js) — той самий
+// вигляд, лише спрощена логіка кроку (без сусідніх дверей і другого виходу,
+// тут потрібен просто прямий вибір вагон+двері).
+function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
+  const next = row.nextElementSibling;
+
+  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'confirm') {
+    next.classList.remove('panel-open');
+    setTimeout(() => next.remove(), 280);
+    return;
+  }
+
+  document.querySelectorAll('.dev-note-panel').forEach(p => {
+    p.classList.remove('panel-open');
+    setTimeout(() => p.remove(), 280);
+  });
+
+  const wId = `devConfirmW${slug}_${posIdx}`;
+  const dId = `devConfirmD${slug}_${posIdx}`;
+
+  const renderCorrectionsList = (data) => {
+    const entries = Object.entries(data.corrections);
+    if (!entries.length) return '';
+    return `<div class="dev-confirm-corrections">
+      ${entries.map(([key, count]) => {
+        const [w, d] = key.split('/');
+        return `<div class="dev-confirm-correction-row">Вагон ${w} / двері ${d} — ${count} ${count === 1 ? 'раз' : 'рази'}</div>`;
+      }).join('')}
+    </div>`;
+  };
+
+  const panel = document.createElement('div');
+  panel.className = 'dev-note-panel dev-confirm-panel';
+  panel.dataset.type = 'confirm';
+
+  const paint = () => {
+    const data = getConfirmationData(slug, posIdx);
+    panel.innerHTML = `
+      <div class="dev-confirm-count-line">Підтверджено: <b>${data.confirmCount}</b> ${data.confirmCount === 1 ? 'раз' : 'разів'}</div>
+      ${renderCorrectionsList(data)}
+      <div class="dev-note-actions">
+        <button type="button" class="dev-confirm-yes confirm-btn-save">Підтвердити</button>
+        <button type="button" class="dev-confirm-mismatch confirm-btn-discard">Не співпадає</button>
+      </div>
+      <div class="dev-confirm-fix-wrap is-hidden">
+        <div class="fb-input-wrap">
+          <span class="fb-input-label">вагон</span>
+          <div class="fb-stepper">
+            <button type="button" class="fb-step fb-step-down" data-id="${wId}" data-min="1" data-max="5" aria-label="Зменшити вагон">−</button>
+            <span class="fb-step-val" id="${wId}">1</span>
+            <button type="button" class="fb-step fb-step-up" data-id="${wId}" data-min="1" data-max="5" aria-label="Збільшити вагон">+</button>
+          </div>
+        </div>
+        <div class="fb-input-wrap">
+          <span class="fb-input-label">двері</span>
+          <div class="fb-stepper">
+            <button type="button" class="fb-step fb-step-down" data-id="${dId}" data-min="1" data-max="4" aria-label="Зменшити двері">−</button>
+            <span class="fb-step-val" id="${dId}">1</span>
+            <button type="button" class="fb-step fb-step-up" data-id="${dId}" data-min="1" data-max="4" aria-label="Збільшити двері">+</button>
+          </div>
+        </div>
+        <button type="button" class="dev-confirm-save-fix confirm-btn-save">Зберегти виправлення</button>
+      </div>`;
+
+    panel.querySelectorAll('.fb-step').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id  = btn.dataset.id;
+        const min = parseInt(btn.dataset.min);
+        const max = parseInt(btn.dataset.max);
+        const el  = document.getElementById(id);
+        let val   = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
+        el.textContent = Math.max(min, Math.min(max, val));
+      });
+    });
+
+    panel.querySelector('.dev-confirm-yes').addEventListener('click', e => {
+      e.stopPropagation();
+      incrementConfirmCount(slug, posIdx);
+      onUpdate();
+      paint();
+    });
+
+    panel.querySelector('.dev-confirm-mismatch').addEventListener('click', e => {
+      e.stopPropagation();
+      panel.querySelector('.dev-confirm-fix-wrap').classList.toggle('is-hidden');
+    });
+
+    panel.querySelector('.dev-confirm-save-fix').addEventListener('click', e => {
+      e.stopPropagation();
+      const wagon = document.getElementById(wId).textContent;
+      const doors = document.getElementById(dId).textContent;
+      addCorrectionVote(slug, posIdx, wagon, doors);
+      onUpdate();
+      paint();
+    });
+  };
+
+  paint();
+  row.after(panel);
+  requestAnimationFrame(() => panel.classList.add('panel-open'));
 }
 
 // ── UI: панель нотатки ───────────────────────────────
