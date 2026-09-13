@@ -16,10 +16,17 @@ import {
 } from './sheets/sheetsManager.js';
 import { withUnsavedCheck } from './core/unsavedCheck.js';
 import { bus } from './core/eventBus.js';
+import { openDevMenuSheet } from './sheets/devMenuSheet.js';
 
 // ── Bottom bar ─────────────────────────────────────────────────
 document.getElementById('favListBtn')?.addEventListener('click', openFavSheet);
 document.getElementById('searchBtnTop')?.addEventListener('click', openSearchSheet);
+
+// ── Меню розробника (плаваюча кнопка зверху карти) ──────────────
+// Видимість кнопки виставляється з main.js ПІСЛЯ Storage.init() —
+// тут, при імпорті цього файлу, Storage ще не завантажений, тож
+// isDevMode() тут завжди хибно повернув би false.
+document.getElementById('devMenuBtn')?.addEventListener('click', openDevMenuSheet);
 
 // ── Dropdown меню ──────────────────────────────────────────────
 const menuBtn  = document.getElementById('menuBtn');

@@ -9,6 +9,7 @@ import { updateFavDock, openFavSheet }    from './features/favorites/index.js';
 import { updateCheckinDock }              from './features/checkin/index.js';
 import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
+import { updateDevMenuButtonVisibility }  from './features/devmode.js';
 
 // Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
 import './map/mapGestures.js';
@@ -63,6 +64,7 @@ async function bootstrap() {
 
     updateCheckinDock();
     updateFavDock();
+    updateDevMenuButtonVisibility(); // тільки тепер Storage реально завантажено — раніше в app.js це завжди бачило "вимкнено"
 
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');

@@ -63,15 +63,18 @@ function _getSyncTimestamp() {
 // auth.currentUser відновлюється з IndexedDB асинхронно — одразу після
 // getAuth() він майже завжди null, навіть для вже залогіненого розробника.
 // Тому весь UI орієнтується на цю підписку (onDevAuthChange), а не на
-// currentUser напряму: при першому відкритті шторки без цього кнопка
-// показувала б "не авторизовано", поки SDK не встигне відповісти.
-let _devUser         = null;
-let _devAuthResolved = false;
-let _lastAboutSheet  = null; // остання відкрита About-шторка — щоб перемалювати індикатор при зміні auth
+// currentUser напряму.
+let _devUser              = null;
+let _devAuthResolved      = false;
+let _lastDevAuthContainer = null; // контейнер форми входу в меню розробника — щоб перемалювати при зміні auth
+let _lastAboutSheet       = null; // остання відкрита About-шторка — щоб оновити іконку швидкого синку
 
 onDevAuthChange(user => {
   _devUser         = user;
   _devAuthResolved = true;
+  if (_lastDevAuthContainer?.isConnected) {
+    renderDevAuthSection(_lastDevAuthContainer);
+  }
   if (_lastAboutSheet?.isConnected) {
     updateDevModeIndicator(_lastAboutSheet, isDevMode());
   }
@@ -99,15 +102,18 @@ async function _performFullSync() {
     const remoteIsNewer = cloudData && Number(cloudData.updatedAt || 0) > localTs;
 
     if (remoteIsNewer) {
-      if (cloudData.notes)    Storage.set(STORAGE_KEYS.DEV_NOTES,    JSON.stringify(cloudData.notes));
-      if (cloudData.verified) Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
+      if (cloudData.notes)              Storage.set(STORAGE_KEYS.DEV_NOTES,    JSON.stringify(cloudData.notes));
+      if (cloudData.verified)           Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
+      if (cloudData.backlog !== undefined) Storage.set(STORAGE_KEYS.DEV_BACKLOG, cloudData.backlog);
       Storage.set(STORAGE_KEYS.DEV_SYNC_LOCAL_TS, String(cloudData.updatedAt));
       bus.emit('station:refresh');
+      bus.emit('devmenu:refresh');
     }
 
     const localNotes    = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}');
     const localVerified = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
-    await uploadDevState(localNotes, localVerified);
+    const localBacklog  = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
+    await uploadDevState(localNotes, localVerified, localBacklog);
 
     return remoteIsNewer ? 'downloaded' : 'uploaded';
   } finally {
@@ -222,6 +228,39 @@ export function setDevNote(slug, posIdx, text) {
     Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(notes));
     _touchSyncTimestamp();
   } catch(e) {}
+}
+
+/** @returns {Record<string, Record<string,string>>} усі нотатки: {slug: {posIdx: текст}} */
+export function getAllDevNotes() {
+  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}'); }
+  catch(e) { return {}; }
+}
+
+/** @returns {Record<string, Record<string,boolean>>} усі позначки перевірки: {slug: {posIdx: true}} */
+export function getAllDevVerified() {
+  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}'); }
+  catch(e) { return {}; }
+}
+
+/** @returns {string} поточний текст беклогу розробника */
+export function getDevBacklog() {
+  return Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
+}
+
+const BACKLOG_SAVE_DEBOUNCE_MS = 800;
+let _backlogSaveTimer = null;
+
+/**
+ * Зберігає текст беклогу з невеликим дебаунсом (щоб не смикати
+ * _touchSyncTimestamp на кожен символ під час набору).
+ * @param {string} text
+ */
+export function setDevBacklog(text) {
+  clearTimeout(_backlogSaveTimer);
+  _backlogSaveTimer = setTimeout(() => {
+    Storage.set(STORAGE_KEYS.DEV_BACKLOG, text);
+    _touchSyncTimestamp();
+  }, BACKLOG_SAVE_DEBOUNCE_MS);
 }
 
 // ── UI: кнопки в картці станції ──────────────────────
@@ -498,96 +537,123 @@ export function showDevModeToast(active) {
 
 const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
 
+// Компактні іконки для швидкої кнопки синхронізації в About-шторці
+// (сама форма входу — тільки в повноекранному меню розробника, тут нема місця).
+const DEV_SYNC_SVG  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>`;
+const DEV_LOGIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>`;
+
 /**
- * Оновлює SVG-іконку dev-режиму та блок Firebase-авторизації у About-шторці.
- * Три стани: сесія ще не відома (isAuthResolved()===false) → нейтральний
- * плейсхолдер; відома, юзера нема → інлайн-форма email/пароль; юзер є →
- * кнопка синхронізації + вихід.
+ * Оновлює SVG-іконку dev-режиму в About-шторці (лише індикатор активності —
+ * сама форма авторизації сюди більше не вбудовується: тут лише 36×36px,
+ * фізично нема місця для полів вводу. Авторизація й синхронізація тепер
+ * живуть у повноекранному меню розробника (renderDevAuthSection).
  * @param {HTMLElement} aboutSheet
  * @param {boolean}     active
  */
 export function updateDevModeIndicator(aboutSheet, active) {
   const container = aboutSheet.querySelector('#aboutDevBtnContainer');
+  const syncBtn   = aboutSheet.querySelector('#aboutDevSyncBtn');
   if (!container) return;
+  container.innerHTML = active ? DEV_MINI_SVG : '';
+  if (active) setupDevDataClear(container);
+
+  if (syncBtn) {
+    syncBtn.classList.toggle('is-hidden', !active);
+    if (active) {
+      syncBtn.innerHTML = _devUser ? DEV_SYNC_SVG : DEV_LOGIN_SVG;
+      syncBtn.title = _devUser ? 'Синхронізувати з Firebase' : 'Увійти для синхронізації';
+      syncBtn.onclick = async e => {
+        e.stopPropagation();
+        if (!_devUser) {
+          bus.emit('devmenu:open');
+          return;
+        }
+        if (_syncInFlight) { _showToast('Синхронізація вже триває…'); return; }
+        syncBtn.classList.add('dev-sync-busy');
+        try {
+          const result = await _performFullSync();
+          _showToast(result === 'downloaded' ? 'Отримано новіші дані з хмари' : 'Синхронізовано з Firebase');
+        } catch (err) {
+          _showToast('Помилка синхронізації: ' + (err.message || err));
+        } finally {
+          syncBtn.classList.remove('dev-sync-busy');
+        }
+      };
+    }
+  }
+}
+
+/**
+ * Малює блок Firebase-авторизації/синхронізації у переданий контейнер.
+ * Розрахований на повноекранне меню розробника (openDevMenuSheet), де є
+ * достатньо місця для повноцінної форми — на відміну від тісної 36×36px
+ * кнопки в About-шторці, звідки цей блок і забрали.
+ * Три стани: сесія ще не відома → нейтральний плейсхолдер; відома, юзера
+ * нема → форма email/пароль; юзер є → кнопка синхронізації + вихід.
+ * Викликає сама себе повторно при зміні стану авторизації (onDevAuthChange),
+ * якщо контейнер усе ще в DOM.
+ * @param {HTMLElement} container
+ */
+export function renderDevAuthSection(container) {
+  if (!container) return;
+  _lastDevAuthContainer = container;
   container.innerHTML = '';
 
-  if (!active) return;
-
   if (!_devAuthResolved) {
-    // SDK ще не встиг відповісти, хто залогінений — не показуємо форму
-    // входу передчасно (інакше миготітиме "не авторизовано" й одразу зникає).
-    container.innerHTML = `
-      <div class="dev-auth-block">
-        <div class="dev-auth-status">Перевірка сесії…</div>
-      </div>`;
+    container.innerHTML = `<div class="dev-auth-status">Перевірка сесії…</div>`;
     return;
   }
 
   if (!_devUser) {
     container.innerHTML = `
-      <div class="dev-auth-block">
-        <form class="dev-login-form" autocomplete="on">
-          <input type="email" class="dev-login-input" name="email" placeholder="Email розробника" autocomplete="username" required>
-          <input type="password" class="dev-login-input" name="password" placeholder="Пароль" autocomplete="current-password" required>
-          <button type="submit" class="confirm-main-btn confirm-btn-save">Увійти</button>
-        </form>
-        <div class="dev-auth-status"></div>
-      </div>`;
+      <form class="dev-login-form" autocomplete="on">
+        <input type="email" class="dev-login-input" name="email" placeholder="Email розробника" autocomplete="username" required>
+        <input type="password" class="dev-login-input" name="password" placeholder="Пароль" autocomplete="current-password" required>
+        <button type="submit" class="confirm-main-btn confirm-btn-save">Увійти</button>
+      </form>
+      <div class="dev-auth-status"></div>`;
 
-    const form     = container.querySelector('.dev-login-form');
-    const statusEl = container.querySelector('.dev-auth-status');
+    const form      = container.querySelector('.dev-login-form');
+    const statusEl  = container.querySelector('.dev-auth-status');
     const submitBtn = form.querySelector('button[type="submit"]');
 
     form.addEventListener('submit', async e => {
       e.preventDefault();
-      e.stopPropagation();
       const email = form.elements.email.value.trim();
       const pass  = form.elements.password.value;
       if (!email || !pass) return;
 
-      submitBtn.disabled  = true;
+      submitBtn.disabled   = true;
       statusEl.textContent = 'Авторизація…';
       try {
         await loginDev(email, pass);
-        // Кнопку/форму перемалює onDevAuthChange автоматично.
+        // Форму перемалює onDevAuthChange автоматично.
       } catch (err) {
         statusEl.textContent = 'Помилка: ' + (err.message || err);
         submitBtn.disabled = false;
       }
     });
-
-    // Клік деінде в контейнері (5-тап очищення) не має зачіпати саму форму
-    form.addEventListener('click', e => e.stopPropagation());
-
-    setupDevDataClear(container);
     return;
   }
 
   // Юзер відомий і залогінений
   container.innerHTML = `
-    <div class="dev-auth-block">
-      <button type="button" id="devFirebaseBtn" class="confirm-main-btn confirm-btn-save">
-        🔄 Синхронізувати з Firebase
-      </button>
-      <button type="button" id="devFirebaseLogout" class="dev-logout-link">Вийти (${_devUser.email})</button>
-      <div id="devFirebaseStatus" class="dev-auth-status"></div>
-    </div>`;
+    <button type="button" class="confirm-main-btn confirm-btn-save dev-sync-btn">🔄 Синхронізувати з Firebase</button>
+    <button type="button" class="dev-logout-link">Вийти (${_devUser.email})</button>
+    <div class="dev-auth-status"></div>`;
 
-  const syncBtn   = container.querySelector('#devFirebaseBtn');
-  const logoutBtn = container.querySelector('#devFirebaseLogout');
-  const statusEl  = container.querySelector('#devFirebaseStatus');
+  const syncBtn   = container.querySelector('.dev-sync-btn');
+  const logoutBtn = container.querySelector('.dev-logout-link');
+  const statusEl  = container.querySelector('.dev-auth-status');
 
-  syncBtn.addEventListener('click', async e => {
-    e.stopPropagation();
-
+  syncBtn.addEventListener('click', async () => {
     if (_syncInFlight) {
       statusEl.textContent = 'Синхронізація вже триває…';
       return;
     }
-
-    syncBtn.textContent = '🔄 Синхронізація…';
-    syncBtn.disabled = true;
-    statusEl.textContent = '';
+    syncBtn.textContent   = '🔄 Синхронізація…';
+    syncBtn.disabled      = true;
+    statusEl.textContent  = '';
 
     try {
       const result = await _performFullSync();
@@ -595,29 +661,25 @@ export function updateDevModeIndicator(aboutSheet, active) {
       statusEl.textContent = result === 'downloaded'
         ? 'Отримано новіші дані з хмари'
         : 'Дані успішно оновлено в хмарі';
-
       setTimeout(() => {
-        syncBtn.disabled = false;
+        syncBtn.disabled    = false;
         syncBtn.textContent = '🔄 Синхронізувати з Firebase';
       }, 3000);
     } catch (err) {
       statusEl.textContent = 'Помилка: ' + (err.message || err);
-      syncBtn.disabled = false;
-      syncBtn.textContent = '🔄 Синхронізувати з Firebase';
+      syncBtn.disabled      = false;
+      syncBtn.textContent   = '🔄 Синхронізувати з Firebase';
     }
   });
 
-  logoutBtn.addEventListener('click', async e => {
-    e.stopPropagation();
+  logoutBtn.addEventListener('click', async () => {
     try {
       await logoutDev();
-      // Форму/кнопку перемалює onDevAuthChange автоматично.
+      // Форму перемалює onDevAuthChange автоматично.
     } catch (err) {
       statusEl.textContent = 'Помилка виходу: ' + (err.message || err);
     }
   });
-
-  setupDevDataClear(container);
 }
 
 // ── Активація Dev Mode прихованим жестом (5 тапів) ──
@@ -643,10 +705,16 @@ export function setupDevModeTapCounter(aboutSheet) {
         const active = toggleDevMode();
         showDevModeToast(active);
         updateDevModeIndicator(aboutSheet, active);
+        updateDevMenuButtonVisibility();
       }
       taps = 0;
     }, 400);
   });
+}
+
+/** Показує/ховає плаваючу кнопку меню розробника зверху карти. */
+export function updateDevMenuButtonVisibility() {
+  document.getElementById('devMenuBtn')?.classList.toggle('is-hidden', !isDevMode());
 }
 
 // ── Очищення даних розробника ─────────────────────────

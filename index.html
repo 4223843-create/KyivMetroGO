@@ -70,7 +70,6 @@ document.documentElement.setAttribute('data-theme', actual);
   <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body id="map-page">
 
@@ -109,7 +108,11 @@ document.documentElement.setAttribute('data-theme', actual);
       </svg>
     </div> <div id="mapViewport" class="map-viewport is-loading">
       <div id="mapInner" class="map-inner"></div>
-    </div> </main>
+    </div>
+    <button id="devMenuBtn" class="dev-menu-fab is-hidden" aria-label="Меню розробника">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>
+    </button>
+    </main>
 
 <nav class="bottom-nav-dock">
 <button id="favListBtn" class="dock-btn" aria-label="Вибране">
@@ -195,6 +198,34 @@ document.documentElement.setAttribute('data-theme', actual);
     </div>
 <div class="sheet-body" style="padding-top: 0;">
       <div id="searchResults" class="search-results" aria-live="polite" aria-atomic="true"></div>
+    </div>
+  </template>
+
+  <template id="tpl-dev-menu-sheet">
+    <div class="sheet-handle-bar">
+      <div class="sheet-handle"></div>
+      <span class="sheet-sheet-title">Меню розробника</span>
+      <button class="sheet-close-btn" id="devMenuClose" aria-label="Закрити">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="dev-menu-section">
+        <div id="devMenuAuth" class="dev-auth-block"></div>
+      </div>
+
+      <div class="dev-menu-section">
+        <div class="dev-menu-section-title">Нотатки</div>
+        <div id="devMenuNotes"></div>
+      </div>
+
+      <div class="dev-menu-section">
+        <div class="dev-menu-section-title">Потребують перевірки</div>
+        <div id="devMenuVerify"></div>
+      </div>
+
+      <div class="dev-menu-section">
+        <div class="dev-menu-section-title">Backlog</div>
+        <textarea id="devMenuBacklog" class="dev-menu-backlog" placeholder="Ідеї, задачі, нотатки по розробці…"></textarea>
+      </div>
     </div>
   </template>
 

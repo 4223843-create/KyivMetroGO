@@ -271,3 +271,55 @@ export function applyFavPillStyles(container, lineColor, isFaved) {
     if (lbl) lbl.style.color = isFaved ? 'var(--bg)' : '';
   });
 }
+
+/**
+ * Розшифровує posIdx (порядковий номер .position-row у відрендереному DOM —
+ * саме так attachDevModeUI() у devmode.js нумерує позиції) у людський опис:
+ * напрямок, підпис виходу, вагон/двері. Потрібно, бо posIdx сам по собі —
+ * лише індекс, він нічого не каже про те, ЯКА це позиція.
+ *
+ * Рендерить renderDirections() у відв'язаний від документа контейнер і йде
+ * по тих самих .direction-label/.exit-label/.position-row в порядку DOM —
+ * тобто гарантовано той самий порядок, що й при реальному відкритті станції.
+ *
+ * Застереження: якщо на момент створення нотатки в іншого користувача було
+ * увімкнено/вимкнено налаштування "Приховати виходи без ліфтів", порядок
+ * рядків міг відрізнятись від того, що видно зараз — це успадкована
+ * особливість самої системи posIdx, а не щось, що можна виправити тут.
+ *
+ * @param {object} s     — об'єкт станції зі state.stationsData
+ * @param {string} color — колір лінії (для рендеру пігулок, на сам опис не впливає)
+ * @returns {Array<{posIdx:number, dirFrom:string, exitLabel:string, wagonDoors:string}>}
+ */
+export function getPositionDescriptorsForStation(s, color) {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = renderDirections(s, color || '#888888');
+
+  const descriptors = [];
+  let currentDir  = '';
+  let currentExit = '';
+
+  wrap.querySelectorAll('.direction-label, .exit-label, .position-row').forEach(el => {
+    if (el.classList.contains('direction-label')) {
+      currentDir  = el.dataset.name || el.textContent.trim();
+      currentExit = '';
+      return;
+    }
+    if (el.classList.contains('exit-label')) {
+      currentExit = el.dataset.name || el.textContent.trim();
+      return;
+    }
+    // .position-row
+    const wagonDoors = Array.from(el.querySelectorAll('.fav-tap-target'))
+      .map(t => `${t.dataset.wagon}/${t.dataset.doors}`)
+      .join(' · ');
+    descriptors.push({
+      posIdx: descriptors.length,
+      dirFrom: currentDir,
+      exitLabel: currentExit,
+      wagonDoors,
+    });
+  });
+
+  return descriptors;
+}
