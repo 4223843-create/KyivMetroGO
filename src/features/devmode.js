@@ -7,8 +7,13 @@
 //   toggleDevMode()                      → boolean
 //   getDevLog()                          → LogEntry[]
 //   appendDevLog(entry)                  → void
-//   isVerified(slug, posIdx)             → boolean
-//   toggleDevVerified(slug, posIdx)      → boolean
+//   isVerified(slug, posIdx)             → boolean (= остаточно підтверджено, 100%)
+//   getConfirmationData(slug, posIdx)    → {finalConfirmed, confirmCount, disputeCount, corrections, lastAction}
+//   incrementConfirmCount(slug, posIdx)  → object (нові дані)
+//   addDisputeVote(slug, posIdx, w, d)   → object (нові дані)
+//   setFinalConfirmed(slug, posIdx)      → object (нові дані)
+//   undoLastConfirmAction(slug, posIdx)  → object (відновлені дані)
+//   resetConfirmationData(slug, posIdx)  → object (порожні дані)
 //   getDevNote(slug, posIdx)             → string
 //   setDevNote(slug, posIdx, text)       → void
 //   attachDevModeUI(container, slug)     → void
@@ -31,7 +36,7 @@ import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
-import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState, downloadDevState } from '../services/firebaseSync.js';
+import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/firebaseSync.js';
 
 
 
@@ -48,17 +53,14 @@ export function toggleDevMode() {
   return next;
 }
 
-// ── Локальний таймстамп останньої зміни (для синхронізації) ──
-// Окремо від dev-логу: тут — лише "коли востаннє змінювались нотатки/
-// верифікація/фото", щоб sync-логіка могла чесно порівняти "хто новіший"
-// з updatedAt документа у Firestore.
+// ── Локальний таймстамп останньої зміни (планування автосинку) ──
+// DEV_SYNC_LOCAL_TS більше не бере участі у порівнянні "хто новіший" —
+// синхронізація тепер об'єднує дані, а не обирає переможця цілим блоком
+// (див. _performFullSync нижче). Таймстамп лишається лише як тригер
+// для _scheduleAutoSync().
 function _touchSyncTimestamp() {
   Storage.set(STORAGE_KEYS.DEV_SYNC_LOCAL_TS, String(Date.now()));
   _scheduleAutoSync();
-}
-
-function _getSyncTimestamp() {
-  return Number(Storage.get(STORAGE_KEYS.DEV_SYNC_LOCAL_TS) || 0);
 }
 
 // ── Реактивний стан авторизації Firebase ──────────────
@@ -95,33 +97,155 @@ let _syncInFlight = false;
  * "останній запис виграє цілком", не по-польове злиття.
  * @returns {Promise<'downloaded'|'uploaded'|'busy'>}
  */
+// ── Об'єднання даних синхронізації (адитивне, без видалень) ──
+// Принцип: синхронізація нічого не знищує, лише збагачує. Ніякого
+// "хто новіший — той і виграє цілком": для кожного запису з обох боків
+// беремо те, що є, і ніколи не викидаємо наявне. Якщо один і той самий
+// запис (нотатка на ту саму позицію) відрізняється на двох пристроях —
+// перевага локальному (він щойно на екрані користувача), а хмарне значення
+// не губиться назавжди — воно просто не потрапляє в цей конкретний ключ,
+// але залишається в документі хмари, доки хтось явно не перезапише.
+function _mergeKeyedMap(local, cloud) {
+  const merged = {};
+  const outerKeys = new Set([...Object.keys(local || {}), ...Object.keys(cloud || {})]);
+  for (const key of outerKeys) {
+    merged[key] = { ...(cloud?.[key] || {}), ...(local?.[key] || {}) };
+  }
+  return merged;
+}
+
+function _mergeConfirmations(local, cloud) {
+  const merged = {};
+  const slugs = new Set([...Object.keys(local || {}), ...Object.keys(cloud || {})]);
+  for (const slug of slugs) {
+    merged[slug] = {};
+    const posIdxs = new Set([...Object.keys(local?.[slug] || {}), ...Object.keys(cloud?.[slug] || {})]);
+    for (const posIdx of posIdxs) {
+      const l = local?.[slug]?.[posIdx]  || _emptyConfirmationData();
+      const c = cloud?.[slug]?.[posIdx]  || _emptyConfirmationData();
+      // Лічильники монотонно зростають — беремо максимум, а не суму
+      // (сума задвоїла б цифру при кожній повторній синхронізації).
+      // finalConfirmed — якщо хоч десь підтверджено остаточно, лишається так назавжди (OR).
+      merged[slug][posIdx] = {
+        finalConfirmed: !!(l.finalConfirmed || c.finalConfirmed),
+        confirmCount:   Math.max(l.confirmCount   || 0, c.confirmCount   || 0),
+        disputeCount:   Math.max(l.disputeCount   || 0, c.disputeCount   || 0),
+        corrections:    (() => {
+          const corrections = {};
+          const keys = new Set([...Object.keys(l.corrections || {}), ...Object.keys(c.corrections || {})]);
+          for (const k of keys) corrections[k] = Math.max(l.corrections?.[k] || 0, c.corrections?.[k] || 0);
+          return corrections;
+        })(),
+        lastAction: l.lastAction || null, // undo стосується лише локальних дій цього пристрою
+      };
+    }
+  }
+  return merged;
+}
+
+/** Похідний {slug:{posIdx:true}} з finalConfirmed — для сумісного формату дроту у Firestore. */
+function _deriveVerifiedFromConfirmations(confirmations) {
+  const verified = {};
+  for (const slug of Object.keys(confirmations || {})) {
+    for (const posIdx of Object.keys(confirmations[slug] || {})) {
+      if (confirmations[slug][posIdx]?.finalConfirmed) {
+        if (!verified[slug]) verified[slug] = {};
+        verified[slug][posIdx] = true;
+      }
+    }
+  }
+  return verified;
+}
+
+/** Додає finalConfirmed=true у confirmations за хмарним verified-полем (лише додає, ніколи не знімає). */
+function _applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified) {
+  if (!cloudVerified) return confirmations;
+  const result = { ...confirmations };
+  for (const slug of Object.keys(cloudVerified)) {
+    if (!result[slug]) result[slug] = {};
+    for (const posIdx of Object.keys(cloudVerified[slug])) {
+      const current = result[slug][posIdx] || _emptyConfirmationData();
+      result[slug][posIdx] = { ...current, finalConfirmed: true };
+    }
+  }
+  return result;
+}
+
+function _mergeBacklog(local, cloud) {
+  const l = (local || '').trim();
+  const c = (cloud || '').trim();
+  if (!l) return c;
+  if (!c) return l;
+  if (l === c) return l;
+  // Обидва боки мають різний текст — не обираємо один замість іншого,
+  // а зберігаємо обидва, щоб нічого не загубилось.
+  return c && !l.includes(c) ? `${l}\n\n— з іншого пристрою —\n${c}` : l;
+}
+
 async function _performFullSync() {
   if (_syncInFlight) return 'busy';
   _syncInFlight = true;
   try {
     const cloudData = await downloadDevState();
-    const localTs   = _getSyncTimestamp();
-    const remoteIsNewer = cloudData && Number(cloudData.updatedAt || 0) > localTs;
-
-    if (remoteIsNewer) {
-      if (cloudData.notes)              Storage.set(STORAGE_KEYS.DEV_NOTES,    JSON.stringify(cloudData.notes));
-      if (cloudData.verified)           Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(cloudData.verified));
-      if (cloudData.backlog !== undefined) Storage.set(STORAGE_KEYS.DEV_BACKLOG, cloudData.backlog);
-      if (cloudData.confirmations)      Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(cloudData.confirmations));
-      Storage.set(STORAGE_KEYS.DEV_SYNC_LOCAL_TS, String(cloudData.updatedAt));
-      bus.emit('station:refresh');
-      bus.emit('devmenu:refresh');
-    }
 
     const localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}');
-    const localVerified      = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
     const localBacklog       = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
     const localConfirmations = getAllDevConfirmations();
-    await uploadDevState(localNotes, localVerified, localBacklog, localConfirmations);
 
-    return remoteIsNewer ? 'downloaded' : 'uploaded';
+    let mergedNotes         = localNotes;
+    let mergedBacklog       = localBacklog;
+    let mergedConfirmations = localConfirmations;
+    let changed = false;
+
+    if (cloudData) {
+      mergedNotes         = _mergeKeyedMap(localNotes, cloudData.notes);
+      mergedBacklog        = _mergeBacklog(localBacklog, cloudData.backlog);
+      mergedConfirmations  = _mergeConfirmations(localConfirmations, cloudData.confirmations);
+      // "verified" — застарілий формат дроту (до появи finalConfirmed) —
+      // домішуємо додатково, щоб старі синхронізовані дані не загубились.
+      mergedConfirmations  = _applyCloudVerifiedIntoConfirmations(mergedConfirmations, cloudData.verified);
+
+      changed = JSON.stringify(mergedNotes)    !== JSON.stringify(localNotes)
+             || mergedBacklog                   !== localBacklog
+             || JSON.stringify(mergedConfirmations) !== JSON.stringify(localConfirmations);
+
+      if (changed) {
+        Storage.set(STORAGE_KEYS.DEV_NOTES,         JSON.stringify(mergedNotes));
+        Storage.set(STORAGE_KEYS.DEV_BACKLOG,       mergedBacklog);
+        Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(mergedConfirmations));
+        bus.emit('station:refresh');
+        bus.emit('devmenu:refresh');
+      }
+    }
+
+    const verifiedForWire = _deriveVerifiedFromConfirmations(mergedConfirmations);
+    await uploadDevState(mergedNotes, verifiedForWire, mergedBacklog, mergedConfirmations);
+    await _syncPhotos();
+
+    return changed ? 'downloaded' : 'uploaded';
   } finally {
     _syncInFlight = false;
+  }
+}
+
+/**
+ * Синхронізація фото — так само адитивна: вивантажуємо локальні, яких ще
+ * нема в хмарі, довантажуємо хмарні, яких ще нема локально. Ніколи нічого
+ * не видаляємо в жодному з напрямків.
+ */
+async function _syncPhotos() {
+  const localPhotos = await PhotoStorage.getAllPhotos();
+  const localIds    = new Set(Object.keys(localPhotos));
+  const cloudIds    = new Set(await listDevPhotoIds());
+
+  const toUpload = [...localIds].filter(id => !cloudIds.has(id));
+  await Promise.all(toUpload.map(id => uploadDevPhoto(id, localPhotos[id])));
+
+  const toDownloadIds = [...cloudIds].filter(id => !localIds.has(id));
+  const downloaded = await Promise.all(toDownloadIds.map(id => downloadDevPhoto(id).then(dataUrl => [id, dataUrl])));
+  if (downloaded.length) {
+    const photosMap = Object.fromEntries(downloaded);
+    await PhotoStorage.bulkSavePhotos(photosMap);
   }
 }
 
@@ -168,35 +292,10 @@ export function appendDevLog(entry) {
 /**
  * @param {string} slug
  * @param {number} posIdx
- * @returns {boolean} true якщо позицію верифіковано в dev-режимі
+ * @returns {boolean} true якщо позицію остаточно підтверджено (100%) в dev-режимі
  */
 export function isVerified(slug, posIdx) {
-  try {
-    const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
-    return !!(v[slug]?.[posIdx]);
-  } catch(e) { return false; }
-}
-
-/**
- * Перемикає прапор верифікації позиції.
- * @param {string} slug
- * @param {number} posIdx
- * @returns {boolean} новий стан верифікації
- */
-export function toggleDevVerified(slug, posIdx) {
-  try {
-    const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_VERIFIED) || '{}');
-    if (!v[slug]) v[slug] = {};
-    const nowOn = !v[slug][posIdx];
-    if (nowOn) v[slug][posIdx] = true;
-    else {
-      delete v[slug][posIdx];
-      if (!Object.keys(v[slug]).length) delete v[slug];
-    }
-    Storage.set(STORAGE_KEYS.DEV_VERIFIED, JSON.stringify(v));
-    _touchSyncTimestamp();
-    return nowOn;
-  } catch(e) { return false; }
+  return !!getConfirmationData(slug, posIdx).finalConfirmed;
 }
 
 // ── Нотатки ──────────────────────────────────────────
@@ -247,10 +346,12 @@ export function getAllDevVerified() {
 }
 
 // ── Лічильник підтверджень + пропозиції виправлень ────
-// Окремо від isVerified (той — просто галочка "перевірено"): тут рахуємо,
-// СКІЛЬКИ РАЗІВ підтвердили, що дані на місці вірні, і, якщо не співпадає,
-// які саме виправлення (вагон/двері) пропонували і скільки разів кожне —
-// щоб було видно, чи є консенсус по конкретному новому значенню.
+// Єдине джерело істини для стану "перевірено": isVerified() тепер читає
+// звідси (finalConfirmed), окремого сховища DEV_VERIFIED більше не пишемо.
+// confirmCount/disputeCount — прості лічильники "+1"/"-1"; corrections —
+// які саме вагон/двері пропонували замість поточних і скільки разів кожен
+// варіант (щоб бачити консенсус). lastAction зберігає знімок стану ПЕРЕД
+// останньою дією — для одноразового "Скасувати останню дію".
 function _readConfirmations() {
   try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_CONFIRMATIONS) || '{}'); }
   catch(e) { return {}; }
@@ -261,41 +362,120 @@ function _writeConfirmations(data) {
   _touchSyncTimestamp();
 }
 
-/** @returns {{confirmCount:number, corrections:Record<string,number>}} */
-export function getConfirmationData(slug, posIdx) {
-  const all = _readConfirmations();
-  return all[slug]?.[posIdx] || { confirmCount: 0, corrections: {} };
+function _emptyConfirmationData() {
+  return { finalConfirmed: false, confirmCount: 0, disputeCount: 0, corrections: {}, lastAction: null };
 }
 
-/** @returns {Record<string, Record<string,{confirmCount:number, corrections:Record<string,number>}>>} усі дані підтверджень */
+/** @returns {{finalConfirmed:boolean, confirmCount:number, disputeCount:number, corrections:Record<string,number>, lastAction:object|null}} */
+export function getConfirmationData(slug, posIdx) {
+  const all = _readConfirmations();
+  return all[slug]?.[posIdx] || _emptyConfirmationData();
+}
+
+/** @returns {object} усі дані підтверджень (для sync-пейлоада) */
 export function getAllDevConfirmations() {
   return _readConfirmations();
 }
 
-/** Підтвердити, що дані на місці правильні. Повертає новий лічильник. */
-export function incrementConfirmCount(slug, posIdx) {
+// Внутрішній хелпер: застосовує мутацію, зберігаючи знімок "до" для undo.
+function _mutateConfirmation(slug, posIdx, actionType, mutator) {
   const all = _readConfirmations();
   if (!all[slug]) all[slug] = {};
-  if (!all[slug][posIdx]) all[slug][posIdx] = { confirmCount: 0, corrections: {} };
-  all[slug][posIdx].confirmCount++;
+  const current = all[slug][posIdx] || _emptyConfirmationData();
+  const { lastAction, ...snapshot } = current; // знімок без вкладеного lastAction — щоб не росло вглиб
+  const next = mutator({ ...current });
+  next.lastAction = { type: actionType, prevSnapshot: snapshot };
+  all[slug][posIdx] = next;
   _writeConfirmations(all);
-  return all[slug][posIdx].confirmCount;
+  return next;
+}
+
+/** "+1" — підтвердити, що дані на місці правильні. Повертає нові дані позиції. */
+export function incrementConfirmCount(slug, posIdx) {
+  return _mutateConfirmation(slug, posIdx, 'confirm', d => ({ ...d, confirmCount: d.confirmCount + 1 }));
 }
 
 /**
- * Додає голос за виправлення (вагон/двері). Якщо таке саме виправлення вже
- * пропонували раніше — просто збільшує його власний лічильник.
- * @returns {number} новий лічильник саме для цього значення виправлення
+ * "-1" — позначити розбіжність і додати голос за конкретне виправлення
+ * (вагон/двері). Повертає нові дані позиції.
  */
-export function addCorrectionVote(slug, posIdx, wagon, doors) {
+export function addDisputeVote(slug, posIdx, wagon, doors) {
+  return _mutateConfirmation(slug, posIdx, 'dispute', d => {
+    const corrections = { ...d.corrections };
+    const key = `${wagon}/${doors}`;
+    corrections[key] = (corrections[key] || 0) + 1;
+    return { ...d, disputeCount: d.disputeCount + 1, corrections };
+  });
+}
+
+/** "100%" — остаточне підтвердження. Повертає нові дані позиції. */
+export function setFinalConfirmed(slug, posIdx) {
+  return _mutateConfirmation(slug, posIdx, 'final', d => ({ ...d, finalConfirmed: true }));
+}
+
+/**
+ * Примусово синхронізує ОДНУ конкретну позицію з хмарою одразу, в обхід
+ * звичайного адитивного merge. Потрібно для скидання/скасування — це свідомі
+ * дії користувача, тож вони мають право перезаписати хмару саме для цього
+ * запису; інакше наступний автосинк (merge "бере максимум") просто підтягне
+ * старе значення назад із хмари, і скидання виглядатиме так, ніби нічого
+ * не відбулось.
+ */
+async function _forcePushPositionToCloud(slug, posIdx) {
+  if (!_devUser) return; // немає сесії — нема куди штовхати; локальний стан і так вже вірний
+  try {
+    const cloudData = await downloadDevState();
+    const cloudConfirmations = cloudData?.confirmations ? { ...cloudData.confirmations } : {};
+    const localEntry = _readConfirmations()[slug]?.[posIdx];
+
+    if (!cloudConfirmations[slug]) cloudConfirmations[slug] = {};
+    if (localEntry) {
+      cloudConfirmations[slug][posIdx] = localEntry;
+    } else {
+      delete cloudConfirmations[slug][posIdx];
+      if (!Object.keys(cloudConfirmations[slug]).length) delete cloudConfirmations[slug];
+    }
+
+    const notes    = cloudData?.notes   || JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
+    const backlog  = cloudData?.backlog ?? (Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '');
+    const verified = _deriveVerifiedFromConfirmations(cloudConfirmations);
+    await uploadDevState(notes, verified, backlog, cloudConfirmations);
+  } catch (err) {
+    console.warn('[KyivMetroGO] Не вдалося одразу синхронізувати скидання/скасування з хмарою — підхопиться при наступній синхронізації:', err);
+  }
+}
+
+/**
+ * Скасовує ОСТАННЮ дію (один рівень назад) — повертає стан, який був
+ * безпосередньо перед нею. Повторний виклик без нової дії між ними нічого
+ * більше не скасує (lastAction одноразовий).
+ * @returns {object} відновлені дані позиції
+ */
+export function undoLastConfirmAction(slug, posIdx) {
   const all = _readConfirmations();
+  const current = all[slug]?.[posIdx];
+  if (!current?.lastAction) return current || _emptyConfirmationData();
+
+  const restored = { ..._emptyConfirmationData(), ...current.lastAction.prevSnapshot, lastAction: null };
   if (!all[slug]) all[slug] = {};
-  if (!all[slug][posIdx]) all[slug][posIdx] = { confirmCount: 0, corrections: {} };
-  const key = `${wagon}/${doors}`;
-  const corrections = all[slug][posIdx].corrections;
-  corrections[key] = (corrections[key] || 0) + 1;
-  _writeConfirmations(all);
-  return corrections[key];
+  all[slug][posIdx] = restored;
+  // Пишемо напряму (без _writeConfirmations/_touchSyncTimestamp) — примусовий
+  // пуш нижче сам подбає про хмару, дублювати звичайний автосинк тут не треба.
+  Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(all));
+  _forcePushPositionToCloud(slug, posIdx);
+  return restored;
+}
+
+/** Повністю скидає лічильник/статус цієї позиції до порожнього стану. */
+export function resetConfirmationData(slug, posIdx) {
+  const all = _readConfirmations();
+  if (all[slug]) {
+    delete all[slug][posIdx];
+    if (!Object.keys(all[slug]).length) delete all[slug];
+  }
+  Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(all));
+  _forcePushPositionToCloud(slug, posIdx);
+  return _emptyConfirmationData();
 }
 
 /** @returns {string} поточний текст беклогу розробника */
@@ -334,35 +514,40 @@ export function attachDevModeUI(container, slug) {
   const defaultOpacity = '1';
 
   container.querySelectorAll('.position-row').forEach((row, posIdx) => {
-    if (row.querySelector('.dev-check-btn')) return;
+    if (row.querySelector('.dev-confirm-btn')) return;
 
     row.dataset.devPosIdx = posIdx;
     row.dataset.devSlug   = slug;
-    const photoId = `${slug}_${posIdx}`;
 
-    // ── Кнопка «Перевірено» ──
-    const checkBtn = document.createElement('button');
-    checkBtn.className = 'dev-check-btn';
-    checkBtn.type = 'button';
-    checkBtn.innerHTML = DEV_CHECK_SVG;
-
-    if (isVerified(slug, posIdx)) {
-      checkBtn.style.color   = lineColor;
-      checkBtn.style.opacity = '1';
-    } else {
-      checkBtn.style.color   = defaultColor;
-      checkBtn.style.opacity = defaultOpacity;
-    }
-
-    // ── Кнопка «Підтвердження» (лічильник) ──
+    // ── Кнопка «Підтвердження» (єдина — замінює колишню окрему галочку) ──
+    // Стани іконки:
+    //  - ще ніхто не чіпав          → сіра (як і решта неактивних кнопок)
+    //  - лише "+1" (без спростувань) → кольорова (колір лінії), бейдж з цифрою
+    //  - є хоч одне спростування     → бейдж стає темним/чорним (сигнал "є розбіжність")
+    //  - "100%" (остаточно)          → повністю змінюється на іконку галочки (як стара)
     const confirmBtn = document.createElement('button');
     confirmBtn.className = 'dev-confirm-btn';
     confirmBtn.type = 'button';
 
     const renderConfirmBtn = () => {
       const data = getConfirmationData(slug, posIdx);
-      confirmBtn.innerHTML = DEV_CONFIRM_SVG + (data.confirmCount > 0 ? `<span class="dev-confirm-count">${data.confirmCount}</span>` : '');
-      const hasAny = data.confirmCount > 0 || Object.keys(data.corrections).length > 0;
+
+      if (data.finalConfirmed) {
+        confirmBtn.innerHTML = DEV_CHECK_SVG;
+        confirmBtn.classList.remove('has-dispute');
+        confirmBtn.classList.add('is-final');
+        confirmBtn.style.color   = lineColor;
+        confirmBtn.style.opacity = '1';
+        return;
+      }
+
+      const hasDispute = data.disputeCount > 0;
+      const hasAny     = data.confirmCount > 0 || hasDispute;
+      const netCount   = data.confirmCount - data.disputeCount;
+
+      confirmBtn.classList.remove('is-final');
+      confirmBtn.classList.toggle('has-dispute', hasDispute);
+      confirmBtn.innerHTML = DEV_CONFIRM_SVG + (hasAny ? `<span class="dev-confirm-count">${netCount}</span>` : '');
       confirmBtn.style.color   = hasAny ? lineColor : defaultColor;
       confirmBtn.style.opacity = hasAny ? '1' : defaultOpacity;
     };
@@ -390,21 +575,14 @@ export function attachDevModeUI(container, slug) {
     photoBtn.style.color   = defaultColor;
     photoBtn.style.opacity = defaultOpacity;
 
-    row.prepend(photoBtn, noteBtn, confirmBtn, checkBtn);
+    row.prepend(photoBtn, noteBtn, confirmBtn);
 
-    PhotoStorage.loadPhoto(photoId).then(hasPhoto => {
-      if (hasPhoto) {
+    listPhotosForPosition(slug, posIdx).then(photos => {
+      if (photos.length) {
         photoBtn.style.color   = lineColor;
         photoBtn.style.opacity = '1';
       }
     }).catch(() => {});
-
-    checkBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      const nowVerified = toggleDevVerified(slug, posIdx);
-      checkBtn.style.color   = nowVerified ? lineColor : defaultColor;
-      checkBtn.style.opacity = nowVerified ? '1' : defaultOpacity;
-    });
 
     confirmBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -427,7 +605,9 @@ export function attachDevModeUI(container, slug) {
 // Інтерфейс степера вагон/двері скопійований з "Запропонувати зміни"
 // (fb-input-wrap/fb-stepper/fb-step/fb-step-val у fbRenderer.js) — той самий
 // вигляд, лише спрощена логіка кроку (без сусідніх дверей і другого виходу,
-// тут потрібен просто прямий вибір вагон+двері).
+// тут потрібен просто прямий вибір вагон+двері). Степер стартує з ПОТОЧНИХ
+// фактичних значень позиції (беремо з .fav-tap-target у самому рядку), а не
+// з довільної 1/1.
 function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
   const next = row.nextElementSibling;
 
@@ -441,6 +621,11 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
     p.classList.remove('panel-open');
     setTimeout(() => p.remove(), 280);
   });
+
+  // Поточні фактичні вагон/двері цієї позиції — дефолт для степера виправлення.
+  const currentTarget = row.querySelector('.fav-tap-target');
+  const currentWagon = parseInt(currentTarget?.dataset.wagon) || 1;
+  const currentDoors = parseInt(currentTarget?.dataset.doors) || 1;
 
   const wId = `devConfirmW${slug}_${posIdx}`;
   const dId = `devConfirmD${slug}_${posIdx}`;
@@ -462,19 +647,26 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
 
   const paint = () => {
     const data = getConfirmationData(slug, posIdx);
+    const netCount = data.confirmCount - data.disputeCount;
+
     panel.innerHTML = `
-      <div class="dev-confirm-count-line">Підтверджено: <b>${data.confirmCount}</b> ${data.confirmCount === 1 ? 'раз' : 'разів'}</div>
+      <div class="dev-confirm-count-line">
+        ${data.finalConfirmed
+          ? '<b>Остаточно підтверджено (100%)</b>'
+          : `Підтверджень: <b>${data.confirmCount}</b>, спростувань: <b>${data.disputeCount}</b> (разом: ${netCount})`}
+      </div>
       ${renderCorrectionsList(data)}
-      <div class="dev-note-actions">
-        <button type="button" class="dev-confirm-yes confirm-btn-save">Підтвердити</button>
-        <button type="button" class="dev-confirm-mismatch confirm-btn-discard">Не співпадає</button>
+      <div class="dev-note-actions dev-confirm-main-actions">
+        <button type="button" class="dev-confirm-final confirm-btn-save">100%</button>
+        <button type="button" class="dev-confirm-plus confirm-btn-save">+1</button>
+        <button type="button" class="dev-confirm-minus confirm-btn-discard">−1</button>
       </div>
       <div class="dev-confirm-fix-wrap is-hidden">
         <div class="fb-input-wrap">
           <span class="fb-input-label">вагон</span>
           <div class="fb-stepper">
             <button type="button" class="fb-step fb-step-down" data-id="${wId}" data-min="1" data-max="5" aria-label="Зменшити вагон">−</button>
-            <span class="fb-step-val" id="${wId}">1</span>
+            <span class="fb-step-val" id="${wId}">${currentWagon}</span>
             <button type="button" class="fb-step fb-step-up" data-id="${wId}" data-min="1" data-max="5" aria-label="Збільшити вагон">+</button>
           </div>
         </div>
@@ -482,11 +674,15 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
           <span class="fb-input-label">двері</span>
           <div class="fb-stepper">
             <button type="button" class="fb-step fb-step-down" data-id="${dId}" data-min="1" data-max="4" aria-label="Зменшити двері">−</button>
-            <span class="fb-step-val" id="${dId}">1</span>
+            <span class="fb-step-val" id="${dId}">${currentDoors}</span>
             <button type="button" class="fb-step fb-step-up" data-id="${dId}" data-min="1" data-max="4" aria-label="Збільшити двері">+</button>
           </div>
         </div>
         <button type="button" class="dev-confirm-save-fix confirm-btn-save">Зберегти виправлення</button>
+      </div>
+      <div class="dev-confirm-secondary-actions">
+        <button type="button" class="dev-confirm-undo" ${data.lastAction ? '' : 'disabled'}>Скасувати останню дію</button>
+        <button type="button" class="dev-confirm-reset">Скинути лічильник</button>
       </div>`;
 
     panel.querySelectorAll('.fb-step').forEach(btn => {
@@ -501,14 +697,21 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
       });
     });
 
-    panel.querySelector('.dev-confirm-yes').addEventListener('click', e => {
+    panel.querySelector('.dev-confirm-final').addEventListener('click', e => {
+      e.stopPropagation();
+      setFinalConfirmed(slug, posIdx);
+      onUpdate();
+      paint();
+    });
+
+    panel.querySelector('.dev-confirm-plus').addEventListener('click', e => {
       e.stopPropagation();
       incrementConfirmCount(slug, posIdx);
       onUpdate();
       paint();
     });
 
-    panel.querySelector('.dev-confirm-mismatch').addEventListener('click', e => {
+    panel.querySelector('.dev-confirm-minus').addEventListener('click', e => {
       e.stopPropagation();
       panel.querySelector('.dev-confirm-fix-wrap').classList.toggle('is-hidden');
     });
@@ -517,7 +720,21 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
       e.stopPropagation();
       const wagon = document.getElementById(wId).textContent;
       const doors = document.getElementById(dId).textContent;
-      addCorrectionVote(slug, posIdx, wagon, doors);
+      addDisputeVote(slug, posIdx, wagon, doors);
+      onUpdate();
+      paint();
+    });
+
+    panel.querySelector('.dev-confirm-undo').addEventListener('click', e => {
+      e.stopPropagation();
+      undoLastConfirmAction(slug, posIdx);
+      onUpdate();
+      paint();
+    });
+
+    panel.querySelector('.dev-confirm-reset').addEventListener('click', e => {
+      e.stopPropagation();
+      resetConfirmationData(slug, posIdx);
       onUpdate();
       paint();
     });
@@ -597,6 +814,28 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
 }
 
 // ── UI: панель фото ───────────────────────────────────
+// ── Фото: підтримка кількох знімків на одну позицію ───
+// Ключ у PhotoStorage тепер `${slug}_${posIdx}_${унікальний суфікс}` замість
+// одного `${slug}_${posIdx}` — тобто кожне фото має свій власний запис,
+// і на одну позицію їх може бути скільки завгодно.
+function _photoPrefix(slug, posIdx) {
+  return `${slug}_${posIdx}_`;
+}
+
+function _newPhotoId(slug, posIdx) {
+  return `${_photoPrefix(slug, posIdx)}${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/** @returns {Promise<Array<{id:string, dataUrl:string}>>} усі фото для конкретної позиції */
+async function listPhotosForPosition(slug, posIdx) {
+  const prefix = _photoPrefix(slug, posIdx);
+  const all = await PhotoStorage.getAllPhotos();
+  return Object.keys(all)
+    .filter(id => id.startsWith(prefix))
+    .sort()
+    .map(id => ({ id, dataUrl: all[id] }));
+}
+
 async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity) {
   const next = row.nextElementSibling;
 
@@ -611,71 +850,88 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
     setTimeout(() => p.remove(), 280);
   });
 
-  const photoId = `${slug}_${posIdx}`;
-const existingPhoto = await PhotoStorage.loadPhoto(photoId);
   const panel = document.createElement('div');
   panel.className = 'dev-note-panel';
   panel.dataset.type = 'photo';
-  panel.innerHTML = `<div style="text-align: center; margin-top: 8px;"> ${existingPhoto  ?`<img src="${existingPhoto}" style="max-width: 100%; max-height: 200px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border);" id="devPhotoThumb"/>` :`<p style="font-size: 13px; color: var(--text-muted); margin: 10px 0;">Фото не прикріплено</p>`} </div> <div class="dev-note-actions"> <button type="button" class="dev-photo-upload confirm-main-btn confirm-btn-save"> ${existingPhoto ? 'Змінити' : 'Вибрати'} </button> <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button> ${existingPhoto ? `<button type="button" class="dev-photo-clear confirm-main-btn confirm-btn-discard">Видалити</button>`: ''} </div> <input type="file" accept="image/*" class="dev-photo-input" style="display: none;" />`;
-
   row.after(panel);
   requestAnimationFrame(() => panel.classList.add('panel-open'));
 
-  panel.querySelector('.dev-photo-back').addEventListener('click', e => {
-    e.stopPropagation();
-    panel.classList.remove('panel-open');
-    setTimeout(() => panel.remove(), 280);
-  });
+  const updateBtnState = (count) => {
+    photoBtn.style.color   = count > 0 ? lineColor : defaultColor;
+    photoBtn.style.opacity = count > 0 ? '1' : defaultOpacity;
+  };
 
-  const thumb = panel.querySelector('#devPhotoThumb');
-  if (thumb) thumb.addEventListener('click', () => showDevPhotoFullscreen(existingPhoto));
+  const paint = async () => {
+    const photos = await listPhotosForPosition(slug, posIdx);
+    updateBtnState(photos.length);
 
-  const fileInput = panel.querySelector('.dev-photo-input');
-  panel.querySelector('.dev-photo-upload').addEventListener('click', e => {
-    e.stopPropagation();
-    fileInput.click();
-  });
+    panel.innerHTML = `
+      <div class="dev-photo-grid">
+        ${photos.map(p => `
+          <div class="dev-photo-thumb-wrap" data-id="${p.id}">
+            <img src="${p.dataUrl}" class="dev-photo-thumb"/>
+            <button type="button" class="dev-photo-thumb-remove" data-id="${p.id}" aria-label="Видалити фото">✕</button>
+          </div>`).join('')}
+        <label class="dev-photo-add-tile">
+          +
+          <input type="file" accept="image/*" multiple class="dev-photo-input" style="display:none;">
+        </label>
+      </div>
+      <div class="dev-note-actions">
+        <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button>
+      </div>`;
 
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        await PhotoStorage.savePhoto(photoId, ev.target.result);
-        _touchSyncTimestamp();
-        photoBtn.style.color   = lineColor;
-        photoBtn.style.opacity = '1';
-        panel.classList.remove('panel-open');
-        setTimeout(() => {
-          panel.remove();
-          toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
-        }, 280);
-      } catch (err) {
-        console.warn('[KyivMetroGO] Не вдалося зберегти фото:', err);
-        _showToast('Не вдалося зберегти фото');
-      }
-    };
-    reader.readAsDataURL(file);
-  });
+    panel.querySelectorAll('.dev-photo-thumb').forEach(img => {
+      img.addEventListener('click', () => showDevPhotoFullscreen(img.src));
+    });
 
-  const clearBtn = panel.querySelector('.dev-photo-clear');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', async e => {
+    panel.querySelectorAll('.dev-photo-thumb-remove').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        try {
+          await PhotoStorage.removePhoto(btn.dataset.id);
+          _touchSyncTimestamp();
+          await paint();
+        } catch (err) {
+          console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
+          _showToast('Не вдалося видалити фото');
+        }
+      });
+    });
+
+    panel.querySelector('.dev-photo-back').addEventListener('click', e => {
       e.stopPropagation();
+      panel.classList.remove('panel-open');
+      setTimeout(() => panel.remove(), 280);
+    });
+
+    const fileInput = panel.querySelector('.dev-photo-input');
+    fileInput.addEventListener('click', e => e.stopPropagation());
+    fileInput.addEventListener('change', async e => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
       try {
-        await PhotoStorage.removePhoto(photoId);
+        await Promise.all(files.map(file => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            try {
+              await PhotoStorage.savePhoto(_newPhotoId(slug, posIdx), ev.target.result);
+              resolve();
+            } catch (err) { reject(err); }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        })));
         _touchSyncTimestamp();
-        photoBtn.style.color   = defaultColor;
-        photoBtn.style.opacity = defaultOpacity;
-        panel.classList.remove('panel-open');
-        setTimeout(() => panel.remove(), 280);
+        await paint();
       } catch (err) {
-        console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
-        _showToast('Не вдалося видалити фото');
+        console.warn('[KyивMetroGO] Не вдалося зберегти фото:', err);
+        _showToast('Не вдалося зберегти одне або кілька фото');
       }
     });
-  }
+  };
+
+  await paint();
 }
 
 // ── Повноекранний перегляд фото ───────────────────────

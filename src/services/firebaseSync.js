@@ -1,6 +1,7 @@
-import { auth, db } from './firebase.js';
+import { auth, db, storage } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL, listAll } from 'firebase/storage';
 
 // ── Стан авторизації (реактивний, не читаємо auth.currentUser напряму) ──
 // auth.currentUser відновлюється з IndexedDB АСИНХРОННО: одразу після
@@ -64,10 +65,10 @@ function _devDocRef() {
 
 // 2. Відправка локальних даних у хмару
 export async function uploadDevState(notes, verified, backlog, confirmations) {
-  const ref = _devDocRef();
-  if (!ref) return;
+  const docRef = _devDocRef();
+  if (!docRef) return;
 
-  await setDoc(ref, {
+  await setDoc(docRef, {
     notes: notes,
     verified: verified,
     backlog: backlog || '',
@@ -78,13 +79,67 @@ export async function uploadDevState(notes, verified, backlog, confirmations) {
 
 // 3. Завантаження даних з хмари
 export async function downloadDevState() {
-  const ref = _devDocRef();
-  if (!ref) return null;
+  const docRef = _devDocRef();
+  if (!docRef) return null;
 
-  const docSnap = await getDoc(ref);
+  const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
     return docSnap.data();
   }
   return null;
+}
+
+// ── Фото: Firebase Storage, окремими файлами (не base64 в Firestore) ──
+// Firestore-документ обмежений 1 МіБ — кілька фото в base64 його б
+// переповнили миттєво. Тому фото зберігаються в Storage як окремі об'єкти
+// dev_photos/{uid}/{photoId}.jpg, а Firestore-документ їх узагалі не бачить.
+function _photoRef(photoId) {
+  if (!auth.currentUser) return null;
+  return ref(storage, `dev_photos/${auth.currentUser.uid}/${photoId}.jpg`);
+}
+
+function _photosFolderRef() {
+  if (!auth.currentUser) return null;
+  return ref(storage, `dev_photos/${auth.currentUser.uid}`);
+}
+
+/**
+ * Вивантажує одне фото (data URL) у Storage під заданим id.
+ * @param {string} photoId
+ * @param {string} dataUrl
+ */
+export async function uploadDevPhoto(photoId, dataUrl) {
+  const fileRef = _photoRef(photoId);
+  if (!fileRef) return;
+  await uploadString(fileRef, dataUrl, 'data_url');
+}
+
+/**
+ * @returns {Promise<string[]>} id усіх фото, які зараз лежать у хмарі для цього акаунта
+ */
+export async function listDevPhotoIds() {
+  const folder = _photosFolderRef();
+  if (!folder) return [];
+  const result = await listAll(folder);
+  return result.items.map(item => item.name.replace(/\.jpg$/, ''));
+}
+
+/**
+ * Завантажує одне фото з хмари і повертає його як data URL
+ * (щоб одразу можна було покласти в PhotoStorage без додаткової конвертації).
+ * @param {string} photoId
+ * @returns {Promise<string>}
+ */
+export async function downloadDevPhoto(photoId) {
+  const fileRef = _photoRef(photoId);
+  const url = await getDownloadURL(fileRef);
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }

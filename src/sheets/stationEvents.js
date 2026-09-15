@@ -209,6 +209,45 @@ function _maybeShowCheckinHint(lineColor) {
   sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
 }
 
+// ── Панель "виходи за номерами" — виїжджає ліворуч від пігулок ──
+// Спрацьовує на ОДИНАРНИЙ тап по .fav-tap-target (довге натискання і
+// подвійний тап і далі відповідають за Вибране — не чіпаємо їх).
+// Показується лише якщо у станції реально є numbered_exits в даних;
+// інакше одинарний тап просто нічого не робить (як і раніше).
+const CIRCLED_NUMS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
+
+function _openNumberedExitsPanel(favTarget, slug) {
+  const station = state.stationsData?.[slug];
+  const exits = station?.numbered_exits;
+  if (!exits || !exits.length) return;
+
+  const row = favTarget.closest('.position-row');
+  if (!row) return;
+
+  // Той самий таргет — закриваємо (тогл)
+  const existing = row.querySelector('.pos-numbered-exits');
+  if (existing) {
+    existing.classList.remove('open');
+    setTimeout(() => existing.remove(), 220);
+    return;
+  }
+
+  // Будь-яка інша відкрита панель у шторці — закриваємо, лишається одна
+  document.querySelectorAll('.pos-numbered-exits').forEach(p => {
+    p.classList.remove('open');
+    setTimeout(() => p.remove(), 220);
+  });
+
+  const panel = document.createElement('div');
+  panel.className = 'pos-numbered-exits';
+  panel.innerHTML = exits.map((text, i) =>
+    `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num">${CIRCLED_NUMS[i] || (i + 1) + '.'}</span><span class="pos-numbered-exit-text">${text}</span></div>`
+  ).join('');
+
+  row.insertBefore(panel, favTarget);
+  requestAnimationFrame(() => panel.classList.add('open'));
+}
+
 // ── Головний bind — викликається ОДИН РАЗ ────────────────────
 /**
  * @param {HTMLElement} sheetBody
@@ -310,7 +349,11 @@ export function bindSheetGestures(sheetBody, getCtx) {
     const gs = _getGS(favTarget);
     gs.tapCount++;
     clearTimeout(gs.tapId);
-    gs.tapId = setTimeout(() => { gs.tapCount = 0; }, TIMING.DOUBLE_TAP);
+    gs.tapId = setTimeout(() => {
+      // Якщо це був лише один тап (не подвійний) — показуємо виходи за номерами
+      if (gs.tapCount === 1) _openNumberedExitsPanel(favTarget, slug);
+      gs.tapCount = 0;
+    }, TIMING.DOUBLE_TAP);
 
     if (gs.tapCount >= 2) {
       gs.tapCount = 0;

@@ -15,7 +15,7 @@ import { pushSheetHistory }  from '../ui/system.js';
 import { animateSheetClose } from '../ui/animations.js';
 import { getPositionDescriptorsForStation } from './renderStation.js';
 import {
-  renderDevAuthSection, getAllDevNotes, getAllDevVerified,
+  renderDevAuthSection, getAllDevNotes,
   getDevBacklog, setDevBacklog, isVerified,
 } from '../features/devmode.js';
 
