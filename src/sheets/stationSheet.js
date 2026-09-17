@@ -7,7 +7,7 @@ import { animateSheetClose }       from '../ui/animations.js';
 import { slugByName }              from '../data/stations.js';
 import { applyExitLabels }         from '../data/localEdits.js';
 import { isFav, getExitFavs }      from '../features/favorites/index.js';
-import { attachDevModeUI }         from '../features/devmode.js';
+import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
 import { renderDirections }        from './renderStation.js';
@@ -181,6 +181,7 @@ function actualOpenStation(slug) {
 
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);
+  setupDevStationNoteButton(sheet, slug, color);
   // querySelectorAll (не querySelector) — видаляємо ВСІ старі кнопки
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
@@ -217,6 +218,7 @@ export function refreshCurrentStation() {
   applyNavLinks(slug);
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);
+  setupDevStationNoteButton(sheet, slug, color);
   // Всі кнопки, а не тільки перша
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });

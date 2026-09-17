@@ -15,7 +15,7 @@ import { pushSheetHistory }  from '../ui/system.js';
 import { animateSheetClose } from '../ui/animations.js';
 import { getPositionDescriptorsForStation } from './renderStation.js';
 import {
-  renderDevAuthSection, getAllDevNotes,
+  renderDevAuthSection, getAllDevNotes, getAllStationNotes,
   getDevBacklog, setDevBacklog, isVerified,
 } from '../features/devmode.js';
 
@@ -40,10 +40,11 @@ function _rowHtml(slug, stationName, descriptor, extra) {
  * опис через getPositionDescriptorsForStation, згруповані по станції.
  */
 function _renderNotesSection(container) {
-  const notes = getAllDevNotes();
-  const slugs = Object.keys(notes);
+  const notes        = getAllDevNotes();
+  const stationNotes = getAllStationNotes();
+  const slugs = new Set([...Object.keys(notes), ...Object.keys(stationNotes)]);
 
-  if (!slugs.length) {
+  if (!slugs.size) {
     container.innerHTML = `<div class="dev-menu-empty">Нотаток ще немає</div>`;
     return;
   }
@@ -55,7 +56,18 @@ function _renderNotesSection(container) {
     const color       = LINE_COLOR[station.line] || '#888888';
     const descriptors = getPositionDescriptorsForStation(station, color);
 
-    const rows = Object.entries(notes[slug]).map(([posIdx, text]) => {
+    let rows = '';
+
+    // Загальна нотатка станції — окремим рядком, без прив'язки до виходу
+    if (stationNotes[slug]) {
+      rows += `<button type="button" class="dev-menu-row" data-slug="${slug}">
+        <div class="dev-menu-row-station">${station.name}</div>
+        <div class="dev-menu-row-detail">загальна нотатка станції</div>
+        <div class="dev-menu-row-extra">«${stationNotes[slug]}»</div>
+      </button>`;
+    }
+
+    rows += Object.entries(notes[slug] || {}).map(([posIdx, text]) => {
       const d = descriptors[Number(posIdx)];
       if (!d) return '';
       return _rowHtml(slug, station.name, d, `«${text}»`);

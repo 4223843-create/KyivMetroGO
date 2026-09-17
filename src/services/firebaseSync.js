@@ -64,7 +64,7 @@ function _devDocRef() {
 }
 
 // 2. Відправка локальних даних у хмару
-export async function uploadDevState(notes, verified, backlog, confirmations) {
+export async function uploadDevState(notes, verified, backlog, confirmations, stationNotes) {
   const docRef = _devDocRef();
   if (!docRef) return;
 
@@ -73,6 +73,7 @@ export async function uploadDevState(notes, verified, backlog, confirmations) {
     verified: verified,
     backlog: backlog || '',
     confirmations: confirmations || {},
+    stationNotes: stationNotes || {},
     updatedAt: Date.now()
   });
 }

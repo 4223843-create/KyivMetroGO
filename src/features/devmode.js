@@ -182,6 +182,17 @@ function _mergeBacklog(local, cloud) {
   return c && !l.includes(c) ? `${l}\n\n— з іншого пристрою —\n${c}` : l;
 }
 
+/** Той самий принцип, що й _mergeBacklog, але для {slug: текст} — по кожній станції окремо. */
+function _mergeStationNotes(local, cloud) {
+  const merged = {};
+  const slugs = new Set([...Object.keys(local || {}), ...Object.keys(cloud || {})]);
+  for (const slug of slugs) {
+    const text = _mergeBacklog(local?.[slug], cloud?.[slug]);
+    if (text) merged[slug] = text;
+  }
+  return merged;
+}
+
 async function _performFullSync() {
   if (_syncInFlight) return 'busy';
   _syncInFlight = true;
@@ -191,35 +202,40 @@ async function _performFullSync() {
     const localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}');
     const localBacklog       = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
     const localConfirmations = getAllDevConfirmations();
+    const localStationNotes  = getAllStationNotes();
 
     let mergedNotes         = localNotes;
     let mergedBacklog       = localBacklog;
     let mergedConfirmations = localConfirmations;
+    let mergedStationNotes  = localStationNotes;
     let changed = false;
 
     if (cloudData) {
       mergedNotes         = _mergeKeyedMap(localNotes, cloudData.notes);
       mergedBacklog        = _mergeBacklog(localBacklog, cloudData.backlog);
       mergedConfirmations  = _mergeConfirmations(localConfirmations, cloudData.confirmations);
+      mergedStationNotes   = _mergeStationNotes(localStationNotes, cloudData.stationNotes);
       // "verified" — застарілий формат дроту (до появи finalConfirmed) —
       // домішуємо додатково, щоб старі синхронізовані дані не загубились.
       mergedConfirmations  = _applyCloudVerifiedIntoConfirmations(mergedConfirmations, cloudData.verified);
 
       changed = JSON.stringify(mergedNotes)    !== JSON.stringify(localNotes)
              || mergedBacklog                   !== localBacklog
-             || JSON.stringify(mergedConfirmations) !== JSON.stringify(localConfirmations);
+             || JSON.stringify(mergedConfirmations) !== JSON.stringify(localConfirmations)
+             || JSON.stringify(mergedStationNotes)  !== JSON.stringify(localStationNotes);
 
       if (changed) {
         Storage.set(STORAGE_KEYS.DEV_NOTES,         JSON.stringify(mergedNotes));
         Storage.set(STORAGE_KEYS.DEV_BACKLOG,       mergedBacklog);
         Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(mergedConfirmations));
+        Storage.set(STORAGE_KEYS.DEV_STATION_NOTES, JSON.stringify(mergedStationNotes));
         bus.emit('station:refresh');
         bus.emit('devmenu:refresh');
       }
     }
 
     const verifiedForWire = _deriveVerifiedFromConfirmations(mergedConfirmations);
-    await uploadDevState(mergedNotes, verifiedForWire, mergedBacklog, mergedConfirmations);
+    await uploadDevState(mergedNotes, verifiedForWire, mergedBacklog, mergedConfirmations, mergedStationNotes);
     await _syncPhotos();
 
     return changed ? 'downloaded' : 'uploaded';
@@ -404,7 +420,9 @@ export function addDisputeVote(slug, posIdx, wagon, doors) {
     const corrections = { ...d.corrections };
     const key = `${wagon}/${doors}`;
     corrections[key] = (corrections[key] || 0) + 1;
-    return { ...d, disputeCount: d.disputeCount + 1, corrections };
+    // 100% і "є спростування" не можуть існувати одночасно — спростування
+    // одразу знімає остаточне підтвердження.
+    return { ...d, finalConfirmed: false, disputeCount: d.disputeCount + 1, corrections };
   });
 }
 
@@ -436,10 +454,11 @@ async function _forcePushPositionToCloud(slug, posIdx) {
       if (!Object.keys(cloudConfirmations[slug]).length) delete cloudConfirmations[slug];
     }
 
-    const notes    = cloudData?.notes   || JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-    const backlog  = cloudData?.backlog ?? (Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '');
-    const verified = _deriveVerifiedFromConfirmations(cloudConfirmations);
-    await uploadDevState(notes, verified, backlog, cloudConfirmations);
+    const notes        = cloudData?.notes   || JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
+    const backlog      = cloudData?.backlog ?? (Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '');
+    const stationNotes = cloudData?.stationNotes || getAllStationNotes();
+    const verified     = _deriveVerifiedFromConfirmations(cloudConfirmations);
+    await uploadDevState(notes, verified, backlog, cloudConfirmations, stationNotes);
   } catch (err) {
     console.warn('[KyivMetroGO] Не вдалося одразу синхронізувати скидання/скасування з хмарою — підхопиться при наступній синхронізації:', err);
   }
@@ -499,6 +518,98 @@ export function setDevBacklog(text) {
   }, BACKLOG_SAVE_DEBOUNCE_MS);
 }
 
+// ── Загальна нотатка станції (не по конкретному виходу, а по станції в цілому) ──
+function _readStationNotes() {
+  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_STATION_NOTES) || '{}'); }
+  catch(e) { return {}; }
+}
+
+/** @returns {string} загальна нотатка станції (порожній рядок, якщо нема) */
+export function getStationNote(slug) {
+  return _readStationNotes()[slug] || '';
+}
+
+/** @returns {Record<string,string>} усі загальні нотатки станцій — для sync-пейлоада */
+export function getAllStationNotes() {
+  return _readStationNotes();
+}
+
+const STATION_NOTE_SAVE_DEBOUNCE_MS = 800;
+let _stationNoteSaveTimer = null;
+
+/** Зберігає загальну нотатку станції з дебаунсом. */
+export function setStationNote(slug, text) {
+  clearTimeout(_stationNoteSaveTimer);
+  _stationNoteSaveTimer = setTimeout(() => {
+    const all = _readStationNotes();
+    if (text) all[slug] = text;
+    else delete all[slug];
+    Storage.set(STORAGE_KEYS.DEV_STATION_NOTES, JSON.stringify(all));
+    _touchSyncTimestamp();
+  }, STATION_NOTE_SAVE_DEBOUNCE_MS);
+}
+
+/**
+ * Показує/ховає кнопку загальної нотатки станції (праворуч від серця) і
+ * прив'язує відкриття панелі. Викликається при кожному відкритті/оновленні
+ * картки станції — так само, як attachDevModeUI.
+ * @param {HTMLElement} sheet  — #stationSheet (не sheetBody — кнопка й панель поза ним)
+ * @param {string} slug
+ * @param {string} lineColor
+ */
+export function setupDevStationNoteButton(sheet, slug, lineColor) {
+  const btn   = sheet.querySelector('#devStationNoteBtn');
+  const panel = sheet.querySelector('#devStationNotePanel');
+  if (!btn || !panel) return;
+
+  const active = isDevMode();
+  btn.classList.toggle('is-hidden', !active);
+  if (!active) {
+    panel.classList.remove('panel-open');
+    panel.innerHTML = '';
+    return;
+  }
+
+  const defaultColor = 'var(--border)';
+  btn.innerHTML = DEV_NOTE_SVG;
+
+  const hasNote = !!getStationNote(slug);
+  btn.style.color = hasNote ? lineColor : defaultColor;
+
+  btn.onclick = e => {
+    e.stopPropagation();
+    _toggleStationNotePanel(panel, slug, lineColor, btn, defaultColor);
+  };
+}
+
+function _toggleStationNotePanel(panel, slug, lineColor, btn, defaultColor) {
+  if (panel.classList.contains('panel-open')) {
+    panel.classList.remove('panel-open');
+    return;
+  }
+
+  const currentText = getStationNote(slug);
+  panel.innerHTML = `
+    <textarea class="dev-note-textarea dev-station-note-textarea" placeholder="Загальна нотатка по станції…">${currentText}</textarea>
+    <div class="dev-note-actions">
+      <button type="button" class="dev-station-note-close confirm-main-btn confirm-btn-neutral">Готово</button>
+    </div>`;
+
+  const textarea = panel.querySelector('textarea');
+  textarea.addEventListener('input', () => {
+    setStationNote(slug, textarea.value);
+    btn.style.color = textarea.value ? lineColor : defaultColor;
+  });
+
+  panel.querySelector('.dev-station-note-close').addEventListener('click', e => {
+    e.stopPropagation();
+    panel.classList.remove('panel-open');
+  });
+
+  panel.classList.add('panel-open');
+  requestAnimationFrame(() => textarea.focus());
+}
+
 // ── UI: кнопки в картці станції ──────────────────────
 /**
  * Вставляє кнопки dev-режиму (верифікація, нотатка, фото) у картку станції.
@@ -533,23 +644,46 @@ export function attachDevModeUI(container, slug) {
       const data = getConfirmationData(slug, posIdx);
 
       if (data.finalConfirmed) {
-        confirmBtn.innerHTML = DEV_CHECK_SVG;
-        confirmBtn.classList.remove('has-dispute');
+        confirmBtn.classList.remove('is-text-badge');
         confirmBtn.classList.add('is-final');
+        confirmBtn.innerHTML = DEV_CHECK_SVG;
         confirmBtn.style.color   = lineColor;
         confirmBtn.style.opacity = '1';
         return;
       }
 
+      const hasConfirm = data.confirmCount > 0;
       const hasDispute = data.disputeCount > 0;
-      const hasAny     = data.confirmCount > 0 || hasDispute;
-      const netCount   = data.confirmCount - data.disputeCount;
+
+      if (!hasConfirm && !hasDispute) {
+        confirmBtn.classList.remove('is-final', 'is-text-badge');
+        confirmBtn.innerHTML = DEV_CONFIRM_SVG;
+        confirmBtn.style.color   = defaultColor;
+        confirmBtn.style.opacity = defaultOpacity;
+        return;
+      }
+
+      // Плоский текстовий індикатор замість круглого бейджа: +N — тільки
+      // підтвердження, −N — тільки спростування, ±N — є і те, і те (N тут
+      // це баланс confirmCount−disputeCount зі знаком). Якщо кількість
+      // дорівнює 1 у "чистому" +/− випадку — цифру не пишемо, лишається
+      // сам знак; для ± цифра пишеться завжди (включно з 1).
+      let text;
+      if (hasConfirm && !hasDispute) {
+        text = data.confirmCount === 1 ? '+' : `+${data.confirmCount}`;
+      } else if (hasDispute && !hasConfirm) {
+        text = data.disputeCount === 1 ? '−' : `−${data.disputeCount}`;
+      } else {
+        const balance = data.confirmCount - data.disputeCount;
+        const sign = balance > 0 ? '+' : balance < 0 ? '−' : '';
+        text = `±${sign}${Math.abs(balance)}`;
+      }
 
       confirmBtn.classList.remove('is-final');
-      confirmBtn.classList.toggle('has-dispute', hasDispute);
-      confirmBtn.innerHTML = DEV_CONFIRM_SVG + (hasAny ? `<span class="dev-confirm-count">${netCount}</span>` : '');
-      confirmBtn.style.color   = hasAny ? lineColor : defaultColor;
-      confirmBtn.style.opacity = hasAny ? '1' : defaultOpacity;
+      confirmBtn.classList.add('is-text-badge');
+      confirmBtn.innerHTML = `<span class="dev-confirm-text">${text}</span>`;
+      confirmBtn.style.color   = lineColor;
+      confirmBtn.style.opacity = '1';
     };
     renderConfirmBtn();
 
@@ -697,18 +831,23 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
       });
     });
 
+    const closePanel = () => {
+      panel.classList.remove('panel-open');
+      setTimeout(() => panel.remove(), 280);
+    };
+
     panel.querySelector('.dev-confirm-final').addEventListener('click', e => {
       e.stopPropagation();
       setFinalConfirmed(slug, posIdx);
       onUpdate();
-      paint();
+      closePanel();
     });
 
     panel.querySelector('.dev-confirm-plus').addEventListener('click', e => {
       e.stopPropagation();
       incrementConfirmCount(slug, posIdx);
       onUpdate();
-      paint();
+      closePanel();
     });
 
     panel.querySelector('.dev-confirm-minus').addEventListener('click', e => {
@@ -722,7 +861,7 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
       const doors = document.getElementById(dId).textContent;
       addDisputeVote(slug, posIdx, wagon, doors);
       onUpdate();
-      paint();
+      closePanel();
     });
 
     panel.querySelector('.dev-confirm-undo').addEventListener('click', e => {

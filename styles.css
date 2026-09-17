@@ -758,6 +758,40 @@ color: var(--text-muted);
 
 .fav-btn-bar.fav-active { color: var(--accent-star); }
 
+/* ── Кнопка загальної нотатки станції (праворуч від серця, лише в Dev Mode) ── */
+.dev-station-note-btn {
+  background: none;
+  border: none;
+  color: var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.dev-station-note-btn.is-hidden { display: none; }
+.dev-station-note-btn:active { opacity: 0.5; }
+.dev-station-note-btn svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+
+/* Панель загальної нотатки — під шапкою, над списком напрямків */
+.dev-station-note-panel {
+  margin: 0 16px;
+}
+.dev-station-note-panel.panel-open {
+  margin: 6px 16px 2px;
+}
+.dev-station-note-textarea {
+  height: 72px;
+}
+
 /* ══ КЛІКАБЕЛЬНІ НАЗВИ СТАНЦІЙ ══ */
 .nav-link {
   cursor: pointer;
@@ -3526,27 +3560,13 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   transform: translateY(1px) !important;
 }
 
-.dev-confirm-count {
-  position: absolute;
-  top: -2px;
-  right: -4px;
-  min-width: 13px;
-  height: 13px;
-  padding: 0 2px;
-  border-radius: 7px;
-  background: currentColor;
-  font-size: 9px;
+/* Плоский текстовий індикатор (+N / −N / ±N) — без кружечка-підложки,
+   просто збільшена кольорова цифра/знак */
+.dev-confirm-text {
+  font-size: 15px;
   font-weight: var(--fw-medium);
-  line-height: 13px;
-  text-align: center;
-  color: var(--bg);
-}
-
-/* Є спростування ("-1") — бейдж стає темним/нейтральним замість кольору лінії,
-   щоб одразу впадало в очі, що є розбіжність */
-.dev-confirm-btn.has-dispute .dev-confirm-count {
-  background: var(--text);
-  color: var(--bg);
+  color: currentColor;
+  line-height: 1;
 }
 
 /* 2. Нотатка: квадратна і масивна, робимо її найменшою */
@@ -4589,34 +4609,55 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   position: relative;
 }
 
-/* ── Панель "виходи за номерами" — виїжджає ліворуч від пігулок ── */
+/* ── Панель "виходи за номерами" — використовує базову анімацію
+   .dev-note-panel (max-height), тут додатково домішуємо translateY,
+   щоб вміст виглядав так, ніби підіймається знизу вгору, а не просто
+   розкривається зверху вниз ── */
 .pos-numbered-exits {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  transition: max-width 0.25s ease, opacity 0.2s ease;
+  gap: 8px;
+  transform: translateY(10px);
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease, transform 0.28s cubic-bezier(0.4,0,0.2,1);
 }
-.pos-numbered-exits.open {
-  max-width: 220px;
-  opacity: 1;
+.pos-numbered-exits.panel-open {
+  transform: translateY(0);
 }
 .pos-numbered-exit-row {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
+  gap: 8px;
   font-size: var(--fs-xs);
   color: var(--text-muted);
-  white-space: normal;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 .pos-numbered-exit-num {
   flex-shrink: 0;
+  font-size: 20px;
   font-weight: var(--fw-medium);
-  color: var(--text);
+  line-height: 1;
+}
+
+/* Розпластана стрілка-смуга внизу панелі — тап згортає */
+.pos-numbered-exits-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 18px;
+  margin-top: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-top: 0.5px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pos-numbered-exits-collapse svg {
+  width: 28px;
+  height: 8px;
+  display: block;
 }
 
 .pos-lift-marks-wrap {

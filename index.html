@@ -164,11 +164,13 @@ document.documentElement.setAttribute('data-theme', actual);
   <div id="stationSheet" class="station-sheet">
     <div class="sheet-handle-bar">
       <button class="fav-btn-bar" aria-label="Вибране"></button>
+      <button id="devStationNoteBtn" class="dev-station-note-btn is-hidden" aria-label="Загальна нотатка станції"></button>
       <div class="sheet-handle"></div>
       <span class="sheet-station-title" id="stationTitleMain"></span>
       <button id="sheetCheckinBtn" class="sheet-action-btn" aria-label="Журнал check-in" hidden></button>
       <button id="sheetClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
     </div>
+    <div id="devStationNotePanel" class="dev-note-panel dev-station-note-panel"></div>
     <div id="sheetBody" class="sheet-body"></div>
   </div>
 
