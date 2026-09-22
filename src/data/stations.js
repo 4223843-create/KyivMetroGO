@@ -1,3 +1,4 @@
+// src/data/stations.js
 import { Capacitor }                      from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
@@ -127,6 +128,30 @@ export function hydrateStations(data) {
   Object.keys(_slugByLower).forEach(k => delete _slugByLower[k]);
 
   data.stations.forEach(station => {
+    // ── РАЗВЕРТАННЯ КАТАЛОГУ ВИХОДІВ (Розпаковка DRY-посилань) ──
+    // exits_catalog — словник на рівні станції; exits у directions посилаються
+    // на записи каталогу через поле "id". Тут розгортаємо посилання у повні
+    // об'єкти до того, як щось інше торкнеться даних.
+    // ── РАЗВЕРТАННЯ КАТАЛОГУ ВИХОДІВ (Розпаковка DRY-посилань) ──
+    const exitsCatalog = station.exits_catalog || {};
+
+    (station.directions || []).forEach(dir => {
+      (dir.exits || []).forEach(ex => {
+        if (ex.id && exitsCatalog[ex.id]) {
+          const catalogItem = exitsCatalog[ex.id];
+          if (!ex.label && catalogItem.label) {
+            ex.label = catalogItem.label;
+          }
+          if (!ex.numbered_exits) {
+            ex.numbered_exits = catalogItem.numbered_exits || catalogItem.exit_numbers;
+          }
+          if (!ex.exit_numbers) {
+            ex.exit_numbers = catalogItem.exit_numbers || catalogItem.numbered_exits;
+          }
+        }
+      });
+    });
+    
     // ── Плаский масив позицій (для feedback та пошуку) ──
     station.positions = [];
     traversePositions(station, ({ dir, exit, position }) => {
@@ -137,6 +162,8 @@ export function hydrateStations(data) {
         doors: position.doors,
       });
     });
+
+    // ... решта функції без змін ...
 
     // ── Заповнюємо приватні словники ──
     const cleanName = station.name.toLowerCase().replace(/["'„"«».,]/g, '');

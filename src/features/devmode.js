@@ -557,6 +557,12 @@ export function setStationNote(slug, text) {
  * @param {string} slug
  * @param {string} lineColor
  */
+// Останній slug, для якого малювалась кнопка/панель нотатки станції —
+// щоб при переході на ІНШУ станцію панель гарантовано закривалась і
+// очищалась (інакше нотатка з попередньої станції "протікала" на нову,
+// поки її не закриють руками).
+let _lastStationNoteSlug = null;
+
 export function setupDevStationNoteButton(sheet, slug, lineColor) {
   const btn   = sheet.querySelector('#devStationNoteBtn');
   const panel = sheet.querySelector('#devStationNotePanel');
@@ -567,10 +573,20 @@ export function setupDevStationNoteButton(sheet, slug, lineColor) {
   if (!active) {
     panel.classList.remove('panel-open');
     panel.innerHTML = '';
+    _lastStationNoteSlug = null;
     return;
   }
 
-  const defaultColor = 'var(--border)';
+  if (slug !== _lastStationNoteSlug) {
+    // Це інша станція, ніж та, для якої панель могла бути відкрита —
+    // закриваємо й чистимо вміст, щоб чужа нотатка не малювалась тут.
+    panel.classList.remove('panel-open');
+    panel.innerHTML = '';
+    _lastStationNoteSlug = slug;
+  }
+
+  // Орієнтир видимості — той самий сірий, що й у хрестика закриття шторки
+  const defaultColor = 'var(--text-muted)';
   btn.innerHTML = DEV_NOTE_SVG;
 
   const hasNote = !!getStationNote(slug);
@@ -669,20 +685,23 @@ export function attachDevModeUI(container, slug) {
       // дорівнює 1 у "чистому" +/− випадку — цифру не пишемо, лишається
       // сам знак; для ± цифра пишеться завжди (включно з 1).
       let text;
+      let badgeColor;
       if (hasConfirm && !hasDispute) {
         text = data.confirmCount === 1 ? '+' : `+${data.confirmCount}`;
+        badgeColor = lineColor;
       } else if (hasDispute && !hasConfirm) {
         text = data.disputeCount === 1 ? '−' : `−${data.disputeCount}`;
+        badgeColor = 'var(--bg-pill)'; // той самий темний тон, що й фон пігулки
       } else {
-        const balance = data.confirmCount - data.disputeCount;
-        const sign = balance > 0 ? '+' : balance < 0 ? '−' : '';
-        text = `±${sign}${Math.abs(balance)}`;
+        // Є і підтвердження, і спростування — просто "±", без цифри
+        text = '±';
+        badgeColor = 'var(--bg-pill)';
       }
 
       confirmBtn.classList.remove('is-final');
       confirmBtn.classList.add('is-text-badge');
       confirmBtn.innerHTML = `<span class="dev-confirm-text">${text}</span>`;
-      confirmBtn.style.color   = lineColor;
+      confirmBtn.style.color   = badgeColor;
       confirmBtn.style.opacity = '1';
     };
     renderConfirmBtn();

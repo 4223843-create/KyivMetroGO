@@ -4617,7 +4617,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transform: translateY(10px);
+  transform: translateY(-8px);
   transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease, transform 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 .pos-numbered-exits.panel-open {
@@ -4627,15 +4627,15 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   line-height: 1.35;
 }
 .pos-numbered-exit-num {
   flex-shrink: 0;
-  font-size: 20px;
+  font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
-  line-height: 1;
+  line-height: 1.35;
 }
 
 /* Розпластана стрілка-смуга внизу панелі — тап згортає */

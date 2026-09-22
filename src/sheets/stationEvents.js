@@ -221,14 +221,110 @@ function _maybeShowCheckinHint(lineColor) {
 // інакше одинарний тап просто нічого не робить (як і раніше).
 const COLLAPSE_ARROW_SVG = `<svg viewBox="0 0 32 10" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8 L16 2 L30 8"/></svg>`;
 
+// ── Панель "виходи за номерами" — виїжджає ЗНИЗУ, розширюючи блок ──
+// ── Панель "виходи за номерами" ──
 function _openNumberedExitsPanel(favTarget, slug, lineColor) {
   const station = state.stationsData?.[slug];
-  const exits = station?.numbered_exits;
-  if (!exits || !exits.length) return;
+  if (!station) return;
 
   const row = favTarget.closest('.position-row');
   if (!row) return;
 
+  const wagon = favTarget.dataset.wagon;
+  const doors = favTarget.dataset.doors;
+
+  // 1. Пошук текстової мітки напрямку (з поточного блоку або попереднього сусіда)
+  const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
+  let labelEl = dirBlock?.querySelector('.direction-label, .transfer-text');
+  if (!labelEl && dirBlock?.previousElementSibling) {
+    labelEl = dirBlock.previousElementSibling.querySelector('.direction-label, .transfer-text')
+      || (dirBlock.previousElementSibling.classList.contains('direction-label') ? dirBlock.previousElementSibling : null);
+  }
+
+  const dirName = labelEl?.dataset.name || (labelEl?.classList.contains('transfer-text') ? '__long_transfer__' : labelEl?.textContent.trim()) || '';
+
+  // 2. Знаходимо напрямок за назвою або шукаємо будь-який напрямок, що містить ці вагони/двері
+  let targetDir = station.directions?.find(d => d.from === dirName || d.from.trim() === dirName.trim());
+  if (!targetDir && station.directions) {
+    targetDir = station.directions.find(d =>
+      d.exits?.some(ex =>
+        ex.positions?.some(p => String(p.wagon).trim() === String(wagon).trim() && String(p.doors).trim() === String(doors).trim())
+      )
+    );
+  }
+
+  // 3. Знаходимо вихід у напрямку (або скан по всій станції як крайній фолбек)
+  let targetExit = targetDir?.exits?.find(ex =>
+    ex.positions?.some(p => String(p.wagon).trim() === String(wagon).trim() && String(p.doors).trim() === String(doors).trim())
+  );
+
+  if (!targetExit && station.directions) {
+    for (const d of station.directions) {
+      targetExit = d.exits?.find(ex =>
+        ex.positions?.some(p => String(p.wagon).trim() === String(wagon).trim() && String(p.doors).trim() === String(doors).trim())
+      );
+      if (targetExit) break;
+    }
+  }
+
+  if (!targetExit) return;
+
+  // 4. Розпаковка списку виходів з урахуванням усіх можливих форматів
+  const rawExits = targetExit.numbered_exits || targetExit.exit_numbers || (Array.isArray(station.numbered_exits) ? station.numbered_exits : []);
+  const stationNumbered = station.numbered_exits;
+
+  let exitsList = [];
+
+  // Якщо номери виходів посилаються на словник станції (station.numbered_exits)
+  if (Array.isArray(rawExits) && rawExits.length > 0 && stationNumbered) {
+    if (typeof stationNumbered === 'object' && !Array.isArray(stationNumbered)) {
+      const resolved = rawExits.map(key => {
+        let text = '';
+        let numStr = '';
+        if (typeof key === 'object' && key !== null) {
+          numStr = String(key.num || key.number || key.id || '');
+          text = key.text || stationNumbered[numStr] || '';
+        } else {
+          numStr = String(key).trim();
+          text = stationNumbered[numStr] || '';
+        }
+        return text ? { num: numStr, text: String(text) } : null;
+      }).filter(Boolean);
+
+      if (resolved.length > 0) exitsList = resolved;
+    } else if (Array.isArray(stationNumbered)) {
+      const resolved = rawExits.map((key, idx) => {
+        if (typeof key === 'object' && key !== null) {
+          return { num: String(key.num || key.number || (idx + 1)), text: String(key.text || '') };
+        }
+        const numIdx = parseInt(key) - 1;
+        const text = !isNaN(numIdx) && stationNumbered[numIdx] ? stationNumbered[numIdx] : (typeof key === 'string' && isNaN(Number(key)) ? key : '');
+        return text ? { num: String(key), text: String(text) } : null;
+      }).filter(Boolean);
+
+      if (resolved.length > 0) exitsList = resolved;
+    }
+  }
+
+  // Якщо rawExits самі містять об'єкти чи текстові описи
+  if (exitsList.length === 0 && Array.isArray(rawExits) && rawExits.length > 0) {
+    exitsList = rawExits.map((item, index) => {
+      if (typeof item === 'object' && item !== null) {
+        return {
+          num: String(item.num || item.number || (index + 1)),
+          text: String(item.text || '')
+        };
+      }
+      return {
+        num: String(index + 1),
+        text: String(item)
+      };
+    }).filter(item => item.text && item.text.trim() !== '');
+  }
+
+  if (!exitsList.length) return;
+
+  // 5. Відкриття / закриття панелі
   const next = row.nextElementSibling;
   if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'numbered-exits') {
     next.classList.remove('panel-open');
@@ -236,8 +332,6 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor) {
     return;
   }
 
-  // Будь-яка інша відкрита панель (нотатка/фото/підтвердження/інші виходи) —
-  // закриваємо, лишається одна одразу під рядком.
   document.querySelectorAll('.dev-note-panel').forEach(p => {
     p.classList.remove('panel-open');
     setTimeout(() => p.remove(), 280);
@@ -247,12 +341,15 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor) {
   panel.className = 'dev-note-panel pos-numbered-exits';
   panel.dataset.type = 'numbered-exits';
   panel.innerHTML =
-    exits.map((text, i) =>
-      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineColor}">${i + 1}</span><span class="pos-numbered-exit-text">${text}</span></div>`
+    exitsList.map(item =>
+      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineColor}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span></div>`
     ).join('') +
     `<button type="button" class="pos-numbered-exits-collapse" aria-label="Згорнути">${COLLAPSE_ARROW_SVG}</button>`;
 
-  row.after(panel);
+  const dirLabel = row.previousElementSibling?.classList.contains('direction-label')
+    ? row.previousElementSibling
+    : row;
+  dirLabel.before(panel);
   requestAnimationFrame(() => panel.classList.add('panel-open'));
 
   panel.querySelector('.pos-numbered-exits-collapse').addEventListener('click', e => {

@@ -1,5 +1,5 @@
 {
-  "version": "20260905",
+  "version": "20260906",
   "stations": [
     {
       "slug": "R.Akademmistechko",
@@ -12,12 +12,32 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "101": {
+          "label": "до Національної академії наук",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "102": {
+          "label": "до ТЦ Academ City",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "кінцева",
           "exits": [
             {
-              "label": "до Національної академії наук",
+              "id": "101",
               "positions": [
                 {
                   "wagon": "1",
@@ -26,7 +46,7 @@
               ]
             },
             {
-              "label": "до ТЦ Academ City",
+              "id": "102",
               "positions": [
                 {
                   "wagon": "5",
@@ -48,12 +68,23 @@
           "y": 36.9
         }
       ],
+      "exits_catalog": {
+        "103": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Святошин",
           "exits": [
             {
-              "label": "",
+              "id": "103",
               "positions": [
                 {
                   "wagon": "1",
@@ -67,7 +98,7 @@
           "from": "попередня Академмістечко",
           "exits": [
             {
-              "label": "",
+              "id": "103",
               "positions": [
                 {
                   "wagon": "5",
@@ -89,12 +120,32 @@
           "y": 41.2
         }
       ],
+      "exits_catalog": {
+        "104": {
+          "label": "кільцева електричка, ринок „Святошин“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "105": {
+          "label": "завод Антонова",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Нивки",
           "exits": [
             {
-              "label": "кільцева електричка, ринок „Святошин“",
+              "id": "104",
               "positions": [
                 {
                   "wagon": "1",
@@ -105,7 +156,7 @@
               ]
             },
             {
-              "label": "завод Антонова",
+              "id": "105",
               "positions": [
                 {
                   "wagon": "5",
@@ -121,7 +172,7 @@
           "from": "попередня Житомирська",
           "exits": [
             {
-              "label": "кільцева електричка, ринок „Святошин“",
+              "id": "104",
               "positions": [
                 {
                   "wagon": "5",
@@ -132,7 +183,7 @@
               ]
             },
             {
-              "label": "завод Антонова",
+              "id": "105",
               "positions": [
                 {
                   "wagon": "1",
@@ -156,12 +207,32 @@
           "y": 45.6
         }
       ],
+      "exits_catalog": {
+        "106": {
+          "label": "Nyvky City, Ultramarket",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "107": {
+          "label": "парк „Нивки“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Берестейська",
           "exits": [
             {
-              "label": "Nyvky City, Ultramarket",
+              "id": "106",
               "positions": [
                 {
                   "wagon": "1",
@@ -170,7 +241,7 @@
               ]
             },
             {
-              "label": "парк „Нивки“",
+              "id": "107",
               "positions": [
                 {
                   "wagon": "5",
@@ -184,7 +255,7 @@
           "from": "попередня Святошин",
           "exits": [
             {
-              "label": "Nyvky City, Ultramarket",
+              "id": "106",
               "positions": [
                 {
                   "wagon": "5",
@@ -193,7 +264,7 @@
               ]
             },
             {
-              "label": "парк „Нивки“",
+              "id": "107",
               "positions": [
                 {
                   "wagon": "1",
@@ -215,12 +286,23 @@
           "y": 49.9
         }
       ],
+      "exits_catalog": {
+        "108": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Шулявська",
           "exits": [
             {
-              "label": "",
+              "id": "108",
               "positions": [
                 {
                   "wagon": "5",
@@ -234,7 +316,7 @@
           "from": "попередня Нивки",
           "exits": [
             {
-              "label": "",
+              "id": "108",
               "positions": [
                 {
                   "wagon": "1",
@@ -256,12 +338,23 @@
           "y": 54.3
         }
       ],
+      "exits_catalog": {
+        "109": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Політехнічний&nbsp;інститут",
           "exits": [
             {
-              "label": "",
+              "id": "109",
               "positions": [
                 {
                   "wagon": "3",
@@ -275,7 +368,7 @@
           "from": "попередня Берестейська",
           "exits": [
             {
-              "label": "",
+              "id": "109",
               "positions": [
                 {
                   "wagon": "3",
@@ -303,12 +396,23 @@
           "h": 6.3
         }
       ],
+      "exits_catalog": {
+        "110": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Вокзальна",
           "exits": [
             {
-              "label": "",
+              "id": "110",
               "positions": [
                 {
                   "wagon": "4",
@@ -322,7 +426,7 @@
           "from": "попередня Шулявська",
           "exits": [
             {
-              "label": "",
+              "id": "110",
               "positions": [
                 {
                   "wagon": "3",
@@ -345,12 +449,23 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "111": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Університет",
           "exits": [
             {
-              "label": "",
+              "id": "111",
               "positions": [
                 {
                   "wagon": "2",
@@ -364,7 +479,7 @@
           "from": "попередня Політехнічний&nbsp;інститут",
           "exits": [
             {
-              "label": "",
+              "id": "111",
               "positions": [
                 {
                   "wagon": "4",
@@ -392,12 +507,23 @@
           "h": 8.7
         }
       ],
+      "exits_catalog": {
+        "112": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Театральна",
           "exits": [
             {
-              "label": "",
+              "id": "112",
               "positions": [
                 {
                   "wagon": "4",
@@ -411,7 +537,7 @@
           "from": "попередня Вокзальна",
           "exits": [
             {
-              "label": "",
+              "id": "112",
               "positions": [
                 {
                   "wagon": "2",
@@ -434,12 +560,32 @@
           "type": "transfer"
         }
       ],
+      "exits_catalog": {
+        "113": {
+          "label": "пересадка на Золоті&nbsp;ворота",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "114": {
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Хрещатик",
           "exits": [
             {
-              "label": "пересадка на Золоті&nbsp;ворота",
+              "id": "113",
               "positions": [
                 {
                   "wagon": "2",
@@ -452,7 +598,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "114",
               "positions": [
                 {
                   "wagon": "5",
@@ -466,7 +612,7 @@
           "from": "попередня Університет",
           "exits": [
             {
-              "label": "пересадка на Золоті&nbsp;ворота",
+              "id": "113",
               "positions": [
                 {
                   "wagon": "4",
@@ -475,7 +621,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "114",
               "positions": [
                 {
                   "wagon": "1",
@@ -498,12 +644,59 @@
           "type": "transfer"
         }
       ],
+      "exits_catalog": {
+        "115": {
+          "label": "короткий перехід на Майдан&nbsp;Незалежності",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "116": {
+          "label": "вихід в місто (Хрещатик)",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "117": {
+          "label": "вихід в місто (Героїв&nbsp;Небесної&nbsp;Сотні)",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "118": {
+          "label": "попередня Театральна",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "119": {
+          "label": "попередня Арсенальна",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Театральна",
           "exits": [
             {
-              "label": "короткий перехід на Майдан&nbsp;Незалежності",
+              "id": "115",
               "positions": [
                 {
                   "wagon": "2",
@@ -512,7 +705,7 @@
               ]
             },
             {
-              "label": "вихід в місто (Хрещатик)",
+              "id": "116",
               "positions": [
                 {
                   "wagon": "4",
@@ -521,7 +714,7 @@
               ]
             },
             {
-              "label": "вихід в місто (Героїв&nbsp;Небесної&nbsp;Сотні)",
+              "id": "117",
               "positions": [
                 {
                   "wagon": "2",
@@ -535,7 +728,7 @@
           "from": "попередня Арсенальна",
           "exits": [
             {
-              "label": "короткий перехід на Майдан&nbsp;Незалежності",
+              "id": "115",
               "positions": [
                 {
                   "wagon": "5",
@@ -544,7 +737,7 @@
               ]
             },
             {
-              "label": "вихід в місто (Хрещатик)",
+              "id": "116",
               "positions": [
                 {
                   "wagon": "2",
@@ -553,7 +746,7 @@
               ]
             },
             {
-              "label": "вихід в місто (Героїв&nbsp;Небесної&nbsp;Сотні)",
+              "id": "117",
               "positions": [
                 {
                   "wagon": "5",
@@ -567,7 +760,7 @@
           "from": "__long_transfer__",
           "exits": [
             {
-              "label": "попередня Театральна",
+              "id": "118",
               "positions": [
                 {
                   "wagon": "2",
@@ -584,7 +777,7 @@
               ]
             },
             {
-              "label": "попередня Арсенальна",
+              "id": "119",
               "positions": [
                 {
                   "wagon": "5",
@@ -611,12 +804,23 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "120": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Хрещатик",
           "exits": [
             {
-              "label": "",
+              "id": "120",
               "positions": [
                 {
                   "wagon": "5",
@@ -630,7 +834,7 @@
           "from": "попередня Дніпро",
           "exits": [
             {
-              "label": "",
+              "id": "120",
               "positions": [
                 {
                   "wagon": "1",
@@ -653,6 +857,17 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "121": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "вихід праворуч",
@@ -662,7 +877,7 @@
           "from": "попередня Арсенальна",
           "exits": [
             {
-              "label": "",
+              "id": "121",
               "positions": [
                 {
                   "wagon": "5",
@@ -676,7 +891,7 @@
           "from": "попередня Гідропарк",
           "exits": [
             {
-              "label": "",
+              "id": "121",
               "positions": [
                 {
                   "wagon": "1",
@@ -704,12 +919,23 @@
           "h": 6.3
         }
       ],
+      "exits_catalog": {
+        "122": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": "Пляжі: передмостова Слобідка, Золотий"
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Дніпро",
           "exits": [
             {
-              "label": "",
+              "id": "122",
               "positions": [
                 {
                   "wagon": "5",
@@ -723,7 +949,7 @@
           "from": "попередня Лівобережна",
           "exits": [
             {
-              "label": "",
+              "id": "122",
               "positions": [
                 {
                   "wagon": "1",
@@ -745,12 +971,32 @@
           "y": 41.3
         }
       ],
+      "exits_catalog": {
+        "123": {
+          "label": "кільцева електричка, Театр драми і комедії",
+          "exit_numbers": [
+            {
+              "num": "2",
+              "text": "вул. Раїси Окіпної, Міжнародний виставковий центр"
+            }
+          ]
+        },
+        "124": {
+          "label": "Міжнародний виставковий центр",
+          "exit_numbers": [
+            {
+              "num": "1",
+              "text": "вул. Євгена Сверстюка, 🚊 Лівобережна"
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Гідропарк",
           "exits": [
             {
-              "label": "кільцева електричка, Театр драми і комедії",
+              "id": "123",
               "positions": [
                 {
                   "wagon": "1",
@@ -761,7 +1007,7 @@
               ]
             },
             {
-              "label": "Міжнародний виставковий центр",
+              "id": "124",
               "positions": [
                 {
                   "wagon": "5",
@@ -776,7 +1022,7 @@
           "from": "попередня Дарниця",
           "exits": [
             {
-              "label": "кільцева електричка, Театр драми і комедії",
+              "id": "123",
               "positions": [
                 {
                   "wagon": "5",
@@ -787,7 +1033,7 @@
               ]
             },
             {
-              "label": "Міжнародний виставковий центр",
+              "id": "124",
               "positions": [
                 {
                   "wagon": "1",
@@ -810,12 +1056,32 @@
           "y": 36.9
         }
       ],
+      "exits_catalog": {
+        "125": {
+          "label": "парк Перемога, ТЦ „Дитячий світ“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "126": {
+          "label": "ТЦ Doma Center",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Лівобережна",
           "exits": [
             {
-              "label": "парк Перемога, ТЦ „Дитячий світ“",
+              "id": "125",
               "positions": [
                 {
                   "wagon": "1",
@@ -825,7 +1091,7 @@
               ]
             },
             {
-              "label": "ТЦ Doma Center",
+              "id": "126",
               "positions": [
                 {
                   "wagon": "5",
@@ -841,7 +1107,7 @@
           "from": "попередня Чернігівська",
           "exits": [
             {
-              "label": "парк Перемога, ТЦ „Дитячий світ“",
+              "id": "125",
               "positions": [
                 {
                   "wagon": "5",
@@ -851,7 +1117,7 @@
               ]
             },
             {
-              "label": "ТЦ Doma Center",
+              "id": "126",
               "positions": [
                 {
                   "wagon": "1",
@@ -875,12 +1141,32 @@
           "y": 32.6
         }
       ],
+      "exits_catalog": {
+        "127": {
+          "label": "автостанція „Дарниця“. артзавод „Платформа“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "128": {
+          "label": "Лікарня швидкої медичної допомоги",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Дарниця",
           "exits": [
             {
-              "label": "автостанція „Дарниця“. артзавод „Платформа“",
+              "id": "127",
               "positions": [
                 {
                   "wagon": "1",
@@ -889,7 +1175,7 @@
               ]
             },
             {
-              "label": "Лікарня швидкої медичної допомоги",
+              "id": "128",
               "positions": [
                 {
                   "wagon": "5",
@@ -903,7 +1189,7 @@
           "from": "попередня Лісова",
           "exits": [
             {
-              "label": "автостанція „Дарниця“. артзавод „Платформа“",
+              "id": "127",
               "positions": [
                 {
                   "wagon": "5",
@@ -912,7 +1198,7 @@
               ]
             },
             {
-              "label": "Лікарня швидкої медичної допомоги",
+              "id": "128",
               "positions": [
                 {
                   "wagon": "1",
@@ -935,12 +1221,32 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "129": {
+          "label": "автостанція",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "130": {
+          "label": "Bazar на Лісовій",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "кінцева",
           "exits": [
             {
-              "label": "автостанція",
+              "id": "129",
               "positions": [
                 {
                   "wagon": "1",
@@ -951,7 +1257,7 @@
               ]
             },
             {
-              "label": "Bazar на Лісовій",
+              "id": "130",
               "positions": [
                 {
                   "wagon": "5",
@@ -975,12 +1281,32 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "201": {
+          "label": "ринок „Оболонь“, трамвайне кільце",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "202": {
+          "label": "ТЦ Dream berry",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "кінцева",
           "exits": [
             {
-              "label": "ринок „Оболонь“, трамвайне кільце",
+              "id": "201",
               "positions": [
                 {
                   "wagon": "1",
@@ -989,7 +1315,7 @@
               ]
             },
             {
-              "label": "ТЦ Dream berry",
+              "id": "202",
               "positions": [
                 {
                   "wagon": "5",
@@ -1011,12 +1337,32 @@
           "y": 6.4
         }
       ],
+      "exits_catalog": {
+        "203": {
+          "label": "ТЦ Smart Plaza, ТЦ Dream berry",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "204": {
+          "label": "Мінський ринок",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Оболонь",
           "exits": [
             {
-              "label": "ТЦ Smart Plaza, ТЦ Dream berry",
+              "id": "203",
               "positions": [
                 {
                   "wagon": "1",
@@ -1025,7 +1371,7 @@
               ]
             },
             {
-              "label": "Мінський ринок",
+              "id": "204",
               "positions": [
                 {
                   "wagon": "5",
@@ -1039,7 +1385,7 @@
           "from": "попередня Героїв&nbsp;Дніпра",
           "exits": [
             {
-              "label": "ТЦ Smart Plaza, ТЦ Dream berry",
+              "id": "203",
               "positions": [
                 {
                   "wagon": "5",
@@ -1048,7 +1394,7 @@
               ]
             },
             {
-              "label": "Мінський ринок",
+              "id": "204",
               "positions": [
                 {
                   "wagon": "1",
@@ -1070,12 +1416,32 @@
           "y": 10.8
         }
       ],
+      "exits_catalog": {
+        "205": {
+          "label": "Dream yellow",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "206": {
+          "label": "Lake Plaza, Кирилівське озеро",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Почайна",
           "exits": [
             {
-              "label": "Dream yellow",
+              "id": "205",
               "positions": [
                 {
                   "wagon": "1",
@@ -1084,7 +1450,7 @@
               ]
             },
             {
-              "label": "Lake Plaza, Кирилівське озеро",
+              "id": "206",
               "positions": [
                 {
                   "wagon": "5",
@@ -1098,7 +1464,7 @@
           "from": "попередня Мінська",
           "exits": [
             {
-              "label": "Dream yellow",
+              "id": "205",
               "positions": [
                 {
                   "wagon": "5",
@@ -1107,7 +1473,7 @@
               ]
             },
             {
-              "label": "Lake Plaza, Кирилівське озеро",
+              "id": "206",
               "positions": [
                 {
                   "wagon": "1",
@@ -1129,12 +1495,32 @@
           "y": 15.2
         }
       ],
+      "exits_catalog": {
+        "207": {
+          "label": "ТЦ Gorodok",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "208": {
+          "label": "кільцева електричка, ринок „Почайна“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Тараса&nbsp;Шевченка",
           "exits": [
             {
-              "label": "ТЦ Gorodok",
+              "id": "207",
               "positions": [
                 {
                   "wagon": "1",
@@ -1143,7 +1529,7 @@
               ]
             },
             {
-              "label": "кільцева електричка, ринок „Почайна“",
+              "id": "208",
               "positions": [
                 {
                   "wagon": "5",
@@ -1157,7 +1543,7 @@
           "from": "попередня Оболонь",
           "exits": [
             {
-              "label": "ТЦ Gorodok",
+              "id": "207",
               "positions": [
                 {
                   "wagon": "5",
@@ -1166,7 +1552,7 @@
               ]
             },
             {
-              "label": "кільцева електричка, ринок „Почайна“",
+              "id": "208",
               "positions": [
                 {
                   "wagon": "1",
@@ -1188,12 +1574,23 @@
           "y": 19.45
         }
       ],
+      "exits_catalog": {
+        "209": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Контрактова&nbsp;площа",
           "exits": [
             {
-              "label": "",
+              "id": "209",
               "positions": [
                 {
                   "wagon": "5",
@@ -1207,7 +1604,7 @@
           "from": "попередня Почайна",
           "exits": [
             {
-              "label": "",
+              "id": "209",
               "positions": [
                 {
                   "wagon": "1",
@@ -1229,12 +1626,32 @@
           "y": 23.9
         }
       ],
+      "exits_catalog": {
+        "210": {
+          "label": "Верхній вал",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "211": {
+          "label": "Контрактова площа",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Поштова&nbsp;площа",
           "exits": [
             {
-              "label": "Верхній вал",
+              "id": "210",
               "positions": [
                 {
                   "wagon": "1",
@@ -1243,7 +1660,7 @@
               ]
             },
             {
-              "label": "Контрактова площа",
+              "id": "211",
               "positions": [
                 {
                   "wagon": "5",
@@ -1257,7 +1674,7 @@
           "from": "попередня Тараса&nbsp;Шевченка",
           "exits": [
             {
-              "label": "Верхній вал",
+              "id": "210",
               "positions": [
                 {
                   "wagon": "5",
@@ -1266,7 +1683,7 @@
               ]
             },
             {
-              "label": "Контрактова площа",
+              "id": "211",
               "positions": [
                 {
                   "wagon": "1",
@@ -1288,12 +1705,23 @@
           "y": 28.2
         }
       ],
+      "exits_catalog": {
+        "212": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Майдан&nbsp;Незалежності",
           "exits": [
             {
-              "label": "",
+              "id": "212",
               "positions": [
                 {
                   "wagon": "5",
@@ -1307,7 +1735,7 @@
           "from": "попередня Контрактова&nbsp;площа",
           "exits": [
             {
-              "label": "",
+              "id": "212",
               "positions": [
                 {
                   "wagon": "1",
@@ -1330,12 +1758,32 @@
           "type": "transfer"
         }
       ],
+      "exits_catalog": {
+        "213": {
+          "label": "пересадка на&nbsp;Хрещатик",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "214": {
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Площа&nbsp;Українських&nbsp;Героїв",
           "exits": [
             {
-              "label": "пересадка на&nbsp;Хрещатик",
+              "id": "213",
               "positions": [
                 {
                   "wagon": "5",
@@ -1344,7 +1792,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "214",
               "positions": [
                 {
                   "wagon": "1",
@@ -1358,7 +1806,7 @@
           "from": "попередня Поштова&nbsp;площа",
           "exits": [
             {
-              "label": "пересадка на&nbsp;Хрещатик",
+              "id": "213",
               "positions": [
                 {
                   "wagon": "1",
@@ -1367,7 +1815,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "214",
               "positions": [
                 {
                   "wagon": "5",
@@ -1390,12 +1838,32 @@
           "type": "transfer"
         }
       ],
+      "exits_catalog": {
+        "215": {
+          "label": "пересадка на Палац&nbsp;спорту",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "216": {
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Майдан&nbsp;Незалежності",
           "exits": [
             {
-              "label": "пересадка на Палац&nbsp;спорту",
+              "id": "215",
               "positions": [
                 {
                   "wagon": "2",
@@ -1404,7 +1872,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "216",
               "positions": [
                 {
                   "wagon": "1",
@@ -1418,7 +1886,7 @@
           "from": "попередня Олімпійська",
           "exits": [
             {
-              "label": "пересадка на Палац&nbsp;спорту",
+              "id": "215",
               "positions": [
                 {
                   "wagon": "4",
@@ -1427,7 +1895,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "216",
               "positions": [
                 {
                   "wagon": "5",
@@ -1449,12 +1917,23 @@
           "y": 58.7
         }
       ],
+      "exits_catalog": {
+        "217": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Площа&nbsp;Українських&nbsp;Героїв",
           "exits": [
             {
-              "label": "",
+              "id": "217",
               "positions": [
                 {
                   "wagon": "5",
@@ -1468,7 +1947,7 @@
           "from": "попередня Палац&nbsp;„Україна“",
           "exits": [
             {
-              "label": "",
+              "id": "217",
               "positions": [
                 {
                   "wagon": "1",
@@ -1491,12 +1970,23 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "218": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Олімпійська",
           "exits": [
             {
-              "label": "",
+              "id": "218",
               "positions": [
                 {
                   "wagon": "2",
@@ -1510,7 +2000,7 @@
           "from": "попередня Либідська",
           "exits": [
             {
-              "label": "",
+              "id": "218",
               "positions": [
                 {
                   "wagon": "4",
@@ -1532,12 +2022,23 @@
           "y": 67.4
         }
       ],
+      "exits_catalog": {
+        "219": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Палац&nbsp;„Україна“",
           "exits": [
             {
-              "label": "",
+              "id": "219",
               "positions": [
                 {
                   "wagon": "2",
@@ -1551,7 +2052,7 @@
           "from": "попередня Деміївська",
           "exits": [
             {
-              "label": "",
+              "id": "219",
               "positions": [
                 {
                   "wagon": "4",
@@ -1573,21 +2074,32 @@
           "y": 71.7
         }
       ],
+      "exits_catalog": {
+        "220": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Либідська",
           "exits": [
             {
-              "label": "",
+              "id": "220",
               "positions": [
                 {
-                  "doors": "3",
                   "wagon": "1-2",
+                  "doors": "3",
                   "isEscalator": true
                 },
                 {
-                  "doors": "3",
                   "wagon": "3",
+                  "doors": "3",
                   "isLift": true
                 }
               ]
@@ -1598,16 +2110,16 @@
           "from": "попередня Голосіївська",
           "exits": [
             {
-              "label": "",
+              "id": "220",
               "positions": [
                 {
-                  "doors": "4",
                   "wagon": "3",
+                  "doors": "4",
                   "isEscalator": true
                 },
                 {
-                  "doors": "4",
                   "wagon": "5",
+                  "doors": "4",
                   "isLift": true
                 }
               ]
@@ -1626,12 +2138,23 @@
           "y": 76.1
         }
       ],
+      "exits_catalog": {
+        "221": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Деміївська",
           "exits": [
             {
-              "label": "",
+              "id": "221",
               "positions": [
                 {
                   "wagon": "5",
@@ -1651,7 +2174,7 @@
           "from": "попередня Васильківська",
           "exits": [
             {
-              "label": "",
+              "id": "221",
               "positions": [
                 {
                   "wagon": "1",
@@ -1679,12 +2202,32 @@
           "y": 80.4
         }
       ],
+      "exits_catalog": {
+        "222": {
+          "label": "Васильківська площа",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "223": {
+          "label": "ТЦ „Васильківський“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Голосіївська",
           "exits": [
             {
-              "label": "Васильківська площа",
+              "id": "222",
               "positions": [
                 {
                   "wagon": "1",
@@ -1699,7 +2242,7 @@
               ]
             },
             {
-              "label": "ТЦ „Васильківський“",
+              "id": "223",
               "positions": [
                 {
                   "wagon": "5",
@@ -1719,7 +2262,7 @@
           "from": "попередня Виставковий&nbsp;центр",
           "exits": [
             {
-              "label": "Васильківська площа",
+              "id": "222",
               "positions": [
                 {
                   "wagon": "5",
@@ -1734,7 +2277,7 @@
               ]
             },
             {
-              "label": "ТЦ „Васильківський“",
+              "id": "223",
               "positions": [
                 {
                   "wagon": "1",
@@ -1762,16 +2305,27 @@
           "y": 84.7
         }
       ],
+      "exits_catalog": {
+        "224": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Васильківська",
           "exits": [
             {
-              "label": "",
+              "id": "224",
               "positions": [
                 {
-                  "doors": "2",
                   "wagon": "1",
+                  "doors": "2",
                   "isEscalator": true,
                   "isLift": true
                 }
@@ -1783,11 +2337,11 @@
           "from": "попередня Іподром",
           "exits": [
             {
-              "label": "",
+              "id": "224",
               "positions": [
                 {
-                  "doors": "3",
                   "wagon": "5",
+                  "doors": "3",
                   "isEscalator": true,
                   "isLift": true
                 }
@@ -1807,12 +2361,41 @@
           "y": 89.1
         }
       ],
+      "exits_catalog": {
+        "225": {
+          "label": "іподром, Льодовий стадіон",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "226": {
+          "label": "автостанція „Південна“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "227": {
+          "label": "ліфт",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Виставковий&nbsp;центр",
           "exits": [
             {
-"label": "іподром, Льодовий стадіон",
+              "id": "225",
               "positions": [
                 {
                   "wagon": "1",
@@ -1822,7 +2405,7 @@
               ]
             },
             {
-              "label": "автостанція „Південна“",
+              "id": "226",
               "positions": [
                 {
                   "wagon": "5",
@@ -1832,7 +2415,7 @@
               ]
             },
             {
-              "label": "ліфт",
+              "id": "227",
               "positions": [
                 {
                   "wagon": "3",
@@ -1847,7 +2430,7 @@
           "from": "попередня Теремки",
           "exits": [
             {
-              "label": "іподром, Льодовий стадіон",
+              "id": "225",
               "positions": [
                 {
                   "wagon": "5",
@@ -1857,7 +2440,7 @@
               ]
             },
             {
-              "label": "автостанція „Південна“",
+              "id": "226",
               "positions": [
                 {
                   "wagon": "1",
@@ -1867,7 +2450,7 @@
               ]
             },
             {
-              "label": "ліфт",
+              "id": "227",
               "positions": [
                 {
                   "wagon": "3",
@@ -1891,12 +2474,32 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "228": {
+          "label": "урочище „Теремки“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "229": {
+          "label": "Будинок соти, Одеський ринок, ТРЦ „Магелан“, Одеська площа",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "кінцева",
           "exits": [
             {
-              "label": "урочище „Теремки“",
+              "id": "228",
               "positions": [
                 {
                   "wagon": "1",
@@ -1907,7 +2510,7 @@
               ]
             },
             {
-              "label": "Будинок соти, Одеський ринок, ТРЦ “Магелан”, Одеська площа",
+              "id": "229",
               "positions": [
                 {
                   "wagon": "5",
@@ -1932,12 +2535,23 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "301": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "кінцева",
           "exits": [
             {
-              "label": "",
+              "id": "301",
               "positions": [
                 {
                   "wagon": "1",
@@ -1959,12 +2573,23 @@
           "y": 32.6
         }
       ],
+      "exits_catalog": {
+        "302": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Лукʼянівська",
           "exits": [
             {
-              "label": "",
+              "id": "302",
               "positions": [
                 {
                   "wagon": "2",
@@ -1978,7 +2603,7 @@
           "from": "попередня Сирець",
           "exits": [
             {
-              "label": "",
+              "id": "302",
               "positions": [
                 {
                   "wagon": "4",
@@ -2006,12 +2631,23 @@
           "h": 6.3
         }
       ],
+      "exits_catalog": {
+        "303": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Золоті ворота",
           "exits": [
             {
-              "label": "",
+              "id": "303",
               "positions": [
                 {
                   "wagon": "1",
@@ -2025,7 +2661,7 @@
           "from": "попередня Дорогожичі",
           "exits": [
             {
-              "label": "",
+              "id": "303",
               "positions": [
                 {
                   "wagon": "5",
@@ -2048,12 +2684,32 @@
           "type": "transfer"
         }
       ],
+      "exits_catalog": {
+        "304": {
+          "label": "пересадка на Театральну",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "305": {
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Палац спорту",
           "exits": [
             {
-              "label": "пересадка на Театральну",
+              "id": "304",
               "positions": [
                 {
                   "wagon": "5",
@@ -2062,7 +2718,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "305",
               "positions": [
                 {
                   "wagon": "1",
@@ -2076,7 +2732,7 @@
           "from": "попередня Лукʼянівська",
           "exits": [
             {
-              "label": "пересадка на Театральну",
+              "id": "304",
               "positions": [
                 {
                   "wagon": "1",
@@ -2085,7 +2741,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "305",
               "positions": [
                 {
                   "wagon": "5",
@@ -2108,12 +2764,32 @@
           "type": "transfer"
         }
       ],
+      "exits_catalog": {
+        "306": {
+          "label": "пересадка на Площу Українських Героїв",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "307": {
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Золоті ворота",
           "exits": [
             {
-              "label": "пересадка на Площу Українських Героїв",
+              "id": "306",
               "positions": [
                 {
                   "wagon": "5",
@@ -2122,7 +2798,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "307",
               "positions": [
                 {
                   "wagon": "1",
@@ -2136,7 +2812,7 @@
           "from": "попередня Кловська",
           "exits": [
             {
-              "label": "пересадка на Площу Українських Героїв",
+              "id": "306",
               "positions": [
                 {
                   "wagon": "1",
@@ -2145,7 +2821,7 @@
               ]
             },
             {
-              "label": "вихід в місто",
+              "id": "307",
               "positions": [
                 {
                   "wagon": "5",
@@ -2157,52 +2833,58 @@
         }
       ]
     },
-{
-  "slug": "G.Klovska",
-  "name": "Кловська",
-  "line": "green",
-  "map_zones": [
     {
-      "x": 51.6,
-      "y": 58.7
-    }
-  ],
-  "numbered_exits": [
-    "вул. Мечникова, 14/1 – 22а, Кловський узвіз",
-    "Свято-Михайлівська лікарня",
-    "Вул. Мечникова, 10/2 – 2, вул. Леоніда Первомайського"
-  ],
-  "directions": [
-    {
-      "from": "попередня Палац спорту",
-      "exits": [
+      "slug": "G.Klovska",
+      "name": "Кловська",
+      "line": "green",
+      "map_zones": [
         {
+          "x": 51.6,
+          "y": 58.7
+        }
+      ],
+      "exits_catalog": {
+        "308": {
           "label": "",
-          "positions": [
+          "exit_numbers": [
             {
-              "wagon": "5",
-              "doors": "2"
+              "num": "",
+              "text": "вул. Мечникова, 14/1 – 22а, Кловський узвіз"
+            }
+          ]
+        }
+      },
+      "directions": [
+        {
+          "from": "попередня Палац спорту",
+          "exits": [
+            {
+              "id": "308",
+              "positions": [
+                {
+                  "wagon": "5",
+                  "doors": "2"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "from": "попередня Печерська",
+          "exits": [
+            {
+              "id": "308",
+              "positions": [
+                {
+                  "wagon": "1",
+                  "doors": "4"
+                }
+              ]
             }
           ]
         }
       ]
     },
-    {
-      "from": "попередня Печерська",
-      "exits": [
-        {
-          "label": "",
-          "positions": [
-            {
-              "wagon": "1",
-              "doors": "4"
-            }
-          ]
-        }
-      ]
-    }
-  ]
-},
     {
       "slug": "G.Pecherska",
       "name": "Печерська",
@@ -2213,12 +2895,23 @@
           "y": 63
         }
       ],
+      "exits_catalog": {
+        "309": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Кловська",
           "exits": [
             {
-              "label": "",
+              "id": "309",
               "positions": [
                 {
                   "wagon": "5",
@@ -2232,7 +2925,7 @@
           "from": "попередня Звіринецька",
           "exits": [
             {
-              "label": "",
+              "id": "309",
               "positions": [
                 {
                   "wagon": "1",
@@ -2254,12 +2947,23 @@
           "y": 67.4
         }
       ],
+      "exits_catalog": {
+        "310": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Печерська",
           "exits": [
             {
-              "label": "",
+              "id": "310",
               "positions": [
                 {
                   "wagon": "5",
@@ -2273,7 +2977,7 @@
           "from": "попередня Видубичі",
           "exits": [
             {
-              "label": "",
+              "id": "310",
               "positions": [
                 {
                   "wagon": "1",
@@ -2301,12 +3005,32 @@
           "h": 6.3
         }
       ],
+      "exits_catalog": {
+        "311": {
+          "label": "Наддніпрянське шосе, Південний міст",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "312": {
+          "label": "кільцева електричка, автостанція „Видубичі“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Звіринецька",
           "exits": [
             {
-              "label": "Наддніпрянське шосе, Південний міст",
+              "id": "311",
               "positions": [
                 {
                   "wagon": "1",
@@ -2315,7 +3039,7 @@
               ]
             },
             {
-              "label": "кільцева електричка, автостанція „Видубичі“",
+              "id": "312",
               "positions": [
                 {
                   "wagon": "5",
@@ -2329,7 +3053,7 @@
           "from": "попередня Славутич",
           "exits": [
             {
-              "label": "Наддніпрянське шосе, Південний міст",
+              "id": "311",
               "positions": [
                 {
                   "wagon": "5",
@@ -2338,7 +3062,7 @@
               ]
             },
             {
-              "label": "кільцева електричка, автостанція „Видубичі“",
+              "id": "312",
               "positions": [
                 {
                   "wagon": "1",
@@ -2361,12 +3085,23 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "313": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Видубичі",
           "exits": [
             {
-              "label": "",
+              "id": "313",
               "positions": [
                 {
                   "wagon": "5",
@@ -2380,7 +3115,7 @@
           "from": "попередня Осокорки",
           "exits": [
             {
-              "label": "",
+              "id": "313",
               "positions": [
                 {
                   "wagon": "1",
@@ -2408,12 +3143,32 @@
           "h": 6.3
         }
       ],
-          "directions": [
+      "exits_catalog": {
+        "314": {
+          "label": "до ТЦ „Arcadia“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "315": {
+          "label": "до Дніпровської набережної",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
+      "directions": [
         {
           "from": "попередня Славутич",
           "exits": [
             {
-              "label": "до ТЦ „Arcadia“",
+              "id": "314",
               "positions": [
                 {
                   "wagon": "1",
@@ -2422,7 +3177,7 @@
               ]
             },
             {
-              "label": "до Дніпровської набережної",
+              "id": "315",
               "positions": [
                 {
                   "wagon": "5",
@@ -2436,7 +3191,7 @@
           "from": "попередня Позняки",
           "exits": [
             {
-              "label": "до ТЦ „Arcadia“",
+              "id": "314",
               "positions": [
                 {
                   "wagon": "5",
@@ -2445,7 +3200,7 @@
               ]
             },
             {
-              "label": "до Дніпровської набережної",
+              "id": "315",
               "positions": [
                 {
                   "wagon": "1",
@@ -2467,12 +3222,32 @@
           "y": 67.4
         }
       ],
+      "exits_catalog": {
+        "316": {
+          "label": "ТРЦ „Аладдін“, парк „Позняки“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "317": {
+          "label": "ТЦ Познякoff, ТРЦ Piramida, трамвайна зупинка",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Осокорки",
           "exits": [
             {
-              "label": "ТРЦ „Аладдін“, парк „Позняки“",
+              "id": "316",
               "positions": [
                 {
                   "wagon": "1",
@@ -2481,7 +3256,7 @@
               ]
             },
             {
-              "label": "ТЦ Познякoff, ТРЦ Piramida, трамвайна зупинка",
+              "id": "317",
               "positions": [
                 {
                   "wagon": "5",
@@ -2495,7 +3270,7 @@
           "from": "попередня Харківська",
           "exits": [
             {
-              "label": "ТРЦ „Аладдін“, парк „Позняки“",
+              "id": "316",
               "positions": [
                 {
                   "wagon": "5",
@@ -2504,7 +3279,7 @@
               ]
             },
             {
-              "label": "ТЦ Познякoff, ТРЦ Piramida, трамвайна зупинка",
+              "id": "317",
               "positions": [
                 {
                   "wagon": "1",
@@ -2526,12 +3301,32 @@
           "y": 63
         }
       ],
+      "exits_catalog": {
+        "318": {
+          "label": "ТЦ Clever, ринок „Вирлиця“, озеро Вирлиця",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        },
+        "319": {
+          "label": "Varus",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Позняки",
           "exits": [
             {
-              "label": "ТЦ Clever, ринок „Вирлиця“, озеро Вирлиця",
+              "id": "318",
               "positions": [
                 {
                   "wagon": "1",
@@ -2540,7 +3335,7 @@
               ]
             },
             {
-              "label": "Varus",
+              "id": "319",
               "positions": [
                 {
                   "wagon": "5",
@@ -2554,7 +3349,7 @@
           "from": "попередня Вирлиця",
           "exits": [
             {
-              "label": "ТЦ Clever, ринок „Вирлиця“, озеро Вирлиця",
+              "id": "318",
               "positions": [
                 {
                   "wagon": "5",
@@ -2563,7 +3358,7 @@
               ]
             },
             {
-              "label": "Varus",
+              "id": "319",
               "positions": [
                 {
                   "wagon": "1",
@@ -2585,6 +3380,17 @@
           "y": 58.7
         }
       ],
+      "exits_catalog": {
+        "320": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "вихід праворуч",
@@ -2594,7 +3400,7 @@
           "from": "попередня Харківська",
           "exits": [
             {
-              "label": "",
+              "id": "320",
               "positions": [
                 {
                   "wagon": "4",
@@ -2610,7 +3416,7 @@
           "from": "попередня Бориспільська",
           "exits": [
             {
-              "label": "",
+              "id": "320",
               "positions": [
                 {
                   "wagon": "2",
@@ -2634,12 +3440,23 @@
           "y": 54.3
         }
       ],
+      "exits_catalog": {
+        "321": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "попередня Вирлиця",
           "exits": [
             {
-              "label": "",
+              "id": "321",
               "positions": [
                 {
                   "doors": "3",
@@ -2655,7 +3472,7 @@
           "from": "попередня Червоний&nbsp;Хутір",
           "exits": [
             {
-              "label": "",
+              "id": "321",
               "positions": [
                 {
                   "doors": "2",
@@ -2680,6 +3497,17 @@
           "tall": true
         }
       ],
+      "exits_catalog": {
+        "322": {
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
+        }
+      },
       "directions": [
         {
           "from": "кінцева",
@@ -2689,7 +3517,7 @@
           "from": "вихід праворуч",
           "exits": [
             {
-              "label": "",
+              "id": "322",
               "positions": [
                 {
                   "doors": "1",
