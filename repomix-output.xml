@@ -6225,446 +6225,6 @@ export async function downloadDevPhoto(photoId) {
 }
 </file>
 
-<file path="src/data/stations.js">
-// src/data/stations.js
-import { Capacitor }                      from '@capacitor/core';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-
-import { state, startupSlug } from '../core/state.js';
-import { bus }                from '../core/eventBus.js';
-import { traversePositions }  from './positions.js';
-
-// ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
-// SW обробляє stations.json для веб/PWA (networkFirst + version-check + postMessage).
-// На нативній платформі SW інертний — реалізуємо ту саму логіку вручну:
-//   1. fetch(REMOTE_STATIONS_URL) з таймаутом
-//   2. Filesystem.Cache як проміжний кеш
-//   3. http://localhost/stations.json (bundled в APK) як фінальний fallback
-//
-// Замініть REMOTE_STATIONS_URL на реальний домен перед релізом.
-
-const REMOTE_STATIONS_URL = 'https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/public/stations.json';
-const NATIVE_CACHE_PATH   = 'stations_cache.json';
-const FETCH_TIMEOUT_MS    = 8000;
-
-// ══ ПРИВАТНІ СЛОВНИКИ (closure) ══════════════════════════════
-// Заповнюються у hydrateStations(), читаються через slugByName() / getSlugByLower().
-// Жоден зовнішній модуль не має прямого доступу до цих об'єктів.
-
-/** @type {Record<string, string>}  назва_lowercase → slug */
-const _nameToSlug  = {};
-
-/** @type {Record<string, string>}  slug_lowercase → slug (оригінальний кейс) */
-const _slugByLower = {};
-
-// ══ АЛІАСИ ДЛЯ ПОШУКУ ═══════════════════════════════════════
-// Застарілі або розмовні назви → нормалізований варіант.
-
-const STATION_ALIASES = {
-  'театральну':                'театральна',
-  'площу українських героїв': 'площа українських героїв',
-};
-
-// ══ ДОПОМІЖНІ ФУНКЦІЇ ════════════════════════════════════════
-
-function getAppBaseHref() {
-  const { origin, pathname } = window.location;
-  const normalizedPath = pathname.endsWith('/')
-    ? pathname
-    : pathname.split('/').pop()?.includes('.')
-      ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
-      : `${pathname}/`;
-  return new URL(normalizedPath, origin);
-}
-
-function getStationsUrl() {
-  return new URL('stations.json', getAppBaseHref());
-}
-
-// ══ ПУБЛІЧНІ ХЕЛПЕРИ ══════════════════════════════════════════
-
-/**
- * Повертає slug станції за довільним рядком назви.
- * Нормалізує регістр, прибирає службові слова («пересадка на», «перехід до» тощо),
- * застосовує аліаси та stem-пошук для коротких збігів.
- *
- * @param {string} raw — сирий рядок (може містити «пересадка на Золоті Ворота»)
- * @returns {string|null} slug або null якщо не знайдено
- */
-export function slugByName(raw) {
-  if (!raw) return null;
-
-  let normalized = raw
-    .toLowerCase()
-    .replace(/[\u00a0\u202f\u2009]/g, ' ')           // NBSP та вузькі пробіли → звичайний пробіл
-    .replace(/(?:короткий |довгий )?пере(?:садка|хід) на\s*/g, '')
-    .replace(/попередня\s*/g, '')
-    .replace(/["'„"«».,]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  // 1. Прямий збіг
-  if (_nameToSlug[normalized]) return _nameToSlug[normalized];
-
-  // 2. Аліаси
-  for (const [alias, realName] of Object.entries(STATION_ALIASES)) {
-    if (normalized.includes(alias)) {
-      normalized = normalized.replace(alias, realName);
-      break;
-    }
-  }
-  if (_nameToSlug[normalized]) return _nameToSlug[normalized];
-
-  // 3. Stem-пошук (скорочення кінця слова для відмінків)
-  for (const [name, slug] of Object.entries(_nameToSlug)) {
-    const stem = name.length > 6 ? name.slice(0, -2) : name;
-    if (normalized.includes(stem)) return slug;
-  }
-
-  return null;
-}
-
-/**
- * Повертає оригінальний (правильного кейсу) slug за lowercase-версією.
- * Використовується у mapInteraction.js для зіставлення id SVG-зон з slug.
- *
- * @param {string} lowerSlug — slug.toLowerCase()
- * @returns {string|null}
- */
-export function getSlugByLower(lowerSlug) {
-  return _slugByLower[lowerSlug] ?? null;
-}
-
-// ══ ГІДРАТАЦІЯ ════════════════════════════════════════════════
-
-/**
- * Заповнює state.stationsData та приватні словники зі свіжих даних.
- * Викликається з reloadStationsData після кожного fetch.
- *
- * Після наповнення stationsData синхронно емітує 'data:stations-hydrated'.
- * data/localEdits.js підписаний на цю подію і застосовує localEdits + exitLabels
- * до тих самих об'єктів (EventBus — синхронний, handlers запускаються до повернення emit).
- *
- * @param {{ stations: Array }} data — розібраний stations.json
- * @returns {Record<string, object>} state.stationsData
- */
-export function hydrateStations(data) {
-  if (!state.stationsData) state.stationsData = {};
-  Object.keys(state.stationsData).forEach(key => delete state.stationsData[key]);
-
-  Object.keys(_nameToSlug).forEach(k  => delete _nameToSlug[k]);
-  Object.keys(_slugByLower).forEach(k => delete _slugByLower[k]);
-
-  data.stations.forEach(station => {
-    // ── РАЗВЕРТАННЯ КАТАЛОГУ ВИХОДІВ (Розпаковка DRY-посилань) ──
-    // exits_catalog — словник на рівні станції; exits у directions посилаються
-    // на записи каталогу через поле "id". Тут розгортаємо посилання у повні
-    // об'єкти до того, як щось інше торкнеться даних.
-    const exitsCatalog = station.exits_catalog || {};
-
-    (station.directions || []).forEach(dir => {
-  (dir.exits || []).forEach(ex => {
-    if (ex.id && exitsCatalog[ex.id]) {
-      const catalogItem = exitsCatalog[ex.id];
-      if (!ex.label) ex.label = catalogItem.label;
-      if (!ex.numbered_exits && catalogItem.numbered_exits) {
-        ex.numbered_exits = catalogItem.numbered_exits;
-      }
-    }
-  });
-});
-
-    // ── Плаский масив позицій (для feedback та пошуку) ──
-    station.positions = [];
-    traversePositions(station, ({ dir, exit, position }) => {
-      station.positions.push({
-        dir:   dir.from,
-        exit:  exit.label || '',
-        wagon: position.wagon,
-        doors: position.doors,
-      });
-    });
-
-    // ... решта функції без змін ...
-
-    // ── Заповнюємо приватні словники ──
-    const cleanName = station.name.toLowerCase().replace(/["'„"«».,]/g, '');
-    _nameToSlug[cleanName]                   = station.slug;
-    _slugByLower[station.slug.toLowerCase()] = station.slug;
-
-    // ── Пошуковий індекс ──
-    const stationWords   = cleanName.split(/[\s\u00a0\u202f\-]+/);
-    const slugParts      = station.slug.split('.');
-    const cleanEnName    = (slugParts.length > 1 ? slugParts[1] : station.slug)
-                             .replace(/_/g, ' ').toLowerCase();
-    const stationEnWords = cleanEnName.split(/\s+/);
-    const acronym        = stationWords.map(word => word.charAt(0)).join('');
-    const aliases        = (station.searchAliases ?? []).map(a => a.toLowerCase());
-
-    station._searchIndex = [
-      ...stationWords,
-      ...stationEnWords,
-      acronym,
-      ...aliases.flatMap(alias => alias.split(/[\s\u00a0\u202f\-]+/)),
-    ];
-
-    // ── Індекс підписів виходів (для пошуку за назвою вулиці) ──
-    const exitTokens = new Set();
-    (station.directions || []).forEach(dir => {
-      (dir.exits || []).forEach(ex => {
-        if (!ex.label) return;
-        ex.label
-          .toLowerCase()
-          .replace(/[„"«»"'.,!?]/g, '')
-          .split(/[\s\u00a0\u202f\u2009]+/)
-          .filter(w => w.length > 1)
-          .forEach(w => exitTokens.add(w));
-      });
-    });
-    station._exitIndex = [...exitTokens];
-
-    state.stationsData[station.slug] = station;
-  });
-
-  // data/localEdits.js підписаний через bus.on('data:stations-hydrated') і виконує
-  // applyLocalEdits + applyExitLabels синхронно перед поверненням цієї функції.
-  bus.emit('data:stations-hydrated', { stationsData: state.stationsData });
-
-  return state.stationsData;
-}
-
-// ══ ЗОНИ КАРТИ ════════════════════════════════════════════════
-
-/**
- * Прив'язує SVG-зони на карті до slug-ів станцій.
- */
-export function renderMapZones() {
-  if (state.isZonesReady) return;
-
-  const inner = document.getElementById('mapInner');
-  const svgEl = inner?.querySelector('svg');
-  if (!svgEl || !state.stationsData) return;
-
-  svgEl.querySelectorAll('[id]').forEach(el => {
-    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
-    const slug  = _slugByLower[rawId];
-
-    if (!slug) return;
-
-    el.style.fill                    = 'transparent';
-    el.style.stroke                  = 'transparent';
-    el.style.pointerEvents           = 'all';
-    el.style.cursor                  = 'pointer';
-    el.style.webkitTapHighlightColor = 'transparent';
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
-    el.setAttribute('aria-label', `Станція ${state.stationsData[slug].name}`);
-  });
-
-  state.isZonesReady = true;
-  checkAppReady();
-}
-
-export function checkAppReady() {
-  if (!state.isMapReady || !state.isZonesReady) return;
-
-  requestAnimationFrame(() => {
-    document.getElementById('mapViewport')?.classList.remove('is-loading');
-    bus.emit('map:sync-checkins');
-  });
-}
-
-// ══ НАТИВНЕ ЗАВАНТАЖЕННЯ (три рівні надійності) ═══════════════
-
-/**
- * Зчитує закешовану версію stations.json з Filesystem.Cache.
- * Повертає { data, version } або null якщо кеш відсутній / пошкоджений.
- *
- * @returns {Promise<{ data: object, version: number|string|null }|null>}
- */
-async function _readFilesystemCache() {
-  try {
-    const cached = await Filesystem.readFile({
-      path:      NATIVE_CACHE_PATH,
-      directory: Directory.Cache,
-      encoding:  Encoding.UTF8,
-    });
-    const data = JSON.parse(cached.data);
-    return { data, version: data.version ?? null };
-  } catch {
-    return null; // кеш відсутній або JSON пошкоджений
-  }
-}
-
-/**
- * Зберігає свіжі дані stations.json у Filesystem.Cache.
- * Помилка запису не є критичною — додаток продовжить роботу з мережевими даними.
- *
- * @param {object} data — розібраний об'єкт stations.json
- */
-async function _writeFilesystemCache(data) {
-  try {
-    await Filesystem.writeFile({
-      path:      NATIVE_CACHE_PATH,
-      data:      JSON.stringify(data),
-      directory: Directory.Cache,
-      encoding:  Encoding.UTF8,
-    });
-  } catch {
-    // Не критично: наступний запуск спробує знову.
-  }
-}
-
-/**
- * Завантажує stations.json для нативної платформи.
- * Три рівні надійності:
- *   1. Мережа (REMOTE_STATIONS_URL) з таймаутом → Filesystem.Cache (запис)
- *   2. Filesystem.Cache (читання) — якщо мережа недоступна
- *   3. Bundled APK (http://localhost/stations.json) — якщо кеш теж порожній
- *
- * При виявленні нової версії емітує 'stations:updated' — swUpdate.js покаже тост.
- *
- * @param {boolean} forceFresh — ігнорувати кеш, завжди йти в мережу
- * @returns {Promise<object>} розібраний stations.json
- */
-async function _fetchStationsNative(forceFresh = false) {
-  // ── Рівень 1: мережа ─────────────────────────────────────────
-  try {
-    const controller = new AbortController();
-    const timeoutId  = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-    const response = await fetch(REMOTE_STATIONS_URL, {
-      signal: controller.signal,
-      cache:  forceFresh ? 'no-store' : 'default',
-    });
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.includes('json')) {
-        throw new Error(`Unexpected content-type: ${contentType}`);
-      }
-
-      const freshData = await response.json();
-
-      // Порівнюємо версію з кешем — щоб повідомити користувача про оновлення.
-      if (!forceFresh) {
-        const cached = await _readFilesystemCache();
-        if (
-          freshData.version != null &&
-          cached?.version   != null &&
-          freshData.version !== cached.version
-        ) {
-          // Дзеркало SW-логіки: там postMessage({ type: 'STATIONS_UPDATED' }),
-          // тут — bus.emit, який swUpdate.js перехоплює через підписку.
-          bus.emit('stations:updated', { version: freshData.version });
-        }
-      }
-
-      // Зберігаємо в кеш асинхронно — не блокуємо гідратацію.
-      _writeFilesystemCache(freshData);
-
-      return freshData;
-    }
-  } catch (networkError) {
-    // AbortError (таймаут) або відсутність мережі — переходимо до рівня 2.
-    if (networkError.name !== 'AbortError') {
-      console.warn('[stations] network fetch failed:', networkError.message);
-    }
-  }
-
-  // ── Рівень 2: Filesystem.Cache ────────────────────────────────
-  if (!forceFresh) {
-    const cached = await _readFilesystemCache();
-    if (cached) {
-      console.info('[stations] loaded from Filesystem cache');
-      return cached.data;
-    }
-  }
-
-  // ── Рівень 3: bundled APK (http://localhost/stations.json) ────
-  console.info('[stations] falling back to bundled APK copy');
-  const bundledUrl      = getStationsUrl();
-  const bundledResponse = await fetch(bundledUrl);
-
-  if (!bundledResponse.ok) {
-    throw new Error(
-      `stations.json bundled fetch failed: ${bundledResponse.status} (${bundledUrl.href})`,
-    );
-  }
-  return bundledResponse.json();
-}
-
-// ══ ЗАВАНТАЖЕННЯ (публічне) ════════════════════════════════════
-
-/**
- * Завантажує та гідратує stations.json.
- * На нативній платформі — _fetchStationsNative() (мережа→кеш→bundled).
- * На веб/PWA — прямий fetch; SW самостійно обробляє networkFirst та кешування.
- *
- * @param {boolean} [forceFresh=false] — примусово оновити дані (ігнорувати кеш/SW)
- * @returns {Promise<Record<string, object>>} state.stationsData після гідратації
- */
-export async function reloadStationsData(forceFresh = false) {
-  let data;
-
-  if (Capacitor.isNativePlatform()) {
-    data = await _fetchStationsNative(forceFresh);
-  } else {
-    // Веб/PWA: SW перехоплює цей fetch і виконує networkFirst для stations.json.
-    const stationsUrl = getStationsUrl();
-    const response    = await fetch(
-      stationsUrl,
-      forceFresh ? { cache: 'no-store' } : undefined,
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
-      );
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('json')) {
-      throw new Error(
-        `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
-      );
-    }
-
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      throw new Error(
-        `stations.json contains invalid JSON (${stationsUrl.href}): ${parseError.message}`,
-      );
-    }
-  }
-
-  if (!data || !Array.isArray(data.stations) || data.stations.length === 0) {
-    throw new Error(
-      'stations.json has unexpected structure: missing or empty "stations" array',
-    );
-  }
-
-  const hydrated = hydrateStations(data);
-
-  if (!forceFresh) {
-    renderMapZones();
-    handleStartupStation(hydrated);
-  }
-
-  bus.emit('fav:render-on-load');
-
-  return hydrated;
-}
-
-function handleStartupStation(data) {
-  if (startupSlug && data[startupSlug]) {
-    requestAnimationFrame(() => bus.emit('station:open', { slug: startupSlug }));
-  }
-}
-</file>
-
 <file path="src/map/mapInit.js">
 import svgText from '../../KyivMetroScheme.svg?raw';
 import { state }                        from '../core/state.js';
@@ -6987,441 +6547,449 @@ bus.on('ui:confirm', (payload) => {
 });
 </file>
 
-<file path="src/sheets/stationEvents.js">
-// ══ STATION SHEET — EVENT DELEGATION ══
-// Один набір listeners на sheetBody, живе весь час сесії.
-// WeakMap<Element, GestureState> — auto-GC при innerHTML-заміні.
-// Правило: жодного querySelector поза handlers, жодного addEventListener на row-елементи.
+<file path="src/data/stations.js">
+// src/data/stations.js
+import { Capacitor }                      from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
-import { state }                  from '../core/state.js';
-import { TIMING }                 from '../core/timing.js';
-import { STORAGE_KEYS, Storage }  from '../core/storage.js';
-import { bus }                    from '../core/eventBus.js';
-import { slugByName }             from '../data/stations.js';
-import { applyExitLabels }        from '../data/localEdits.js';
-import {
-  isFav, getExitFavs, isExitFav,
-  toggleExitFav, replaceExitFav,
-} from '../features/favorites/index.js';
-import { dismissHintWithDoors } from '../ui/animations.js';
-import { Icons }                from '../ui/icons.js';
-import { applyFavPillStyles }     from './renderStation.js';
-import { heartSvg }               from '../ui/components.js';
-import { Haptics, NotificationType } from '@capacitor/haptics';
-import { isEditModeEnabled }      from '../features/settings.js';
+import { state, startupSlug } from '../core/state.js';
+import { bus }                from '../core/eventBus.js';
+import { traversePositions }  from './positions.js';
 
-// ── Gesture state (auto-GC разом з DOM-елементами) ──────────
+// ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
+// SW обробляє stations.json для веб/PWA (networkFirst + version-check + postMessage).
+// На нативній платформі SW інертний — реалізуємо ту саму логіку вручну:
+//   1. fetch(REMOTE_STATIONS_URL) з таймаутом
+//   2. Filesystem.Cache як проміжний кеш
+//   3. http://localhost/stations.json (bundled в APK) як фінальний fallback
+//
+// Замініть REMOTE_STATIONS_URL на реальний домен перед релізом.
+
+const REMOTE_STATIONS_URL = 'https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/public/stations.json';
+const NATIVE_CACHE_PATH   = 'stations_cache.json';
+const FETCH_TIMEOUT_MS    = 8000;
+
+// ══ ПРИВАТНІ СЛОВНИКИ (closure) ══════════════════════════════
+// Заповнюються у hydrateStations(), читаються через slugByName() / getSlugByLower().
+// Жоден зовнішній модуль не має прямого доступу до цих об'єктів.
+
+/** @type {Record<string, string>}  назва_lowercase → slug */
+const _nameToSlug  = {};
+
+/** @type {Record<string, string>}  slug_lowercase → slug (оригінальний кейс) */
+const _slugByLower = {};
+
+// ══ АЛІАСИ ДЛЯ ПОШУКУ ═══════════════════════════════════════
+// Застарілі або розмовні назви → нормалізований варіант.
+
+const STATION_ALIASES = {
+  'театральну':                'театральна',
+  'площу українських героїв': 'площа українських героїв',
+};
+
+// ══ ДОПОМІЖНІ ФУНКЦІЇ ════════════════════════════════════════
+
+function getAppBaseHref() {
+  const { origin, pathname } = window.location;
+  const normalizedPath = pathname.endsWith('/')
+    ? pathname
+    : pathname.split('/').pop()?.includes('.')
+      ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
+      : `${pathname}/`;
+  return new URL(normalizedPath, origin);
+}
+
+function getStationsUrl() {
+  return new URL('stations.json', getAppBaseHref());
+}
+
+// ══ ПУБЛІЧНІ ХЕЛПЕРИ ══════════════════════════════════════════
+
 /**
- * @typedef {{ longPressId: ReturnType<typeof setTimeout>|null,
- *             tapCount: number,
- *             tapId: ReturnType<typeof setTimeout>|null }} GestureState
- */
-/** @type {WeakMap<Element, GestureState>} */
-const _gesture = new WeakMap();
-
-function _getGS(el) {
-  if (!_gesture.has(el)) _gesture.set(el, { longPressId: null, tapCount: 0, tapId: null });
-  return _gesture.get(el);
-}
-
-function _cancelLongPress(el) {
-  const gs = _gesture.get(el);
-  if (!gs) return;
-  clearTimeout(gs.longPressId);
-  gs.longPressId = null;
-}
-
-// ── Toast ────────────────────────────────────────────────────
-function _showExitFavToast(row) {
-  let existing = row.querySelector('.exit-fav-toast');
-  if (existing) {
-    existing.classList.remove('fav-note-open');
-    setTimeout(() => existing?.remove(), TIMING.TOAST_FADE);
-  }
-  const toast = document.createElement('div');
-  toast.className = 'exit-fav-toast';
-  toast.setAttribute('role', 'status');
-  toast.setAttribute('aria-live', 'polite');
-  toast.innerHTML =
-    '<span class="exit-fav-toast-text">вихід&nbsp;додано<br>до&nbsp;' +
-    '<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span></span>';
-  row.prepend(toast);
-  requestAnimationFrame(() => toast.classList.add('fav-note-open'));
-  setTimeout(() => {
-    toast.classList.remove('fav-note-open');
-    setTimeout(() => toast.remove(), TIMING.TOAST_FADE);
-  }, TIMING.TOAST_SHOW);
-}
-
-// ── Replace-confirm inline card ──────────────────────────────
-function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoors, lineColor) {
-  document.querySelectorAll('.exit-replace-confirm').forEach(el => {
-    el.classList.remove('exit-replace-open');
-    setTimeout(() => el.remove(), 280);
-  });
-
-  const confirmEl = document.createElement('div');
-  confirmEl.className = 'exit-replace-confirm';
-  confirmEl.innerHTML =
-    `<p class="exit-replace-text">Ви вже додали до&nbsp;` +
-    `<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span>` +
-    ` інший вихід з&nbsp;цієї станції. Замінити на цей?</p>` +
-    `<div class="exit-replace-btns">` +
-    `<button class="exit-replace-btn confirm-btn-save">Замінити</button>` +
-    `<button class="exit-replace-btn confirm-btn-discard">Скасувати</button>` +
-    `</div>`;
-  row.after(confirmEl);
-  requestAnimationFrame(() => confirmEl.classList.add('exit-replace-open'));
-
-  const close = () => {
-    confirmEl.classList.remove('exit-replace-open');
-    setTimeout(() => confirmEl.remove(), 280);
-  };
-  // Ці два listeners — не витік: вони живуть рівно стільки, скільки confirmEl
-  confirmEl.querySelector('.confirm-btn-save').addEventListener('click', e => {
-    e.stopPropagation();
-    replaceExitFav(slug, dirLabel, existing.wagon, existing.doors, newWagon, newDoors);
-    close();
-    bus.emit('station:refresh');
-  });
-  confirmEl.querySelector('.confirm-btn-discard').addEventListener('click', e => {
-    e.stopPropagation();
-    close();
-  });
-}
-
-
-
-
-// ── Тост «спершу увімкніть режим редагування» ─────────────────
-function _showEditModeLockToast(row) {
-  document.querySelectorAll('.edit-mode-lock-toast').forEach(t => t.remove());
-  const rect  = row.getBoundingClientRect();
-  const toast = document.createElement('div');
-  toast.className = 'dev-mode-toast dev-mode-toast-open edit-mode-lock-toast';
-  toast.style.cssText = `
-    position: fixed;
-    top: ${rect.top - 45}px;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: auto;
-    z-index: 10000;
-  `;
-  toast.textContent = 'Спершу увімкніть режим редагування в налаштуваннях';
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.remove('dev-mode-toast-open');
-    setTimeout(() => toast.remove(), 300);
-  }, 2500);
-}
-
-// ── Тост над іконкою (ліфт / ескалатор / підйомник) — прямо над самим значком ──
-function _showIconLabelToast(el, text) {
-  document.querySelectorAll('.icon-info-toast').forEach(t => t.remove());
-  const rect  = el.getBoundingClientRect();
-  const toast = document.createElement('div');
-  toast.className = 'dev-mode-toast dev-mode-toast-open icon-info-toast';
-  toast.style.cssText = `
-    position: fixed;
-    top: ${rect.top - 38}px;
-    left: ${rect.left + rect.width / 2}px;
-    transform: translateX(-50%);
-    bottom: auto;
-    z-index: 10000;
-  `;
-  toast.textContent = text;
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.remove('dev-mode-toast-open');
-    setTimeout(() => toast.remove(), 300);
-  }, 2000);
-}
-
-
-// ── Ядро: toggle exit fav ─────────────────────────────────────
-function _triggerExitFav(favTarget, slug, lineColor) {
-  const wagon    = favTarget.dataset.wagon;
-  const doors    = favTarget.dataset.doors;
-  if (!wagon || !doors) return;
-
-  const row      = favTarget.closest('.position-row');
-  const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
-  const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
-  const dirLabel = labelEl?.textContent.trim() ?? '';
-
-  const result = toggleExitFav(slug, dirLabel, wagon, doors);
-
-  if (result.status === 'replace') {
-    _showExitReplaceConfirm(row, result.existing, slug, dirLabel, wagon, doors, lineColor);
-    return;
-  }
-
-  const added = result.status === 'added';
-  if (row) applyFavPillStyles(row, lineColor, added);
-  
-  if (added) {
-    _showExitFavToast(row);
-
-    // Соковитий подвійний нативний вібровідгук «Успіх»
-    Haptics.notification({ type: NotificationType.Success }).catch(() => {});
-
-    _maybeShowCheckinHint(lineColor);
-    _maybeDismissOnboarding(lineColor);
-  }
-
-  // Оновлюємо серце в шапці (тепер цей блок чітко всередині функції)
-  const favBtnBar = document.querySelector(`.fav-btn-bar[data-slug="${slug}"]`);
-  if (favBtnBar) {
-    const nowFav = isFav(slug);
-    favBtnBar.innerHTML = heartSvg(nowFav, slug, lineColor);
-    favBtnBar.classList.toggle('fav-active', nowFav);
-  }
-}
-
-function _maybeDismissOnboarding(lineColor) {
-  const hint = document.getElementById('onboardingHint');
-  if (hint) dismissHintWithDoors(hint, () => _maybeShowCheckinHint(lineColor));
-  else      _maybeShowCheckinHint(lineColor);
-}
-
-function _maybeShowCheckinHint(lineColor) {
-  if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
-  if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
-  const sheetBodyEl = document.getElementById('sheetBody');
-  if (!sheetBodyEl || document.getElementById('checkinHint')) return;
-  Storage.set(STORAGE_KEYS.CHECKIN_HINT_SEEN, 'true');
-  const hint = document.createElement('div');
-  hint.id        = 'checkinHint';
-  hint.className = 'onboarding-hint';
-  hint.innerHTML =
-    `<span class="hint-icon-wrap" style="color:${lineColor}">${Icons.info}</span>` +
-    `Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід&nbsp;зі&nbsp;станції як&nbsp;відвіданий`;
-  sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
-}
-
-// ── Панель "виходи за номерами" — виїжджає ЗНИЗУ, розширюючи блок ──
-// (той самий "блок" — пігулки, підпис напрямку, пін, значки розробника —
-// що й для note/photo/confirm-панелей розробника: вставляємо як сусідній
-// елемент ПІСЛЯ рядка, той самий .dev-note-panel-паттерн і той самий
-// "закрити всі інші" механізм — щоб дві панелі не намагались відкритись
-// одночасно під одним рядком).
-// Спрацьовує на ОДИНАРНИЙ тап по .fav-tap-target (довге натискання і
-// подвійний тап і далі відповідають за Вибране — не чіпаємо їх).
-// Показується лише якщо у станції реально є numbered_exits в даних;
-// інакше одинарний тап просто нічого не робить (як і раніше).
-const COLLAPSE_ARROW_SVG = `<svg viewBox="0 0 32 10" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8 L16 2 L30 8"/></svg>`;
-
-// ── Панель "виходи за номерами" — виїжджає ЗНИЗУ, розширюючи блок ──
-// ── Панель "виходи за номерами" ──
-function _openNumberedExitsPanel(favTarget, slug, lineColor) {
-  const station = state.stationsData?.[slug];
-  if (!station) return;
-
-  const row = favTarget.closest('.position-row');
-  if (!row) return;
-
-  const wagon = favTarget.dataset.wagon;
-  const doors = favTarget.dataset.doors;
-  const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
-  const labelEl = dirBlock?.querySelector('.direction-label, .transfer-text');
-  const dirName = labelEl?.dataset.name || (labelEl?.classList.contains('transfer-text') ? '__long_transfer__' : labelEl?.textContent.trim()) || '';
-
-  const targetDir = station.directions?.find(d => d.from === dirName || d.from.trim() === dirName.trim());
-  const targetExit = targetDir?.exits?.find(ex =>
-    ex.positions?.some(p => String(p.wagon).trim() === String(wagon).trim() && String(p.doors).trim() === String(doors).trim())
-  );
-
-  if (!targetExit) return;
-
-  const rawExits = targetExit.numbered_exits || [];
-
-  // Зчитуємо вручну прописані номери
-  const exitsList = rawExits.map((item, index) => {
-    if (typeof item === 'object' && item !== null) {
-      return {
-        num: String(item.num || item.number || (index + 1)),
-        text: String(item.text || '')
-      };
-    }
-    return { num: String(index + 1), text: String(item) };
-  }).filter(item => item.text && item.text.trim() !== '');
-
-  if (!exitsList.length) return;
-
-  const next = row.nextElementSibling;
-  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'numbered-exits') {
-    next.classList.remove('panel-open');
-    setTimeout(() => next.remove(), 280);
-    return;
-  }
-
-  document.querySelectorAll('.dev-note-panel').forEach(p => {
-    p.classList.remove('panel-open');
-    setTimeout(() => p.remove(), 280);
-  });
-
-  const panel = document.createElement('div');
-  panel.className = 'dev-note-panel pos-numbered-exits';
-  panel.dataset.type = 'numbered-exits';
-  panel.innerHTML =
-    exitsList.map(item =>
-      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineColor}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span></div>`
-    ).join('') +
-    `<button type="button" class="pos-numbered-exits-collapse" aria-label="Згорнути">${COLLAPSE_ARROW_SVG}</button>`;
-
-  const dirLabel = row.previousElementSibling?.classList.contains('direction-label')
-    ? row.previousElementSibling
-    : row;
-  dirLabel.before(panel);
-  requestAnimationFrame(() => panel.classList.add('panel-open'));
-
-  panel.querySelector('.pos-numbered-exits-collapse').addEventListener('click', e => {
-    e.stopPropagation();
-    panel.classList.remove('panel-open');
-    setTimeout(() => panel.remove(), 280);
-  });
-}
-
-// ── Головний bind — викликається ОДИН РАЗ ────────────────────
-/**
- * @param {HTMLElement} sheetBody
- * @param {() => { slug: string, lineColor: string }} getCtx
- *   Getter повертає актуальний slug та колір на момент події.
- *   Це критично: не передаємо значення, бо вони змінюються між відкриттями.
- */
-export function bindSheetGestures(sheetBody, getCtx) {
-
-  // ── touchstart: початок long-press ──────────────────────────
-  sheetBody.addEventListener('touchstart', e => {
-    const favTarget = e.target.closest('.fav-tap-target');
-    if (!favTarget) return;
-
-    const gs = _getGS(favTarget);
-    clearTimeout(gs.longPressId);
-
-    gs.longPressId = setTimeout(() => {
-      gs.longPressId = null;
-      const { slug, lineColor } = getCtx();
-      _triggerExitFav(favTarget, slug, lineColor);
-    }, TIMING.LONG_PRESS);
-
-  }, { passive: true });
-
-  // ── touchmove: скасувати long-press (не блокуємо скрол) ─────
-  sheetBody.addEventListener('touchmove', e => {
-    // Скасовуємо для всіх активних .fav-tap-target в зоні дотику
-    // e.target може бути дочірнім елементом — тому .closest()
-    const favTarget = e.target.closest('.fav-tap-target');
-    if (favTarget) _cancelLongPress(favTarget);
-  }, { passive: true });
-
-  // ── touchend: скасувати, якщо не спрацював ──────────────────
-  sheetBody.addEventListener('touchend', e => {
-    const favTarget = e.target.closest('.fav-tap-target');
-    if (favTarget) _cancelLongPress(favTarget);
-  }, { passive: true });
-
-  // ── click: double-tap fav + pencil + nav-link ────────────────
-  sheetBody.addEventListener('click', e => {
-    const { slug, lineColor } = getCtx();
-
-    // 1. Значок підйомника → показати текст про часткову доступність
-    const hoistMark = e.target.closest('.pos-hoist-mark');
-    if (hoistMark) {
-      e.stopPropagation();
-      _showIconLabelToast(hoistMark, 'Забезпечує часткову доступність');
-      return;
-    }
-
-    // 1b. Значок ліфта → показати підпис "Ліфт"
-    const elevatorMark = e.target.closest('.pos-elevator-mark');
-    if (elevatorMark) {
-      e.stopPropagation();
-      _showIconLabelToast(elevatorMark, 'Ліфт');
-      return;
-    }
-
-    // 1c. Значок ескалатора → показати підпис "Ескалатор"
-    const escalatorMark = e.target.closest('.pos-escalator-mark');
-    if (escalatorMark) {
-      e.stopPropagation();
-      _showIconLabelToast(escalatorMark, 'Ескалатор');
-      return;
-    }
-
-    // 2. Pencil (відредагована позиція → відкрити feedback)
-    const pencil = e.target.closest('.pos-edited-mark');
-    if (pencil) {
-      e.stopPropagation();
-      const editSlug = pencil.dataset.slug;
-      if (!editSlug) return;
-      if (!isEditModeEnabled()) {
-        _showEditModeLockToast(pencil);
-        return;
-      }
-      bus.emit('sheet:open-feedback-for', { slug: editSlug });
-      return;
-    }
-
-    // 3. Скасувати exit-replace confirm
-    if (e.target.closest('.exit-replace-confirm')) return;
-
-    // 4. Nav-label → відкрити іншу станцію
-    const navLabel = e.target.closest('.nav-link');
-    if (navLabel) {
-      const target = slugByName(navLabel.dataset.name || '');
-      if (target && target !== slug) bus.emit('station:open', { slug: target });
-      return;
-    }
-
-    // 5. Double-tap на .fav-tap-target
-    const favTarget = e.target.closest('.fav-tap-target');
-    if (!favTarget) return;
-    // Ігноруємо кліки по службових елементах всередині target
-    if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
-
-    const gs = _getGS(favTarget);
-    gs.tapCount++;
-    clearTimeout(gs.tapId);
-    gs.tapId = setTimeout(() => {
-      // Якщо це був лише один тап (не подвійний) — показуємо виходи за номерами
-      if (gs.tapCount === 1) _openNumberedExitsPanel(favTarget, slug, lineColor);
-      gs.tapCount = 0;
-    }, TIMING.DOUBLE_TAP);
-
-    if (gs.tapCount >= 2) {
-      gs.tapCount = 0;
-      clearTimeout(gs.tapId);
-      _triggerExitFav(favTarget, slug, lineColor);
-    }
-  });
-}
-
-// ── Початкове зафарбовування улюблених при відкритті картки ──
-/**
- * Проходиться по всіх .fav-tap-target у sheetBody
- * і підфарбовує ті, що є у exitFavs.
- * Викликається після кожного innerHTML = (без повторного bind).
+ * Повертає slug станції за довільним рядком назви.
+ * Нормалізує регістр, прибирає службові слова («пересадка на», «перехід до» тощо),
+ * застосовує аліаси та stem-пошук для коротких збігів.
  *
- * @param {HTMLElement} sheetBody
- * @param {string} slug
- * @param {string} lineColor
+ * @param {string} raw — сирий рядок (може містити «пересадка на Золоті Ворота»)
+ * @returns {string|null} slug або null якщо не знайдено
  */
-export function applyInitialFavStyles(sheetBody, slug, lineColor) {
-  sheetBody.querySelectorAll('.fav-tap-target').forEach(favTarget => {
-    const wagon    = favTarget.dataset.wagon;
-    const doors    = favTarget.dataset.doors;
-    if (!wagon || !doors) return;
+export function slugByName(raw) {
+  if (!raw) return null;
 
-    const row      = favTarget.closest('.position-row');
-    const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
-    const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
-    const dirLabel = labelEl?.textContent.trim() ?? '';
+  let normalized = raw
+    .toLowerCase()
+    .replace(/[\u00a0\u202f\u2009]/g, ' ')           // NBSP та вузькі пробіли → звичайний пробіл
+    .replace(/(?:короткий |довгий )?пере(?:садка|хід) на\s*/g, '')
+    .replace(/попередня\s*/g, '')
+    .replace(/["'„"«».,]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-    if (row && isExitFav(slug, dirLabel, wagon, doors)) {
-      applyFavPillStyles(row, lineColor, true);
+  // 1. Прямий збіг
+  if (_nameToSlug[normalized]) return _nameToSlug[normalized];
+
+  // 2. Аліаси
+  for (const [alias, realName] of Object.entries(STATION_ALIASES)) {
+    if (normalized.includes(alias)) {
+      normalized = normalized.replace(alias, realName);
+      break;
     }
+  }
+  if (_nameToSlug[normalized]) return _nameToSlug[normalized];
+
+  // 3. Stem-пошук (скорочення кінця слова для відмінків)
+  for (const [name, slug] of Object.entries(_nameToSlug)) {
+    const stem = name.length > 6 ? name.slice(0, -2) : name;
+    if (normalized.includes(stem)) return slug;
+  }
+
+  return null;
+}
+
+/**
+ * Повертає оригінальний (правильного кейсу) slug за lowercase-версією.
+ * Використовується у mapInteraction.js для зіставлення id SVG-зон з slug.
+ *
+ * @param {string} lowerSlug — slug.toLowerCase()
+ * @returns {string|null}
+ */
+export function getSlugByLower(lowerSlug) {
+  return _slugByLower[lowerSlug] ?? null;
+}
+
+// ══ ГІДРАТАЦІЯ ════════════════════════════════════════════════
+
+/**
+ * Заповнює state.stationsData та приватні словники зі свіжих даних.
+ * Викликається з reloadStationsData після кожного fetch.
+ *
+ * Після наповнення stationsData синхронно емітує 'data:stations-hydrated'.
+ * data/localEdits.js підписаний на цю подію і застосовує localEdits + exitLabels
+ * до тих самих об'єктів (EventBus — синхронний, handlers запускаються до повернення emit).
+ *
+ * @param {{ stations: Array }} data — розібраний stations.json
+ * @returns {Record<string, object>} state.stationsData
+ */
+export function hydrateStations(data) {
+  if (!state.stationsData) state.stationsData = {};
+  Object.keys(state.stationsData).forEach(key => delete state.stationsData[key]);
+
+  Object.keys(_nameToSlug).forEach(k  => delete _nameToSlug[k]);
+  Object.keys(_slugByLower).forEach(k => delete _slugByLower[k]);
+
+  data.stations.forEach(station => {
+    // ── РАЗВЕРТАННЯ КАТАЛОГУ ВИХОДІВ (Розпаковка DRY-посилань) ──
+    // exits_catalog — словник на рівні станції; exits у directions посилаються
+    // на записи каталогу через поле "id". Тут розгортаємо посилання у повні
+    // об'єкти до того, як щось інше торкнеться даних.
+    // ── РАЗВЕРТАННЯ КАТАЛОГУ ВИХОДІВ (Розпаковка DRY-посилань) ──
+    const exitsCatalog = station.exits_catalog || {};
+
+    (station.directions || []).forEach(dir => {
+      (dir.exits || []).forEach(ex => {
+        if (ex.id && exitsCatalog[ex.id]) {
+          const catalogItem = exitsCatalog[ex.id];
+          if (!ex.label && catalogItem.label) {
+            ex.label = catalogItem.label;
+          }
+          if (!ex.numbered_exits) {
+            ex.numbered_exits = catalogItem.numbered_exits || catalogItem.exit_numbers;
+          }
+          if (!ex.exit_numbers) {
+            ex.exit_numbers = catalogItem.exit_numbers || catalogItem.numbered_exits;
+          }
+        }
+      });
+    });
+    
+    // ── Плаский масив позицій (для feedback та пошуку) ──
+    station.positions = [];
+    traversePositions(station, ({ dir, exit, position }) => {
+      station.positions.push({
+        dir:   dir.from,
+        exit:  exit.label || '',
+        wagon: position.wagon,
+        doors: position.doors,
+      });
+    });
+
+    // ... решта функції без змін ...
+
+    // ── Заповнюємо приватні словники ──
+    const cleanName = station.name.toLowerCase().replace(/["'„"«».,]/g, '');
+    _nameToSlug[cleanName]                   = station.slug;
+    _slugByLower[station.slug.toLowerCase()] = station.slug;
+
+    // ── Пошуковий індекс ──
+    const stationWords   = cleanName.split(/[\s\u00a0\u202f\-]+/);
+    const slugParts      = station.slug.split('.');
+    const cleanEnName    = (slugParts.length > 1 ? slugParts[1] : station.slug)
+                             .replace(/_/g, ' ').toLowerCase();
+    const stationEnWords = cleanEnName.split(/\s+/);
+    const acronym        = stationWords.map(word => word.charAt(0)).join('');
+    const aliases        = (station.searchAliases ?? []).map(a => a.toLowerCase());
+
+    station._searchIndex = [
+      ...stationWords,
+      ...stationEnWords,
+      acronym,
+      ...aliases.flatMap(alias => alias.split(/[\s\u00a0\u202f\-]+/)),
+    ];
+
+    // ── Індекс підписів виходів (для пошуку за назвою вулиці) ──
+    const exitTokens = new Set();
+    (station.directions || []).forEach(dir => {
+      (dir.exits || []).forEach(ex => {
+        if (!ex.label) return;
+        ex.label
+          .toLowerCase()
+          .replace(/[„"«»"'.,!?]/g, '')
+          .split(/[\s\u00a0\u202f\u2009]+/)
+          .filter(w => w.length > 1)
+          .forEach(w => exitTokens.add(w));
+      });
+    });
+    station._exitIndex = [...exitTokens];
+
+    state.stationsData[station.slug] = station;
   });
+
+  // data/localEdits.js підписаний через bus.on('data:stations-hydrated') і виконує
+  // applyLocalEdits + applyExitLabels синхронно перед поверненням цієї функції.
+  bus.emit('data:stations-hydrated', { stationsData: state.stationsData });
+
+  return state.stationsData;
+}
+
+// ══ ЗОНИ КАРТИ ════════════════════════════════════════════════
+
+/**
+ * Прив'язує SVG-зони на карті до slug-ів станцій.
+ */
+export function renderMapZones() {
+  if (state.isZonesReady) return;
+
+  const inner = document.getElementById('mapInner');
+  const svgEl = inner?.querySelector('svg');
+  if (!svgEl || !state.stationsData) return;
+
+  svgEl.querySelectorAll('[id]').forEach(el => {
+    const rawId = el.id.replace(/\d+$/, '').toLowerCase();
+    const slug  = _slugByLower[rawId];
+
+    if (!slug) return;
+
+    el.style.fill                    = 'transparent';
+    el.style.stroke                  = 'transparent';
+    el.style.pointerEvents           = 'all';
+    el.style.cursor                  = 'pointer';
+    el.style.webkitTapHighlightColor = 'transparent';
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('aria-label', `Станція ${state.stationsData[slug].name}`);
+  });
+
+  state.isZonesReady = true;
+  checkAppReady();
+}
+
+export function checkAppReady() {
+  if (!state.isMapReady || !state.isZonesReady) return;
+
+  requestAnimationFrame(() => {
+    document.getElementById('mapViewport')?.classList.remove('is-loading');
+    bus.emit('map:sync-checkins');
+  });
+}
+
+// ══ НАТИВНЕ ЗАВАНТАЖЕННЯ (три рівні надійності) ═══════════════
+
+/**
+ * Зчитує закешовану версію stations.json з Filesystem.Cache.
+ * Повертає { data, version } або null якщо кеш відсутній / пошкоджений.
+ *
+ * @returns {Promise<{ data: object, version: number|string|null }|null>}
+ */
+async function _readFilesystemCache() {
+  try {
+    const cached = await Filesystem.readFile({
+      path:      NATIVE_CACHE_PATH,
+      directory: Directory.Cache,
+      encoding:  Encoding.UTF8,
+    });
+    const data = JSON.parse(cached.data);
+    return { data, version: data.version ?? null };
+  } catch {
+    return null; // кеш відсутній або JSON пошкоджений
+  }
+}
+
+/**
+ * Зберігає свіжі дані stations.json у Filesystem.Cache.
+ * Помилка запису не є критичною — додаток продовжить роботу з мережевими даними.
+ *
+ * @param {object} data — розібраний об'єкт stations.json
+ */
+async function _writeFilesystemCache(data) {
+  try {
+    await Filesystem.writeFile({
+      path:      NATIVE_CACHE_PATH,
+      data:      JSON.stringify(data),
+      directory: Directory.Cache,
+      encoding:  Encoding.UTF8,
+    });
+  } catch {
+    // Не критично: наступний запуск спробує знову.
+  }
+}
+
+/**
+ * Завантажує stations.json для нативної платформи.
+ * Три рівні надійності:
+ *   1. Мережа (REMOTE_STATIONS_URL) з таймаутом → Filesystem.Cache (запис)
+ *   2. Filesystem.Cache (читання) — якщо мережа недоступна
+ *   3. Bundled APK (http://localhost/stations.json) — якщо кеш теж порожній
+ *
+ * При виявленні нової версії емітує 'stations:updated' — swUpdate.js покаже тост.
+ *
+ * @param {boolean} forceFresh — ігнорувати кеш, завжди йти в мережу
+ * @returns {Promise<object>} розібраний stations.json
+ */
+async function _fetchStationsNative(forceFresh = false) {
+  // ── Рівень 1: мережа ─────────────────────────────────────────
+  try {
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    const response = await fetch(REMOTE_STATIONS_URL, {
+      signal: controller.signal,
+      cache:  forceFresh ? 'no-store' : 'default',
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('json')) {
+        throw new Error(`Unexpected content-type: ${contentType}`);
+      }
+
+      const freshData = await response.json();
+
+      // Порівнюємо версію з кешем — щоб повідомити користувача про оновлення.
+      if (!forceFresh) {
+        const cached = await _readFilesystemCache();
+        if (
+          freshData.version != null &&
+          cached?.version   != null &&
+          freshData.version !== cached.version
+        ) {
+          // Дзеркало SW-логіки: там postMessage({ type: 'STATIONS_UPDATED' }),
+          // тут — bus.emit, який swUpdate.js перехоплює через підписку.
+          bus.emit('stations:updated', { version: freshData.version });
+        }
+      }
+
+      // Зберігаємо в кеш асинхронно — не блокуємо гідратацію.
+      _writeFilesystemCache(freshData);
+
+      return freshData;
+    }
+  } catch (networkError) {
+    // AbortError (таймаут) або відсутність мережі — переходимо до рівня 2.
+    if (networkError.name !== 'AbortError') {
+      console.warn('[stations] network fetch failed:', networkError.message);
+    }
+  }
+
+  // ── Рівень 2: Filesystem.Cache ────────────────────────────────
+  if (!forceFresh) {
+    const cached = await _readFilesystemCache();
+    if (cached) {
+      console.info('[stations] loaded from Filesystem cache');
+      return cached.data;
+    }
+  }
+
+  // ── Рівень 3: bundled APK (http://localhost/stations.json) ────
+  console.info('[stations] falling back to bundled APK copy');
+  const bundledUrl      = getStationsUrl();
+  const bundledResponse = await fetch(bundledUrl);
+
+  if (!bundledResponse.ok) {
+    throw new Error(
+      `stations.json bundled fetch failed: ${bundledResponse.status} (${bundledUrl.href})`,
+    );
+  }
+  return bundledResponse.json();
+}
+
+// ══ ЗАВАНТАЖЕННЯ (публічне) ════════════════════════════════════
+
+/**
+ * Завантажує та гідратує stations.json.
+ * На нативній платформі — _fetchStationsNative() (мережа→кеш→bundled).
+ * На веб/PWA — прямий fetch; SW самостійно обробляє networkFirst та кешування.
+ *
+ * @param {boolean} [forceFresh=false] — примусово оновити дані (ігнорувати кеш/SW)
+ * @returns {Promise<Record<string, object>>} state.stationsData після гідратації
+ */
+export async function reloadStationsData(forceFresh = false) {
+  let data;
+
+  if (Capacitor.isNativePlatform()) {
+    data = await _fetchStationsNative(forceFresh);
+  } else {
+    // Веб/PWA: SW перехоплює цей fetch і виконує networkFirst для stations.json.
+    const stationsUrl = getStationsUrl();
+    const response    = await fetch(
+      stationsUrl,
+      forceFresh ? { cache: 'no-store' } : undefined,
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
+      );
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('json')) {
+      throw new Error(
+        `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
+      );
+    }
+
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      throw new Error(
+        `stations.json contains invalid JSON (${stationsUrl.href}): ${parseError.message}`,
+      );
+    }
+  }
+
+  if (!data || !Array.isArray(data.stations) || data.stations.length === 0) {
+    throw new Error(
+      'stations.json has unexpected structure: missing or empty "stations" array',
+    );
+  }
+
+  const hydrated = hydrateStations(data);
+
+  if (!forceFresh) {
+    renderMapZones();
+    handleStartupStation(hydrated);
+  }
+
+  bus.emit('fav:render-on-load');
+
+  return hydrated;
+}
+
+function handleStartupStation(data) {
+  if (startupSlug && data[startupSlug]) {
+    requestAnimationFrame(() => bus.emit('station:open', { slug: startupSlug }));
+  }
 }
 </file>
 
@@ -8441,6 +8009,511 @@ export function getPositionDescriptorsForStation(s, color) {
   });
 
   return descriptors;
+}
+</file>
+
+<file path="src/sheets/stationEvents.js">
+// ══ STATION SHEET — EVENT DELEGATION ══
+// Один набір listeners на sheetBody, живе весь час сесії.
+// WeakMap<Element, GestureState> — auto-GC при innerHTML-заміні.
+// Правило: жодного querySelector поза handlers, жодного addEventListener на row-елементи.
+
+import { state }                  from '../core/state.js';
+import { TIMING }                 from '../core/timing.js';
+import { STORAGE_KEYS, Storage }  from '../core/storage.js';
+import { bus }                    from '../core/eventBus.js';
+import { slugByName }             from '../data/stations.js';
+import { applyExitLabels }        from '../data/localEdits.js';
+import {
+  isFav, getExitFavs, isExitFav,
+  toggleExitFav, replaceExitFav,
+} from '../features/favorites/index.js';
+import { dismissHintWithDoors } from '../ui/animations.js';
+import { Icons }                from '../ui/icons.js';
+import { applyFavPillStyles }     from './renderStation.js';
+import { heartSvg }               from '../ui/components.js';
+import { Haptics, NotificationType } from '@capacitor/haptics';
+import { isEditModeEnabled }      from '../features/settings.js';
+
+// ── Gesture state (auto-GC разом з DOM-елементами) ──────────
+/**
+ * @typedef {{ longPressId: ReturnType<typeof setTimeout>|null,
+ *             tapCount: number,
+ *             tapId: ReturnType<typeof setTimeout>|null }} GestureState
+ */
+/** @type {WeakMap<Element, GestureState>} */
+const _gesture = new WeakMap();
+
+function _getGS(el) {
+  if (!_gesture.has(el)) _gesture.set(el, { longPressId: null, tapCount: 0, tapId: null });
+  return _gesture.get(el);
+}
+
+function _cancelLongPress(el) {
+  const gs = _gesture.get(el);
+  if (!gs) return;
+  clearTimeout(gs.longPressId);
+  gs.longPressId = null;
+}
+
+// ── Toast ────────────────────────────────────────────────────
+function _showExitFavToast(row) {
+  let existing = row.querySelector('.exit-fav-toast');
+  if (existing) {
+    existing.classList.remove('fav-note-open');
+    setTimeout(() => existing?.remove(), TIMING.TOAST_FADE);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'exit-fav-toast';
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.innerHTML =
+    '<span class="exit-fav-toast-text">вихід&nbsp;додано<br>до&nbsp;' +
+    '<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span></span>';
+  row.prepend(toast);
+  requestAnimationFrame(() => toast.classList.add('fav-note-open'));
+  setTimeout(() => {
+    toast.classList.remove('fav-note-open');
+    setTimeout(() => toast.remove(), TIMING.TOAST_FADE);
+  }, TIMING.TOAST_SHOW);
+}
+
+// ── Replace-confirm inline card ──────────────────────────────
+function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoors, lineColor) {
+  document.querySelectorAll('.exit-replace-confirm').forEach(el => {
+    el.classList.remove('exit-replace-open');
+    setTimeout(() => el.remove(), 280);
+  });
+
+  const confirmEl = document.createElement('div');
+  confirmEl.className = 'exit-replace-confirm';
+  confirmEl.innerHTML =
+    `<p class="exit-replace-text">Ви вже додали до&nbsp;` +
+    `<span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span>` +
+    ` інший вихід з&nbsp;цієї станції. Замінити на цей?</p>` +
+    `<div class="exit-replace-btns">` +
+    `<button class="exit-replace-btn confirm-btn-save">Замінити</button>` +
+    `<button class="exit-replace-btn confirm-btn-discard">Скасувати</button>` +
+    `</div>`;
+  row.after(confirmEl);
+  requestAnimationFrame(() => confirmEl.classList.add('exit-replace-open'));
+
+  const close = () => {
+    confirmEl.classList.remove('exit-replace-open');
+    setTimeout(() => confirmEl.remove(), 280);
+  };
+  // Ці два listeners — не витік: вони живуть рівно стільки, скільки confirmEl
+  confirmEl.querySelector('.confirm-btn-save').addEventListener('click', e => {
+    e.stopPropagation();
+    replaceExitFav(slug, dirLabel, existing.wagon, existing.doors, newWagon, newDoors);
+    close();
+    bus.emit('station:refresh');
+  });
+  confirmEl.querySelector('.confirm-btn-discard').addEventListener('click', e => {
+    e.stopPropagation();
+    close();
+  });
+}
+
+
+
+
+// ── Тост «спершу увімкніть режим редагування» ─────────────────
+function _showEditModeLockToast(row) {
+  document.querySelectorAll('.edit-mode-lock-toast').forEach(t => t.remove());
+  const rect  = row.getBoundingClientRect();
+  const toast = document.createElement('div');
+  toast.className = 'dev-mode-toast dev-mode-toast-open edit-mode-lock-toast';
+  toast.style.cssText = `
+    position: fixed;
+    top: ${rect.top - 45}px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: auto;
+    z-index: 10000;
+  `;
+  toast.textContent = 'Спершу увімкніть режим редагування в налаштуваннях';
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.remove('dev-mode-toast-open');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+// ── Тост над іконкою (ліфт / ескалатор / підйомник) — прямо над самим значком ──
+function _showIconLabelToast(el, text) {
+  document.querySelectorAll('.icon-info-toast').forEach(t => t.remove());
+  const rect  = el.getBoundingClientRect();
+  const toast = document.createElement('div');
+  toast.className = 'dev-mode-toast dev-mode-toast-open icon-info-toast';
+  toast.style.cssText = `
+    position: fixed;
+    top: ${rect.top - 38}px;
+    left: ${rect.left + rect.width / 2}px;
+    transform: translateX(-50%);
+    bottom: auto;
+    z-index: 10000;
+  `;
+  toast.textContent = text;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.remove('dev-mode-toast-open');
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
+}
+
+
+// ── Ядро: toggle exit fav ─────────────────────────────────────
+function _triggerExitFav(favTarget, slug, lineColor) {
+  const wagon    = favTarget.dataset.wagon;
+  const doors    = favTarget.dataset.doors;
+  if (!wagon || !doors) return;
+
+  const row      = favTarget.closest('.position-row');
+  const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
+  const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
+  const dirLabel = labelEl?.textContent.trim() ?? '';
+
+  const result = toggleExitFav(slug, dirLabel, wagon, doors);
+
+  if (result.status === 'replace') {
+    _showExitReplaceConfirm(row, result.existing, slug, dirLabel, wagon, doors, lineColor);
+    return;
+  }
+
+  const added = result.status === 'added';
+  if (row) applyFavPillStyles(row, lineColor, added);
+  
+  if (added) {
+    _showExitFavToast(row);
+
+    // Соковитий подвійний нативний вібровідгук «Успіх»
+    Haptics.notification({ type: NotificationType.Success }).catch(() => {});
+
+    _maybeShowCheckinHint(lineColor);
+    _maybeDismissOnboarding(lineColor);
+  }
+
+  // Оновлюємо серце в шапці (тепер цей блок чітко всередині функції)
+  const favBtnBar = document.querySelector(`.fav-btn-bar[data-slug="${slug}"]`);
+  if (favBtnBar) {
+    const nowFav = isFav(slug);
+    favBtnBar.innerHTML = heartSvg(nowFav, slug, lineColor);
+    favBtnBar.classList.toggle('fav-active', nowFav);
+  }
+}
+
+function _maybeDismissOnboarding(lineColor) {
+  const hint = document.getElementById('onboardingHint');
+  if (hint) dismissHintWithDoors(hint, () => _maybeShowCheckinHint(lineColor));
+  else      _maybeShowCheckinHint(lineColor);
+}
+
+function _maybeShowCheckinHint(lineColor) {
+  if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
+  if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
+  const sheetBodyEl = document.getElementById('sheetBody');
+  if (!sheetBodyEl || document.getElementById('checkinHint')) return;
+  Storage.set(STORAGE_KEYS.CHECKIN_HINT_SEEN, 'true');
+  const hint = document.createElement('div');
+  hint.id        = 'checkinHint';
+  hint.className = 'onboarding-hint';
+  hint.innerHTML =
+    `<span class="hint-icon-wrap" style="color:${lineColor}">${Icons.info}</span>` +
+    `Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід&nbsp;зі&nbsp;станції як&nbsp;відвіданий`;
+  sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
+}
+
+// ── Панель "виходи за номерами" — виїжджає ЗНИЗУ, розширюючи блок ──
+// (той самий "блок" — пігулки, підпис напрямку, пін, значки розробника —
+// що й для note/photo/confirm-панелей розробника: вставляємо як сусідній
+// елемент ПІСЛЯ рядка, той самий .dev-note-panel-паттерн і той самий
+// "закрити всі інші" механізм — щоб дві панелі не намагались відкритись
+// одночасно під одним рядком).
+// Спрацьовує на ОДИНАРНИЙ тап по .fav-tap-target (довге натискання і
+// подвійний тап і далі відповідають за Вибране — не чіпаємо їх).
+// Показується лише якщо у станції реально є numbered_exits в даних;
+// інакше одинарний тап просто нічого не робить (як і раніше).
+const COLLAPSE_ARROW_SVG = `<svg viewBox="0 0 32 10" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8 L16 2 L30 8"/></svg>`;
+
+// ── Панель "виходи за номерами" — виїжджає ЗНИЗУ, розширюючи блок ──
+// ── Панель "виходи за номерами" ──
+function _openNumberedExitsPanel(favTarget, slug, lineColor) {
+  const station = state.stationsData?.[slug];
+  if (!station) return;
+
+  const row = favTarget.closest('.position-row');
+  if (!row) return;
+
+  const wagon = favTarget.dataset.wagon;
+  const doors = favTarget.dataset.doors;
+
+  // 1. Пошук текстової мітки напрямку (з поточного блоку або попереднього сусіда)
+  const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
+  let labelEl = dirBlock?.querySelector('.direction-label, .transfer-text');
+  if (!labelEl && dirBlock?.previousElementSibling) {
+    labelEl = dirBlock.previousElementSibling.querySelector('.direction-label, .transfer-text')
+      || (dirBlock.previousElementSibling.classList.contains('direction-label') ? dirBlock.previousElementSibling : null);
+  }
+
+  const dirName = labelEl?.dataset.name || (labelEl?.classList.contains('transfer-text') ? '__long_transfer__' : labelEl?.textContent.trim()) || '';
+
+  // 2. Знаходимо напрямок за назвою або шукаємо будь-який напрямок, що містить ці вагони/двері
+  let targetDir = station.directions?.find(d => d.from === dirName || d.from.trim() === dirName.trim());
+  if (!targetDir && station.directions) {
+    targetDir = station.directions.find(d =>
+      d.exits?.some(ex =>
+        ex.positions?.some(p => String(p.wagon).trim() === String(wagon).trim() && String(p.doors).trim() === String(doors).trim())
+      )
+    );
+  }
+
+  // 3. Знаходимо вихід у напрямку (або скан по всій станції як крайній фолбек)
+  let targetExit = targetDir?.exits?.find(ex =>
+    ex.positions?.some(p => String(p.wagon).trim() === String(wagon).trim() && String(p.doors).trim() === String(doors).trim())
+  );
+
+  if (!targetExit && station.directions) {
+    for (const d of station.directions) {
+      targetExit = d.exits?.find(ex =>
+        ex.positions?.some(p => String(p.wagon).trim() === String(wagon).trim() && String(p.doors).trim() === String(doors).trim())
+      );
+      if (targetExit) break;
+    }
+  }
+
+  if (!targetExit) return;
+
+  // 4. Розпаковка списку виходів з урахуванням усіх можливих форматів
+  const rawExits = targetExit.numbered_exits || targetExit.exit_numbers || (Array.isArray(station.numbered_exits) ? station.numbered_exits : []);
+  const stationNumbered = station.numbered_exits;
+
+  let exitsList = [];
+
+  // Якщо номери виходів посилаються на словник станції (station.numbered_exits)
+  if (Array.isArray(rawExits) && rawExits.length > 0 && stationNumbered) {
+    if (typeof stationNumbered === 'object' && !Array.isArray(stationNumbered)) {
+      const resolved = rawExits.map(key => {
+        let text = '';
+        let numStr = '';
+        if (typeof key === 'object' && key !== null) {
+          numStr = String(key.num || key.number || key.id || '');
+          text = key.text || stationNumbered[numStr] || '';
+        } else {
+          numStr = String(key).trim();
+          text = stationNumbered[numStr] || '';
+        }
+        return text ? { num: numStr, text: String(text) } : null;
+      }).filter(Boolean);
+
+      if (resolved.length > 0) exitsList = resolved;
+    } else if (Array.isArray(stationNumbered)) {
+      const resolved = rawExits.map((key, idx) => {
+        if (typeof key === 'object' && key !== null) {
+          return { num: String(key.num || key.number || (idx + 1)), text: String(key.text || '') };
+        }
+        const numIdx = parseInt(key) - 1;
+        const text = !isNaN(numIdx) && stationNumbered[numIdx] ? stationNumbered[numIdx] : (typeof key === 'string' && isNaN(Number(key)) ? key : '');
+        return text ? { num: String(key), text: String(text) } : null;
+      }).filter(Boolean);
+
+      if (resolved.length > 0) exitsList = resolved;
+    }
+  }
+
+  // Якщо rawExits самі містять об'єкти чи текстові описи
+  if (exitsList.length === 0 && Array.isArray(rawExits) && rawExits.length > 0) {
+    exitsList = rawExits.map((item, index) => {
+      if (typeof item === 'object' && item !== null) {
+        return {
+          num: String(item.num || item.number || (index + 1)),
+          text: String(item.text || '')
+        };
+      }
+      return {
+        num: String(index + 1),
+        text: String(item)
+      };
+    }).filter(item => item.text && item.text.trim() !== '');
+  }
+
+  if (!exitsList.length) return;
+
+  // 5. Відкриття / закриття панелі
+  const next = row.nextElementSibling;
+  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'numbered-exits') {
+    next.classList.remove('panel-open');
+    setTimeout(() => next.remove(), 280);
+    return;
+  }
+
+  document.querySelectorAll('.dev-note-panel').forEach(p => {
+    p.classList.remove('panel-open');
+    setTimeout(() => p.remove(), 280);
+  });
+
+  const panel = document.createElement('div');
+  panel.className = 'dev-note-panel pos-numbered-exits';
+  panel.dataset.type = 'numbered-exits';
+  panel.innerHTML =
+    exitsList.map(item =>
+      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineColor}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span></div>`
+    ).join('') +
+    `<button type="button" class="pos-numbered-exits-collapse" aria-label="Згорнути">${COLLAPSE_ARROW_SVG}</button>`;
+
+  const dirLabel = row.previousElementSibling?.classList.contains('direction-label')
+    ? row.previousElementSibling
+    : row;
+  dirLabel.before(panel);
+  requestAnimationFrame(() => panel.classList.add('panel-open'));
+
+  panel.querySelector('.pos-numbered-exits-collapse').addEventListener('click', e => {
+    e.stopPropagation();
+    panel.classList.remove('panel-open');
+    setTimeout(() => panel.remove(), 280);
+  });
+}
+
+// ── Головний bind — викликається ОДИН РАЗ ────────────────────
+/**
+ * @param {HTMLElement} sheetBody
+ * @param {() => { slug: string, lineColor: string }} getCtx
+ *   Getter повертає актуальний slug та колір на момент події.
+ *   Це критично: не передаємо значення, бо вони змінюються між відкриттями.
+ */
+export function bindSheetGestures(sheetBody, getCtx) {
+
+  // ── touchstart: початок long-press ──────────────────────────
+  sheetBody.addEventListener('touchstart', e => {
+    const favTarget = e.target.closest('.fav-tap-target');
+    if (!favTarget) return;
+
+    const gs = _getGS(favTarget);
+    clearTimeout(gs.longPressId);
+
+    gs.longPressId = setTimeout(() => {
+      gs.longPressId = null;
+      const { slug, lineColor } = getCtx();
+      _triggerExitFav(favTarget, slug, lineColor);
+    }, TIMING.LONG_PRESS);
+
+  }, { passive: true });
+
+  // ── touchmove: скасувати long-press (не блокуємо скрол) ─────
+  sheetBody.addEventListener('touchmove', e => {
+    // Скасовуємо для всіх активних .fav-tap-target в зоні дотику
+    // e.target може бути дочірнім елементом — тому .closest()
+    const favTarget = e.target.closest('.fav-tap-target');
+    if (favTarget) _cancelLongPress(favTarget);
+  }, { passive: true });
+
+  // ── touchend: скасувати, якщо не спрацював ──────────────────
+  sheetBody.addEventListener('touchend', e => {
+    const favTarget = e.target.closest('.fav-tap-target');
+    if (favTarget) _cancelLongPress(favTarget);
+  }, { passive: true });
+
+  // ── click: double-tap fav + pencil + nav-link ────────────────
+  sheetBody.addEventListener('click', e => {
+    const { slug, lineColor } = getCtx();
+
+    // 1. Значок підйомника → показати текст про часткову доступність
+    const hoistMark = e.target.closest('.pos-hoist-mark');
+    if (hoistMark) {
+      e.stopPropagation();
+      _showIconLabelToast(hoistMark, 'Забезпечує часткову доступність');
+      return;
+    }
+
+    // 1b. Значок ліфта → показати підпис "Ліфт"
+    const elevatorMark = e.target.closest('.pos-elevator-mark');
+    if (elevatorMark) {
+      e.stopPropagation();
+      _showIconLabelToast(elevatorMark, 'Ліфт');
+      return;
+    }
+
+    // 1c. Значок ескалатора → показати підпис "Ескалатор"
+    const escalatorMark = e.target.closest('.pos-escalator-mark');
+    if (escalatorMark) {
+      e.stopPropagation();
+      _showIconLabelToast(escalatorMark, 'Ескалатор');
+      return;
+    }
+
+    // 2. Pencil (відредагована позиція → відкрити feedback)
+    const pencil = e.target.closest('.pos-edited-mark');
+    if (pencil) {
+      e.stopPropagation();
+      const editSlug = pencil.dataset.slug;
+      if (!editSlug) return;
+      if (!isEditModeEnabled()) {
+        _showEditModeLockToast(pencil);
+        return;
+      }
+      bus.emit('sheet:open-feedback-for', { slug: editSlug });
+      return;
+    }
+
+    // 3. Скасувати exit-replace confirm
+    if (e.target.closest('.exit-replace-confirm')) return;
+
+    // 4. Nav-label → відкрити іншу станцію
+    const navLabel = e.target.closest('.nav-link');
+    if (navLabel) {
+      const target = slugByName(navLabel.dataset.name || '');
+      if (target && target !== slug) bus.emit('station:open', { slug: target });
+      return;
+    }
+
+    // 5. Double-tap на .fav-tap-target
+    const favTarget = e.target.closest('.fav-tap-target');
+    if (!favTarget) return;
+    // Ігноруємо кліки по службових елементах всередині target
+    if (e.target.closest('.pos-edited-mark, .exit-fav-cancel, .edit-info-panel')) return;
+
+    const gs = _getGS(favTarget);
+    gs.tapCount++;
+    clearTimeout(gs.tapId);
+    gs.tapId = setTimeout(() => {
+      // Якщо це був лише один тап (не подвійний) — показуємо виходи за номерами
+      if (gs.tapCount === 1) _openNumberedExitsPanel(favTarget, slug, lineColor);
+      gs.tapCount = 0;
+    }, TIMING.DOUBLE_TAP);
+
+    if (gs.tapCount >= 2) {
+      gs.tapCount = 0;
+      clearTimeout(gs.tapId);
+      _triggerExitFav(favTarget, slug, lineColor);
+    }
+  });
+}
+
+// ── Початкове зафарбовування улюблених при відкритті картки ──
+/**
+ * Проходиться по всіх .fav-tap-target у sheetBody
+ * і підфарбовує ті, що є у exitFavs.
+ * Викликається після кожного innerHTML = (без повторного bind).
+ *
+ * @param {HTMLElement} sheetBody
+ * @param {string} slug
+ * @param {string} lineColor
+ */
+export function applyInitialFavStyles(sheetBody, slug, lineColor) {
+  sheetBody.querySelectorAll('.fav-tap-target').forEach(favTarget => {
+    const wagon    = favTarget.dataset.wagon;
+    const doors    = favTarget.dataset.doors;
+    if (!wagon || !doors) return;
+
+    const row      = favTarget.closest('.position-row');
+    const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
+    const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
+    const dirLabel = labelEl?.textContent.trim() ?? '';
+
+    if (row && isExitFav(slug, dirLabel, wagon, doors)) {
+      applyFavPillStyles(row, lineColor, true);
+    }
+  });
 }
 </file>
 
@@ -11482,7 +11555,7 @@ registerServiceWorker();
 
 <file path="public/stations.json">
 {
-  "version": "20260906",
+  "version": "20260922",
   "stations": [
     {
       "slug": "R.Akademmistechko",
@@ -11497,10 +11570,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "101": {
-          "label": "до Національної академії наук"
+          "label": "до Національної академії наук",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "102": {
-          "label": "до ТЦ Academ City"
+          "label": "до ТЦ Academ City",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11541,7 +11626,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "103": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11587,10 +11678,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "104": {
-          "label": "кільцева електричка, ринок „Святошин“"
+          "label": "кільцева електричка, ринок „Святошин“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "105": {
-          "label": "завод Антонова"
+          "label": "завод Антонова",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11662,10 +11765,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "106": {
-          "label": "Nyvky City, Ultramarket"
+          "label": "Nyvky City, Ultramarket",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "107": {
-          "label": "парк „Нивки“"
+          "label": "парк „Нивки“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11729,7 +11844,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "108": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11775,7 +11896,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "109": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11827,7 +11954,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "110": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11874,7 +12007,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "111": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11926,7 +12065,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "112": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -11973,10 +12118,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "113": {
-          "label": "пересадка на Золоті&nbsp;ворота"
+          "label": "пересадка на Золоті&nbsp;ворота",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "114": {
-          "label": "вихід в місто"
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12045,19 +12202,49 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "115": {
-          "label": "короткий перехід на Майдан&nbsp;Незалежності"
+          "label": "короткий перехід на Майдан&nbsp;Незалежності",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "116": {
-          "label": "вихід в місто (Хрещатик)"
+          "label": "вихід в місто (Хрещатик)",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "117": {
-          "label": "вихід в місто (Героїв&nbsp;Небесної&nbsp;Сотні)"
+          "label": "вихід в місто (Героїв&nbsp;Небесної&nbsp;Сотні)",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "118": {
-          "label": "попередня Театральна"
+          "label": "попередня Театральна",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "119": {
-          "label": "попередня Арсенальна"
+          "label": "попередня Арсенальна",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12175,7 +12362,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "120": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12222,7 +12415,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "121": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12280,7 +12479,14 @@ registerServiceWorker();
         "122": {
           "label": "",
           "exit_numbers": [
-            "Пляжі: передмостова Слобідка, Золотий"
+            {
+              "num": "1",
+              "text": "Пляжі: Передмостова Слобідка, Золотий"
+            },
+            {
+              "num": "2",
+              "text": "Пляжі: Дитячий, Венеція, Молодіжний<br>Спортмайданчик"
+            }
           ]
         }
       },
@@ -12329,13 +12535,19 @@ registerServiceWorker();
         "123": {
           "label": "кільцева електричка, Театр драми і комедії",
           "exit_numbers": [
-            "1. вул. Раїси Окіпної, Міжнародний виставковий центр"
+            {
+              "num": "2",
+              "text": "вул. Євгена Сверстюка, 🚊 Лівобережна"
+            }
           ]
         },
         "124": {
           "label": "Міжнародний виставковий центр",
           "exit_numbers": [
-            "2. вул. Євгена Сверстюка, 🚊 Лівобережна"
+            {
+              "num": "1",
+              "text": "вул. Раїси Окіпної, Міжнародний виставковий центр"
+            }
           ]
         }
       },
@@ -12406,10 +12618,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "125": {
-          "label": "парк Перемога, ТЦ „Дитячий світ“"
+          "label": "парк Перемога, ТЦ „Дитячий світ“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "126": {
-          "label": "ТЦ Doma Center"
+          "label": "ТЦ Doma Center",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12479,10 +12703,34 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "127": {
-          "label": "автостанція „Дарниця“. артзавод „Платформа“"
+          "label": "автостанція „Дарниця“. артзавод „Платформа“",
+          "exit_numbers": [
+            {
+              "num": "2",
+              "text": "вул. Гната Хоткевича, 1-3<br>вул. Гетьмана Павла Полуботка, 50-54<br>Автостанція 🚌 „Дарниця“<br>🚊 🚌 у бік Троєщини, Лісового масиву"
+            },
+            {
+              "num": "4",
+              "text": "Транспорт у бік Броварів"
+            },
+            {
+              "num": "4-5",
+              "text": "вул. Кіото, 25-27"
+            },
+            {
+              "num": "5",
+              "text": "вул. Кубанської України<br>Транспорт у бік Троєщини та Воскресенки"
+            }
+          ]
         },
         "128": {
-          "label": "Лікарня швидкої медичної допомоги"
+          "label": "Лікарня швидкої медичної допомоги",
+          "exit_numbers": [
+            {
+              "num": "1",
+              "text": "вул. Гетьмана Павла Полуботка, 46-38<br>вул. Гната Хоткевичча, 2-12<br>вул. Краківська<br>🚊 🚌 у бік ДВРЗ, ЗЗБК, правого берега"
+            }
+          ]
         }
       },
       "directions": [
@@ -12547,10 +12795,30 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "129": {
-          "label": "автостанція"
+          "label": "автостанція",
+          "exit_numbers": [
+            {
+              "num": "5",
+              "text": "Підйомник № 1<br>виклик персоналу 044 238 45 27, 050 448 91 71"
+            }
+          ]
         },
         "130": {
-          "label": "Bazar на Лісовій"
+          "label": "Bazar на Лісовій",
+          "exit_numbers": [
+            {
+              "num": "1",
+              "text": "вул. Гетьмана Івана Полуботка<br>вул. Катерини Гандзюк<br>вул. Якова Гніздовського<br>🚊 8, 22к, 29, 33к"
+            },
+            {
+              "num": "2",
+              "text": "Торгівельно-економічний університет<br>Транспорт у бік Троєщини та Воскресенки"
+            },
+            {
+              "num": "2-3",
+              "text": "Торгівельно-економічний університет<br>вул. Дмитра Мілютенка<br>вул. Кіото, 21-19<br>🚎 37<br>🚌22тк, 28т, 37трд, 35т, 118д<br>Транспорт у бік Троєщини та Воскресенки"
+            }
+          ]
         }
       },
       "directions": [
@@ -12595,10 +12863,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "201": {
-          "label": "ринок „Оболонь“, трамвайне кільце"
+          "label": "ринок „Оболонь“, трамвайне кільце",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "202": {
-          "label": "ТЦ Dream berry"
+          "label": "ТЦ Dream berry",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12639,10 +12919,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "203": {
-          "label": "ТЦ Smart Plaza, ТЦ Dream berry"
+          "label": "ТЦ Smart Plaza, ТЦ Dream berry",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "204": {
-          "label": "Мінський ринок"
+          "label": "Мінський ринок",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12706,10 +12998,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "205": {
-          "label": "Dream yellow"
+          "label": "Dream yellow",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "206": {
-          "label": "Lake Plaza, Кирилівське озеро"
+          "label": "Lake Plaza, Кирилівське озеро",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12773,10 +13077,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "207": {
-          "label": "ТЦ Gorodok"
+          "label": "ТЦ Gorodok",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "208": {
-          "label": "кільцева електричка, ринок „Почайна“"
+          "label": "кільцева електричка, ринок „Почайна“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12840,7 +13156,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "209": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12886,10 +13208,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "210": {
-          "label": "Верхній вал"
+          "label": "Верхній вал",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "211": {
-          "label": "Контрактова площа"
+          "label": "Контрактова площа",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -12953,7 +13287,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "212": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13000,10 +13340,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "213": {
-          "label": "пересадка на&nbsp;Хрещатик"
+          "label": "пересадка на&nbsp;Хрещатик",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "214": {
-          "label": "вихід в місто"
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13068,10 +13420,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "215": {
-          "label": "пересадка на Палац&nbsp;спорту"
+          "label": "пересадка на Палац&nbsp;спорту",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "216": {
-          "label": "вихід в місто"
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13135,7 +13499,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "217": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13182,7 +13552,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "218": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13228,7 +13604,17 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "219": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "1",
+              "text": "вул. Велика Васильківська, 136—130"
+            },
+            {
+              "num": "2",
+              "text": "вул. Антоновича, 169—155"
+            }
+          ]
         }
       },
       "directions": [
@@ -13274,7 +13660,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "220": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13332,7 +13724,17 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "221": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "1-2",
+              "text": "до вул. Васильківської, готелю „Мир“<br>🚌 № 28"
+            },
+            {
+              "num": "3-4",
+              "text": "до Голосіївського проспекту, Голосіївської площі, вул. Голосіївської, Васильківської, М. Рильського, музею М. Рильського 🚎 №№ 39, 91 🚌 №№ 11, 12, 43"
+            }
+          ]
         }
       },
       "directions": [
@@ -13390,10 +13792,34 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "222": {
-          "label": "Васильківська площа"
+          "label": "Васильківська площа",
+          "exit_numbers": [
+            {
+              "num": "3",
+              "text": "вул. Михайла Максимовича"
+            },
+            {
+              "num": "3-4",
+              "text": "до Васильківської площі, вул. Васильківської"
+            },
+            {
+              "num": "4",
+              "text": "вул. Юлії Здановської"
+            }
+          ]
         },
         "223": {
-          "label": "ТЦ „Васильківський“"
+          "label": "ТЦ „Васильківський“",
+          "exit_numbers": [
+            {
+              "num": "1",
+              "text": "до вул. Васильківської<br>🚌 №№ 19, 78, 119, 119к, 120<br>🚎 №№ 12 і 45"
+            },
+            {
+              "num": "2",
+              "text": "до вул. Васильківської"
+            }
+          ]
         }
       },
       "directions": [
@@ -13481,7 +13907,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "224": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13531,13 +13963,31 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "225": {
-          "label": "іподром, Льодовий стадіон"
+          "label": "іподром, Льодовий стадіон",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "226": {
-          "label": "автостанція „Південна“"
+          "label": "автостанція „Південна“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "227": {
-          "label": "ліфт"
+          "label": "ліфт",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13626,10 +14076,30 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "228": {
-          "label": "урочище „Теремки“"
+          "label": "урочище „Теремки“",
+          "exit_numbers": [
+            {
+              "num": "1",
+              "text": "пр. Академіка Глушкова, 22–12<br>🚎 № 43 (у бік Кіберцентру)<br>🚌 № 120 (у бік Кіберцентру)<br>🚌 до Боярки, Вишневого, Василькова)"
+            },
+            {
+              "num": "2",
+              "text": "Одеський ринок<br>вул. Чабанівська"
+            },
+            {
+              "num": "3",
+              "text": "пр. Академіка Глушкова, 41—61<br>Урочище „Теремки“"
+            }
+          ]
         },
         "229": {
-          "label": "Будинок соти, Одеський ринок, ТРЦ „Магелан“, Одеська площа"
+          "label": "Будинок соти, Одеський ринок, ТРЦ „Магелан“, Одеська площа",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13675,7 +14145,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "301": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13707,7 +14183,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "302": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13759,7 +14241,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "303": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13806,10 +14294,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "304": {
-          "label": "пересадка на Театральну"
+          "label": "пересадка на Театральну",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "305": {
-          "label": "вихід в місто"
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13874,10 +14374,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "306": {
-          "label": "пересадка на Площу Українських Героїв"
+          "label": "пересадка на Площу Українських Героїв",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "307": {
-          "label": "вихід в місто"
+          "label": "вихід в місто",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -13943,7 +14455,18 @@ registerServiceWorker();
         "308": {
           "label": "",
           "exit_numbers": [
-            "вул. Мечникова, 14/1 – 22а, Кловський узвіз"
+            {
+              "num": "1",
+              "text": "вул. Мечникова, 14/1 – 22а, Кловський узвіз<br>🚌 у бік Печерська, лівого берега"
+            },
+            {
+              "num": "2-3",
+              "text": "вул. Мечникова, 2 – 11<br>вул. Леоніда Первомайського<br>Свято-Михайлівська лікарня<br>🚌 у бік Контрактової площі<br>🚊 Київ-Пасажирський"
+            },
+            {
+              "num": "3",
+              "text": "вул. Мечникова, 10/2 – 2, вул. Леоніда Первомайського"
+            }
           ]
         }
       },
@@ -13990,7 +14513,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "309": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -14036,7 +14565,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "310": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -14088,10 +14623,26 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "311": {
-          "label": "Наддніпрянське шосе, Південний міст"
+          "label": "Наддніпрянське шосе, Південний міст",
+          "exit_numbers": [
+            {
+              "num": "2-4",
+              "text": "Набережно-Печерська дорога<br>вул. Будіндустрії<br>🚌 у бік Обухова, Кагарлика, Миронівки, Городища<br>🚌 № 43, 43к, 54"
+            },
+            {
+              "num": "5",
+              "text": "вул. Покільська"
+            }
+          ]
         },
         "312": {
-          "label": "кільцева електричка, автостанція „Видубичі“"
+          "label": "кільцева електричка, автостанція „Видубичі“",
+          "exit_numbers": [
+            {
+              "num": "1",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -14156,7 +14707,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "313": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -14208,10 +14765,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "314": {
-          "label": "до ТЦ „Arcadia“"
+          "label": "до ТЦ „Arcadia“",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "315": {
-          "label": "до Дніпровської набережної"
+          "label": "до Дніпровської набережної",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -14275,10 +14844,38 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "316": {
-          "label": "ТРЦ „Аладдін“, парк „Позняки“"
+          "label": "ТРЦ „Аладдін“, парк „Позняки“",
+          "exit_numbers": [
+            {
+              "num": "6",
+              "text": "пр. Миколи Бажана, 24–36<br>🚎 у бік Переяслава"
+            },
+            {
+              "num": "7-8",
+              "text": "пр. Петра Григоренка, 39–43<br>Автостоянка<br>🚎 у бік Позняків, ст. м. „Дарниця“"
+            }
+          ]
         },
         "317": {
-          "label": "ТЦ Познякoff, ТРЦ Piramida, трамвайна зупинка"
+          "label": "ТЦ Познякoff, ТРЦ Piramida, трамвайна зупинка",
+          "exit_numbers": [
+            {
+              "num": "1",
+              "text": "пр. Петра Григоренка, 36–40"
+            },
+            {
+              "num": "2",
+              "text": "пр. Петра Григоренка, 32–2<br>пр. Миколи Бажана, 16–2<br>🚊 у бік Троєщини, ст. м. „Лісова“<br>🚌 у бік правого берега, Позняків, Харківського масиву"
+            },
+            {
+              "num": "4",
+              "text": "Парк „Позняки“<br>вул. Михайла Драгоманова<br>🚌 №№ 22 (у бік музею авіації, пр. Валерія Лобановського) і 91 (до ст. м. Голосіївська та Диміївська)"
+            },
+            {
+              "num": "5",
+              "text": "пр. Петра Григоренка, 32–2<br>вул. Срібнокільська<br>🚎 №№ 8 і 27"
+            }
+          ]
         }
       },
       "directions": [
@@ -14342,10 +14939,22 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "318": {
-          "label": "ТЦ Clever, ринок „Вирлиця“, озеро Вирлиця"
+          "label": "ТЦ Clever, ринок „Вирлиця“, озеро Вирлиця",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         },
         "319": {
-          "label": "Varus"
+          "label": "Varus",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -14409,7 +15018,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "320": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -14463,7 +15078,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "321": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [
@@ -14514,7 +15135,13 @@ registerServiceWorker();
       ],
       "exits_catalog": {
         "322": {
-          "label": ""
+          "label": "",
+          "exit_numbers": [
+            {
+              "num": "",
+              "text": ""
+            }
+          ]
         }
       },
       "directions": [

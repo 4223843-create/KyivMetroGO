@@ -1,6 +1,6 @@
 MASTER BUG FIX PROMPT: Station Title Clipping & Hatched Mask in Bottom Sheet (KyivMetroGO)
 
-CONTEXT & HTML STRUCTURE (index.html):
+CONTEXT & HTML STRUCTURE (index.html):я
   <div id="stationSheet" class="station-sheet">
     <div class="sheet-handle-bar">   <!-- Fixed header (52px high) -->
       <button class="fav-btn-bar">...</button>
