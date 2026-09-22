@@ -238,6 +238,22 @@ document.documentElement.setAttribute('data-theme', actual);
         </div>
       </div>
 
+      <div class="dev-menu-section dev-menu-collapsible" data-section="exits">
+        <button type="button" class="dev-menu-section-title dev-menu-section-toggle">
+          <span>Виходи зі станцій</span>
+          <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="dev-menu-section-body">
+          <div id="devExitsLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
+            <button class="search-line-btn is-active" data-line="">Всі</button>
+            <button class="search-line-btn" data-line="red">Червона</button>
+            <button class="search-line-btn" data-line="blue">Синя</button>
+            <button class="search-line-btn" data-line="green">Зелена</button>
+          </div>
+          <div id="devMenuExits"></div>
+        </div>
+      </div>
+
       <div class="dev-menu-section dev-menu-collapsible" data-section="backlog">
         <button type="button" class="dev-menu-section-title dev-menu-section-toggle">
           <span>Backlog</span>

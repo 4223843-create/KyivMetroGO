@@ -16,6 +16,10 @@
 //   resetConfirmationData(slug, posIdx)  → object (порожні дані)
 //   getDevNote(slug, posIdx)             → string
 //   setDevNote(slug, posIdx, text)       → void
+//   isExitsCatalogVerified(slug)         → boolean
+//   setExitsCatalogVerified(slug)        → void
+//   resetExitsCatalogVerified(slug)      → void
+//   getAllExitsVerified()                → object
 //   attachDevModeUI(container, slug)     → void
 //   showDevModeToast(active)             → void
 //   updateDevModeIndicator(sheet, active)→ void
@@ -1309,6 +1313,55 @@ export function setupDevModeTapCounter(aboutSheet) {
 /** Показує/ховає плаваючу кнопку меню розробника зверху карти. */
 export function updateDevMenuButtonVisibility() {
   document.getElementById('devMenuBtn')?.classList.toggle('is-hidden', !isDevMode());
+}
+
+
+// ── Перевірені виходи зі станцій (ручна верифікація exits_catalog) ──────────
+
+function _readExitsVerified() {
+  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_EXITS_VERIFIED) || '{}'); }
+  catch(e) { return {}; }
+}
+
+function _writeExitsVerified(data) {
+  Storage.set(STORAGE_KEYS.DEV_EXITS_VERIFIED, JSON.stringify(data));
+}
+
+/**
+ * Повертає true якщо виходи станції були вручну позначені як перевірені.
+ * @param {string} slug
+ * @returns {boolean}
+ */
+export function isExitsCatalogVerified(slug) {
+  return !!_readExitsVerified()[slug];
+}
+
+/**
+ * Позначає виходи станції як перевірені (ручно).
+ * @param {string} slug
+ */
+export function setExitsCatalogVerified(slug) {
+  const data = _readExitsVerified();
+  data[slug] = true;
+  _writeExitsVerified(data);
+}
+
+/**
+ * Скидає ручне позначення «виходи перевірені» для станції.
+ * @param {string} slug
+ */
+export function resetExitsCatalogVerified(slug) {
+  const data = _readExitsVerified();
+  delete data[slug];
+  _writeExitsVerified(data);
+}
+
+/**
+ * Повертає об'єкт усіх ручних верифікацій виходів (для sync-пейлоада).
+ * @returns {Object}
+ */
+export function getAllExitsVerified() {
+  return _readExitsVerified();
 }
 
 // ── Очищення даних розробника ─────────────────────────

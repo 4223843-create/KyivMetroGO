@@ -17,6 +17,7 @@ import { getPositionDescriptorsForStation } from './renderStation.js';
 import {
   renderDevAuthSection, getAllDevNotes, getAllStationNotes,
   getDevBacklog, setDevBacklog, isVerified,
+  isExitsCatalogVerified, setExitsCatalogVerified, resetExitsCatalogVerified,
 } from '../features/devmode.js';
 
 const sheetOverlay = document.getElementById('sheetOverlay');
@@ -24,6 +25,7 @@ const sheetOverlay = document.getElementById('sheetOverlay');
 // Активний фільтр по гілці для секції "Потребують перевірки" —
 // живе тільки на час відкритої шторки, не зберігається між сесіями.
 let _verifyLine = '';
+let _exitsLine  = '';
 
 // ── Допоміжне: один рядок "станція → вихід" для секції "Нотатки" ──
 function _rowHtml(slug, stationName, descriptor, extra) {
@@ -183,6 +185,141 @@ function _setupCollapsibles(sheet) {
   });
 }
 
+
+// ── Класифікація станцій за заповненістю виходів ─────────────────────────────
+// «Заповнений вихід» = хоча б один exit_numbers із непорожнім num або text.
+//
+// Категорії:
+//   empty    — ВСІ виходи без жодного заповненого exit_numbers
+//   partial  — є хоча б один заповнений і хоча б один порожній,
+//              АБО всі заповнені, але станцію НЕ позначено як перевірену
+//   verified — лише через ручну дію (isExitsCatalogVerified)
+
+function _exitIsFilled(ev) {
+  const nums = ev.exit_numbers || ev.numbered_exits || [];
+  return nums.some(n => (n.num || '').trim() || (n.text || '').trim());
+}
+
+function _classifyStationExits(station) {
+  const catalog = station.exits_catalog;
+  if (!catalog || !Object.keys(catalog).length) return 'empty';
+  const exits = Object.values(catalog);
+  const filledCount = exits.filter(_exitIsFilled).length;
+  if (filledCount === 0) return 'empty';
+  return 'partial';
+}
+
+function _renderExitsSection(container) {
+  const stationsData = state.stationsData || {};
+
+  const empty    = [];
+  const partial  = [];
+  const verified = [];
+
+  for (const [slug, station] of Object.entries(stationsData)) {
+    if (_exitsLine && station.line !== _exitsLine) continue;
+    const color = LINE_COLOR[station.line] || '#888888';
+
+    if (isExitsCatalogVerified(slug)) {
+      verified.push({ slug, station, color });
+    } else {
+      const cat = _classifyStationExits(station);
+      if (cat === 'empty') empty.push({ slug, station, color });
+      else                 partial.push({ slug, station, color });
+    }
+  }
+
+  const byName = (a, b) => a.station.name.localeCompare(b.station.name, 'uk');
+  empty.sort(byName); partial.sort(byName); verified.sort(byName);
+
+  let html = '';
+
+  html += `<div class="dev-exits-sub-title">Незаповнені <span class="dev-exits-count">${empty.length}</span></div>`;
+  html += empty.length
+    ? empty.map(e => _exitStationRowHtml(e.slug, e.station, e.color, false)).join('')
+    : `<div class="dev-menu-empty">Немає незаповнених 🎉</div>`;
+
+  html += `<div class="dev-exits-sub-title dev-exits-sub-title--spaced">Частково заповнені <span class="dev-exits-count">${partial.length}</span></div>`;
+  html += partial.length
+    ? partial.map(e => _exitStationRowHtml(e.slug, e.station, e.color, false)).join('')
+    : `<div class="dev-menu-empty">Немає частково заповнених</div>`;
+
+  html += `<div class="dev-exits-sub-title dev-exits-sub-title--spaced">Перевірені <span class="dev-exits-count">${verified.length}</span></div>`;
+  html += verified.length
+    ? verified.map(e => _exitStationRowHtml(e.slug, e.station, e.color, true)).join('')
+    : `<div class="dev-menu-empty">Ще немає перевірених</div>`;
+
+  container.innerHTML = html;
+  _bindExitsClicks(container);
+}
+
+function _exitStationRowHtml(slug, station, color, isVer) {
+  const catalog = station.exits_catalog || {};
+  const total   = Object.keys(catalog).length;
+  const filled  = Object.values(catalog).filter(_exitIsFilled).length;
+  const hint    = total === 0 ? 'немає виходів у каталозі' : `${filled} / ${total} виходів заповнено`;
+
+  const btn = isVer
+    ? `<button type="button" class="dev-exits-reset-btn" data-slug="${slug}">Скинути</button>`
+    : `<button type="button" class="dev-exits-verify-btn" data-slug="${slug}">Виходи перевірені</button>`;
+
+  return `<div class="dev-exits-row${isVer ? ' dev-exits-row--verified' : ''}" data-slug="${slug}">
+    <div class="dev-exits-row-info">
+      <div class="search-item-line" style="background-color:${color}"></div>
+      <div>
+        <div class="dev-menu-row-station">${station.name}</div>
+        <div class="dev-menu-row-detail">${hint}</div>
+      </div>
+    </div>
+    ${btn}
+  </div>`;
+}
+
+function _bindExitsClicks(container) {
+  container.querySelectorAll('.dev-exits-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('.dev-exits-verify-btn, .dev-exits-reset-btn')) return;
+      const { slug } = row.dataset;
+      if (slug) bus.emit('station:open', { slug });
+    });
+  });
+
+  container.querySelectorAll('.dev-exits-verify-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      setExitsCatalogVerified(btn.dataset.slug);
+      const el = document.getElementById('devMenuExits');
+      if (el) { _renderExitsSection(el); }
+    });
+  });
+
+  container.querySelectorAll('.dev-exits-reset-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      resetExitsCatalogVerified(btn.dataset.slug);
+      const el = document.getElementById('devMenuExits');
+      if (el) { _renderExitsSection(el); }
+    });
+  });
+}
+
+function _bindExitsLineFilter(sheet) {
+  if (!sheet) return;
+  const filter = sheet.querySelector('#devExitsLineFilter');
+  if (!filter || filter.dataset.bound) return;
+  filter.dataset.bound = '1';
+
+  filter.addEventListener('click', e => {
+    const btn = e.target.closest('.search-line-btn');
+    if (!btn) return;
+    filter.querySelectorAll('.search-line-btn').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    _exitsLine = btn.dataset.line;
+    const el = sheet.querySelector('#devMenuExits');
+    if (el) _renderExitsSection(el);
+  });
+}
+
 function _renderAll(sheet) {
   const notesEl   = sheet.querySelector('#devMenuNotes');
   const verifyEl  = sheet.querySelector('#devMenuVerify');
@@ -191,6 +328,8 @@ function _renderAll(sheet) {
 
   if (notesEl)  { _renderNotesSection(notesEl);  _bindNotesClicks(notesEl); }
   if (verifyEl) { _renderVerificationSection(verifyEl); _bindVerifyClicks(verifyEl); _bindVerifyLineFilter(sheet); }
+  const exitsEl  = sheet.querySelector('#devMenuExits');
+  if (exitsEl)  { _renderExitsSection(exitsEl); _bindExitsLineFilter(sheet); }
   if (backlogEl && !backlogEl.dataset.bound) {
     backlogEl.value = getDevBacklog();
     backlogEl.addEventListener('input', () => setDevBacklog(backlogEl.value));
