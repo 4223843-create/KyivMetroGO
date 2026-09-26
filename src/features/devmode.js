@@ -174,16 +174,85 @@ function _applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified) {
   }
   return result;
 }
-
-function _mergeBacklog(local, cloud) {
+const DEV_BACKLOG_SYNC_BASE_KEY = 'dev_backlog_last_synced';
+function _mergeBacklog(local, cloud, base) {
   const l = (local || '').trim();
   const c = (cloud || '').trim();
-  if (!l) return c;
-  if (!c) return l;
-  if (l === c) return l;
-  // Обидва боки мають різний текст — не обираємо один замість іншого,
-  // а зберігаємо обидва, щоб нічого не загубилось.
-  return c && !l.includes(c) ? `${l}\n\n— з іншого пристрою —\n${c}` : l;
+  const b = (base || '').trim();
+
+  // Нічого немає
+  if (!l && !c) return '';
+
+  // Перший запуск / немає попередньої синхронізованої версії
+  if (!b) {
+    if (!l) return c;
+    if (!c) return l;
+    if (l === c) return l;
+
+    // Якщо cloud є частиною local — локальна версія вже містить cloud
+    if (l.startsWith(c + '\n') || l === c) return l;
+
+    // Якщо local є частиною cloud — хмарна версія вже містить local
+    if (c.startsWith(l + '\n')) return c;
+
+    // Справді незалежні тексти
+    return `${l}\n\n— з іншого пристрою —\n${c}`;
+  }
+
+  // Нічого не змінилося локально
+  if (l === b) return c;
+
+  // Нічого не змінилося в хмарі
+  if (c === b) return l;
+
+  // Зміни відбулися тільки локально
+  if (l !== b && c === b) return l;
+
+  // Зміни відбулися тільки в cloud
+  if (l === b && c !== b) return c;
+
+  // Обидві сторони змінилися.
+  // Визначаємо додані частини відносно останньої
+  // синхронізованої версії.
+  const baseLines = b.split('\n');
+  const localLines = l.split('\n');
+  const cloudLines = c.split('\n');
+
+  function getAddedLines(currentLines) {
+    let i = 0;
+
+    while (
+      i < baseLines.length &&
+      i < currentLines.length &&
+      baseLines[i] === currentLines[i]
+    ) {
+      i++;
+    }
+
+    return currentLines.slice(i);
+  }
+
+  const localAdded = getAddedLines(localLines);
+  const cloudAdded = getAddedLines(cloudLines);
+
+  // Починаємо з базової версії.
+  const result = [...baseLines];
+
+  // Додаємо зміни cloud
+  for (const line of cloudAdded) {
+    if (!result.includes(line)) {
+      result.push(line);
+    }
+  }
+
+  // Додаємо локальні зміни
+  for (const line of localAdded) {
+    if (!result.includes(line)) {
+      result.push(line);
+    }
+  }
+
+  return result.join('\n').trim();
 }
 
 /** Той самий принцип, що й _mergeBacklog, але для {slug: текст} — по кожній станції окремо. */
@@ -200,13 +269,19 @@ function _mergeStationNotes(local, cloud) {
 async function _performFullSync() {
   if (_syncInFlight) return 'busy';
   _syncInFlight = true;
+
   try {
     const cloudData = await downloadDevState();
 
-    const localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}');
+    const localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
     const localBacklog       = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
     const localConfirmations = getAllDevConfirmations();
     const localStationNotes  = getAllStationNotes();
+
+    // Остання версія backlog, яка була успішно синхронізована
+    // цим пристроєм.
+    const lastSyncedBacklog =
+      Storage.get(DEV_BACKLOG_SYNC_BASE_KEY) || '';
 
     let mergedNotes         = localNotes;
     let mergedBacklog       = localBacklog;
@@ -215,34 +290,88 @@ async function _performFullSync() {
     let changed = false;
 
     if (cloudData) {
-      mergedNotes         = _mergeKeyedMap(localNotes, cloudData.notes);
-      mergedBacklog        = _mergeBacklog(localBacklog, cloudData.backlog);
-      mergedConfirmations  = _mergeConfirmations(localConfirmations, cloudData.confirmations);
-      mergedStationNotes   = _mergeStationNotes(localStationNotes, cloudData.stationNotes);
-      // "verified" — застарілий формат дроту (до появи finalConfirmed) —
-      // домішуємо додатково, щоб старі синхронізовані дані не загубились.
-      mergedConfirmations  = _applyCloudVerifiedIntoConfirmations(mergedConfirmations, cloudData.verified);
+      mergedNotes = _mergeKeyedMap(
+        localNotes,
+        cloudData.notes
+      );
 
-      changed = JSON.stringify(mergedNotes)    !== JSON.stringify(localNotes)
-             || mergedBacklog                   !== localBacklog
-             || JSON.stringify(mergedConfirmations) !== JSON.stringify(localConfirmations)
-             || JSON.stringify(mergedStationNotes)  !== JSON.stringify(localStationNotes);
+      mergedBacklog = _mergeBacklog(
+        localBacklog,
+        cloudData.backlog || '',
+        lastSyncedBacklog
+      );
+
+      mergedConfirmations = _mergeConfirmations(
+        localConfirmations,
+        cloudData.confirmations
+      );
+
+      mergedStationNotes = _mergeStationNotes(
+        localStationNotes,
+        cloudData.stationNotes
+      );
+
+      // "verified" — застарілий формат дроту.
+      mergedConfirmations = _applyCloudVerifiedIntoConfirmations(
+        mergedConfirmations,
+        cloudData.verified
+      );
+
+      changed =
+        JSON.stringify(mergedNotes) !== JSON.stringify(localNotes)
+        || mergedBacklog !== localBacklog
+        || JSON.stringify(mergedConfirmations) !== JSON.stringify(localConfirmations)
+        || JSON.stringify(mergedStationNotes) !== JSON.stringify(localStationNotes);
 
       if (changed) {
-        Storage.set(STORAGE_KEYS.DEV_NOTES,         JSON.stringify(mergedNotes));
-        Storage.set(STORAGE_KEYS.DEV_BACKLOG,       mergedBacklog);
-        Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(mergedConfirmations));
-        Storage.set(STORAGE_KEYS.DEV_STATION_NOTES, JSON.stringify(mergedStationNotes));
+        Storage.set(
+          STORAGE_KEYS.DEV_NOTES,
+          JSON.stringify(mergedNotes)
+        );
+
+        Storage.set(
+          STORAGE_KEYS.DEV_BACKLOG,
+          mergedBacklog
+        );
+
+        Storage.set(
+          STORAGE_KEYS.DEV_CONFIRMATIONS,
+          JSON.stringify(mergedConfirmations)
+        );
+
+        Storage.set(
+          STORAGE_KEYS.DEV_STATION_NOTES,
+          JSON.stringify(mergedStationNotes)
+        );
+
         bus.emit('station:refresh');
         bus.emit('devmenu:refresh');
       }
     }
 
-    const verifiedForWire = _deriveVerifiedFromConfirmations(mergedConfirmations);
-    await uploadDevState(mergedNotes, verifiedForWire, mergedBacklog, mergedConfirmations, mergedStationNotes);
+    const verifiedForWire =
+      _deriveVerifiedFromConfirmations(mergedConfirmations);
+
+    // Спочатку успішно записуємо об'єднаний стан у cloud.
+    await uploadDevState(
+      mergedNotes,
+      verifiedForWire,
+      mergedBacklog,
+      mergedConfirmations,
+      mergedStationNotes
+    );
+
+    // Тільки ПІСЛЯ успішного upload ця версія стає
+    // новою базою для наступного 3-way merge.
+    Storage.set(
+      DEV_BACKLOG_SYNC_BASE_KEY,
+      mergedBacklog
+    );
+
     await _syncPhotos();
 
     return changed ? 'downloaded' : 'uploaded';
+
   } finally {
     _syncInFlight = false;
   }
@@ -1383,15 +1512,21 @@ function setupDevDataClear(container) {
         document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
         bus.emit('ui:confirm', {
           message:  'Очистити всі дані режиму розробника?',
-          onYes:    async () => {
-            Storage.remove(STORAGE_KEYS.DEV_LOG);
-            Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
-            Storage.remove(STORAGE_KEYS.DEV_NOTES);
-            await PhotoStorage.clearAllPhotos().catch(err =>
-              console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
-            );
-            setTimeout(() => location.reload(), 180);
-          },
+          onYes: async () => {
+  Storage.remove(STORAGE_KEYS.DEV_LOG);
+  Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
+  Storage.remove(STORAGE_KEYS.DEV_NOTES);
+  Storage.remove(STORAGE_KEYS.DEV_BACKLOG);
+  Storage.remove(STORAGE_KEYS.DEV_CONFIRMATIONS);
+  Storage.remove(STORAGE_KEYS.DEV_STATION_NOTES);
+  Storage.remove(DEV_BACKLOG_SYNC_BASE_KEY);
+
+  await PhotoStorage.clearAllPhotos().catch(err =>
+    console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
+  );
+
+  setTimeout(() => location.reload(), 180);
+},
           onNo:      null,
           onCancel:  null,
           labelYes:  'Очистити',

@@ -330,10 +330,13 @@ function _renderAll(sheet) {
   if (verifyEl) { _renderVerificationSection(verifyEl); _bindVerifyClicks(verifyEl); _bindVerifyLineFilter(sheet); }
   const exitsEl  = sheet.querySelector('#devMenuExits');
   if (exitsEl)  { _renderExitsSection(exitsEl); _bindExitsLineFilter(sheet); }
-  if (backlogEl && !backlogEl.dataset.bound) {
+  if (backlogEl) {
+    // Оновлюємо значення поля актуальними даними при кожному відкритті/рендері
     backlogEl.value = getDevBacklog();
-    backlogEl.addEventListener('input', () => setDevBacklog(backlogEl.value));
-    backlogEl.dataset.bound = '1';
+    if (!backlogEl.dataset.bound) {
+      backlogEl.addEventListener('input', () => setDevBacklog(backlogEl.value));
+      backlogEl.dataset.bound = '1';
+    }
   }
   if (authEl) renderDevAuthSection(authEl);
 
