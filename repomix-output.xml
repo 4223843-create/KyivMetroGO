@@ -5735,6 +5735,128 @@ export async function downloadDevPhoto(photoId) {
 }
 </file>
 
+<file path="src/map/mapInit.js">
+import svgText from '../../KyivMetroScheme.svg?raw';
+import { state }                        from '../core/state.js';
+import { renderMapZones, checkAppReady } from '../data/stations.js';
+import { applyVisitedHatchOverlays } from './mapInteraction.js';
+
+// ══ ІНІЦІАЛІЗАЦІЯ КАРТИ ══
+// Відповідальність: вставка SVG, розрахунок масштабу та центрування,
+// адаптація висоти viewport під реальний розмір екрана (враховує адресний рядок браузера).
+
+
+const vp    = document.getElementById('mapViewport');
+const inner = document.getElementById('mapInner');
+
+export const BASE_MAP_WIDTH  = 1195.84;
+export const BASE_MAP_HEIGHT = 840;
+const CENTER_X = 0.485;
+const CENTER_Y = 0.5;
+
+setTimeout(() => {
+  vp?.classList.remove('is-loading');
+  document.getElementById('startupLoader')?.classList.add('hidden');
+}, 10_000);
+
+/**
+ * Встановлює висоту mapViewport рівно до нижнього краю екрана.
+ * Враховує візуальний viewport (window.visualViewport) для коректної роботи
+ * в мобільних браузерах з динамічною адресною панеллю.
+ */
+export function adjustViewportHeight() {
+  if (!vp) return;
+  const top   = vp.getBoundingClientRect().top;
+  const avail = Math.floor((window.visualViewport?.height ?? window.innerHeight) - top - 8);
+  vp.style.height = Math.max(120, avail) + 'px';
+}
+
+/**
+ * Вираховує початковий масштаб карти та вирівнює видимість по центру схеми.
+ * На вузьких екранах (≤500px) застосовує коефіцієнт 4.5 замість 1.5
+ * щоб схема одразу виглядала читабельно без ручного масштабування.
+ */
+export function applyZoomAndCenter() {
+  const svgEl = inner.querySelector('svg');
+  if (svgEl) {
+    svgEl.style.width   = '100%';
+    svgEl.style.height  = '100%';
+    svgEl.style.display = 'block';
+  }
+
+  const w      = Math.min(window.innerWidth, document.documentElement.clientWidth);
+  const sf     = w <= 500 ? 4.5 : 1.5;
+  const minZoom = vp.clientWidth / BASE_MAP_WIDTH;
+  const zoom   = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / BASE_MAP_WIDTH));
+
+  const newW = Math.round(BASE_MAP_WIDTH  * zoom);
+  const newH = Math.round(BASE_MAP_HEIGHT * zoom);
+
+  inner.style.width  = newW + 'px';
+  inner.style.height = newH + 'px';
+
+  const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
+  const padY = Math.max(0, (vp.clientHeight - newH) / 2);
+  inner.style.marginLeft = padX + 'px';
+  inner.style.marginTop  = padY + 'px';
+
+  requestAnimationFrame(() => {
+    vp.scrollLeft = Math.max(0, padX + newW * CENTER_X - vp.clientWidth  / 2);
+    vp.scrollTop  = Math.max(0, padY + newH * CENTER_Y - vp.clientHeight / 2);
+    state.isMapReady = true;
+    checkAppReady();
+    applyVisitedHatchOverlays();
+    
+    vp?.classList.remove('is-loading');
+    document.getElementById('startupLoader')?.classList.add('hidden');
+  });
+}
+
+/**
+ * Вставляє SVG-схему метро в DOM та запускає початковий рендер.
+ * Викликається один раз з main.js під час bootstrap.
+ */
+/**
+ * Вставляє SVG-схему метро в DOM та запускає початковий рендер.
+ * Викликається один раз з main.js під час bootstrap.
+ */
+export function initMap() {
+  inner.innerHTML = svgText;
+
+  const svgEl = inner.querySelector('svg');
+  if (svgEl) {
+    const styleTag = document.getElementById('mapHacksStyle') || document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleTag.id = 'mapHacksStyle';
+    
+    styleTag.textContent = `
+      /* УЛЬТИМАТИВНИЙ ХАК ПРОТИ ПРИМУСОВОЇ ІНВЕРСІЇ CHROMIUM */
+      #mapInner path[aria-label] {
+        fill: #000000 !important;
+        
+        /* Якщо Хром насильно вибілить літери для "контрасту", 
+           цей фільтр схопить уже готовий білий рендер і розчавить його яскравість до 0.
+           Результат: залізобетонний чорний колір у будь-якій темі! */
+        filter: brightness(0) !important;
+      }
+    `;
+    svgEl.appendChild(styleTag);
+  }
+
+  renderMapZones();
+  adjustViewportHeight();
+  applyZoomAndCenter();
+}
+
+// ── Resize ────────────────────────────────────────────────────
+let resizeTimer;
+const onResize = () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120);
+};
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
+</file>
+
 <file path="src/sheets/devMenuSheet.js">
 // ══ МЕНЮ РОЗРОБНИКА ══
 // Окрема повноекранна шторка, доступна плаваючою кнопкою зверху карти
@@ -6116,128 +6238,6 @@ export function openDevMenuSheet() {
 // Дозволяє відкрити меню розробника зовні (наприклад, з компактної кнопки
 // в About-шторці, коли розробник ще не залогінений і треба показати форму входу).
 bus.on('devmenu:open', openDevMenuSheet);
-</file>
-
-<file path="src/map/mapInit.js">
-import svgText from '../../KyivMetroScheme.svg?raw';
-import { state }                        from '../core/state.js';
-import { renderMapZones, checkAppReady } from '../data/stations.js';
-import { applyVisitedHatchOverlays } from './mapInteraction.js';
-
-// ══ ІНІЦІАЛІЗАЦІЯ КАРТИ ══
-// Відповідальність: вставка SVG, розрахунок масштабу та центрування,
-// адаптація висоти viewport під реальний розмір екрана (враховує адресний рядок браузера).
-
-
-const vp    = document.getElementById('mapViewport');
-const inner = document.getElementById('mapInner');
-
-export const BASE_MAP_WIDTH  = 1195.84;
-export const BASE_MAP_HEIGHT = 840;
-const CENTER_X = 0.485;
-const CENTER_Y = 0.5;
-
-setTimeout(() => {
-  vp?.classList.remove('is-loading');
-  document.getElementById('startupLoader')?.classList.add('hidden');
-}, 10_000);
-
-/**
- * Встановлює висоту mapViewport рівно до нижнього краю екрана.
- * Враховує візуальний viewport (window.visualViewport) для коректної роботи
- * в мобільних браузерах з динамічною адресною панеллю.
- */
-export function adjustViewportHeight() {
-  if (!vp) return;
-  const top   = vp.getBoundingClientRect().top;
-  const avail = Math.floor((window.visualViewport?.height ?? window.innerHeight) - top - 8);
-  vp.style.height = Math.max(120, avail) + 'px';
-}
-
-/**
- * Вираховує початковий масштаб карти та вирівнює видимість по центру схеми.
- * На вузьких екранах (≤500px) застосовує коефіцієнт 4.5 замість 1.5
- * щоб схема одразу виглядала читабельно без ручного масштабування.
- */
-export function applyZoomAndCenter() {
-  const svgEl = inner.querySelector('svg');
-  if (svgEl) {
-    svgEl.style.width   = '100%';
-    svgEl.style.height  = '100%';
-    svgEl.style.display = 'block';
-  }
-
-  const w      = Math.min(window.innerWidth, document.documentElement.clientWidth);
-  const sf     = w <= 500 ? 4.5 : 1.5;
-  const minZoom = vp.clientWidth / BASE_MAP_WIDTH;
-  const zoom   = Math.max(minZoom, Math.min(4.0, Math.round(vp.clientWidth * sf) / BASE_MAP_WIDTH));
-
-  const newW = Math.round(BASE_MAP_WIDTH  * zoom);
-  const newH = Math.round(BASE_MAP_HEIGHT * zoom);
-
-  inner.style.width  = newW + 'px';
-  inner.style.height = newH + 'px';
-
-  const padX = Math.max(0, (vp.clientWidth  - newW) / 2);
-  const padY = Math.max(0, (vp.clientHeight - newH) / 2);
-  inner.style.marginLeft = padX + 'px';
-  inner.style.marginTop  = padY + 'px';
-
-  requestAnimationFrame(() => {
-    vp.scrollLeft = Math.max(0, padX + newW * CENTER_X - vp.clientWidth  / 2);
-    vp.scrollTop  = Math.max(0, padY + newH * CENTER_Y - vp.clientHeight / 2);
-    state.isMapReady = true;
-    checkAppReady();
-    applyVisitedHatchOverlays();
-    
-    vp?.classList.remove('is-loading');
-    document.getElementById('startupLoader')?.classList.add('hidden');
-  });
-}
-
-/**
- * Вставляє SVG-схему метро в DOM та запускає початковий рендер.
- * Викликається один раз з main.js під час bootstrap.
- */
-/**
- * Вставляє SVG-схему метро в DOM та запускає початковий рендер.
- * Викликається один раз з main.js під час bootstrap.
- */
-export function initMap() {
-  inner.innerHTML = svgText;
-
-  const svgEl = inner.querySelector('svg');
-  if (svgEl) {
-    const styleTag = document.getElementById('mapHacksStyle') || document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    styleTag.id = 'mapHacksStyle';
-    
-    styleTag.textContent = `
-      /* УЛЬТИМАТИВНИЙ ХАК ПРОТИ ПРИМУСОВОЇ ІНВЕРСІЇ CHROMIUM */
-      #mapInner path[aria-label] {
-        fill: #000000 !important;
-        
-        /* Якщо Хром насильно вибілить літери для "контрасту", 
-           цей фільтр схопить уже готовий білий рендер і розчавить його яскравість до 0.
-           Результат: залізобетонний чорний колір у будь-якій темі! */
-        filter: brightness(0) !important;
-      }
-    `;
-    svgEl.appendChild(styleTag);
-  }
-
-  renderMapZones();
-  adjustViewportHeight();
-  applyZoomAndCenter();
-}
-
-// ── Resize ────────────────────────────────────────────────────
-let resizeTimer;
-const onResize = () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { adjustViewportHeight(); applyZoomAndCenter(); }, 120);
-};
-window.addEventListener('resize', onResize);
-window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
 </file>
 
 <file path="src/sheets/sheetsManager.js">
@@ -10163,16 +10163,85 @@ function _applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified) {
   }
   return result;
 }
-
-function _mergeBacklog(local, cloud) {
+const DEV_BACKLOG_SYNC_BASE_KEY = 'dev_backlog_last_synced';
+function _mergeBacklog(local, cloud, base) {
   const l = (local || '').trim();
   const c = (cloud || '').trim();
-  if (!l) return c;
-  if (!c) return l;
-  if (l === c) return l;
-  // Обидва боки мають різний текст — не обираємо один замість іншого,
-  // а зберігаємо обидва, щоб нічого не загубилось.
-  return c && !l.includes(c) ? `${l}\n\n— з іншого пристрою —\n${c}` : l;
+  const b = (base || '').trim();
+
+  // Нічого немає
+  if (!l && !c) return '';
+
+  // Перший запуск / немає попередньої синхронізованої версії
+  if (!b) {
+    if (!l) return c;
+    if (!c) return l;
+    if (l === c) return l;
+
+    // Якщо cloud є частиною local — локальна версія вже містить cloud
+    if (l.startsWith(c + '\n') || l === c) return l;
+
+    // Якщо local є частиною cloud — хмарна версія вже містить local
+    if (c.startsWith(l + '\n')) return c;
+
+    // Справді незалежні тексти
+    return `${l}\n\n— з іншого пристрою —\n${c}`;
+  }
+
+  // Нічого не змінилося локально
+  if (l === b) return c;
+
+  // Нічого не змінилося в хмарі
+  if (c === b) return l;
+
+  // Зміни відбулися тільки локально
+  if (l !== b && c === b) return l;
+
+  // Зміни відбулися тільки в cloud
+  if (l === b && c !== b) return c;
+
+  // Обидві сторони змінилися.
+  // Визначаємо додані частини відносно останньої
+  // синхронізованої версії.
+  const baseLines = b.split('\n');
+  const localLines = l.split('\n');
+  const cloudLines = c.split('\n');
+
+  function getAddedLines(currentLines) {
+    let i = 0;
+
+    while (
+      i < baseLines.length &&
+      i < currentLines.length &&
+      baseLines[i] === currentLines[i]
+    ) {
+      i++;
+    }
+
+    return currentLines.slice(i);
+  }
+
+  const localAdded = getAddedLines(localLines);
+  const cloudAdded = getAddedLines(cloudLines);
+
+  // Починаємо з базової версії.
+  const result = [...baseLines];
+
+  // Додаємо зміни cloud
+  for (const line of cloudAdded) {
+    if (!result.includes(line)) {
+      result.push(line);
+    }
+  }
+
+  // Додаємо локальні зміни
+  for (const line of localAdded) {
+    if (!result.includes(line)) {
+      result.push(line);
+    }
+  }
+
+  return result.join('\n').trim();
 }
 
 /** Той самий принцип, що й _mergeBacklog, але для {slug: текст} — по кожній станції окремо. */
@@ -10189,13 +10258,19 @@ function _mergeStationNotes(local, cloud) {
 async function _performFullSync() {
   if (_syncInFlight) return 'busy';
   _syncInFlight = true;
+
   try {
     const cloudData = await downloadDevState();
 
-    const localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES)    || '{}');
+    const localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
     const localBacklog       = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
     const localConfirmations = getAllDevConfirmations();
     const localStationNotes  = getAllStationNotes();
+
+    // Остання версія backlog, яка була успішно синхронізована
+    // цим пристроєм.
+    const lastSyncedBacklog =
+      Storage.get(DEV_BACKLOG_SYNC_BASE_KEY) || '';
 
     let mergedNotes         = localNotes;
     let mergedBacklog       = localBacklog;
@@ -10204,34 +10279,88 @@ async function _performFullSync() {
     let changed = false;
 
     if (cloudData) {
-      mergedNotes         = _mergeKeyedMap(localNotes, cloudData.notes);
-      mergedBacklog        = _mergeBacklog(localBacklog, cloudData.backlog);
-      mergedConfirmations  = _mergeConfirmations(localConfirmations, cloudData.confirmations);
-      mergedStationNotes   = _mergeStationNotes(localStationNotes, cloudData.stationNotes);
-      // "verified" — застарілий формат дроту (до появи finalConfirmed) —
-      // домішуємо додатково, щоб старі синхронізовані дані не загубились.
-      mergedConfirmations  = _applyCloudVerifiedIntoConfirmations(mergedConfirmations, cloudData.verified);
+      mergedNotes = _mergeKeyedMap(
+        localNotes,
+        cloudData.notes
+      );
 
-      changed = JSON.stringify(mergedNotes)    !== JSON.stringify(localNotes)
-             || mergedBacklog                   !== localBacklog
-             || JSON.stringify(mergedConfirmations) !== JSON.stringify(localConfirmations)
-             || JSON.stringify(mergedStationNotes)  !== JSON.stringify(localStationNotes);
+      mergedBacklog = _mergeBacklog(
+        localBacklog,
+        cloudData.backlog || '',
+        lastSyncedBacklog
+      );
+
+      mergedConfirmations = _mergeConfirmations(
+        localConfirmations,
+        cloudData.confirmations
+      );
+
+      mergedStationNotes = _mergeStationNotes(
+        localStationNotes,
+        cloudData.stationNotes
+      );
+
+      // "verified" — застарілий формат дроту.
+      mergedConfirmations = _applyCloudVerifiedIntoConfirmations(
+        mergedConfirmations,
+        cloudData.verified
+      );
+
+      changed =
+        JSON.stringify(mergedNotes) !== JSON.stringify(localNotes)
+        || mergedBacklog !== localBacklog
+        || JSON.stringify(mergedConfirmations) !== JSON.stringify(localConfirmations)
+        || JSON.stringify(mergedStationNotes) !== JSON.stringify(localStationNotes);
 
       if (changed) {
-        Storage.set(STORAGE_KEYS.DEV_NOTES,         JSON.stringify(mergedNotes));
-        Storage.set(STORAGE_KEYS.DEV_BACKLOG,       mergedBacklog);
-        Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(mergedConfirmations));
-        Storage.set(STORAGE_KEYS.DEV_STATION_NOTES, JSON.stringify(mergedStationNotes));
+        Storage.set(
+          STORAGE_KEYS.DEV_NOTES,
+          JSON.stringify(mergedNotes)
+        );
+
+        Storage.set(
+          STORAGE_KEYS.DEV_BACKLOG,
+          mergedBacklog
+        );
+
+        Storage.set(
+          STORAGE_KEYS.DEV_CONFIRMATIONS,
+          JSON.stringify(mergedConfirmations)
+        );
+
+        Storage.set(
+          STORAGE_KEYS.DEV_STATION_NOTES,
+          JSON.stringify(mergedStationNotes)
+        );
+
         bus.emit('station:refresh');
         bus.emit('devmenu:refresh');
       }
     }
 
-    const verifiedForWire = _deriveVerifiedFromConfirmations(mergedConfirmations);
-    await uploadDevState(mergedNotes, verifiedForWire, mergedBacklog, mergedConfirmations, mergedStationNotes);
+    const verifiedForWire =
+      _deriveVerifiedFromConfirmations(mergedConfirmations);
+
+    // Спочатку успішно записуємо об'єднаний стан у cloud.
+    await uploadDevState(
+      mergedNotes,
+      verifiedForWire,
+      mergedBacklog,
+      mergedConfirmations,
+      mergedStationNotes
+    );
+
+    // Тільки ПІСЛЯ успішного upload ця версія стає
+    // новою базою для наступного 3-way merge.
+    Storage.set(
+      DEV_BACKLOG_SYNC_BASE_KEY,
+      mergedBacklog
+    );
+
     await _syncPhotos();
 
     return changed ? 'downloaded' : 'uploaded';
+
   } finally {
     _syncInFlight = false;
   }
@@ -11372,15 +11501,21 @@ function setupDevDataClear(container) {
         document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
         bus.emit('ui:confirm', {
           message:  'Очистити всі дані режиму розробника?',
-          onYes:    async () => {
-            Storage.remove(STORAGE_KEYS.DEV_LOG);
-            Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
-            Storage.remove(STORAGE_KEYS.DEV_NOTES);
-            await PhotoStorage.clearAllPhotos().catch(err =>
-              console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
-            );
-            setTimeout(() => location.reload(), 180);
-          },
+          onYes: async () => {
+  Storage.remove(STORAGE_KEYS.DEV_LOG);
+  Storage.remove(STORAGE_KEYS.DEV_VERIFIED);
+  Storage.remove(STORAGE_KEYS.DEV_NOTES);
+  Storage.remove(STORAGE_KEYS.DEV_BACKLOG);
+  Storage.remove(STORAGE_KEYS.DEV_CONFIRMATIONS);
+  Storage.remove(STORAGE_KEYS.DEV_STATION_NOTES);
+  Storage.remove(DEV_BACKLOG_SYNC_BASE_KEY);
+
+  await PhotoStorage.clearAllPhotos().catch(err =>
+    console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
+  );
+
+  setTimeout(() => location.reload(), 180);
+},
           onNo:      null,
           onCancel:  null,
           labelYes:  'Очистити',

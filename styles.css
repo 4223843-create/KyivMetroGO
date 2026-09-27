@@ -3949,6 +3949,145 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   box-sizing: border-box;
 }
 
+/* ── Секція "Виходи зі станцій" ────────────────────────────── */
+.dev-exits-group {
+  border-bottom: 0.5px solid var(--border);
+}
+
+.dev-exits-group-toggle {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dev-exits-group-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+}
+
+.dev-exits-count {
+  color: var(--text-muted);
+  font-weight: var(--fw-normal);
+  margin-left: 4px;
+}
+
+.dev-exits-group-arrow {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.dev-exits-group.is-collapsed .dev-exits-group-arrow {
+  transform: rotate(-90deg);
+}
+
+.dev-exits-group-body {
+  padding-bottom: 6px;
+}
+
+.dev-exits-group.is-collapsed .dev-exits-group-body {
+  display: none;
+}
+
+.dev-exits-empty {
+  padding: 6px 0;
+  text-align: left;
+  opacity: 0.5;
+}
+
+.dev-exits-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 0.5px solid var(--border);
+  width: 100%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dev-exits-row:first-child {
+  border-top: none;
+}
+
+.dev-exits-row-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dev-exits-row-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dev-exits-row-name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal);
+  color: var(--text);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Перевірені станції — назва приглушена */
+.dev-exits-row--full .dev-exits-row-name {
+  color: var(--text-muted);
+}
+
+.dev-exits-check-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.dev-exits-counter {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dev-exits-cycle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 0;
+}
+
+.dev-exits-cycle-btn:active {
+  opacity: 0.5;
+}
+
+.dev-exits-check {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transition: color 0.15s, opacity 0.15s;
+}
+
+.dev-exits-check svg {
+  width: 20px;
+  height: 20px;
+}
+
 .dev-note-actions button.confirm-btn-discard {
   border-left: 3px solid var(--line-red);
   border-right: 3px solid var(--line-red);

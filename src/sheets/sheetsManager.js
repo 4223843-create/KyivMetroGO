@@ -13,6 +13,7 @@ import { reloadStationsData, getSlugByLower } from '../data/stations.js';
 import { animateSheetClose }  from '../ui/animations.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { closeAllDevPanels } from '../features/devmode.js';
 
 export { openStation, openAboutSheet, withUnsavedCheck };
 
@@ -32,6 +33,7 @@ export function closeAllSheets(force = false) {
   if (!force) {
     if (withUnsavedCheck(() => closeAllSheets(true))) return false;
   }
+  closeAllDevPanels();
 
   const openSheets = [...document.querySelectorAll('.station-sheet.sheet-open')];
   const dropMenu   = document.getElementById('dropMenu');

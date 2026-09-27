@@ -479,6 +479,7 @@ export function setDevNote(slug, posIdx, text) {
     }
     Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(notes));
     _touchSyncTimestamp();
+    _forcePushNotesToCloud(slug, posIdx);
   } catch(e) {}
 }
 
@@ -597,6 +598,56 @@ async function _forcePushPositionToCloud(slug, posIdx) {
   }
 }
 
+async function _forcePushNotesToCloud(slug, posIdx) {
+  if (!_devUser) return;
+  try {
+    const cloudData = await downloadDevState();
+    const cloudNotes = cloudData?.notes ? { ...cloudData.notes } : {};
+    const localNotes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
+
+    if (localNotes[slug]?.[posIdx]) {
+      if (!cloudNotes[slug]) cloudNotes[slug] = {};
+      cloudNotes[slug][posIdx] = localNotes[slug][posIdx];
+    } else {
+      if (cloudNotes[slug]) {
+        delete cloudNotes[slug][posIdx];
+        if (!Object.keys(cloudNotes[slug]).length) delete cloudNotes[slug];
+      }
+    }
+
+    const confirmations = cloudData?.confirmations || getAllDevConfirmations();
+    const backlog       = cloudData?.backlog ?? (Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '');
+    const stationNotes  = cloudData?.stationNotes || getAllStationNotes();
+    const verified      = _deriveVerifiedFromConfirmations(confirmations);
+    await uploadDevState(localNotes, verified, backlog, confirmations, stationNotes);
+  } catch (err) {
+    console.warn('[KyivMetroGO] Помилка синхронізації нотатки:', err);
+  }
+}
+
+async function _forcePushStationNoteToCloud(slug) {
+  if (!_devUser) return;
+  try {
+    const cloudData = await downloadDevState();
+    const cloudStationNotes = cloudData?.stationNotes ? { ...cloudData.stationNotes } : {};
+    const localStationNotes = getAllStationNotes();
+
+    if (localStationNotes[slug]) {
+      cloudStationNotes[slug] = localStationNotes[slug];
+    } else {
+      delete cloudStationNotes[slug];
+    }
+
+    const notes         = cloudData?.notes || JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
+    const confirmations = cloudData?.confirmations || getAllDevConfirmations();
+    const backlog       = cloudData?.backlog ?? (Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '');
+    const verified      = _deriveVerifiedFromConfirmations(confirmations);
+    await uploadDevState(notes, verified, backlog, confirmations, cloudStationNotes);
+  } catch (err) {
+    console.warn('[KyivMetroGO] Помилка синхронізації нотатки станції:', err);
+  }
+}
+
 /**
  * Скасовує ОСТАННЮ дію (один рівень назад) — повертає стан, який був
  * безпосередньо перед нею. Повторний виклик без нової дії між ними нічого
@@ -671,15 +722,22 @@ const STATION_NOTE_SAVE_DEBOUNCE_MS = 800;
 let _stationNoteSaveTimer = null;
 
 /** Зберігає загальну нотатку станції з дебаунсом. */
-export function setStationNote(slug, text) {
+export function setStationNote(slug, text, debounce = true) {
   clearTimeout(_stationNoteSaveTimer);
-  _stationNoteSaveTimer = setTimeout(() => {
+  const doSave = () => {
     const all = _readStationNotes();
     if (text) all[slug] = text;
     else delete all[slug];
     Storage.set(STORAGE_KEYS.DEV_STATION_NOTES, JSON.stringify(all));
     _touchSyncTimestamp();
-  }, STATION_NOTE_SAVE_DEBOUNCE_MS);
+    _forcePushStationNoteToCloud(slug);
+  };
+
+  if (debounce) {
+    _stationNoteSaveTimer = setTimeout(doSave, STATION_NOTE_SAVE_DEBOUNCE_MS);
+  } else {
+    doSave();
+  }
 }
 
 /**
@@ -708,7 +766,11 @@ export function setupDevStationNoteButton(sheet, slug, lineColor) {
     panel.innerHTML = '';
     _lastStationNoteSlug = null;
     return;
+
+
   }
+
+
 
   if (slug !== _lastStationNoteSlug) {
     // Це інша станція, ніж та, для якої панель могла бути відкрита —
@@ -737,23 +799,44 @@ function _toggleStationNotePanel(panel, slug, lineColor, btn, defaultColor) {
     return;
   }
 
+  // Закриваємо та видаляємо відкриті нотатки виходів, але НЕ панель станції
+  document.querySelectorAll('.dev-note-panel').forEach(p => {
+    if (p !== panel) {
+      p.classList.remove('panel-open');
+      setTimeout(() => p.remove(), 280);
+    }
+  });
+
   const currentText = getStationNote(slug);
   panel.innerHTML = `
     <textarea class="dev-note-textarea dev-station-note-textarea" placeholder="Загальна нотатка по станції…">${currentText}</textarea>
     <div class="dev-note-actions">
-      <button type="button" class="dev-station-note-close confirm-main-btn confirm-btn-neutral">Готово</button>
+      <button type="button" class="dev-station-note-save confirm-main-btn confirm-btn-save">Готово</button>
+      ${currentText ? `<button type="button" class="dev-station-note-delete confirm-btn-discard">Видалити</button>` : ''}
     </div>`;
 
   const textarea = panel.querySelector('textarea');
   textarea.addEventListener('input', () => {
-    setStationNote(slug, textarea.value);
-    btn.style.color = textarea.value ? lineColor : defaultColor;
+    setStationNote(slug, textarea.value, true);
+    btn.style.color = textarea.value.trim() ? lineColor : defaultColor;
   });
 
-  panel.querySelector('.dev-station-note-close').addEventListener('click', e => {
+  panel.querySelector('.dev-station-note-save').addEventListener('click', e => {
     e.stopPropagation();
+    setStationNote(slug, textarea.value.trim(), false);
+    btn.style.color = textarea.value.trim() ? lineColor : defaultColor;
     panel.classList.remove('panel-open');
   });
+
+  const deleteBtn = panel.querySelector('.dev-station-note-delete');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      setStationNote(slug, '', false);
+      btn.style.color = defaultColor;
+      panel.classList.remove('panel-open');
+    });
+  }
 
   panel.classList.add('panel-open');
   requestAnimationFrame(() => textarea.focus());
@@ -905,7 +988,9 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
 
   document.querySelectorAll('.dev-note-panel').forEach(p => {
     p.classList.remove('panel-open');
-    setTimeout(() => p.remove(), 280);
+    if (p.id !== 'devStationNotePanel') {
+      setTimeout(() => p.remove(), 280);
+    }
   });
 
   // Поточні фактичні вагон/двері цієї позиції — дефолт для степера виправлення.
@@ -1048,7 +1133,9 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
 
   document.querySelectorAll('.dev-note-panel').forEach(p => {
     p.classList.remove('panel-open');
-    setTimeout(() => p.remove(), 280);
+    if (p.id !== 'devStationNotePanel') {
+      setTimeout(() => p.remove(), 280);
+    }
   });
 
   const existingNote = getDevNote(slug, posIdx);
@@ -1138,7 +1225,9 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
 
   document.querySelectorAll('.dev-note-panel').forEach(p => {
     p.classList.remove('panel-open');
-    setTimeout(() => p.remove(), 280);
+    if (p.id !== 'devStationNotePanel') {
+      setTimeout(() => p.remove(), 280);
+    }
   });
 
   const panel = document.createElement('div');
@@ -1461,17 +1550,110 @@ function _writeExitsVerified(data) {
  * @param {string} slug
  * @returns {boolean}
  */
-export function isExitsCatalogVerified(slug) {
-  return !!_readExitsVerified()[slug];
+/**
+ * Повертає статус перевірки каталогу виходів: 'unverified' | 'partial' | 'full'
+ * Підтримує як старий формат ('partial'/'full'/true), так і новий {count, total}.
+ * @param {string} slug
+ * @returns {'unverified'|'partial'|'full'}
+ */
+export function getExitsCatalogStatus(slug) {
+  const val = _readExitsVerified()[slug];
+  if (!val) return 'unverified';
+  if (val === true || val === 'full') return 'full';
+  if (val === 'partial') return 'partial';
+  // Новий формат: { count, total }
+  if (typeof val === 'object' && val !== null) {
+    if (val.count >= val.total) return 'full';
+    if (val.count > 0) return 'partial';
+  }
+  return 'unverified';
 }
 
 /**
- * Позначає виходи станції як перевірені (ручно).
+ * Повертає лічильник підтверджених/загальних виходів для станції.
+ * Якщо станція у стані 'full' без лічильника — повертає { count: total, total }.
+ * @param {string} slug
+ * @param {number} total  — загальна кількість пронумерованих виходів
+ * @returns {{ count: number, total: number }}
+ */
+export function getExitsCatalogCount(slug, total) {
+  const val = _readExitsVerified()[slug];
+  if (!val) return { count: 0, total };
+  if (val === true || val === 'full') return { count: total, total };
+  if (val === 'partial') return { count: 0, total };
+  if (typeof val === 'object' && val !== null) {
+    return { count: val.count ?? 0, total: val.total ?? total };
+  }
+  return { count: 0, total };
+}
+
+/**
+ * Циклічно переходить між станами: unverified → partial(1) → partial(2) → … → full → unverified.
+ * Якщо лічильник досягає total — встановлює 'full'.
+ * @param {string} slug
+ * @param {number} total  — загальна кількість пронумерованих виходів
+ * @returns {'unverified'|'partial'|'full'}  — новий статус
+ */
+export function cycleExitsCatalogStatus(slug, total) {
+  const data = _readExitsVerified();
+  const val  = data[slug];
+
+  // full → скидаємо
+  if (val === true || val === 'full') {
+    delete data[slug];
+    _writeExitsVerified(data);
+    return 'unverified';
+  }
+
+  // { count, total } → інкремент
+  if (typeof val === 'object' && val !== null) {
+    const next = (val.count ?? 0) + 1;
+    if (next >= total) {
+      data[slug] = 'full';
+      _writeExitsVerified(data);
+      return 'full';
+    }
+    data[slug] = { count: next, total };
+    _writeExitsVerified(data);
+    return 'partial';
+  }
+
+  // unverified / 'partial' (старий формат) → перший клік: кольорова галочка без лічильника
+  if (!val || val === 'partial') {
+    if (total <= 1) {
+      data[slug] = 'full';
+      _writeExitsVerified(data);
+      return 'full';
+    }
+    data[slug] = { count: 1, total };
+    _writeExitsVerified(data);
+    return 'partial';
+  }
+
+  return 'unverified';
+}
+
+export function isExitsCatalogVerified(slug) {
+  return getExitsCatalogStatus(slug) === 'full';
+}
+
+/**
+ * Позначає виходи станції як частково перевірені (legacy, зберігається для сумісності).
+ * @param {string} slug
+ */
+export function setExitsCatalogPartial(slug) {
+  const data = _readExitsVerified();
+  data[slug] = 'partial';
+  _writeExitsVerified(data);
+}
+
+/**
+ * Позначає виходи станції як повністю перевірені.
  * @param {string} slug
  */
 export function setExitsCatalogVerified(slug) {
   const data = _readExitsVerified();
-  data[slug] = true;
+  data[slug] = 'full';
   _writeExitsVerified(data);
 }
 
@@ -1538,4 +1720,24 @@ function setupDevDataClear(container) {
       clearTaps = 0;
     }, 400); 
   };
+}
+
+// src/features/devmode.js
+
+let isStationNoteOpen = false;
+let activeExitNoteIdx = null;
+
+export function closeAllDevPanels() {
+  // 1. Скидаємо прапорці стану
+  isStationNoteOpen = false;
+  activeExitNoteIdx = null;
+
+  // 2. Закриваємо панелі та видаляємо з DOM лише динамічні панелі виходів
+  document.querySelectorAll('.dev-note-panel, .dev-station-note-modal, .dev-note-overlay')
+    .forEach(el => {
+      el.classList.remove('panel-open', 'modal-open');
+      if (el.id !== 'devStationNotePanel') {
+        el.remove();
+      }
+    });
 }

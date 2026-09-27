@@ -17,7 +17,7 @@ import { getPositionDescriptorsForStation } from './renderStation.js';
 import {
   renderDevAuthSection, getAllDevNotes, getAllStationNotes,
   getDevBacklog, setDevBacklog, isVerified,
-  isExitsCatalogVerified, setExitsCatalogVerified, resetExitsCatalogVerified,
+  getExitsCatalogStatus, getExitsCatalogCount, cycleExitsCatalogStatus,
 } from '../features/devmode.js';
 
 const sheetOverlay = document.getElementById('sheetOverlay');
@@ -186,119 +186,136 @@ function _setupCollapsibles(sheet) {
 }
 
 
-// ── Класифікація станцій за заповненістю виходів ─────────────────────────────
-// «Заповнений вихід» = хоча б один exit_numbers із непорожнім num або text.
-//
-// Категорії:
-//   empty    — ВСІ виходи без жодного заповненого exit_numbers
-//   partial  — є хоча б один заповнений і хоча б один порожній,
-//              АБО всі заповнені, але станцію НЕ позначено як перевірену
-//   verified — лише через ручну дію (isExitsCatalogVerified)
+// ── Підрахунок пронумерованих виходів станції ────────────────────────────────
+// «Вихід» = exit_numbers із непорожнім полем num ("1", "2" тощо).
+// Використовується для лічильника у галочці.
 
-function _exitIsFilled(ev) {
-  const nums = ev.exit_numbers || ev.numbered_exits || [];
-  return nums.some(n => (n.num || '').trim() || (n.text || '').trim());
+function _countStationExits(station) {
+  const catalog = station.exits_catalog;
+  if (!catalog) return 0;
+  let count = 0;
+  for (const ev of Object.values(catalog)) {
+    for (const en of (ev.exit_numbers || [])) {
+      if ((en.num || '').trim()) count++;
+    }
+  }
+  return count;
 }
 
-function _classifyStationExits(station) {
-  const catalog = station.exits_catalog;
-  if (!catalog || !Object.keys(catalog).length) return 'empty';
-  const exits = Object.values(catalog);
-  const filledCount = exits.filter(_exitIsFilled).length;
-  if (filledCount === 0) return 'empty';
-  return 'partial';
+const DEV_CHECK_SVG = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M14.83 4.89l1.34.94-5.81 8.38H9.02L5.78 9.67l1.34-1.25 2.57 2.4z"/></svg>`;
+
+
+function _renderExitsGroupHtml(title, items) {
+  const bodyHtml = items.length
+    ? items.map(e => _exitStationRowHtml(e.slug, e.station, e.color, e.status, e.total, e.count)).join('')
+    : `<div class="dev-menu-empty dev-exits-empty">Немає станцій</div>`;
+
+  return `<div class="dev-exits-group is-collapsed">
+    <div class="dev-exits-group-toggle">
+      <span class="dev-exits-group-title">${title} <span class="dev-exits-count">${items.length}</span></span>
+      <svg class="dev-exits-group-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="dev-exits-group-body">
+      ${bodyHtml}
+    </div>
+  </div>`;
 }
 
 function _renderExitsSection(container) {
   const stationsData = state.stationsData || {};
 
-  const empty    = [];
-  const partial  = [];
-  const verified = [];
+  const unverified = [];
+  const partial    = [];
+  const full       = [];
 
   for (const [slug, station] of Object.entries(stationsData)) {
     if (_exitsLine && station.line !== _exitsLine) continue;
-    const color = LINE_COLOR[station.line] || '#888888';
+    const color  = LINE_COLOR[station.line] || '#888888';
+    const total  = _countStationExits(station);
+    const status = getExitsCatalogStatus(slug);
+    const { count } = getExitsCatalogCount(slug, total);
 
-    if (isExitsCatalogVerified(slug)) {
-      verified.push({ slug, station, color });
+    const entry = { slug, station, color, status, total, count };
+    if (status === 'full') {
+      full.push(entry);
+    } else if (status === 'partial') {
+      partial.push(entry);
     } else {
-      const cat = _classifyStationExits(station);
-      if (cat === 'empty') empty.push({ slug, station, color });
-      else                 partial.push({ slug, station, color });
+      unverified.push(entry);
     }
   }
 
   const byName = (a, b) => a.station.name.localeCompare(b.station.name, 'uk');
-  empty.sort(byName); partial.sort(byName); verified.sort(byName);
+  unverified.sort(byName);
+  partial.sort(byName);
+  full.sort(byName);
 
   let html = '';
-
-  html += `<div class="dev-exits-sub-title">Незаповнені <span class="dev-exits-count">${empty.length}</span></div>`;
-  html += empty.length
-    ? empty.map(e => _exitStationRowHtml(e.slug, e.station, e.color, false)).join('')
-    : `<div class="dev-menu-empty">Немає незаповнених 🎉</div>`;
-
-  html += `<div class="dev-exits-sub-title dev-exits-sub-title--spaced">Частково заповнені <span class="dev-exits-count">${partial.length}</span></div>`;
-  html += partial.length
-    ? partial.map(e => _exitStationRowHtml(e.slug, e.station, e.color, false)).join('')
-    : `<div class="dev-menu-empty">Немає частково заповнених</div>`;
-
-  html += `<div class="dev-exits-sub-title dev-exits-sub-title--spaced">Перевірені <span class="dev-exits-count">${verified.length}</span></div>`;
-  html += verified.length
-    ? verified.map(e => _exitStationRowHtml(e.slug, e.station, e.color, true)).join('')
-    : `<div class="dev-menu-empty">Ще немає перевірених</div>`;
+  html += _renderExitsGroupHtml('Неперевірені', unverified);
+  html += _renderExitsGroupHtml('Частково перевірені', partial);
+  html += _renderExitsGroupHtml('Повністю перевірені', full);
 
   container.innerHTML = html;
   _bindExitsClicks(container);
 }
 
-function _exitStationRowHtml(slug, station, color, isVer) {
-  const catalog = station.exits_catalog || {};
-  const total   = Object.keys(catalog).length;
-  const filled  = Object.values(catalog).filter(_exitIsFilled).length;
-  const hint    = total === 0 ? 'немає виходів у каталозі' : `${filled} / ${total} виходів заповнено`;
+function _exitStationRowHtml(slug, station, color, status, total, count) {
+  // Галочка 1: завжди є. Кольорова якщо partial або full.
+  const check1Color = (status === 'partial' || status === 'full') ? color : 'var(--text-muted)';
+  const check1Opacity = (status === 'partial' || status === 'full') ? '1' : '0.3';
 
-  const btn = isVer
-    ? `<button type="button" class="dev-exits-reset-btn" data-slug="${slug}">Скинути</button>`
-    : `<button type="button" class="dev-exits-verify-btn" data-slug="${slug}">Виходи перевірені</button>`;
+  // Галочка 2: тільки при full.
+  const check2 = status === 'full'
+    ? `<span class="dev-exits-check" style="color:${color}">${DEV_CHECK_SVG}</span>`
+    : '';
 
-  return `<div class="dev-exits-row${isVer ? ' dev-exits-row--verified' : ''}" data-slug="${slug}">
+  // Лічильник: при partial з лічильником (count > 0), але не full.
+  // Перший клік (count === 1, без показу до другого кліку вже є count) — показуємо одразу.
+  const showCounter = status === 'partial' && count > 0 && total > 0;
+  const counter = showCounter
+    ? `<span class="dev-exits-counter">${count}/${total}</span>`
+    : '';
+
+  return `<div class="dev-exits-row dev-exits-row--${status}" data-slug="${slug}" data-total="${total}">
     <div class="dev-exits-row-info">
-      <div class="search-item-line" style="background-color:${color}"></div>
-      <div>
-        <div class="dev-menu-row-station">${station.name}</div>
-        <div class="dev-menu-row-detail">${hint}</div>
-      </div>
+      <span class="dev-exits-row-dot" style="background-color:${color}"></span>
+      <span class="dev-exits-row-name">${station.name}</span>
     </div>
-    ${btn}
+    <div class="dev-exits-check-wrap">
+      ${counter}
+      <button type="button" class="dev-exits-cycle-btn" data-slug="${slug}" data-total="${total}" aria-label="Змінити статус">
+        <span class="dev-exits-check" style="color:${check1Color}; opacity:${check1Opacity}">${DEV_CHECK_SVG}</span>${check2}
+      </button>
+    </div>
   </div>`;
 }
 
 function _bindExitsClicks(container) {
+  container.querySelectorAll('.dev-exits-group-toggle').forEach(toggle => {
+    toggle.addEventListener('click', e => {
+      e.stopPropagation();
+      const group = toggle.closest('.dev-exits-group');
+      if (!group) return;
+      group.classList.toggle('is-collapsed');
+    });
+  });
+
   container.querySelectorAll('.dev-exits-row').forEach(row => {
     row.addEventListener('click', e => {
-      if (e.target.closest('.dev-exits-verify-btn, .dev-exits-reset-btn')) return;
+      if (e.target.closest('.dev-exits-cycle-btn')) return;
       const { slug } = row.dataset;
       if (slug) bus.emit('station:open', { slug });
     });
   });
 
-  container.querySelectorAll('.dev-exits-verify-btn').forEach(btn => {
+  container.querySelectorAll('.dev-exits-cycle-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
-      setExitsCatalogVerified(btn.dataset.slug);
+      const { slug } = btn.dataset;
+      const total = Number(btn.dataset.total) || 0;
+      cycleExitsCatalogStatus(slug, total);
       const el = document.getElementById('devMenuExits');
-      if (el) { _renderExitsSection(el); }
-    });
-  });
-
-  container.querySelectorAll('.dev-exits-reset-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      resetExitsCatalogVerified(btn.dataset.slug);
-      const el = document.getElementById('devMenuExits');
-      if (el) { _renderExitsSection(el); }
+      if (el) _renderExitsSection(el);
     });
   });
 }
