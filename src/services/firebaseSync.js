@@ -1,7 +1,7 @@
 import { auth, db, storage } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL, listAll } from 'firebase/storage';
+import { ref, uploadString, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 
 // ── Стан авторизації (реактивний, не читаємо auth.currentUser напряму) ──
 // auth.currentUser відновлюється з IndexedDB АСИНХРОННО: одразу після
@@ -124,6 +124,23 @@ export async function listDevPhotoIds() {
   if (!folder) return [];
   const result = await listAll(folder);
   return result.items.map(item => item.name.replace(/\.jpg$/, ''));
+}
+
+/**
+ * Видаляє одне фото зі Storage.
+ * Якщо файл не існує — помилку ігноруємо (вважаємо вже видаленим).
+ * @param {string} photoId
+ * @returns {Promise<void>}
+ */
+export async function deleteDevPhoto(photoId) {
+  const fileRef = _photoRef(photoId);
+  if (!fileRef) return;
+  try {
+    await deleteObject(fileRef);
+  } catch (err) {
+    // storage/object-not-found — файл вже відсутній, це нормально
+    if (err?.code !== 'storage/object-not-found') throw err;
+  }
 }
 
 /**

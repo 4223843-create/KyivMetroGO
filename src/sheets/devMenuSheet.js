@@ -141,6 +141,11 @@ function _bindVerifyLineFilter(sheet) {
   if (!filter || filter.dataset.bound) return;
   filter.dataset.bound = '1';
 
+  // Синхронізуємо візуальний стан кнопок зі збереженим значенням фільтра
+  filter.querySelectorAll('.search-line-btn').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.line === _verifyLine);
+  });
+
   filter.addEventListener('click', e => {
     const btn = e.target.closest('.search-line-btn');
     if (!btn) return;
@@ -357,6 +362,11 @@ function _bindExitsLineFilter(sheet) {
   const filter = sheet.querySelector('#devExitsLineFilter');
   if (!filter || filter.dataset.bound) return;
   filter.dataset.bound = '1';
+
+  // Синхронізуємо візуальний стан кнопок зі збереженим значенням фільтра
+  filter.querySelectorAll('.search-line-btn').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.line === _exitsLine);
+  });
 
   filter.addEventListener('click', e => {
     const btn = e.target.closest('.search-line-btn');

@@ -82,6 +82,20 @@ export async function clearAllPhotos() {
 }
 
 /**
+ * Повертає масив усіх id фото без завантаження самих даних.
+ * Значно економніший за getAllPhotos() для порівняння списків при синхронізації.
+ * @returns {Promise<string[]>}
+ */
+export async function getAllPhotoIds() {
+  const db = await _openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE_NAME).objectStore(STORE_NAME).getAllKeys();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+/**
  * Повертає ВСІ фото як плаский об'єкт { id: dataUrl }.
  * Використовується для збірки пейлоада синхронізації Dev Mode —
  * інших сценаріїв масового читання в застосунку немає.
@@ -131,4 +145,4 @@ export async function bulkSavePhotos(photosMap) {
 }
 
 // Іменований об'єкт для зручного імпорту одним рядком
-export const PhotoStorage = { savePhoto, loadPhoto, removePhoto, clearAllPhotos, getAllPhotos, bulkSavePhotos };
+export const PhotoStorage = { savePhoto, loadPhoto, removePhoto, clearAllPhotos, getAllPhotos, getAllPhotoIds, bulkSavePhotos };

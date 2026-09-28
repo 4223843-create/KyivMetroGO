@@ -40,7 +40,7 @@ import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
-import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/firebaseSync.js';
+import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/firebaseSync.js';
 
 
 
@@ -101,21 +101,70 @@ let _syncInFlight = false;
  * "останній запис виграє цілком", не по-польове злиття.
  * @returns {Promise<'downloaded'|'uploaded'|'busy'>}
  */
-// ── Об'єднання даних синхронізації (адитивне, без видалень) ──
-// Принцип: синхронізація нічого не знищує, лише збагачує. Ніякого
-// "хто новіший — той і виграє цілком": для кожного запису з обох боків
-// беремо те, що є, і ніколи не викидаємо наявне. Якщо один і той самий
-// запис (нотатка на ту саму позицію) відрізняється на двох пристроях —
-// перевага локальному (він щойно на екрані користувача), а хмарне значення
-// не губиться назавжди — воно просто не потрапляє в цей конкретний ключ,
-// але залишається в документі хмари, доки хтось явно не перезапише.
+// ── Об'єднання даних синхронізації з підтримкою tombstone ──
+// Кожна нотатка тепер зберігається як об'єкт { v: string, t: number, d?: true }
+// замість голого рядка. Поле d:true означає «навмисно видалено».
+// Переможець визначається виключно за таймстампом t — останній запис виграє,
+// незалежно від того, це додавання чи видалення. Це гарантує, що явне
+// видалення (tombstone) не скасовується старим значенням із хмари.
+//
+// Зворотна сумісність: якщо при читанні зустрічається голий рядок (старий
+// формат) — він обгортається у { v: string, t: 0 } і тихо мігрує при
+// наступному записі. Оскільки t:0 < будь-якого реального таймстампу — при
+// конфлікті зі свіжим tombstone tombstone перемагає, що є правильною
+// поведінкою (нового видаляє старе).
+function _wrapLegacyEntry(raw) {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'object') return raw;            // вже новий формат
+  return { v: String(raw), t: 0 };                   // старий голий рядок
+}
+
 function _mergeKeyedMap(local, cloud) {
   const merged = {};
-  const outerKeys = new Set([...Object.keys(local || {}), ...Object.keys(cloud || {})]);
-  for (const key of outerKeys) {
-    merged[key] = { ...(cloud?.[key] || {}), ...(local?.[key] || {}) };
+  const outerKeys = new Set([
+    ...Object.keys(local || {}),
+    ...Object.keys(cloud || {}),
+  ]);
+  for (const outerKey of outerKeys) {
+    const innerKeys = new Set([
+      ...Object.keys(local?.[outerKey] || {}),
+      ...Object.keys(cloud?.[outerKey] || {}),
+    ]);
+    const innerMerged = {};
+    for (const innerKey of innerKeys) {
+      const l = _wrapLegacyEntry(local?.[outerKey]?.[innerKey]);
+      const c = _wrapLegacyEntry(cloud?.[outerKey]?.[innerKey]);
+      if (!l && !c) continue;
+      // Переможець — з більшим таймстампом; рівний — перевага локальному
+      innerMerged[innerKey] = (!c || (l && (l.t ?? 0) >= (c.t ?? 0))) ? l : c;
+    }
+    // Не зберігаємо порожній slug — але tombstone-записи (d:true) зберігаємо,
+    // щоб видалення дійшло до іншого пристрою при наступній синхронізації
+    if (Object.keys(innerMerged).length) merged[outerKey] = innerMerged;
   }
   return merged;
+}
+
+/**
+ * Видаляє tombstone-записи, старші за maxAgeMs (за замовчуванням 7 діб).
+ * Викликається один раз на старті у _performFullSync — лише якщо є авторизація.
+ * @param {object} map  — структура {slug: {posIdx: entry}}
+ * @param {number} [maxAgeMs]
+ * @returns {object}
+ */
+function _purgeTombstones(map, maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
+  const now = Date.now();
+  const result = {};
+  for (const [outerKey, inner] of Object.entries(map || {})) {
+    const cleaned = {};
+    for (const [innerKey, entry] of Object.entries(inner || {})) {
+      const e = _wrapLegacyEntry(entry);
+      if (e?.d && (now - (e.t ?? 0)) > maxAgeMs) continue; // прибираємо старий tombstone
+      cleaned[innerKey] = e;
+    }
+    if (Object.keys(cleaned).length) result[outerKey] = cleaned;
+  }
+  return result;
 }
 
 function _mergeConfirmations(local, cloud) {
@@ -123,26 +172,54 @@ function _mergeConfirmations(local, cloud) {
   const slugs = new Set([...Object.keys(local || {}), ...Object.keys(cloud || {})]);
   for (const slug of slugs) {
     merged[slug] = {};
-    const posIdxs = new Set([...Object.keys(local?.[slug] || {}), ...Object.keys(cloud?.[slug] || {})]);
+    const posIdxs = new Set([
+      ...Object.keys(local?.[slug] || {}),
+      ...Object.keys(cloud?.[slug] || {}),
+    ]);
     for (const posIdx of posIdxs) {
-      const l = local?.[slug]?.[posIdx]  || _emptyConfirmationData();
-      const c = cloud?.[slug]?.[posIdx]  || _emptyConfirmationData();
-      // Лічильники монотонно зростають — беремо максимум, а не суму
-      // (сума задвоїла б цифру при кожній повторній синхронізації).
-      // finalConfirmed — якщо хоч десь підтверджено остаточно, лишається так назавжди (OR).
+      const l = local?.[slug]?.[posIdx] || _emptyConfirmationData();
+      const c = cloud?.[slug]?.[posIdx] || _emptyConfirmationData();
+
+      // resetAt — таймстамп явного скидання цієї позиції (resetConfirmationData).
+      // Якщо скидання відбулось ПІСЛЯ останнього оновлення іншого боку —
+      // скидання перемагає, і ми не відновлюємо старі лічильники з хмари.
+      const lResetAt   = l.resetAt ?? 0;
+      const cResetAt   = c.resetAt ?? 0;
+      const lUpdatedAt = l.updatedAt ?? 0;
+      const cUpdatedAt = c.updatedAt ?? 0;
+
+      // Локальне скидання новіше за хмарні дані → беремо локальний (порожній) стан
+      if (lResetAt > cUpdatedAt && lResetAt >= cResetAt) {
+        merged[slug][posIdx] = { ...l };
+        continue;
+      }
+      // Хмарне скидання новіше за локальні дані → беремо хмарний (порожній) стан
+      if (cResetAt > lUpdatedAt && cResetAt > lResetAt) {
+        merged[slug][posIdx] = { ...c };
+        continue;
+      }
+
+      // Звичайний merge — монотонні лічильники, OR для finalConfirmed
+      const corrections = {};
+      const corrKeys = new Set([
+        ...Object.keys(l.corrections || {}),
+        ...Object.keys(c.corrections || {}),
+      ]);
+      for (const k of corrKeys) {
+        corrections[k] = Math.max(l.corrections?.[k] || 0, c.corrections?.[k] || 0);
+      }
+
       merged[slug][posIdx] = {
         finalConfirmed: !!(l.finalConfirmed || c.finalConfirmed),
-        confirmCount:   Math.max(l.confirmCount   || 0, c.confirmCount   || 0),
-        disputeCount:   Math.max(l.disputeCount   || 0, c.disputeCount   || 0),
-        corrections:    (() => {
-          const corrections = {};
-          const keys = new Set([...Object.keys(l.corrections || {}), ...Object.keys(c.corrections || {})]);
-          for (const k of keys) corrections[k] = Math.max(l.corrections?.[k] || 0, c.corrections?.[k] || 0);
-          return corrections;
-        })(),
-        lastAction: l.lastAction || null, // undo стосується лише локальних дій цього пристрою
+        confirmCount:   Math.max(l.confirmCount  || 0, c.confirmCount  || 0),
+        disputeCount:   Math.max(l.disputeCount  || 0, c.disputeCount  || 0),
+        corrections,
+        lastAction:     l.lastAction || null,
+        updatedAt:      Math.max(lUpdatedAt, cUpdatedAt),
+        resetAt:        Math.max(lResetAt,   cResetAt) || undefined,
       };
     }
+    if (!Object.keys(merged[slug]).length) delete merged[slug];
   }
   return merged;
 }
@@ -161,7 +238,11 @@ function _deriveVerifiedFromConfirmations(confirmations) {
   return verified;
 }
 
-/** Додає finalConfirmed=true у confirmations за хмарним verified-полем (лише додає, ніколи не знімає). */
+/** Застосовує застарілий verified-формат із хмари.
+ *  Не виставляє finalConfirmed якщо для цієї позиції є свіжий resetAt —
+ *  це означає, що розробник явно скинув підтвердження після того, як
+ *  verified-запис потрапив у хмару.
+ */
 function _applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified) {
   if (!cloudVerified) return confirmations;
   const result = { ...confirmations };
@@ -169,6 +250,9 @@ function _applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified) {
     if (!result[slug]) result[slug] = {};
     for (const posIdx of Object.keys(cloudVerified[slug])) {
       const current = result[slug][posIdx] || _emptyConfirmationData();
+      // Якщо є resetAt і він новіший ніж updatedAt — скидання вже відбулось,
+      // ігноруємо старий verified із хмари
+      if (current.resetAt && current.resetAt >= (current.updatedAt ?? 0)) continue;
       result[slug][posIdx] = { ...current, finalConfirmed: true };
     }
   }
@@ -255,13 +339,21 @@ function _mergeBacklog(local, cloud, base) {
   return result.join('\n').trim();
 }
 
-/** Той самий принцип, що й _mergeBacklog, але для {slug: текст} — по кожній станції окремо. */
+/** Merge нотаток станцій: переможець — запис з більшим таймстампом.
+ *  Tombstone { d:true, t } зберігається, щоб видалення дійшло до іншого пристрою. */
 function _mergeStationNotes(local, cloud) {
   const merged = {};
-  const slugs = new Set([...Object.keys(local || {}), ...Object.keys(cloud || {})]);
+  const slugs = new Set([
+    ...Object.keys(local || {}),
+    ...Object.keys(cloud || {}),
+  ]);
   for (const slug of slugs) {
-    const text = _mergeBacklog(local?.[slug], cloud?.[slug]);
-    if (text) merged[slug] = text;
+    const l = _wrapLegacyEntry(local?.[slug]);
+    const c = _wrapLegacyEntry(cloud?.[slug]);
+    if (!l && !c) continue;
+    // Переможець — з більшим t; при рівності — локальний
+    const winner = (!c || (l && (l.t ?? 0) >= (c.t ?? 0))) ? l : c;
+    merged[slug] = winner;
   }
   return merged;
 }
@@ -273,10 +365,14 @@ async function _performFullSync() {
   try {
     const cloudData = await downloadDevState();
 
-    const localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
+    // Щотижневе очищення старих tombstone-записів (старші за 7 діб).
+    // Відбувається локально перед merge — щоб не тягнути мертвий вантаж у хмару.
+    let localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
+    localNotes             = _purgeTombstones(localNotes);
+
     const localBacklog       = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
     const localConfirmations = getAllDevConfirmations();
-    const localStationNotes  = getAllStationNotes();
+    let localStationNotes    = getAllStationNotes();
 
     // Остання версія backlog, яка була успішно синхронізована
     // цим пристроєм.
@@ -378,47 +474,100 @@ async function _performFullSync() {
 }
 
 /**
- * Синхронізація фото — так само адитивна: вивантажуємо локальні, яких ще
- * нема в хмарі, довантажуємо хмарні, яких ще нема локально. Ніколи нічого
- * не видаляємо в жодному з напрямків.
+ * Синхронізація фото з підтримкою tombstone.
+ * Tombstone-список зберігається у Storage під DEV_DELETED_PHOTOS_KEY —
+ * { photoId: deletedAtTimestamp }. Фото, яке є в tombstone:
+ *  – не завантажується з хмари (видалення перемагає);
+ *  – якщо є в хмарі — видаляється звідти.
+ * Після успішного видалення з хмари запис у tombstone прибирається,
+ * щоб список не ріс безкінечно.
+ *
+ * Читаємо з IndexedDB спочатку тільки ключі (без даних) — завантажуємо
+ * dataUrl лише для тих фото, які реально треба вивантажити в хмару.
  */
+const DEV_DELETED_PHOTOS_KEY = 'metro_dev_deleted_photos';
+
+function _getPhotoTombstones() {
+  try { return JSON.parse(Storage.get(DEV_DELETED_PHOTOS_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function _savePhotoTombstones(map) {
+  Storage.set(DEV_DELETED_PHOTOS_KEY, JSON.stringify(map));
+}
+
+/** Позначає фото як навмисно видалене і запускає синк. */
+export async function removeDevPhoto(photoId) {
+  await PhotoStorage.removePhoto(photoId);
+  const tombstones = _getPhotoTombstones();
+  tombstones[photoId] = Date.now();
+  _savePhotoTombstones(tombstones);
+  _requestSync(true);
+}
+
 async function _syncPhotos() {
-  const localPhotos = await PhotoStorage.getAllPhotos();
-  const localIds    = new Set(Object.keys(localPhotos));
-  const cloudIds    = new Set(await listDevPhotoIds());
+  const tombstones = _getPhotoTombstones();
+  // Тільки ключі — не вантажимо дані до часу
+  const localIds = new Set(await PhotoStorage.getAllPhotoIds());
+  const cloudIds = new Set(await listDevPhotoIds());
 
-  const toUpload = [...localIds].filter(id => !cloudIds.has(id));
-  await Promise.all(toUpload.map(id => uploadDevPhoto(id, localPhotos[id])));
+  // 1. Видалити з хмари фото, які є в tombstone
+  const toDeleteFromCloud = [...cloudIds].filter(id => !!tombstones[id]);
+  if (toDeleteFromCloud.length) {
+    await Promise.allSettled(toDeleteFromCloud.map(id => deleteDevPhoto(id)));
+    // Прибираємо успішно видалені з tombstone
+    const updatedTombstones = { ...tombstones };
+    toDeleteFromCloud.forEach(id => delete updatedTombstones[id]);
+    _savePhotoTombstones(updatedTombstones);
+  }
 
-  const toDownloadIds = [...cloudIds].filter(id => !localIds.has(id));
-  const downloaded = await Promise.all(toDownloadIds.map(id => downloadDevPhoto(id).then(dataUrl => [id, dataUrl])));
-  if (downloaded.length) {
-    const photosMap = Object.fromEntries(downloaded);
-    await PhotoStorage.bulkSavePhotos(photosMap);
+  // 2. Вивантажити локальні, яких нема в хмарі і які не видалені
+  const toUpload = [...localIds].filter(id => !cloudIds.has(id) && !tombstones[id]);
+  for (const id of toUpload) {
+    const dataUrl = await PhotoStorage.loadPhoto(id);
+    if (dataUrl) await uploadDevPhoto(id, dataUrl);
+  }
+
+  // 3. Завантажити хмарні, яких нема локально і які не видалені
+  const toDownloadIds = [...cloudIds].filter(id => !localIds.has(id) && !tombstones[id]);
+  if (toDownloadIds.length) {
+    const downloaded = await Promise.allSettled(
+      toDownloadIds.map(id => downloadDevPhoto(id).then(dataUrl => [id, dataUrl]))
+    );
+    const photosMap = Object.fromEntries(
+      downloaded.filter(r => r.status === 'fulfilled').map(r => r.value)
+    );
+    if (Object.keys(photosMap).length) await PhotoStorage.bulkSavePhotos(photosMap);
   }
 }
 
-// ── Автосинхронізація після кожної правки ─────────────
-// Спрацьовує лише якщо розробник вже залогінений у Firebase — інакше
-// довелось би самим показувати форму входу при кожній правці, а це вже
-// нав'язливо. Дебаунс 1.5с — щоб кілька швидких правок поспіль злились
-// в один мережевий запит.
-const AUTO_SYNC_DEBOUNCE_MS = 1500;
+// ── Єдина черга синхронізації ──────────────────────────
+// Усі зміни (нотатки, стан, фото) проходять через один шлях — _requestSync.
+// immediate:true дає коротший debounce (100мс), щоб явне видалення або
+// скидання потрапило в хмару якнайшвидше, але все одно через _syncInFlight.
+// Це усуває race condition між трьома старими force-push функціями та
+// звичайним автосинком — тепер вони всі є одним й тим самим таймером.
+const AUTO_SYNC_DEBOUNCE_MS   = 1500;
+const URGENT_SYNC_DEBOUNCE_MS = 100;
 let _autoSyncTimer = null;
 
-function _scheduleAutoSync() {
+function _requestSync(immediate = false) {
   if (!_devUser) return;
-
   clearTimeout(_autoSyncTimer);
+  const delay = immediate ? URGENT_SYNC_DEBOUNCE_MS : AUTO_SYNC_DEBOUNCE_MS;
   _autoSyncTimer = setTimeout(async () => {
     try {
       const result = await _performFullSync();
-      if (result !== 'busy') console.log('[KyivMetroGO] Автосинхронізація Firebase успішна:', result);
+      if (result !== 'busy') console.log('[KyivMetroGO] Синхронізація Firebase:', result);
     } catch (err) {
-      console.warn('[KyivMetroGO] Автосинхронізація Firebase не вдалась:', err);
+      console.warn('[KyivMetroGO] Синхронізація Firebase не вдалась:', err);
     }
-  }, AUTO_SYNC_DEBOUNCE_MS);
+  }, delay);
 }
+
+// Залишаємо _scheduleAutoSync як alias для зворотної сумісності з викликами
+// всередині _touchSyncTimestamp (беклог, DEV_SYNC_LOCAL_TS тощо).
+function _scheduleAutoSync() { _requestSync(false); }
 
 // ── Лог змін ────────────────────────────────────────
 /** @returns {object[]} масив записів про всі зміни позицій у dev-режимі */
@@ -457,7 +606,11 @@ export function isVerified(slug, posIdx) {
 export function getDevNote(slug, posIdx) {
   try {
     const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-    return notes[slug]?.[posIdx] || '';
+    const raw = notes[slug]?.[posIdx];
+    if (!raw) return '';
+    if (typeof raw === 'string') return raw;  // legacy
+    if (raw.d) return '';                     // tombstone
+    return raw.v ?? '';
   } catch(e) { return ''; }
 }
 
@@ -472,14 +625,14 @@ export function setDevNote(slug, posIdx, text) {
   try {
     const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
     if (!notes[slug]) notes[slug] = {};
-    if (text) notes[slug][posIdx] = text;
-    else {
-      delete notes[slug][posIdx];
-      if (!Object.keys(notes[slug]).length) delete notes[slug];
-    }
+    const now = Date.now();
+    // Tombstone: замість delete записуємо { d: true, t: now } — щоб
+    // наступний merge не відновив нотатку зі старого хмарного запису.
+    notes[slug][posIdx] = text
+      ? { v: text, t: now }
+      : { d: true,  t: now };
     Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(notes));
-    _touchSyncTimestamp();
-    _forcePushNotesToCloud(slug, posIdx);
+    _requestSync(true);
   } catch(e) {}
 }
 
@@ -513,7 +666,7 @@ function _writeConfirmations(data) {
 }
 
 function _emptyConfirmationData() {
-  return { finalConfirmed: false, confirmCount: 0, disputeCount: 0, corrections: {}, lastAction: null };
+  return { finalConfirmed: false, confirmCount: 0, disputeCount: 0, corrections: {}, lastAction: null, updatedAt: 0 };
 }
 
 /** @returns {{finalConfirmed:boolean, confirmCount:number, disputeCount:number, corrections:Record<string,number>, lastAction:object|null}} */
@@ -535,6 +688,7 @@ function _mutateConfirmation(slug, posIdx, actionType, mutator) {
   const { lastAction, ...snapshot } = current; // знімок без вкладеного lastAction — щоб не росло вглиб
   const next = mutator({ ...current });
   next.lastAction = { type: actionType, prevSnapshot: snapshot };
+  next.updatedAt = Date.now();
   all[slug][posIdx] = next;
   _writeConfirmations(all);
   return next;
@@ -565,88 +719,15 @@ export function setFinalConfirmed(slug, posIdx) {
   return _mutateConfirmation(slug, posIdx, 'final', d => ({ ...d, finalConfirmed: true }));
 }
 
-/**
- * Примусово синхронізує ОДНУ конкретну позицію з хмарою одразу, в обхід
- * звичайного адитивного merge. Потрібно для скидання/скасування — це свідомі
- * дії користувача, тож вони мають право перезаписати хмару саме для цього
- * запису; інакше наступний автосинк (merge "бере максимум") просто підтягне
- * старе значення назад із хмари, і скидання виглядатиме так, ніби нічого
- * не відбулось.
- */
-async function _forcePushPositionToCloud(slug, posIdx) {
-  if (!_devUser) return; // немає сесії — нема куди штовхати; локальний стан і так вже вірний
-  try {
-    const cloudData = await downloadDevState();
-    const cloudConfirmations = cloudData?.confirmations ? { ...cloudData.confirmations } : {};
-    const localEntry = _readConfirmations()[slug]?.[posIdx];
+// _forcePushPositionToCloud видалено — замінено на _requestSync(true).
+// Tombstone-запис у confirmations (resetAt) гарантує, що merge не відновить
+// старі дані з хмари навіть якщо синк відбудеться із затримкою.
 
-    if (!cloudConfirmations[slug]) cloudConfirmations[slug] = {};
-    if (localEntry) {
-      cloudConfirmations[slug][posIdx] = localEntry;
-    } else {
-      delete cloudConfirmations[slug][posIdx];
-      if (!Object.keys(cloudConfirmations[slug]).length) delete cloudConfirmations[slug];
-    }
+// _forcePushNotesToCloud видалено — замінено на _requestSync(true).
+// Tombstone { d:true, t } у notes гарантує передачу видалення через merge.
 
-    const notes        = cloudData?.notes   || JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-    const backlog      = cloudData?.backlog ?? (Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '');
-    const stationNotes = cloudData?.stationNotes || getAllStationNotes();
-    const verified     = _deriveVerifiedFromConfirmations(cloudConfirmations);
-    await uploadDevState(notes, verified, backlog, cloudConfirmations, stationNotes);
-  } catch (err) {
-    console.warn('[KyivMetroGO] Не вдалося одразу синхронізувати скидання/скасування з хмарою — підхопиться при наступній синхронізації:', err);
-  }
-}
-
-async function _forcePushNotesToCloud(slug, posIdx) {
-  if (!_devUser) return;
-  try {
-    const cloudData = await downloadDevState();
-    const cloudNotes = cloudData?.notes ? { ...cloudData.notes } : {};
-    const localNotes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-
-    if (localNotes[slug]?.[posIdx]) {
-      if (!cloudNotes[slug]) cloudNotes[slug] = {};
-      cloudNotes[slug][posIdx] = localNotes[slug][posIdx];
-    } else {
-      if (cloudNotes[slug]) {
-        delete cloudNotes[slug][posIdx];
-        if (!Object.keys(cloudNotes[slug]).length) delete cloudNotes[slug];
-      }
-    }
-
-    const confirmations = cloudData?.confirmations || getAllDevConfirmations();
-    const backlog       = cloudData?.backlog ?? (Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '');
-    const stationNotes  = cloudData?.stationNotes || getAllStationNotes();
-    const verified      = _deriveVerifiedFromConfirmations(confirmations);
-    await uploadDevState(localNotes, verified, backlog, confirmations, stationNotes);
-  } catch (err) {
-    console.warn('[KyivMetroGO] Помилка синхронізації нотатки:', err);
-  }
-}
-
-async function _forcePushStationNoteToCloud(slug) {
-  if (!_devUser) return;
-  try {
-    const cloudData = await downloadDevState();
-    const cloudStationNotes = cloudData?.stationNotes ? { ...cloudData.stationNotes } : {};
-    const localStationNotes = getAllStationNotes();
-
-    if (localStationNotes[slug]) {
-      cloudStationNotes[slug] = localStationNotes[slug];
-    } else {
-      delete cloudStationNotes[slug];
-    }
-
-    const notes         = cloudData?.notes || JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-    const confirmations = cloudData?.confirmations || getAllDevConfirmations();
-    const backlog       = cloudData?.backlog ?? (Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '');
-    const verified      = _deriveVerifiedFromConfirmations(confirmations);
-    await uploadDevState(notes, verified, backlog, confirmations, cloudStationNotes);
-  } catch (err) {
-    console.warn('[KyivMetroGO] Помилка синхронізації нотатки станції:', err);
-  }
-}
+// _forcePushStationNoteToCloud видалено — замінено на _requestSync(true).
+// Tombstone { d:true, t } у stationNotes передає видалення через merge.
 
 /**
  * Скасовує ОСТАННЮ дію (один рівень назад) — повертає стан, який був
@@ -659,25 +740,30 @@ export function undoLastConfirmAction(slug, posIdx) {
   const current = all[slug]?.[posIdx];
   if (!current?.lastAction) return current || _emptyConfirmationData();
 
-  const restored = { ..._emptyConfirmationData(), ...current.lastAction.prevSnapshot, lastAction: null };
+  const restored = {
+    ..._emptyConfirmationData(),
+    ...current.lastAction.prevSnapshot,
+    lastAction: null,
+    updatedAt: Date.now(),
+  };
   if (!all[slug]) all[slug] = {};
   all[slug][posIdx] = restored;
-  // Пишемо напряму (без _writeConfirmations/_touchSyncTimestamp) — примусовий
-  // пуш нижче сам подбає про хмару, дублювати звичайний автосинк тут не треба.
   Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(all));
-  _forcePushPositionToCloud(slug, posIdx);
+  _requestSync(true);
   return restored;
 }
 
-/** Повністю скидає лічильник/статус цієї позиції до порожнього стану. */
+/** Повністю скидає лічильник/статус цієї позиції до порожнього стану.
+ *  Замість видалення ключа записує tombstone { resetAt, updatedAt } —
+ *  це гарантує, що наступний merge не відновить старі дані з хмари.
+ */
 export function resetConfirmationData(slug, posIdx) {
   const all = _readConfirmations();
-  if (all[slug]) {
-    delete all[slug][posIdx];
-    if (!Object.keys(all[slug]).length) delete all[slug];
-  }
+  if (!all[slug]) all[slug] = {};
+  const now = Date.now();
+  all[slug][posIdx] = { ..._emptyConfirmationData(), resetAt: now, updatedAt: now };
   Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(all));
-  _forcePushPositionToCloud(slug, posIdx);
+  _requestSync(true); // єдина черга — не force-push
   return _emptyConfirmationData();
 }
 
@@ -708,9 +794,13 @@ function _readStationNotes() {
   catch(e) { return {}; }
 }
 
-/** @returns {string} загальна нотатка станції (порожній рядок, якщо нема) */
+/** @returns {string} загальна нотатка станції (порожній рядок, якщо нема або tombstone) */
 export function getStationNote(slug) {
-  return _readStationNotes()[slug] || '';
+  const raw = _readStationNotes()[slug];
+  if (!raw) return '';
+  if (typeof raw === 'string') return raw;  // legacy
+  if (raw.d) return '';                     // tombstone
+  return raw.v ?? '';
 }
 
 /** @returns {Record<string,string>} усі загальні нотатки станцій — для sync-пейлоада */
@@ -726,11 +816,11 @@ export function setStationNote(slug, text, debounce = true) {
   clearTimeout(_stationNoteSaveTimer);
   const doSave = () => {
     const all = _readStationNotes();
-    if (text) all[slug] = text;
-    else delete all[slug];
+    const now = Date.now();
+    // Tombstone замість delete — щоб видалення дійшло до іншого пристрою
+    all[slug] = text ? { v: text, t: now } : { d: true, t: now };
     Storage.set(STORAGE_KEYS.DEV_STATION_NOTES, JSON.stringify(all));
-    _touchSyncTimestamp();
-    _forcePushStationNoteToCloud(slug);
+    _requestSync(true);
   };
 
   if (debounce) {

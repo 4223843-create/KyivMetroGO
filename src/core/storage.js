@@ -81,9 +81,11 @@ export const Storage = {
     const valStr = String(value);
     memoryCache.set(key, valStr);
     
-    // Фоновий нативний запис, який не блокує головний потік UI
-    Promise.resolve().then(async () => {
-      await Preferences.set({ key, value: valStr });
+    // Фоновий нативний запис, який не блокує головний потік UI.
+    // Помилки виводимо у консоль — без них розбіжність між кешем і
+    // нативним сховищем при наступному старті буде непомітною.
+    Preferences.set({ key, value: valStr }).catch(err => {
+      console.error('[Storage] Не вдалось зберегти ключ у нативне сховище:', key, err);
     });
   },
 
