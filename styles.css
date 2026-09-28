@@ -4077,9 +4077,10 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   height: 20px;
 }
 
-/* Дві галочки — трохи тісніше */
+/* Дві галочки — WhatsApp стиль: права трохи вліво і вгору */
 .dev-exits-full-btn .dev-exits-check + .dev-exits-check {
-  margin-left: -6px;
+  margin-left: -10px;
+  margin-top: -4px;
 }
 
 .dev-note-actions button.confirm-btn-discard {
