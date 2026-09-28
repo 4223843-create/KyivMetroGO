@@ -4001,68 +4001,53 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 .dev-exits-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 36px 1fr 52px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 7px 0;
+  padding: 6px 0;
   border-top: 0.5px solid var(--border);
   width: 100%;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .dev-exits-row:first-child {
   border-top: none;
 }
 
-.dev-exits-row-info {
+.dev-exits-row-center {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
   min-width: 0;
-  flex: 1;
-}
-
-.dev-exits-row-dot {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  text-align: center;
+  gap: 2px;
 }
 
 .dev-exits-row-name {
   font-size: var(--fs-sm);
   font-weight: var(--fw-normal);
   color: var(--text);
-  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
-/* Перевірені станції — назва приглушена */
 .dev-exits-row--full .dev-exits-row-name {
   color: var(--text-muted);
-}
-
-.dev-exits-check-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
 }
 
 .dev-exits-counter {
   font-size: var(--fs-xs);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
-.dev-exits-cycle-btn {
+.dev-exits-cycle-btn,
+.dev-exits-full-btn {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
   background: none;
   border: none;
   padding: 4px;
@@ -4071,8 +4056,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   line-height: 0;
 }
 
-.dev-exits-cycle-btn:active {
-  opacity: 0.5;
+.dev-exits-cycle-btn { justify-self: start; }
+.dev-exits-full-btn  { justify-self: end; }
+
+.dev-exits-cycle-btn:active,
+.dev-exits-full-btn:active {
+  opacity: 0.4;
 }
 
 .dev-exits-check {
@@ -4086,6 +4075,11 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .dev-exits-check svg {
   width: 20px;
   height: 20px;
+}
+
+/* Дві галочки — трохи тісніше */
+.dev-exits-full-btn .dev-exits-check + .dev-exits-check {
+  margin-left: -6px;
 }
 
 .dev-note-actions button.confirm-btn-discard {

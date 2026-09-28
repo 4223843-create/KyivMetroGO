@@ -18,6 +18,7 @@ import {
   renderDevAuthSection, getAllDevNotes, getAllStationNotes,
   getDevBacklog, setDevBacklog, isVerified,
   getExitsCatalogStatus, getExitsCatalogCount, cycleExitsCatalogStatus,
+  setExitsCatalogVerified, resetExitsCatalogVerified,
 } from '../features/devmode.js';
 
 const sheetOverlay = document.getElementById('sheetOverlay');
@@ -205,12 +206,13 @@ function _countStationExits(station) {
 const DEV_CHECK_SVG = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M14.83 4.89l1.34.94-5.81 8.38H9.02L5.78 9.67l1.34-1.25 2.57 2.4z"/></svg>`;
 
 
-function _renderExitsGroupHtml(title, items) {
+function _renderExitsGroupHtml(title, items, groupKey) {
+  const isOpen = _exitsGroupOpen[groupKey] ?? false;
   const bodyHtml = items.length
     ? items.map(e => _exitStationRowHtml(e.slug, e.station, e.color, e.status, e.total, e.count)).join('')
     : `<div class="dev-menu-empty dev-exits-empty">Немає станцій</div>`;
 
-  return `<div class="dev-exits-group is-collapsed">
+  return `<div class="dev-exits-group${isOpen ? '' : ' is-collapsed'}" data-group="${groupKey}">
     <div class="dev-exits-group-toggle">
       <span class="dev-exits-group-title">${title} <span class="dev-exits-count">${items.length}</span></span>
       <svg class="dev-exits-group-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
@@ -221,7 +223,13 @@ function _renderExitsGroupHtml(title, items) {
   </div>`;
 }
 
-function _renderExitsSection(container) {
+// Зберігаємо стан розгорнутості груп між перерендерами.
+// Ключі: 'unverified' | 'partial' | 'full'
+const _exitsGroupOpen = { unverified: false, partial: false, full: false };
+
+const _EXITS_GROUP_KEYS = ['unverified', 'partial', 'full'];
+
+function _renderExitsSection(container, openGroupKey) {
   const stationsData = state.stationsData || {};
 
   const unverified = [];
@@ -236,13 +244,9 @@ function _renderExitsSection(container) {
     const { count } = getExitsCatalogCount(slug, total);
 
     const entry = { slug, station, color, status, total, count };
-    if (status === 'full') {
-      full.push(entry);
-    } else if (status === 'partial') {
-      partial.push(entry);
-    } else {
-      unverified.push(entry);
-    }
+    if (status === 'full')         full.push(entry);
+    else if (status === 'partial') partial.push(entry);
+    else                           unverified.push(entry);
   }
 
   const byName = (a, b) => a.station.name.localeCompare(b.station.name, 'uk');
@@ -250,43 +254,44 @@ function _renderExitsSection(container) {
   partial.sort(byName);
   full.sort(byName);
 
-  let html = '';
-  html += _renderExitsGroupHtml('Неперевірені', unverified);
-  html += _renderExitsGroupHtml('Частково перевірені', partial);
-  html += _renderExitsGroupHtml('Повністю перевірені', full);
+  // Якщо після дії станція переїхала до іншої групи — відкриваємо ту групу
+  if (openGroupKey) _exitsGroupOpen[openGroupKey] = true;
 
-  container.innerHTML = html;
+  container.innerHTML =
+    _renderExitsGroupHtml('Неперевірені',        unverified, 'unverified') +
+    _renderExitsGroupHtml('Частково перевірені', partial,    'partial')    +
+    _renderExitsGroupHtml('Повністю перевірені', full,       'full');
+
   _bindExitsClicks(container);
 }
 
 function _exitStationRowHtml(slug, station, color, status, total, count) {
-  // Галочка 1: завжди є. Кольорова якщо partial або full.
-  const check1Color = (status === 'partial' || status === 'full') ? color : 'var(--text-muted)';
-  const check1Opacity = (status === 'partial' || status === 'full') ? '1' : '0.3';
+  // ── Ліва галочка (цикл: unverified → partial → … → full → unverified) ──
+  const cycleColor   = (status === 'partial' || status === 'full') ? color : 'var(--text-muted)';
+  const cycleOpacity = (status === 'partial' || status === 'full') ? '1' : '0.25';
 
-  // Галочка 2: тільки при full.
-  const check2 = status === 'full'
-    ? `<span class="dev-exits-check" style="color:${color}">${DEV_CHECK_SVG}</span>`
-    : '';
+  // ── Права кнопка (одразу → full) ──
+  const fullColor   = status === 'full' ? color : 'var(--text-muted)';
+  const fullOpacity = status === 'full' ? '1' : '0.25';
 
-  // Лічильник: при partial з лічильником (count > 0), але не full.
-  // Перший клік (count === 1, без показу до другого кліку вже є count) — показуємо одразу.
+  // ── Лічильник під назвою (тільки partial) ──
   const showCounter = status === 'partial' && count > 0 && total > 0;
   const counter = showCounter
     ? `<span class="dev-exits-counter">${count}/${total}</span>`
     : '';
 
   return `<div class="dev-exits-row dev-exits-row--${status}" data-slug="${slug}" data-total="${total}">
-    <div class="dev-exits-row-info">
-      <span class="dev-exits-row-dot" style="background-color:${color}"></span>
+    <button type="button" class="dev-exits-cycle-btn" data-slug="${slug}" data-total="${total}" aria-label="Змінити статус перевірки">
+      <span class="dev-exits-check" style="color:${cycleColor}; opacity:${cycleOpacity}">${DEV_CHECK_SVG}</span>
+    </button>
+    <div class="dev-exits-row-center">
       <span class="dev-exits-row-name">${station.name}</span>
-    </div>
-    <div class="dev-exits-check-wrap">
       ${counter}
-      <button type="button" class="dev-exits-cycle-btn" data-slug="${slug}" data-total="${total}" aria-label="Змінити статус">
-        <span class="dev-exits-check" style="color:${check1Color}; opacity:${check1Opacity}">${DEV_CHECK_SVG}</span>${check2}
-      </button>
     </div>
+    <button type="button" class="dev-exits-full-btn" data-slug="${slug}" data-total="${total}" aria-label="Позначити як повністю перевірені">
+      <span class="dev-exits-check" style="color:${fullColor}; opacity:${fullOpacity}">${DEV_CHECK_SVG}</span>
+      <span class="dev-exits-check" style="color:${fullColor}; opacity:${fullOpacity}">${DEV_CHECK_SVG}</span>
+    </button>
   </div>`;
 }
 
@@ -296,13 +301,17 @@ function _bindExitsClicks(container) {
       e.stopPropagation();
       const group = toggle.closest('.dev-exits-group');
       if (!group) return;
-      group.classList.toggle('is-collapsed');
+      const key = group.dataset.group;
+      const nowOpen = group.classList.toggle('is-collapsed') === false;
+      // classList.toggle повертає true якщо клас ДОДАНИЙ (тобто згорнуто)
+      // тому інвертуємо: якщо клас додано — nowOpen = false
+      _exitsGroupOpen[key] = !group.classList.contains('is-collapsed');
     });
   });
 
   container.querySelectorAll('.dev-exits-row').forEach(row => {
     row.addEventListener('click', e => {
-      if (e.target.closest('.dev-exits-cycle-btn')) return;
+      if (e.target.closest('.dev-exits-cycle-btn, .dev-exits-full-btn')) return;
       const { slug } = row.dataset;
       if (slug) bus.emit('station:open', { slug });
     });
@@ -313,9 +322,32 @@ function _bindExitsClicks(container) {
       e.stopPropagation();
       const { slug } = btn.dataset;
       const total = Number(btn.dataset.total) || 0;
-      cycleExitsCatalogStatus(slug, total);
+      const oldStatus = getExitsCatalogStatus(slug);
+      const newStatus = cycleExitsCatalogStatus(slug, total);
       const el = document.getElementById('devMenuExits');
-      if (el) _renderExitsSection(el);
+      if (!el) return;
+      // Якщо станція переїхала до іншого розділу — відкриваємо той розділ
+      const openKey = newStatus !== oldStatus ? newStatus : null;
+      _renderExitsSection(el, openKey);
+    });
+  });
+
+  container.querySelectorAll('.dev-exits-full-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const { slug } = btn.dataset;
+      const oldStatus = getExitsCatalogStatus(slug);
+      // Якщо вже full — скидаємо до unverified; інакше — одразу full
+      const newStatus = oldStatus === 'full' ? 'unverified' : 'full';
+      if (newStatus === 'full') {
+        setExitsCatalogVerified(slug);
+      } else {
+        resetExitsCatalogVerified(slug);
+      }
+      const el = document.getElementById('devMenuExits');
+      if (!el) return;
+      const openKey = newStatus !== oldStatus ? newStatus : null;
+      _renderExitsSection(el, openKey);
     });
   });
 }
