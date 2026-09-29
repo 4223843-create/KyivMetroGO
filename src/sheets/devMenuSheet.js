@@ -33,34 +33,10 @@ let _exitsLine  = '';
 // останнього редагування (поле t у tombstone-форматі), найновіші — вгорі.
 
 // Стан розгорнутості груп — живе між перерендерами в межах відкритої шторки
-const _stationNotesGroupOpen = {};
-const _exitNotesGroupOpen    = {};
 
-function _noteGroupHtml(title, items, groupKey, stateMap, rowHtmlFn) {
-  const isOpen   = stateMap[groupKey] ?? (items.length > 0);
-  const bodyHtml = items.length
-    ? items.map(rowHtmlFn).join('')
-    : `<div class="dev-menu-empty dev-exits-empty">Немає нотаток</div>`;
 
-  return `<div class="dev-exits-group${isOpen ? '' : ' is-collapsed'}" data-group="${groupKey}">
-    <div class="dev-exits-group-toggle">
-      <span class="dev-exits-group-title">${title} <span class="dev-exits-count">${items.length}</span></span>
-      <svg class="dev-exits-group-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
-    </div>
-    <div class="dev-exits-group-body">${bodyHtml}</div>
-  </div>`;
-}
 
-function _bindNoteGroupToggles(container, stateMap) {
-  container.querySelectorAll('.dev-exits-group-toggle').forEach(toggle => {
-    toggle.addEventListener('click', e => {
-      e.stopPropagation();
-      const group = toggle.closest('.dev-exits-group');
-      if (!group) return;
-      stateMap[group.dataset.group] = !group.classList.toggle('is-collapsed');
-    });
-  });
-}
+
 
 /** Витягає рядкове значення нотатки з об'єкта або legacy-рядка. */
 function _noteText(raw) {
@@ -78,17 +54,16 @@ function _noteTs(raw) {
 
 /**
  * Рендерить секцію «Нотатки по станціях».
- * Один рядок = одна станція з текстом нотатки.
- * Групи = лінії метро, відсортовані за часом останнього редагування.
+ * Плаский список, відсортований за часом останнього редагування (нові вгорі).
+ * Фільтрація по лінії — через кнопки над списком (без розгортальних груп).
  */
 function _renderStationNotesSection(container, lineFilter) {
-  const raw = getAllStationNotes(); // { slug: {v,t,d} | string }
+  const raw = getAllStationNotes();
 
-  // Фільтруємо: тільки живі нотатки (не tombstone) і за активним фільтром лінії
   const entries = [];
   for (const [slug, entry] of Object.entries(raw)) {
     const text = _noteText(entry);
-    if (!text) continue; // пропускаємо tombstone і порожні
+    if (!text) continue;
     const station = state.stationsData?.[slug];
     if (!station) continue;
     if (lineFilter && station.line !== lineFilter) continue;
@@ -96,43 +71,19 @@ function _renderStationNotesSection(container, lineFilter) {
   }
 
   if (!entries.length) {
-    container.innerHTML = `<div class="dev-menu-empty">Нотаток по станціях ще немає</div>`;
+    container.innerHTML = '<div class="dev-menu-empty">Нотаток по станціях ще немає</div>';
     return;
   }
 
-  // Групуємо за лінією
-  const byLine = {};
-  for (const e of entries) {
-    if (!byLine[e.station.line]) byLine[e.station.line] = [];
-    byLine[e.station.line].push(e);
-  }
+  entries.sort((a, b) => b.ts - a.ts);
 
-  // Всередині кожної лінії — сортуємо за ts DESC (нові вгорі)
-  for (const line of Object.keys(byLine)) {
-    byLine[line].sort((a, b) => b.ts - a.ts);
-  }
+  container.innerHTML = entries.map(({ slug, station, text }) =>
+    '<button type="button" class="dev-menu-row" data-slug="' + slug + '">' +
+    '<div class="dev-menu-row-station">' + station.name + '</div>' +
+    '<div class="dev-menu-row-extra">«' + text + '»</div>' +
+    '</button>'
+  ).join('');
 
-  // Лінії сортуємо: перша та, де найновіша нотатка
-  const lineOrder = Object.keys(byLine).sort((a, b) => {
-    const maxTs = arr => Math.max(...arr.map(e => e.ts));
-    return maxTs(byLine[b]) - maxTs(byLine[a]);
-  });
-
-  const lineNames = { red: 'Червона лінія', blue: 'Синя лінія', green: 'Зелена лінія' };
-
-  const html = lineOrder.map(line => {
-    const items  = byLine[line];
-    const title  = lineNames[line] || line;
-    const rowFn  = ({ slug, station, text }) => `
-      <button type="button" class="dev-menu-row" data-slug="${slug}">
-        <div class="dev-menu-row-station">${station.name}</div>
-        <div class="dev-menu-row-extra">«${text}»</div>
-      </button>`;
-    return _noteGroupHtml(title, items, `sn-${line}`, _stationNotesGroupOpen, rowFn);
-  }).join('');
-
-  container.innerHTML = html;
-  _bindNoteGroupToggles(container, _stationNotesGroupOpen);
   _bindNotesClicks(container);
 }
 
@@ -141,63 +92,60 @@ function _renderStationNotesSection(container, lineFilter) {
  * Один рядок = один вихід (slug + posIdx) з описом і текстом нотатки.
  * Групи = лінії метро, сортування за часом редагування.
  */
+/**
+ * Рендерить секцію «Нотатки по виходах».
+ * Один рядок = один вихід.
+ * Плоский список, сортування за часом редагування.
+ * Фільтрація по лінії — через кнопки над списком.
+ */
 function _renderExitNotesSection(container, lineFilter) {
-  const raw = getAllDevNotes(); // { slug: { posIdx: {v,t,d} | string } }
-
+  const raw = getAllDevNotes();
   const entries = [];
+
   for (const [slug, positions] of Object.entries(raw)) {
     const station = state.stationsData?.[slug];
     if (!station) continue;
     if (lineFilter && station.line !== lineFilter) continue;
-    const color       = LINE_COLOR[station.line] || '#888888';
+
+    const color = LINE_COLOR[station.line] || '#888888';
     const descriptors = getPositionDescriptorsForStation(station, color);
 
     for (const [posIdx, entry] of Object.entries(positions)) {
       const text = _noteText(entry);
-      if (!text) continue; // tombstone
+      if (!text) continue;
+
       const d = descriptors[Number(posIdx)];
       if (!d) continue;
-      entries.push({ slug, station, text, ts: _noteTs(entry), descriptor: d });
+
+      entries.push({
+        slug,
+        station,
+        text,
+        ts: _noteTs(entry),
+        descriptor: d,
+      });
     }
   }
 
   if (!entries.length) {
-    container.innerHTML = `<div class="dev-menu-empty">Нотаток по виходах ще немає</div>`;
+    container.innerHTML =
+      '<div class="dev-menu-empty">Нотаток по виходах ще немає</div>';
     return;
   }
 
-  // Групуємо за лінією
-  const byLine = {};
-  for (const e of entries) {
-    if (!byLine[e.station.line]) byLine[e.station.line] = [];
-    byLine[e.station.line].push(e);
-  }
-  for (const line of Object.keys(byLine)) {
-    byLine[line].sort((a, b) => b.ts - a.ts);
-  }
-  const lineOrder = Object.keys(byLine).sort((a, b) => {
-    const maxTs = arr => Math.max(...arr.map(e => e.ts));
-    return maxTs(byLine[b]) - maxTs(byLine[a]);
-  });
+  entries.sort((a, b) => b.ts - a.ts);
 
-  const lineNames = { red: 'Червона лінія', blue: 'Синя лінія', green: 'Зелена лінія' };
+  container.innerHTML = entries.map(({ slug, station, text, descriptor: d }) => {
+    const parts = [d.dirFrom, d.exitLabel].filter(Boolean).join(' · ');
 
-  const html = lineOrder.map(line => {
-    const items = byLine[line];
-    const title = lineNames[line] || line;
-    const rowFn = ({ slug, station, text, descriptor: d }) => {
-      const parts = [d.dirFrom, d.exitLabel].filter(Boolean).join(' · ');
-      return `<button type="button" class="dev-menu-row" data-slug="${slug}">
+    return `
+      <button type="button" class="dev-menu-row" data-slug="${slug}">
         <div class="dev-menu-row-station">${station.name}</div>
         <div class="dev-menu-row-detail">${parts || 'вихід'} (${d.wagonDoors || '—'})</div>
         <div class="dev-menu-row-extra">«${text}»</div>
       </button>`;
-    };
-    return _noteGroupHtml(title, items, `en-${line}`, _exitNotesGroupOpen, rowFn);
   }).join('');
 
-  container.innerHTML = html;
-  _bindNoteGroupToggles(container, _exitNotesGroupOpen);
   _bindNotesClicks(container);
 }
 
