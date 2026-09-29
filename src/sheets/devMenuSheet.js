@@ -17,11 +17,21 @@ import { getPositionDescriptorsForStation } from './renderStation.js';
 import {
   renderDevAuthSection, getAllDevNotes, getAllStationNotes,
   getDevBacklog, setDevBacklog, isVerified,
+  setDevNote, setStationNote,
   getExitsCatalogStatus, getExitsCatalogCount, cycleExitsCatalogStatus,
   setExitsCatalogVerified, resetExitsCatalogVerified,
 } from '../features/devmode.js';
 
 const sheetOverlay = document.getElementById('sheetOverlay');
+
+// ── Стан "очікує підтвердження видалення" ─────────────────────────────────
+// Ключ: унікальний id рядка (slug або slug+posIdx), значення: таймер.
+// Поки таймер активний — замість кнопки «Видалити» відображається «Скасувати».
+// Синхронізація ще не запускалась — видалення фізично відбудеться лише після
+// того, як таймер спрацює. Якщо натиснути «Скасувати» до спрацювання —
+// видалення скасовується без будь-яких наслідків для Storage чи хмари.
+const DELETE_CONFIRM_MS = 4000; // 4с — достатньо щоб передумати, не надто довго
+const _pendingDeletes   = new Map(); // id → { timerId, revertFn }
 
 // Активний фільтр по гілці для секції "Потребують перевірки" —
 // живе тільки на час відкритої шторки, не зберігається між сесіями.
@@ -77,14 +87,23 @@ function _renderStationNotesSection(container, lineFilter) {
 
   entries.sort((a, b) => b.ts - a.ts);
 
-  container.innerHTML = entries.map(({ slug, station, text }) =>
-    '<button type="button" class="dev-menu-row" data-slug="' + slug + '">' +
-    '<div class="dev-menu-row-station">' + station.name + '</div>' +
-    '<div class="dev-menu-row-extra">«' + text + '»</div>' +
-    '</button>'
-  ).join('');
+  container.innerHTML = entries.map(({ slug, station, text }) => {
+    const deleteId = 'sn-' + slug;
+    const isPending = _pendingDeletes.has(deleteId);
+    return '<div class="dev-menu-row-wrap">' +
+      '<button type="button" class="dev-menu-row" data-slug="' + slug + '">' +
+      '<div class="dev-menu-row-station">' + station.name + '</div>' +
+      '<div class="dev-menu-row-extra">«' + text + '»</div>' +
+      '</button>' +
+      '<button type="button" class="dev-menu-delete-btn' + (isPending ? ' is-pending' : '') + '" ' +
+      'data-delete-id="' + deleteId + '" data-slug="' + slug + '" data-type="station">' +
+      (isPending ? 'Скасувати' : 'Видалити') +
+      '</button>' +
+      '</div>';
+  }).join('');
 
   _bindNotesClicks(container);
+  _bindDeleteButtons(container);
 }
 
 /**
@@ -123,6 +142,7 @@ function _renderExitNotesSection(container, lineFilter) {
         text,
         ts: _noteTs(entry),
         descriptor: d,
+        posIdx,
       });
     }
   }
@@ -135,18 +155,25 @@ function _renderExitNotesSection(container, lineFilter) {
 
   entries.sort((a, b) => b.ts - a.ts);
 
-  container.innerHTML = entries.map(({ slug, station, text, descriptor: d }) => {
-    const parts = [d.dirFrom, d.exitLabel].filter(Boolean).join(' · ');
-
-    return `
-      <button type="button" class="dev-menu-row" data-slug="${slug}">
-        <div class="dev-menu-row-station">${station.name}</div>
-        <div class="dev-menu-row-detail">${parts || 'вихід'} (${d.wagonDoors || '—'})</div>
-        <div class="dev-menu-row-extra">«${text}»</div>
-      </button>`;
+  container.innerHTML = entries.map(({ slug, station, text, descriptor: d, posIdx }) => {
+    const parts    = [d.dirFrom, d.exitLabel].filter(Boolean).join(' · ');
+    const deleteId = 'en-' + slug + '-' + posIdx;
+    const isPending = _pendingDeletes.has(deleteId);
+    return '<div class="dev-menu-row-wrap">' +
+      '<button type="button" class="dev-menu-row" data-slug="' + slug + '">' +
+      '<div class="dev-menu-row-station">' + station.name + '</div>' +
+      '<div class="dev-menu-row-detail">' + (parts || 'вихід') + ' (' + (d.wagonDoors || '—') + ')</div>' +
+      '<div class="dev-menu-row-extra">«' + text + '»</div>' +
+      '</button>' +
+      '<button type="button" class="dev-menu-delete-btn' + (isPending ? ' is-pending' : '') + '" ' +
+      'data-delete-id="' + deleteId + '" data-slug="' + slug + '" data-pos-idx="' + posIdx + '" data-type="exit">' +
+      (isPending ? 'Скасувати' : 'Видалити') +
+      '</button>' +
+      '</div>';
   }).join('');
 
   _bindNotesClicks(container);
+  _bindDeleteButtons(container);
 }
 
 // Фільтри по лінії для двох нових секцій — живуть між відкриттями шторки
@@ -203,6 +230,59 @@ function _bindVerifyClicks(container) {
     row.addEventListener('click', () => {
       const slug = row.dataset.slug;
       if (slug) bus.emit('station:open', { slug });
+    });
+  });
+}
+
+/**
+ * Кнопка «Видалити» праворуч від кожної нотатки.
+ * Перший клік: кнопка стає «Скасувати», запускається таймер DELETE_CONFIRM_MS.
+ * Якщо таймер спрацьовує — видалення відбувається (tombstone у Storage → синк).
+ * Якщо натиснути «Скасувати» до спрацювання — таймер скидається, нічого не змінюється.
+ */
+function _bindDeleteButtons(container) {
+  container.querySelectorAll('.dev-menu-delete-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const deleteId = btn.dataset.deleteId;
+      const slug     = btn.dataset.slug;
+      const posIdx   = btn.dataset.posIdx;
+      const type     = btn.dataset.type; // 'station' | 'exit'
+
+      if (_pendingDeletes.has(deleteId)) {
+        // Скасування: прибираємо таймер, повертаємо кнопку до стану «Видалити»
+        clearTimeout(_pendingDeletes.get(deleteId).timerId);
+        _pendingDeletes.delete(deleteId);
+        btn.textContent = 'Видалити';
+        btn.classList.remove('is-pending');
+        return;
+      }
+
+      // Переходимо в режим «очікує підтвердження»
+      btn.textContent = 'Скасувати';
+      btn.classList.add('is-pending');
+
+      const timerId = setTimeout(() => {
+        _pendingDeletes.delete(deleteId);
+        // Фізичне видалення через tombstone
+        if (type === 'station') {
+          setStationNote(slug, '', false); // debounce=false — одразу
+        } else {
+          setDevNote(slug, Number(posIdx), '');
+        }
+        // Перемальовуємо відповідний контейнер
+        const sheet = document.getElementById('devMenuSheet');
+        if (!sheet) return;
+        if (type === 'station') {
+          const el = sheet.querySelector('#devMenuStationNotes');
+          if (el) _renderStationNotesSection(el, _stationNotesLine);
+        } else {
+          const el = sheet.querySelector('#devMenuExitNotes');
+          if (el) _renderExitNotesSection(el, _exitNotesLine);
+        }
+      }, DELETE_CONFIRM_MS);
+
+      _pendingDeletes.set(deleteId, { timerId });
     });
   });
 }
@@ -508,7 +588,12 @@ function _renderAll(sheet) {
   const exitsEl = sheet.querySelector('#devMenuExits');
   if (exitsEl)  { _renderExitsSection(exitsEl); _bindExitsLineFilter(sheet); }
   if (backlogEl) {
-    backlogEl.value = getDevBacklog();
+    // Не перезаписуємо value, якщо textarea зараз у фокусі —
+    // на iOS WebKit будь-яке присвоєння value скидає позицію курсора в кінець,
+    // навіть якщо текст не змінився. Це викликало перескок курсора при наборі.
+    if (document.activeElement !== backlogEl) {
+      backlogEl.value = getDevBacklog();
+    }
     if (!backlogEl.dataset.bound) {
       backlogEl.addEventListener('input', () => setDevBacklog(backlogEl.value));
       backlogEl.dataset.bound = '1';
