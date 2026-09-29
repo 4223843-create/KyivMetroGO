@@ -485,7 +485,7 @@ async function _performFullSync() {
  * Читаємо з IndexedDB спочатку тільки ключі (без даних) — завантажуємо
  * dataUrl лише для тих фото, які реально треба вивантажити в хмару.
  */
-const DEV_DELETED_PHOTOS_KEY = 'metro_dev_deleted_photos';
+const DEV_DELETED_PHOTOS_KEY = STORAGE_KEYS.DEV_DELETED_PHOTOS;
 
 function _getPhotoTombstones() {
   try { return JSON.parse(Storage.get(DEV_DELETED_PHOTOS_KEY) || '{}'); }
@@ -662,7 +662,7 @@ function _readConfirmations() {
 
 function _writeConfirmations(data) {
   Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(data));
-  _touchSyncTimestamp();
+  _requestSync(false);
 }
 
 function _emptyConfirmationData() {
@@ -784,7 +784,7 @@ export function setDevBacklog(text) {
   clearTimeout(_backlogSaveTimer);
   _backlogSaveTimer = setTimeout(() => {
     Storage.set(STORAGE_KEYS.DEV_BACKLOG, text);
-    _touchSyncTimestamp();
+    _requestSync(false);
   }, BACKLOG_SAVE_DEBOUNCE_MS);
 }
 
@@ -1359,8 +1359,8 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
       btn.addEventListener('click', async e => {
         e.stopPropagation();
         try {
-          await PhotoStorage.removePhoto(btn.dataset.id);
-          _touchSyncTimestamp();
+          // removeDevPhoto: видаляє локально І пише tombstone → хмара прибере при наступному синку
+          await removeDevPhoto(btn.dataset.id);
           await paint();
         } catch (err) {
           console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
@@ -1392,10 +1392,10 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
           reader.onerror = reject;
           reader.readAsDataURL(file);
         })));
-        _touchSyncTimestamp();
+        _requestSync(true);
         await paint();
       } catch (err) {
-        console.warn('[KyивMetroGO] Не вдалося зберегти фото:', err);
+        console.warn('[KyivMetroGO] Не вдалося зберегти фото:', err);
         _showToast('Не вдалося зберегти одне або кілька фото');
       }
     });
@@ -1791,6 +1791,7 @@ function setupDevDataClear(container) {
   Storage.remove(STORAGE_KEYS.DEV_BACKLOG);
   Storage.remove(STORAGE_KEYS.DEV_CONFIRMATIONS);
   Storage.remove(STORAGE_KEYS.DEV_STATION_NOTES);
+  Storage.remove(STORAGE_KEYS.DEV_DELETED_PHOTOS);
   Storage.remove(DEV_BACKLOG_SYNC_BASE_KEY);
 
   await PhotoStorage.clearAllPhotos().catch(err =>

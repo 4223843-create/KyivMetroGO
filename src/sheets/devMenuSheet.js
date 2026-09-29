@@ -118,7 +118,7 @@ function _renderStationNotesSection(container, lineFilter) {
     return maxTs(byLine[b]) - maxTs(byLine[a]);
   });
 
-  const lineNames = { M1: 'Червона лінія', M2: 'Синя лінія', M3: 'Зелена лінія' };
+  const lineNames = { red: 'Червона лінія', blue: 'Синя лінія', green: 'Зелена лінія' };
 
   const html = lineOrder.map(line => {
     const items  = byLine[line];
@@ -180,7 +180,7 @@ function _renderExitNotesSection(container, lineFilter) {
     return maxTs(byLine[b]) - maxTs(byLine[a]);
   });
 
-  const lineNames = { M1: 'Червона лінія', M2: 'Синя лінія', M3: 'Зелена лінія' };
+  const lineNames = { red: 'Червона лінія', blue: 'Синя лінія', green: 'Зелена лінія' };
 
   const html = lineOrder.map(line => {
     const items = byLine[line];
