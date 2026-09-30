@@ -216,7 +216,7 @@ function _mergeConfirmations(local, cloud) {
         corrections,
         lastAction:     l.lastAction || null,
         updatedAt:      Math.max(lUpdatedAt, cUpdatedAt),
-        resetAt:        Math.max(lResetAt,   cResetAt) || undefined,
+        resetAt:        Math.max(lResetAt,   cResetAt) || null,
       };
     }
     if (!Object.keys(merged[slug]).length) delete merged[slug];
@@ -258,57 +258,85 @@ function _applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified) {
   }
   return result;
 }
-// DEV_BACKLOG_SYNC_BASE_KEY має бути у STORAGE_KEYS, інакше Storage.init()
-// не завантажить його при старті → lastSyncedBacklog завжди '' → кожна
-// синхронізація після рестарту конкатенує беклог замість merge.
-// Використовуємо STORAGE_KEYS.DEV_BACKLOG_SYNC_BASE (додано до storage.js).
-const DEV_BACKLOG_SYNC_BASE_KEY = STORAGE_KEYS.DEV_BACKLOG_SYNC_BASE;
-
+const DEV_BACKLOG_SYNC_BASE_KEY = 'dev_backlog_last_synced';
 function _mergeBacklog(local, cloud, base) {
   const l = (local || '').trim();
   const c = (cloud || '').trim();
-  const b = (base  || '').trim();
+  const b = (base || '').trim();
 
+  // Нічого немає
   if (!l && !c) return '';
 
-  // Якщо тексти ідентичні (навіть без бази) — повертаємо одразу.
-  // Нормалізуємо пробіли щоб уникнути хибної розбіжності через \r\n vs \n.
-  if (l === c) return l;
-
-  // Немає бази (перший синк або після очищення):
+  // Перший запуск / немає попередньої синхронізованої версії
   if (!b) {
     if (!l) return c;
     if (!c) return l;
-    // Якщо один є частиною іншого — беремо довший (він вже містить короткий)
-    if (l.includes(c)) return l;
-    if (c.includes(l)) return c;
-    // Справді незалежні тексти — єдиний випадок коли конкатенуємо
+    if (l === c) return l;
+
+    // Якщо cloud є частиною local — локальна версія вже містить cloud
+    if (l.startsWith(c + '\n') || l === c) return l;
+
+    // Якщо local є частиною cloud — хмарна версія вже містить local
+    if (c.startsWith(l + '\n')) return c;
+
+    // Справді незалежні тексти
     return `${l}\n\n— з іншого пристрою —\n${c}`;
   }
 
-  // Нічого не змінилося з жодного боку (відносно бази)
-  if (l === b && c === b) return l;
-
-  // Змінився тільки один бік — беремо його
+  // Нічого не змінилося локально
   if (l === b) return c;
+
+  // Нічого не змінилося в хмарі
   if (c === b) return l;
 
-  // Обидві сторони змінилися відносно бази.
-  // Беремо локальну версію як основу (вона "щойно на екрані"),
-  // і дописуємо рядки з cloud, яких немає в локальній.
-  // Це безпечніше ніж старий getAddedLines, який міг дублювати
-  // рядки при вставці не в кінець.
+  // Зміни відбулися тільки локально
+  if (l !== b && c === b) return l;
+
+  // Зміни відбулися тільки в cloud
+  if (l === b && c !== b) return c;
+
+  // Обидві сторони змінилися.
+  // Визначаємо додані частини відносно останньої
+  // синхронізованої версії.
+  const baseLines = b.split('\n');
   const localLines = l.split('\n');
   const cloudLines = c.split('\n');
-  const localSet   = new Set(localLines.map(s => s.trim()).filter(Boolean));
 
-  const toAppend = cloudLines.filter(line => {
-    const t = line.trim();
-    return t && !localSet.has(t);
-  });
+  function getAddedLines(currentLines) {
+    let i = 0;
 
-  if (!toAppend.length) return l;
-  return (l + '\n' + toAppend.join('\n')).trim();
+    while (
+      i < baseLines.length &&
+      i < currentLines.length &&
+      baseLines[i] === currentLines[i]
+    ) {
+      i++;
+    }
+
+    return currentLines.slice(i);
+  }
+
+  const localAdded = getAddedLines(localLines);
+  const cloudAdded = getAddedLines(cloudLines);
+
+  // Починаємо з базової версії.
+  const result = [...baseLines];
+
+  // Додаємо зміни cloud
+  for (const line of cloudAdded) {
+    if (!result.includes(line)) {
+      result.push(line);
+    }
+  }
+
+  // Додаємо локальні зміни
+  for (const line of localAdded) {
+    if (!result.includes(line)) {
+      result.push(line);
+    }
+  }
+
+  return result.join('\n').trim();
 }
 
 /** Merge нотаток станцій: переможець — запис з більшим таймстампом.
@@ -1430,35 +1458,10 @@ const DEV_LOGIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 2
  */
 export function updateDevModeIndicator(aboutSheet, active) {
   const container = aboutSheet.querySelector('#aboutDevBtnContainer');
-  const syncBtn   = aboutSheet.querySelector('#aboutDevSyncBtn');
   if (!container) return;
   container.innerHTML = active ? DEV_MINI_SVG : '';
   if (active) setupDevDataClear(container);
-
-  if (syncBtn) {
-    syncBtn.classList.toggle('is-hidden', !active);
-    if (active) {
-      syncBtn.innerHTML = _devUser ? DEV_SYNC_SVG : DEV_LOGIN_SVG;
-      syncBtn.title = _devUser ? 'Синхронізувати з Firebase' : 'Увійти для синхронізації';
-      syncBtn.onclick = async e => {
-        e.stopPropagation();
-        if (!_devUser) {
-          bus.emit('devmenu:open');
-          return;
-        }
-        if (_syncInFlight) { _showToast('Синхронізація вже триває…'); return; }
-        syncBtn.classList.add('dev-sync-busy');
-        try {
-          const result = await _performFullSync();
-          _showToast(result === 'downloaded' ? 'Отримано новіші дані з хмари' : 'Синхронізовано з Firebase');
-        } catch (err) {
-          _showToast('Помилка синхронізації: ' + (err.message || err));
-        } finally {
-          syncBtn.classList.remove('dev-sync-busy');
-        }
-      };
-    }
-  }
+  // #aboutDevSyncBtn прибрано — синхронізація лише через меню розробника
 }
 
 /**

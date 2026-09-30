@@ -214,36 +214,12 @@ document.documentElement.setAttribute('data-theme', actual);
         <div id="devMenuAuth" class="dev-auth-block"></div>
       </div>
 
-      <div class="dev-menu-section dev-menu-collapsible" data-section="stationNotes">
+      <div class="dev-menu-section dev-menu-collapsible" data-section="notes">
         <button type="button" class="dev-menu-section-title dev-menu-section-toggle">
-          <span>Нотатки по станціях</span>
+          <span>Нотатки</span>
           <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        <div class="dev-menu-section-body">
-          <div id="devStationNotesLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
-            <button class="search-line-btn is-active" data-line="">Всі</button>
-            <button class="search-line-btn" data-line="red">Червона</button>
-            <button class="search-line-btn" data-line="blue">Синя</button>
-            <button class="search-line-btn" data-line="green">Зелена</button>
-          </div>
-          <div id="devMenuStationNotes"></div>
-        </div>
-      </div>
-
-      <div class="dev-menu-section dev-menu-collapsible" data-section="exitNotes">
-        <button type="button" class="dev-menu-section-title dev-menu-section-toggle">
-          <span>Нотатки по виходах</span>
-          <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div class="dev-menu-section-body">
-          <div id="devExitNotesLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
-            <button class="search-line-btn is-active" data-line="">Всі</button>
-            <button class="search-line-btn" data-line="red">Червона</button>
-            <button class="search-line-btn" data-line="blue">Синя</button>
-            <button class="search-line-btn" data-line="green">Зелена</button>
-          </div>
-          <div id="devMenuExitNotes"></div>
-        </div>
+        <div class="dev-menu-section-body" id="devMenuNotes"></div>
       </div>
 
       <div class="dev-menu-section dev-menu-collapsible" data-section="verify">
@@ -293,7 +269,6 @@ document.documentElement.setAttribute('data-theme', actual);
   <template id="tpl-about-sheet">
     <div class="sheet-handle-bar">
     <button id="aboutDevBtnContainer" aria-label="Режим розробника"></button>
-    <button id="aboutDevSyncBtn" class="is-hidden" aria-label="Синхронізація Dev Mode"></button>
     <div class="sheet-handle"></div>
     <span class="sheet-sheet-title about-version-title">KyivMetroGO</span>
     <button class="sheet-close-btn" id="aboutClose" aria-label="Закрити">✕</button>
