@@ -3934,6 +3934,120 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   word-break: break-word;
 }
 
+/* ── Рядки нотаток з кнопкою видалення ────────────────────────────────────
+   Структура: [.dev-menu-row--with-action (2/3)] [.dev-note-action-zone (1/3)]
+   Стрілка › відкриває зону дій; клік на рядок відкриває станцію.
+   Права третина — виключна зона кнопок, щоб не було випадкових переходів.
+──────────────────────────────────────────────────────────────────────────── */
+.dev-note-row-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* Кнопка-рядок обмежена 2/3 ширини */
+.dev-menu-row--with-action {
+  flex: 0 0 66.67%;
+  width: 66.67%;
+  border-radius: 10px 0 0 10px;
+}
+
+/* Права третина — зона кнопок */
+.dev-note-action-zone {
+  flex: 0 0 33.33%;
+  width: 33.33%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  padding: 0 6px;
+  min-width: 0;
+}
+
+/* Стрілка › — за замовчуванням */
+.dev-note-expand-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.dev-note-expand-btn:active {
+  opacity: 1;
+}
+
+/* Маленька кнопка «Видалити» */
+.dev-note-delete-btn {
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  font-family: inherit;
+  padding: 4px 8px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--bg-pill);
+  border-left: 2px solid var(--line-red);
+  border-right: 2px solid var(--line-red);
+  border-top: none;
+  border-bottom: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.dev-note-delete-btn:active {
+  opacity: 0.6;
+}
+
+/* Кнопка «Скасувати» (після натискання «Видалити», сіра) */
+.dev-note-undo-btn {
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  font-family: inherit;
+  padding: 4px 8px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--bg-pill);
+  border-left: 2px solid var(--text-muted);
+  border-right: 2px solid var(--text-muted);
+  border-top: none;
+  border-bottom: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.dev-note-undo-btn:active {
+  opacity: 1;
+}
+
+/* Кнопка × — закрити зону дій без видалення */
+.dev-note-collapse-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+  padding: 4px 4px;
+  cursor: pointer;
+  font-family: inherit;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.dev-note-collapse-btn:active {
+  opacity: 1;
+}
+
 .dev-menu-backlog {
   width: 100%;
   min-height: 160px;
@@ -4157,6 +4271,41 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .confirm-btn-neutral {
   border-left: 3px solid var(--text-muted) !important;
   border-right: 3px solid var(--text-muted) !important;
+}
+
+/* ── Кнопка 100% — дві зелені лінії з кожного боку ───────────────────────
+   .confirm-btn-lines--left і --right — span-елементи всередині кнопки.
+   Кожен малює дві горизонтальні смуги через ::before і ::after.
+   Базова одна лінія вже є через .confirm-btn-save (border-left/right 3px).
+   Тут скасовуємо border і малюємо дві лінії через псевдоелементи.
+──────────────────────────────────────────────────────────────────────────── */
+.dev-confirm-final.confirm-btn-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  /* прибираємо одинарний border — замінюємо на подвійні через span */
+  border-left: none;
+  border-right: none;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.confirm-btn-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.confirm-btn-lines::before,
+.confirm-btn-lines::after {
+  content: '';
+  display: block;
+  width: 3px;
+  height: 10px;
+  background: var(--line-green);
+  border-radius: 1px;
 }
 
 #aboutLogoImg {

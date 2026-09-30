@@ -214,27 +214,33 @@ function _renderVerificationSection(container) {
  */
 function _noteRowHtml({ deleteId, slug, posIdx, text, extra, expanded, pending }) {
   const posAttr = posIdx !== undefined ? ' data-pos-idx="' + posIdx + '"' : '';
+  // Права третина рядка — зона дій (.dev-note-action-zone).
+  // .dev-menu-row--with-action обмежений 66.67% ширини через CSS,
+  // тому клік на зону дій не потрапляє на кнопку відкриття станції.
+  let actionHtml;
+  if (pending) {
+    actionHtml =
+      '<button type="button" class="dev-note-undo-btn" ' +
+      'data-delete-id="' + deleteId + '" data-slug="' + slug + '"' + posAttr + '>Скасувати</button>';
+  } else if (expanded) {
+    // «Видалити» + × (закрити без видалення)
+    actionHtml =
+      '<button type="button" class="dev-note-delete-btn" ' +
+      'data-delete-id="' + deleteId + '" data-slug="' + slug + '"' + posAttr + '>Видалити</button>' +
+      '<button type="button" class="dev-note-collapse-btn" ' +
+      'data-delete-id="' + deleteId + '" aria-label="Закрити">&times;</button>';
+  } else {
+    actionHtml =
+      '<button type="button" class="dev-note-expand-btn" ' +
+      'data-delete-id="' + deleteId + '" aria-label="Дії">›</button>';
+  }
   return (
     '<div class="dev-note-row-wrap">' +
-      '<button type="button" class="dev-menu-row" data-slug="' + slug + '">' +
+      '<button type="button" class="dev-menu-row dev-menu-row--with-action" data-slug="' + slug + '">' +
         '<div class="dev-menu-row-station">' + text + '</div>' +
         '<div class="dev-menu-row-extra">«' + extra + '»</div>' +
       '</button>' +
-      '<div class="dev-note-row-actions">' +
-        // Якщо таймер іде — показуємо тільки «Скасувати», стрілки немає
-        (pending
-          ? '<button type="button" class="dev-note-undo-btn" ' +
-            'data-delete-id="' + deleteId + '" data-slug="' + slug + '"' + posAttr + '>Скасувати</button>'
-          // Якщо стрілку натиснули — показуємо маленьку кнопку «Видалити»
-          : (expanded
-              ? '<button type="button" class="dev-note-delete-btn" ' +
-                'data-delete-id="' + deleteId + '" data-slug="' + slug + '"' + posAttr + '>Видалити</button>'
-              // За замовчуванням — тільки стрілка
-              : '<button type="button" class="dev-note-expand-btn" ' +
-                'data-delete-id="' + deleteId + '" aria-label="Дії">›</button>'
-            )
-        ) +
-      '</div>' +
+      '<div class="dev-note-action-zone">' + actionHtml + '</div>' +
     '</div>'
   );
 }
@@ -276,14 +282,22 @@ function _bindNoteRowControls(container, deleteFn, rerenderFn) {
     });
   });
 
-  // Кнопка «Скасувати» — скидає таймер і повертає кнопку до «Видалити»
+  // Кнопка «Скасувати» — скидає таймер, залишає expanded (кнопка «Видалити» видима)
   container.querySelectorAll('.dev-note-undo-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const deleteId = btn.dataset.deleteId;
       clearTimeout(_pendingDeletes.get(deleteId));
       _pendingDeletes.delete(deleteId);
-      // Залишаємо expanded=true — кнопка «Видалити» залишається видимою
+      rerenderFn(container);
+    });
+  });
+
+  // Кнопка × — закриває зону дій (expanded → false), нічого не видаляє
+  container.querySelectorAll('.dev-note-collapse-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      _expandedRows.delete(btn.dataset.deleteId);
       rerenderFn(container);
     });
   });
@@ -608,7 +622,11 @@ function _renderAll(sheet) {
   const exitsEl = sheet.querySelector('#devMenuExits');
   if (exitsEl)  { _renderExitsSection(exitsEl); _bindExitsLineFilter(sheet); }
   if (backlogEl) {
-    backlogEl.value = getDevBacklog();
+    // iOS WebKit скидає позицію курсора при будь-якому .value= навіть з тим самим текстом.
+    // Пропускаємо перезапис поки textarea у фокусі.
+    if (document.activeElement !== backlogEl) {
+      backlogEl.value = getDevBacklog();
+    }
     if (!backlogEl.dataset.bound) {
       backlogEl.addEventListener('input', () => setDevBacklog(backlogEl.value));
       backlogEl.dataset.bound = '1';
