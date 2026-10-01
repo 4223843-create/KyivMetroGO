@@ -4284,28 +4284,22 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   align-items: center;
   justify-content: center;
   gap: 5px;
-  /* прибираємо одинарний border — замінюємо на подвійні через span */
   border-left: none;
   border-right: none;
   padding-left: 2px;
   padding-right: 2px;
 }
 
+/* Кожен span = дві вертикальні паралельні лінії (( і )) */
 .confirm-btn-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  border-left: 2.5px solid var(--line-green);
+  border-right: 2.5px solid var(--line-green);
+  border-top: none;
+  border-bottom: none;
   flex-shrink: 0;
-}
-
-.confirm-btn-lines::before,
-.confirm-btn-lines::after {
-  content: '';
-  display: block;
-  width: 3px;
-  height: 10px;
-  background: var(--line-green);
-  border-radius: 1px;
 }
 
 #aboutLogoImg {

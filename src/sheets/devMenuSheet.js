@@ -238,7 +238,7 @@ function _noteRowHtml({ deleteId, slug, posIdx, text, extra, expanded, pending }
     '<div class="dev-note-row-wrap">' +
       '<button type="button" class="dev-menu-row dev-menu-row--with-action" data-slug="' + slug + '">' +
         '<div class="dev-menu-row-station">' + text + '</div>' +
-        '<div class="dev-menu-row-extra">«' + extra + '»</div>' +
+        '<div class="dev-menu-row-extra">' + extra + '</div>' +
       '</button>' +
       '<div class="dev-note-action-zone">' + actionHtml + '</div>' +
     '</div>'
