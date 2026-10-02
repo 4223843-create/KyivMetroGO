@@ -4280,26 +4280,9 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
    Тут скасовуємо border і малюємо дві лінії через псевдоелементи.
 ──────────────────────────────────────────────────────────────────────────── */
 .dev-confirm-final.confirm-btn-save {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border-left: none;
-  border-right: none;
-  padding-left: 2px;
-  padding-right: 2px;
-}
-
-/* Кожен span = дві вертикальні паралельні лінії (( і )) */
-.confirm-btn-lines {
-  display: inline-block;
-  width: 8px;
-  height: 14px;
-  border-left: 2.5px solid var(--line-green);
-  border-right: 2.5px solid var(--line-green);
-  border-top: none;
-  border-bottom: none;
-  flex-shrink: 0;
+  border: 2px solid var(--line-green);
+  border-left-width: 3px;
+  border-right-width: 3px;
 }
 
 #aboutLogoImg {

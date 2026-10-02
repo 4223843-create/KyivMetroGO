@@ -1118,7 +1118,7 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
       </div>
       ${renderCorrectionsList(data)}
       <div class="dev-note-actions dev-confirm-main-actions">
-        <button type="button" class="dev-confirm-final confirm-btn-save"><span class="confirm-btn-lines confirm-btn-lines--left" aria-hidden="true"></span>100%<span class="confirm-btn-lines confirm-btn-lines--right" aria-hidden="true"></span></button>
+        <button type="button" class="dev-confirm-final confirm-btn-save">100%</button>
         <button type="button" class="dev-confirm-plus confirm-btn-save">+1</button>
         <button type="button" class="dev-confirm-minus confirm-btn-discard">−1</button>
       </div>
