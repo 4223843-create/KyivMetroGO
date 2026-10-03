@@ -100,6 +100,19 @@ function currentInterval(line, terminal, now) {
   return p[day === 0 || day === 6 ? 'holiday' : 'weekday']?.[terminal] || null;
 }
 
+/** Назви кінцевих у родовому відмінку: «в бік Теремків». */
+const TERMINAL_GEN = {
+  'Теремки': 'Теремків', 'Героїв Дніпра': 'Героїв Дніпра',
+  'Лісова': 'Лісової', 'Академмістечко': 'Академмістечка',
+  'Червоний хутір': 'Червоного хутора', 'Сирець': 'Сирця',
+};
+
+function clockRow(label, [a, b]) {
+  const val = a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`;
+  return `<div class="clock-row"><span class="clock-dir">${label}</span>` +
+    `<span class="clock-interval">кожні ${val}&nbsp;хв</span></div>`;
+}
+
 /**
  * Вміст панелі годинника (кнопка біля серця) станом на час телефону:
  * «відкриється о …», якщо вхід зараз закритий; «вхід до …», якщо до закриття
@@ -119,15 +132,19 @@ export function renderStationClock(s, now = new Date()) {
     lines.push(`<div class="clock-head">Вхід до ${sch.close}</div>`);
   }
 
-  Object.entries(sch.trains || {}).forEach(([terminal, t]) => {
-    if (nowMin < toMin(t.first) || nowMin > toMin(t.last)) return;
-    const iv = currentInterval(s.line, terminal, now);
-    if (!iv) return;
-    const [a, b] = iv;
-    const val = a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`;
-    lines.push(`<div class="clock-row"><span class="clock-dir">→ ${terminal}</span>` +
-      `<span class="clock-interval">кожні ${val}&nbsp;хв</span></div>`);
-  });
+  const ivs = Object.entries(sch.trains || {})
+    .filter(([, t]) => nowMin >= toMin(t.first) && nowMin <= toMin(t.last))
+    .map(([terminal]) => [terminal, currentInterval(s.line, terminal, now)])
+    .filter(([, iv]) => iv);
+
+  // Якщо в обидва боки інтервал різниться не більше ніж на 30 с — один рядок
+  const [x, y] = ivs;
+  if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= 30 && Math.abs(x[1][1] - y[1][1]) <= 30) {
+    const iv = [Math.min(x[1][0], y[1][0]), Math.max(x[1][1], y[1][1])];
+    lines.push(clockRow('в обидва боки', iv));
+  } else {
+    ivs.forEach(([terminal, iv]) => lines.push(clockRow(`в бік ${TERMINAL_GEN[terminal] || terminal}`, iv)));
+  }
 
   if (!lines.length) lines.push('<div class="clock-head">Немає даних про інтервал на цю годину</div>');
   return lines.join('');
