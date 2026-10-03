@@ -89,7 +89,10 @@ function groupPositions(positions) {
 function renderIcons(p) {
   let iconsHtml = '';
 
-  if (p.isEscalator) {
+  // Підйомник вимкнено в налаштуваннях — ховаємо і його ескалатор
+  const hoistHidden = p.isHoist && !isShowHoistsEnabled();
+
+  if (p.isEscalator && !hoistHidden) {
     iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" aria-label="Ескалатор">${Icons.escalator}</span>`;
   }
 
@@ -116,7 +119,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
       ? `<span class="pos-edited-mark" data-slug="${p._slug}" data-idx="${p._posIdx}">${Icons.pencil}</span>`
       : '';
     const icons      = renderIcons(p, exit);
-    const hasSpecial = p.isLift || p.isEscalator || p.isHoist;
+    const hasSpecial = !!icons;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
       ${edited}${favTargetHtml(p.wagon, p.doors, color)}${icons}
@@ -140,7 +143,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
   return grouped.map(p => {
     const isMulti    = String(p.wagon).includes(',');
     const icons      = renderIcons(p, exit);
-    const hasSpecial = p.isLift || p.isEscalator || p.isHoist;
+    const hasSpecial = !!icons;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
       ${favTargetHtml(p.wagon, p.doors, color)}${icons}

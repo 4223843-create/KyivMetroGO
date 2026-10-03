@@ -456,9 +456,9 @@ export function isHideNoLiftEnabled() {
   return Storage.get(STORAGE_KEYS.HIDE_NO_LIFT) === 'true';
 }
 
-/** Повертає true якщо увімкнено відображення доступності на карті. */
+/** Повертає true якщо увімкнено відображення доступності на карті. За замовчуванням — увімкнено. */
 export function isShowMapAccessibilityEnabled() {
-  return Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) === 'true';
+  return Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) !== 'false';
 }
 
 /** Повертає true якщо увімкнено показ підйомників на станціях. За замовчуванням — увімкнено. */
