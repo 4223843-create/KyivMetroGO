@@ -249,10 +249,14 @@ function _handleRestore(idx, slug, afterRender) {
   }
   invalidateLocalEditsCache();
   if (fbState.current[idx]) fbState.current[idx].isClosed = false;
-  applyLocalEdits(appState.stationsData);
-  bus.emit('station:refresh');
-  renderFeedbackPositions(slug, { onAfterRender: afterRender });
-  renderResetBtn({ onReset: () => _handleReset(afterRender) });
+  // applyLocalEdits лише накладає правки, що лишились, а не повертає змінену
+  // позицію до вихідних даних — тому перечитуємо дані повністю.
+  bus.emit('data:reload-stations', {
+    onDone: () => {
+      renderFeedbackPositions(slug, { onAfterRender: afterRender });
+      renderResetBtn({ onReset: () => _handleReset(afterRender) });
+    },
+  });
 }
 
 function _handleCloseExit(idx, slug, afterRender) {

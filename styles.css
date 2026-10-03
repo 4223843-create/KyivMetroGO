@@ -4876,6 +4876,8 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 .clear-data-item:last-child { border-bottom: none; }
 .clear-data-item:active { opacity: 0.6; }
+/* Порожня категорія: тап лишається активним, щоб показати «… немає» */
+.clear-data-item.is-empty { opacity: 0.4; }
 .clear-data-item.is-disabled {
   opacity: 0.3;
   pointer-events: none;

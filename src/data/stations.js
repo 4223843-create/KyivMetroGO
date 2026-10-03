@@ -7,17 +7,15 @@ import { bus }                from '../core/eventBus.js';
 import { traversePositions }  from './positions.js';
 
 // ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
-// SW обробляє stations.json для веб/PWA (networkFirst + version-check + postMessage).
+// SW обробляє stations.json для веб/PWA (спершу локальна копія, мережа у фоні + postMessage).
 // На нативній платформі SW інертний — реалізуємо ту саму логіку вручну:
-//   1. fetch(REMOTE_STATIONS_URL) з таймаутом
-//   2. Filesystem.Cache як проміжний кеш
-//   3. http://localhost/stations.json (bundled в APK) як фінальний fallback
-//
-// Замініть REMOTE_STATIONS_URL на реальний домен перед релізом.
+//   1. одразу — новіша з копій: Filesystem.Cache або bundled в APK (localhost/stations.json)
+//   2. у фоні — fetch(REMOTE_STATIONS_URL); нова версія → Filesystem.Cache + тост
 
 const REMOTE_STATIONS_URL = 'https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/public/stations.json';
 const NATIVE_CACHE_PATH   = 'stations_cache.json';
-const FETCH_TIMEOUT_MS    = 8000;
+const FETCH_TIMEOUT_MS    = 4000;
+const BACKGROUND_FETCH_TIMEOUT_MS = 20000;
 
 // ══ ПРИВАТНІ СЛОВНИКИ (closure) ══════════════════════════════
 // Заповнюються у hydrateStations(), читаються через slugByName() / getSlugByLower().
@@ -295,92 +293,83 @@ async function _writeFilesystemCache(data) {
   }
 }
 
+/** Новіша з двох локальних копій: Filesystem.Cache (з мережі) або вшита в APK. */
+async function _readLocalStations() {
+  const cached = await _readFilesystemCache();
+  let bundled  = null;
+  try {
+    const bundledResponse = await fetch(getStationsUrl());
+    if (bundledResponse.ok) bundled = await bundledResponse.json();
+  } catch {
+    // нижче — кеш або нічого
+  }
+  // Після оновлення APK вшиті дані можуть бути новішими за кеш з мережі.
+  if (cached && (!bundled || String(cached.version ?? '') >= String(bundled.version ?? ''))) {
+    return cached.data;
+  }
+  return bundled;
+}
+
+/** Завантажує stations.json з GitHub; null — якщо мережі немає або відповідь некоректна. */
+async function _fetchRemoteStations(timeoutMs) {
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(REMOTE_STATIONS_URL, { signal: controller.signal, cache: 'no-store' });
+    if (!response.ok) return null;
+    // raw.githubusercontent.com віддає .json як text/plain — тому перевіряємо вміст, а не content-type.
+    const data = await response.json();
+    return Array.isArray(data?.stations) ? data : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
- * Завантажує stations.json для нативної платформи.
- * Три рівні надійності:
- *   1. Мережа (REMOTE_STATIONS_URL) з таймаутом → Filesystem.Cache (запис)
- *   2. Filesystem.Cache (читання) — якщо мережа недоступна
- *   3. Bundled APK (http://localhost/stations.json) — якщо кеш теж порожній
+ * Фонова перевірка оновлень: нова версія зберігається в Filesystem.Cache і
+ * застосовується при наступному запуску або після тосту «Перезавантажити».
+ */
+async function _refreshStationsInBackground(currentVersion) {
+  const fresh = await _fetchRemoteStations(BACKGROUND_FETCH_TIMEOUT_MS);
+  if (!fresh || fresh.version == null || String(fresh.version) <= String(currentVersion ?? '')) return;
+  await _writeFilesystemCache(fresh);
+  // Дзеркало SW-логіки: там postMessage({ type: 'STATIONS_UPDATED' }),
+  // тут — bus.emit, який swUpdate.js перехоплює через підписку.
+  bus.emit('stations:updated', { version: fresh.version });
+}
+
+/**
+ * Завантажує stations.json для нативної платформи — спершу локально:
+ * одразу повертає новішу з локальних копій (кеш або APK), а мережу перевіряє
+ * у фоні, тож інтернет ніколи не гальмує запуск.
+ * forceFresh — навпаки, спершу мережа (з таймаутом), а локальна копія як запас.
  *
- * При виявленні нової версії емітує 'stations:updated' — swUpdate.js покаже тост.
- *
- * @param {boolean} forceFresh — ігнорувати кеш, завжди йти в мережу
+ * @param {boolean} forceFresh
  * @returns {Promise<object>} розібраний stations.json
  */
 async function _fetchStationsNative(forceFresh = false) {
-  // ── Рівень 1: мережа ─────────────────────────────────────────
-  try {
-    const controller = new AbortController();
-    const timeoutId  = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-    const response = await fetch(REMOTE_STATIONS_URL, {
-      signal: controller.signal,
-      cache:  forceFresh ? 'no-store' : 'default',
-    });
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.includes('json')) {
-        throw new Error(`Unexpected content-type: ${contentType}`);
-      }
-
-      const freshData = await response.json();
-
-      // Порівнюємо версію з кешем — щоб повідомити користувача про оновлення.
-      if (!forceFresh) {
-        const cached = await _readFilesystemCache();
-        if (
-          freshData.version != null &&
-          cached?.version   != null &&
-          freshData.version !== cached.version
-        ) {
-          // Дзеркало SW-логіки: там postMessage({ type: 'STATIONS_UPDATED' }),
-          // тут — bus.emit, який swUpdate.js перехоплює через підписку.
-          bus.emit('stations:updated', { version: freshData.version });
-        }
-      }
-
-      // Зберігаємо в кеш асинхронно — не блокуємо гідратацію.
-      _writeFilesystemCache(freshData);
-
-      return freshData;
-    }
-  } catch (networkError) {
-    // AbortError (таймаут) або відсутність мережі — переходимо до рівня 2.
-    if (networkError.name !== 'AbortError') {
-      console.warn('[stations] network fetch failed:', networkError.message);
+  if (forceFresh) {
+    const fresh = await _fetchRemoteStations(FETCH_TIMEOUT_MS);
+    if (fresh) {
+      await _writeFilesystemCache(fresh);
+      return fresh;
     }
   }
 
-  // ── Рівень 2: Filesystem.Cache ────────────────────────────────
-  if (!forceFresh) {
-    const cached = await _readFilesystemCache();
-    if (cached) {
-      console.info('[stations] loaded from Filesystem cache');
-      return cached.data;
-    }
-  }
-
-  // ── Рівень 3: bundled APK (http://localhost/stations.json) ────
-  console.info('[stations] falling back to bundled APK copy');
-  const bundledUrl      = getStationsUrl();
-  const bundledResponse = await fetch(bundledUrl);
-
-  if (!bundledResponse.ok) {
-    throw new Error(
-      `stations.json bundled fetch failed: ${bundledResponse.status} (${bundledUrl.href})`,
-    );
-  }
-  return bundledResponse.json();
+  const local = await _readLocalStations();
+  if (!local) throw new Error('stations.json: немає ні кешу, ні вшитої копії');
+  if (!forceFresh) _refreshStationsInBackground(local.version);
+  return local;
 }
 
 // ══ ЗАВАНТАЖЕННЯ (публічне) ════════════════════════════════════
 
 /**
  * Завантажує та гідратує stations.json.
- * На нативній платформі — _fetchStationsNative() (мережа→кеш→bundled).
- * На веб/PWA — прямий fetch; SW самостійно обробляє networkFirst та кешування.
+ * На нативній платформі — _fetchStationsNative() (локальна копія, мережа у фоні).
+ * На веб/PWA — прямий fetch; SW віддає збережену копію й оновлює її у фоні.
  *
  * @param {boolean} [forceFresh=false] — примусово оновити дані (ігнорувати кеш/SW)
  * @returns {Promise<Record<string, object>>} state.stationsData після гідратації
@@ -391,7 +380,7 @@ export async function reloadStationsData(forceFresh = false) {
   if (Capacitor.isNativePlatform()) {
     data = await _fetchStationsNative(forceFresh);
   } else {
-    // Веб/PWA: SW перехоплює цей fetch і виконує networkFirst для stations.json.
+    // Веб/PWA: SW перехоплює цей fetch: віддає збережену копію, мережу перевіряє у фоні.
     const stationsUrl = getStationsUrl();
     const response    = await fetch(
       stationsUrl,
@@ -438,7 +427,13 @@ export async function reloadStationsData(forceFresh = false) {
   return hydrated;
 }
 
+// Станцію з посилання ?station= відкриваємо лише при першому завантаженні,
+// а не при кожному перезавантаженні даних (наприклад, після скидання правок).
+let _startupStationHandled = false;
+
 function handleStartupStation(data) {
+  if (_startupStationHandled) return;
+  _startupStationHandled = true;
   if (startupSlug && data[startupSlug]) {
     requestAnimationFrame(() => bus.emit('station:open', { slug: startupSlug }));
   }

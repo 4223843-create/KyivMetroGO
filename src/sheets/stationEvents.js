@@ -19,6 +19,7 @@ import { applyFavPillStyles, renderExitRoutes } from './renderStation.js';
 import { heartSvg }               from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { isEditModeEnabled }      from '../features/settings.js';
+import { isCheckinMode }          from '../domain/checkin.js';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -175,7 +176,6 @@ function _triggerExitFav(favTarget, slug, lineColor) {
     // Соковитий подвійний нативний вібровідгук «Успіх»
     Haptics.notification({ type: NotificationType.Success }).catch(() => {});
 
-    _maybeShowCheckinHint(lineColor);
     _maybeDismissOnboarding(lineColor);
   }
 
@@ -195,6 +195,8 @@ function _maybeDismissOnboarding(lineColor) {
 }
 
 function _maybeShowCheckinHint(lineColor) {
+  // Без увімкненого Check-in шпильок немає — підказку збережемо на потім
+  if (!isCheckinMode()) return;
   if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
   if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
   const sheetBodyEl = document.getElementById('sheetBody');
@@ -324,11 +326,16 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor) {
 
   if (!exitsList.length) return;
 
-  // 5. Відкриття / закриття панелі
-  const next = row.nextElementSibling;
-  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'numbered-exits') {
-    next.classList.remove('panel-open');
-    setTimeout(() => next.remove(), 280);
+  // 5. Відкриття / закриття панелі. Панель вставляється ПЕРЕД рядком (або перед
+  // підписом напрямку над ним) — там і шукаємо вже відкриту.
+  const anchor = row.previousElementSibling?.classList.contains('direction-label')
+    ? row.previousElementSibling
+    : row;
+  const prev = anchor.previousElementSibling;
+  if (prev?.classList.contains('dev-note-panel') && prev.dataset.type === 'numbered-exits'
+      && prev.classList.contains('panel-open')) {
+    prev.classList.remove('panel-open');
+    setTimeout(() => prev.remove(), 280);
     return;
   }
 

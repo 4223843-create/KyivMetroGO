@@ -45,7 +45,11 @@ function showDataUpdateToast(version) {
 }
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('controllerchange', showUpdateToast);
+  // Перше встановлення SW (clients.claim) теж дає controllerchange — тоді це не оновлення.
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) showUpdateToast();
+  });
 
   // Слухаємо повідомлення від SW — зокрема STATIONS_UPDATED.
   navigator.serviceWorker.addEventListener('message', event => {

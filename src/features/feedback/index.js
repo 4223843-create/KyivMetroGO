@@ -7,10 +7,12 @@ import { fbState, resetFbState }                 from './fbState.js';
 import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
 import { STORAGE_KEYS, Storage }                 from '../../core/storage.js';
+import { pushSheetHistory }                      from '../../ui/system.js';
 
 export { renderFeedbackPositions }               from './fbRenderer.js';
 
 bus.on('sheet:open-feedback', openFeedbackSheet);
+bus.on('feedback:close', closeFeedbackSheet);
 bus.on('feedback:dirty-changed', ({ isDirty }) => { appState.hasUnsavedFeedback = isDirty; });
 bus.on('feedback:submit-silent', () => submitFeedback(true));
 
@@ -119,6 +121,7 @@ function _resetSheetUI() {
 }
 
 function _openSheetDOM() {
+  pushSheetHistory();
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   _sheetEl.classList.add('sheet-open');
   document.getElementById('sheetOverlay').classList.add('overlay-visible');

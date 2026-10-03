@@ -14,7 +14,7 @@ import { isDevMode, getDevLog }    from './devmode.js';
 import { BackupService }           from '../services/backup.js';
 
 import {
-  getFavs, getExitFavs, saveFavs, updateFavDock,
+  getFavs, getExitFavs, saveFavs, updateFavDock, clearExitFavs,
 } from './favorites/index.js';
 import {
   isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache,
@@ -251,6 +251,14 @@ export function openSettingsSheet() {
     }
 
     // ── Приховати інформаційні блоки ──
+    // ── Локальні зміни: правки не надсилаються розробнику ──
+    const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
+    if (localFbToggle) {
+      localFbToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK, String(e.target.checked));
+      });
+    }
+
     const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
     if (hideInfoToggle) {
       hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
@@ -277,8 +285,9 @@ export function openSettingsSheet() {
         message: 'Очистити <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span>?',
         onYes:   () => {
           saveFavs([]);
-          Storage.remove(STORAGE_KEYS.EXIT_FAVS);
+          clearExitFavs();
           updateFavDock();
+          bus.emit('station:refresh');
           setTimeout(() => document.getElementById('settingsClose').click(), 180);
         },
         labelYes: 'Очистити',
@@ -308,6 +317,7 @@ export function openSettingsSheet() {
           Storage.remove(STORAGE_KEYS.CHECKINS);
           invalidateCheckinsCache();
           updateCheckinDock();
+          bus.emit('map:sync-checkins');
           setTimeout(() => document.getElementById('settingsClose').click(), 180);
         },
         labelYes: 'Очистити',
@@ -484,9 +494,13 @@ export function openSettingsSheet() {
     const hasCheckins     = Object.keys(getCheckins()).length > 0;
     const hasAnyData      = BackupService.hasUserData();
 
-    if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
-    if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
-    if (clearLocalBtn)   clearLocalBtn.disabled   = !hasAnyData;
+    // .disabled на div — лише прапорець для обробника кліку; візуально — клас is-empty
+    [[clearFavsBtn, !hasFavs], [clearCheckinBtn, !hasCheckins], [clearLocalBtn, !hasAnyData]]
+      .forEach(([btn, empty]) => {
+        if (!btn) return;
+        btn.disabled = empty;
+        btn.classList.toggle('is-empty', empty);
+      });
 
     const ma = document.getElementById('settingsShowMapAccessibilityToggle');
     if (ma) ma.checked = isShowMapAccessibilityEnabled();
