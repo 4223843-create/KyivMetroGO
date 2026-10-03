@@ -124,9 +124,9 @@ const TERMINAL_GEN = {
  * «закрита, відкриється о …», якщо вхід зараз закритий; години роботи — залежно
  * від налаштування; інтервал у кожен бік на поточну годину.
  */
-/** Чи є що показувати в панелі годинника за поточних налаштувань. */
+/** Чи є що показувати в панелі годинника зараз (за налаштуваннями й часом). */
 export function hasStationClock(s) {
-  return !!s?.schedule && (isShowIntervalsEnabled() || getStationHoursMode() !== 'never');
+  return !!s?.schedule && renderStationClock(s) !== '';
 }
 
 export function renderStationClock(s, now = new Date()) {

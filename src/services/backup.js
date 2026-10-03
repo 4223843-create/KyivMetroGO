@@ -282,10 +282,12 @@ async function _pickNative() {
 
   const file = result.files[0];
 
-  // file.data — base64-рядок; atob() декодує в UTF-8 текст
+  // file.data — base64-рядок. atob() дає байти (Latin-1), тому декодуємо
+  // їх як UTF-8, інакше кирилиця перетворюється на «Ð’Ð¸Ñ…»
   let text;
   try {
-    text = atob(file.data);
+    const bytes = Uint8Array.from(atob(file.data), ch => ch.charCodeAt(0));
+    text = new TextDecoder('utf-8').decode(bytes);
   } catch {
     return { status: 'invalid', reason: 'Не вдалося прочитати вміст файлу.' };
   }

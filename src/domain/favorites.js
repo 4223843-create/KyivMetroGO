@@ -65,10 +65,23 @@ export const isFav = slug => _readFavCache().includes(slug);
  */
 export function toggleFav(slug) {
   let favs = getFavs();
-  favs = favs.includes(slug)
+  const removing = favs.includes(slug);
+  favs = removing
     ? favs.filter(s => s !== slug)
     : [...favs, slug];
   saveFavs(favs);
+
+  // Станцію прибрали з Обраного — прибираємо й її збережені виходи,
+  // інакше пілюлі лишаються зафарбованими, а станції в Обраному вже немає.
+  if (removing) {
+    const exits = _readExitFavCache();
+    if (exits.some(f => f.slug === slug)) {
+      _exitFavCache = exits.filter(f => f.slug !== slug);
+      Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(_exitFavCache));
+      bus.emit('station:refresh');
+    }
+  }
+
   bus.emit('fav:updated');
   return favs.includes(slug);
 }
@@ -86,6 +99,12 @@ function _readExitFavCache() {
     _exitFavCache = [];
   }
   return _exitFavCache;
+}
+
+/** Очищує всі обрані виходи (і в сховищі, і в пам'яті). */
+export function clearExitFavs() {
+  _exitFavCache = [];
+  Storage.remove(STORAGE_KEYS.EXIT_FAVS);
 }
 
 /**
@@ -149,6 +168,7 @@ export function toggleExitFav(slug, dir, wagon, doors) {
   }
 
   Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
+  bus.emit('fav:updated');
   return { status: 'added' };
 }
 

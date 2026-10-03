@@ -9,6 +9,7 @@ import { applyExitLabels }         from '../data/localEdits.js';
 import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
+import { pushSheetHistory }        from '../ui/system.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
 import { renderDirections, renderStationConnections, renderStationClock, hasStationClock } from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
@@ -76,6 +77,13 @@ const _navLinkCache = new Map();
 bus.on('station:refresh', () => {
   _directionsHtmlCache.clear();
   refreshCurrentStation();
+});
+
+// Обране змінилось (зокрема при заміні виходу) — оновлюємо серце в шапці
+bus.on('fav:updated', () => {
+  const slug = state.currentStationSlug;
+  if (!slug || !sheet.classList.contains('sheet-open')) return;
+  _updateFavBtn(slug, LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)');
 });
 
 bus.on('station:open', ({ slug }) => openStation(slug));
@@ -146,6 +154,7 @@ function actualOpenStation(slug) {
   }
 
   state.currentStationSlug = slug;
+  pushSheetHistory();
   bus.emit('fav:dismiss-hint');
 
   const fav            = isFav(slug);

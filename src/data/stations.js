@@ -17,7 +17,7 @@ import { traversePositions }  from './positions.js';
 
 const REMOTE_STATIONS_URL = 'https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/public/stations.json';
 const NATIVE_CACHE_PATH   = 'stations_cache.json';
-const FETCH_TIMEOUT_MS    = 8000;
+const FETCH_TIMEOUT_MS    = 4000;
 
 // ══ ПРИВАТНІ СЛОВНИКИ (closure) ══════════════════════════════
 // Заповнюються у hydrateStations(), читаються через slugByName() / getSlugByLower().
@@ -320,12 +320,12 @@ async function _fetchStationsNative(forceFresh = false) {
     clearTimeout(timeoutId);
 
     if (response.ok) {
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.includes('json')) {
-        throw new Error(`Unexpected content-type: ${contentType}`);
-      }
-
+      // raw.githubusercontent.com віддає .json як text/plain — тому не перевіряємо
+      // content-type, а перевіряємо сам вміст.
       const freshData = await response.json();
+      if (!Array.isArray(freshData?.stations)) {
+        throw new Error('Unexpected stations.json structure');
+      }
 
       // Порівнюємо версію з кешем — щоб повідомити користувача про оновлення.
       if (!forceFresh) {
@@ -353,26 +353,27 @@ async function _fetchStationsNative(forceFresh = false) {
     }
   }
 
-  // ── Рівень 2: Filesystem.Cache ────────────────────────────────
-  if (!forceFresh) {
-    const cached = await _readFilesystemCache();
-    if (cached) {
-      console.info('[stations] loaded from Filesystem cache');
-      return cached.data;
-    }
+  // ── Рівень 2–3: Filesystem.Cache або bundled APK — беремо новішу версію ──
+  // Після оновлення APK вшиті дані можуть бути новішими за кеш з мережі.
+  const cached  = forceFresh ? null : await _readFilesystemCache();
+  let bundled   = null;
+  const bundledUrl = getStationsUrl();
+  try {
+    const bundledResponse = await fetch(bundledUrl);
+    if (bundledResponse.ok) bundled = await bundledResponse.json();
+  } catch {
+    // нижче — кеш або помилка
   }
 
-  // ── Рівень 3: bundled APK (http://localhost/stations.json) ────
-  console.info('[stations] falling back to bundled APK copy');
-  const bundledUrl      = getStationsUrl();
-  const bundledResponse = await fetch(bundledUrl);
-
-  if (!bundledResponse.ok) {
-    throw new Error(
-      `stations.json bundled fetch failed: ${bundledResponse.status} (${bundledUrl.href})`,
-    );
+  if (cached && (!bundled || String(cached.version ?? '') >= String(bundled.version ?? ''))) {
+    console.info('[stations] loaded from Filesystem cache');
+    return cached.data;
   }
-  return bundledResponse.json();
+  if (bundled) {
+    console.info('[stations] falling back to bundled APK copy');
+    return bundled;
+  }
+  throw new Error(`stations.json bundled fetch failed (${bundledUrl.href})`);
 }
 
 // ══ ЗАВАНТАЖЕННЯ (публічне) ════════════════════════════════════
@@ -438,7 +439,13 @@ export async function reloadStationsData(forceFresh = false) {
   return hydrated;
 }
 
+// Станцію з посилання ?station= відкриваємо лише при першому завантаженні,
+// а не при кожному перезавантаженні даних (наприклад, після скидання правок).
+let _startupStationHandled = false;
+
 function handleStartupStation(data) {
+  if (_startupStationHandled) return;
+  _startupStationHandled = true;
   if (startupSlug && data[startupSlug]) {
     requestAnimationFrame(() => bus.emit('station:open', { slug: startupSlug }));
   }

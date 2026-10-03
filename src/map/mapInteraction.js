@@ -3,7 +3,7 @@
 // накладання та зняття heatmap-штрихування для відвіданих виходів (check-in).
 
 import { state }                  from '../core/state.js';
-import { getCheckins }            from '../domain/checkin.js';
+import { getCheckins, isCheckinMode, getStationExitStats } from '../domain/checkin.js';
 import { bus }                    from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { getSlugByLower }         from '../data/stations.js';
@@ -242,7 +242,9 @@ function buildHatchLines(sourceShape, isFull, scale) {
 export function syncMapWithCheckins() {
   if (!inner || !state.stationsData) return;
 
-  const checkins = getCheckins();
+  // Check-in вимкнено — карта без позначок відвіданих станцій
+  const checkins = isCheckinMode() ? getCheckins() : {};
+  const entries  = Object.values(checkins);
   const visitedExitsBySlug = {};
 
   for (const entry of Object.values(checkins)) {
@@ -276,12 +278,11 @@ export function syncMapWithCheckins() {
     const slug  = getSlugByLower(rawId);
     if (!slug || !visitedExitsBySlug[slug]) return;
 
-    const stData         = state.stationsData[slug];
-    const totalOpenExits = stData?.positions?.length
-      ? stData.positions.filter(p => !p.closed).length
-      : 1;
+    // Той самий підрахунок, що й у журналі check-in (без довгих переходів,
+    // з урахуванням дзеркальних виходів)
+    const { total, visited } = getStationExitStats(slug, entries);
 
-    el.classList.add(visitedExitsBySlug[slug].size >= totalOpenExits
+    el.classList.add(visited >= Math.max(total, 1)
       ? 'is-visited-full'
       : 'is-visited-partial');
   });

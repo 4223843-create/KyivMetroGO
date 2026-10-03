@@ -38,6 +38,7 @@ import {
   isExitFav,
   toggleExitFav,
   replaceExitFav,
+  clearExitFavs,
 } from '../../domain/favorites.js';
 
 // ── Ре-експорти для зворотної сумісності ─────────────────────
@@ -45,7 +46,7 @@ import {
 // імпортують ці функції з features/favorites — вони делегують у domain.
 export {
   getFavs, saveFavs, isFav, toggleFav,
-  getExitFavs, exitFavId, isExitFav, toggleExitFav, replaceExitFav,
+  getExitFavs, exitFavId, isExitFav, toggleExitFav, replaceExitFav, clearExitFavs,
 };
 
 // ══ DOM-ВУЗЛИ ════════════════════════════════════════════════

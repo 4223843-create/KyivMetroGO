@@ -113,6 +113,8 @@ bus.on('sheet:close', ({ sheetEl }) => {
 bus.on('data:reload-stations', async ({ onDone } = {}) => {
   try {
     await reloadStationsData();
+    // Дані перечитано без локальних правок — скидаємо кеш HTML картки станції
+    bus.emit('station:refresh');
     onDone?.();
   } catch (err) {
     console.error('[sheetsManager] data:reload-stations failed:', err);
