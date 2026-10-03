@@ -121,8 +121,8 @@ const TERMINAL_GEN = {
 
 /**
  * Вміст панелі годинника (кнопка біля серця) станом на час телефону:
- * «відкриється о …», якщо вхід зараз закритий; «вхід до …», якщо до закриття
- * менше двох годин; інтервал у кожен бік на поточну годину.
+ * «закрита, відкриється о …», якщо вхід зараз закритий; години роботи — залежно
+ * від налаштування; інтервал у кожен бік на поточну годину.
  */
 /** Чи є що показувати в панелі годинника за поточних налаштувань. */
 export function hasStationClock(s) {
@@ -140,11 +140,10 @@ export function renderStationClock(s, now = new Date()) {
   const hoursMode = getStationHoursMode();
   if (hoursMode !== 'never') {
     if (nowMin < open || nowMin >= close) {
-      lines.push(`<div class="clock-head">Станція відкриється о ${sch.open}</div>`);
-    } else if (hoursMode === 'always') {
+      lines.push(`<div class="clock-head">Станція закрита, відкриється о ${sch.open}</div>`);
+    } else if (hoursMode === 'always' || close - nowMin <= 120 || nowMin - open < 120) {
+      // 'soon': перші дві години після відкриття та останні дві до закриття
       lines.push(`<div class="clock-head">Вхід ${sch.open}–${sch.close}</div>`);
-    } else if (close - nowMin <= 120) {
-      lines.push(`<div class="clock-head">Вхід до ${sch.close}</div>`);
     }
   }
 
