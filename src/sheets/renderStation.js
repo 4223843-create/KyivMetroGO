@@ -185,7 +185,7 @@ export function renderDirections(s, color) {
 
     const mainHtml = mainDirs.map(dir => {
       const exitsHtml = dir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator || (p.isHoist && isShowHoistsEnabled()))) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
         if (!visiblePos.length) return '';
         return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true, exit)}`;
       }).join('');
@@ -235,7 +235,7 @@ export function renderDirections(s, color) {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
-      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || p.isEscalator || (p.isHoist && isShowHoistsEnabled()))) || [];
+      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
       if (!visiblePos.length) return '';
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';

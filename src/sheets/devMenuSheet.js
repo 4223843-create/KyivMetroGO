@@ -214,16 +214,12 @@ function _renderVerificationSection(container) {
  */
 function _noteRowHtml({ deleteId, slug, posIdx, text, extra, expanded, pending }) {
   const posAttr = posIdx !== undefined ? ' data-pos-idx="' + posIdx + '"' : '';
-  // Права третина рядка — зона дій (.dev-note-action-zone).
-  // .dev-menu-row--with-action обмежений 66.67% ширини через CSS,
-  // тому клік на зону дій не потрапляє на кнопку відкриття станції.
   let actionHtml;
   if (pending) {
     actionHtml =
       '<button type="button" class="dev-note-undo-btn" ' +
       'data-delete-id="' + deleteId + '" data-slug="' + slug + '"' + posAttr + '>Скасувати</button>';
   } else if (expanded) {
-    // «Видалити» + × (закрити без видалення)
     actionHtml =
       '<button type="button" class="dev-note-delete-btn" ' +
       'data-delete-id="' + deleteId + '" data-slug="' + slug + '"' + posAttr + '>Видалити</button>' +

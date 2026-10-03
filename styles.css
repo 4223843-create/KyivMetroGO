@@ -666,7 +666,7 @@ color: var(--text-muted);
   display: block;
   font-size: var(--fs-xs);
   color: var(--text-muted);
-  opacity: 0.7;
+  opacity: 0.6;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -819,7 +819,7 @@ color: var(--text-muted);
   border: 0.5px solid var(--border);
   
   /* Робимо весь блок прозорим на 70% */
-  opacity: 0.7;
+  opacity: 0.6;
 }
 .drop-menu.show {
   display: block;
@@ -852,7 +852,7 @@ color: var(--text-muted);
   letter-spacing: .06em;
   color: var(--text-muted);
   margin: 20px 0 8px;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 
@@ -1069,7 +1069,7 @@ color: var(--text-muted);
   cursor: pointer;
   padding: 12px 0 4px;
   text-align: center;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 .fb-reset-btn:active { opacity: 1; }
 
@@ -1217,7 +1217,7 @@ color: var(--text-muted);
 }
 .fb-restore-exit:active svg {
   transform: scale(0.85);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 [data-theme="light"] .fb-closed-note {
@@ -1588,7 +1588,7 @@ max-height: 92dvh;
 .about-footer {
   margin: 0;
   text-align: center;
-  opacity: 0.4;
+  opacity: 0.6;
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
@@ -1747,7 +1747,7 @@ z-index: var(--z-dropdown-active);
   background: none;
   border: none;
   color: var(--text-muted);
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: pointer;
   padding: 2px;
   display: flex;
@@ -3321,7 +3321,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   justify-content: center;
   height: 36px;
   color: var(--text-muted);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .about-support-divider {
@@ -3397,7 +3397,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   font-weight: var(--fw-medium);
 }
 .about-btn-mono-fixed:active {
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .about-beta-success {
@@ -3943,29 +3943,30 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   display: flex;
   align-items: stretch;
   gap: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Кнопка-рядок обмежена 2/3 ширини */
 .dev-menu-row--with-action {
-  flex: 0 0 85%;
-  width: 85%;
+  flex: 1 1 0;
+  min-width: 0;
   border-radius: 10px 0 0 10px;
 }
 
 /* Права третина — зона кнопок */
 .dev-note-action-zone {
-  flex: 0 0 15%;
-  width: 15%;
+  flex: 0 0 40px;
+  width: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   background: var(--bg-card);
   border: 0.5px solid var(--border);
-  border-left: none;
+  border-left: 1px solid var(--border);
   border-radius: 0 10px 10px 0;
-  padding: 0 6px;
-  min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 /* Стрілка › — за замовчуванням */
@@ -3987,6 +3988,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 /* Маленька кнопка «Видалити» */
 .dev-note-delete-btn {
+  position: absolute;
+  right: 56px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  white-space: nowrap;
   font-size: 11px;
   font-weight: var(--fw-medium);
   font-family: inherit;
@@ -4009,6 +4016,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 /* Кнопка «Скасувати» (після натискання «Видалити», сіра) */
 .dev-note-undo-btn {
+  position: absolute;
+  right: 56px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  white-space: nowrap;
   font-size: 11px;
   font-weight: var(--fw-medium);
   font-family: inherit;
@@ -4023,7 +4036,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   color: var(--text-muted);
   cursor: pointer;
   white-space: nowrap;
-  opacity: 0.7;
+  opacity: 0.6;
   transition: opacity 0.15s;
 }
 .dev-note-undo-btn:active {
@@ -4040,7 +4053,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   padding: 4px 4px;
   cursor: pointer;
   font-family: inherit;
-  opacity: 0.4;
+  opacity: 0.6;
   transition: opacity 0.15s;
   flex-shrink: 0;
 }
@@ -4175,7 +4188,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 
 .dev-exits-cycle-btn:active,
 .dev-exits-full-btn:active {
-  opacity: 0.4;
+  opacity: 0.6;
 }
 
 .dev-exits-check {
@@ -4263,7 +4276,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   padding: 4px 0;
 }
 .dev-confirm-secondary-actions button:disabled {
-  opacity: 0.4;
+  opacity: 0.6;
   text-decoration: none;
   cursor: default;
 }
@@ -4519,7 +4532,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   text-decoration: underline;
   cursor: pointer;
   padding: 8px;
-  opacity: 0.7;
+  opacity: 0.6;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -4676,7 +4689,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .ci-ring-sub {
   font-size: 10px;
   color: var(--text-muted);
-  opacity: 0.7;
+  opacity: 0.6;
   line-height: 1;
 }
 
@@ -4699,7 +4712,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 .settings-row.row-disabled {
-  opacity: 0.4;
+  opacity: 0.6;
   filter: grayscale(0.6);
   transition: opacity 0.3s ease;
 }
@@ -4791,7 +4804,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 .clear-data-chevron {
   color: var(--text-muted);
-  opacity: 0.4;
+  opacity: 0.6;
   font-size: 14px;
   transition: transform 0.22s ease;
   display: inline-block;

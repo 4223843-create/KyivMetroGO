@@ -5,6 +5,7 @@
       "slug": "R.Akademmistechko",
       "name": "Академмістечко",
       "line": "red",
+      "code_st": "110",
       "map_zones": [
         {
           "x": 0,
@@ -129,13 +130,13 @@
             }
           ]
         }
-      ],
-      "code_st": "110"
+      ]
     },
     {
       "slug": "R.Zhytomyrska",
       "name": "Житомирська",
       "line": "red",
+      "code_st": "111",
       "map_zones": [
         {
           "x": 3.3,
@@ -241,13 +242,13 @@
             }
           ]
         }
-      ],
-      "code_st": "111"
+      ]
     },
     {
       "slug": "R.Sviatoshyn",
       "name": "Святошин",
       "line": "red",
+      "code_st": "112",
       "map_zones": [
         {
           "x": 6.5,
@@ -429,13 +430,13 @@
             }
           ]
         }
-      ],
-      "code_st": "112"
+      ]
     },
     {
       "slug": "R.Nyvky",
       "name": "Нивки",
       "line": "red",
+      "code_st": "113",
       "map_zones": [
         {
           "x": 9.7,
@@ -555,13 +556,13 @@
             }
           ]
         }
-      ],
-      "code_st": "113"
+      ]
     },
     {
       "slug": "R.Beresteiska",
       "name": "Берестейська",
       "line": "red",
+      "code_st": "114",
       "map_zones": [
         {
           "x": 12.9,
@@ -649,13 +650,13 @@
             }
           ]
         }
-      ],
-      "code_st": "114"
+      ]
     },
     {
       "slug": "R.Shuliavska",
       "name": "Шулявська",
       "line": "red",
+      "code_st": "115",
       "map_zones": [
         {
           "x": 16.1,
@@ -707,13 +708,13 @@
             }
           ]
         }
-      ],
-      "code_st": "115"
+      ]
     },
     {
       "slug": "R.Politekhnychnyi_instytut",
       "name": "Політехнічний інститут",
       "line": "red",
+      "code_st": "116",
       "map_zones": [
         {
           "x": 19.4,
@@ -771,13 +772,13 @@
             }
           ]
         }
-      ],
-      "code_st": "116"
+      ]
     },
     {
       "slug": "R.Vokzalna",
       "name": "Вокзальна",
       "line": "red",
+      "code_st": "117",
       "map_zones": [
         {
           "x": 25.8,
@@ -830,13 +831,13 @@
             }
           ]
         }
-      ],
-      "code_st": "117"
+      ]
     },
     {
       "slug": "R.Universytet",
       "name": "Університет",
       "line": "red",
+      "code_st": "118",
       "map_zones": [
         {
           "x": 32.3,
@@ -894,13 +895,13 @@
             }
           ]
         }
-      ],
-      "code_st": "118"
+      ]
     },
     {
       "slug": "R.Teatralna",
       "name": "Театральна",
       "line": "red",
+      "code_st": "119",
       "map_zones": [
         {
           "x": 38.7,
@@ -1007,13 +1008,13 @@
             }
           ]
         }
-      ],
-      "code_st": "119"
+      ]
     },
     {
       "slug": "R.Khreshchatyk",
       "name": "Хрещатик",
       "line": "red",
+      "code_st": "120",
       "map_zones": [
         {
           "x": 45.2,
@@ -1173,13 +1174,13 @@
             }
           ]
         }
-      ],
-      "code_st": "120"
+      ]
     },
     {
       "slug": "R.Arsenalna",
       "name": "Арсенальна",
       "line": "red",
+      "code_st": "121",
       "map_zones": [
         {
           "x": 51.6,
@@ -1232,13 +1233,13 @@
             }
           ]
         }
-      ],
-      "code_st": "121"
+      ]
     },
     {
       "slug": "R.Dnipro",
       "name": "Дніпро",
       "line": "red",
+      "code_st": "122",
       "map_zones": [
         {
           "x": 58,
@@ -1304,13 +1305,13 @@
             }
           ]
         }
-      ],
-      "code_st": "122"
+      ]
     },
     {
       "slug": "R.Hidropark",
       "name": "Гідропарк",
       "line": "red",
+      "code_st": "123",
       "map_zones": [
         {
           "x": 64.5,
@@ -1386,13 +1387,13 @@
             }
           ]
         }
-      ],
-      "code_st": "123"
+      ]
     },
     {
       "slug": "R.Livoberezhna",
       "name": "Лівобережна",
       "line": "red",
+      "code_st": "124",
       "map_zones": [
         {
           "x": 67.7,
@@ -1482,13 +1483,13 @@
             }
           ]
         }
-      ],
-      "code_st": "124"
+      ]
     },
     {
       "slug": "R.Darnytsia",
       "name": "Дарниця",
       "line": "red",
+      "code_st": "125",
       "map_zones": [
         {
           "x": 70.9,
@@ -1605,13 +1606,13 @@
             }
           ]
         }
-      ],
-      "code_st": "125"
+      ]
     },
     {
       "slug": "R.Chernihivska",
       "name": "Чернігівська",
       "line": "red",
+      "code_st": "126",
       "map_zones": [
         {
           "x": 74.2,
@@ -1707,13 +1708,13 @@
             }
           ]
         }
-      ],
-      "code_st": "126"
+      ]
     },
     {
       "slug": "R.Lisova",
       "name": "Лісова",
       "line": "red",
+      "code_st": "127",
       "map_zones": [
         {
           "x": 77.5,
@@ -1805,13 +1806,13 @@
             }
           ]
         }
-      ],
-      "code_st": "127"
+      ]
     },
     {
       "slug": "B.Heroiv_Dnipra",
       "name": "Героїв Дніпра",
       "line": "blue",
+      "code_st": "210",
       "map_zones": [
         {
           "x": 35.5,
@@ -1891,13 +1892,13 @@
             }
           ]
         }
-      ],
-      "code_st": "210"
+      ]
     },
     {
       "slug": "B.Minska",
       "name": "Мінська",
       "line": "blue",
+      "code_st": "211",
       "map_zones": [
         {
           "x": 32.3,
@@ -2035,13 +2036,13 @@
             }
           ]
         }
-      ],
-      "code_st": "211"
+      ]
     },
     {
       "slug": "B.Obolon",
       "name": "Оболонь",
       "line": "blue",
+      "code_st": "212",
       "map_zones": [
         {
           "x": 35.5,
@@ -2179,13 +2180,13 @@
             }
           ]
         }
-      ],
-      "code_st": "212"
+      ]
     },
     {
       "slug": "B.Pochaina",
       "name": "Почайна",
       "line": "blue",
+      "code_st": "213",
       "map_zones": [
         {
           "x": 32.3,
@@ -2296,13 +2297,13 @@
             }
           ]
         }
-      ],
-      "code_st": "213"
+      ]
     },
     {
       "slug": "B.Tarasa_Shevchenko",
       "name": "Тараса Шевченко",
       "line": "blue",
+      "code_st": "214",
       "map_zones": [
         {
           "x": 35.5,
@@ -2381,13 +2382,13 @@
             }
           ]
         }
-      ],
-      "code_st": "214"
+      ]
     },
     {
       "slug": "B.Kontraktova_ploshcha",
       "name": "Контрактова площа",
       "line": "blue",
+      "code_st": "215",
       "map_zones": [
         {
           "x": 38.7,
@@ -2570,13 +2571,13 @@
             }
           ]
         }
-      ],
-      "code_st": "215"
+      ]
     },
     {
       "slug": "B.Poshtova_ploshcha",
       "name": "Поштова площа",
       "line": "blue",
+      "code_st": "216",
       "map_zones": [
         {
           "x": 42,
@@ -2628,13 +2629,13 @@
             }
           ]
         }
-      ],
-      "code_st": "216"
+      ]
     },
     {
       "slug": "B.Maidan_Nezalezhnosti",
       "name": "Майдан Незалежності",
       "line": "blue",
+      "code_st": "217",
       "map_zones": [
         {
           "x": 45.2,
@@ -2791,13 +2792,13 @@
             }
           ]
         }
-      ],
-      "code_st": "217"
+      ]
     },
     {
       "slug": "B.Ploshcha_Ukrainskikh_heroiv",
       "name": "Площа Українських Героїв",
       "line": "blue",
+      "code_st": "218",
       "map_zones": [
         {
           "x": 45.2,
@@ -2927,13 +2928,13 @@
             }
           ]
         }
-      ],
-      "code_st": "218"
+      ]
     },
     {
       "slug": "B.Olimpiiska",
       "name": "Олімпійська",
       "line": "blue",
+      "code_st": "219",
       "map_zones": [
         {
           "x": 42,
@@ -3021,13 +3022,13 @@
             }
           ]
         }
-      ],
-      "code_st": "219"
+      ]
     },
     {
       "slug": "B.Palats_Ukraina",
       "name": "Палац „Україна“",
       "line": "blue",
+      "code_st": "220",
       "map_zones": [
         {
           "x": 45.2,
@@ -3107,13 +3108,13 @@
             }
           ]
         }
-      ],
-      "code_st": "220"
+      ]
     },
     {
       "slug": "B.Lybidska",
       "name": "Либідська",
       "line": "blue",
+      "code_st": "221",
       "map_zones": [
         {
           "x": 48.4,
@@ -3219,13 +3220,13 @@
             }
           ]
         }
-      ],
-      "code_st": "221"
+      ]
     },
     {
       "slug": "B.Demiivska",
       "name": "Деміївська",
       "line": "blue",
+      "code_st": "222",
       "map_zones": [
         {
           "x": 45.2,
@@ -3316,13 +3317,13 @@
             }
           ]
         }
-      ],
-      "code_st": "222"
+      ]
     },
     {
       "slug": "B.Holosiivska",
       "name": "Голосіївська",
       "line": "blue",
+      "code_st": "223",
       "map_zones": [
         {
           "x": 42,
@@ -3413,13 +3414,13 @@
             }
           ]
         }
-      ],
-      "code_st": "223"
+      ]
     },
     {
       "slug": "B.Vasylkivska",
       "name": "Васильківська",
       "line": "blue",
+      "code_st": "224",
       "map_zones": [
         {
           "x": 38.7,
@@ -3484,11 +3485,7 @@
                 {
                   "wagon": "1",
                   "doors": "2",
-                  "isEscalator": true
-                },
-                {
-                  "wagon": "1",
-                  "doors": "2",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
@@ -3499,11 +3496,7 @@
                 {
                   "wagon": "5",
                   "doors": "3",
-                  "isEscalator": true
-                },
-                {
-                  "wagon": "5",
-                  "doors": "3",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
@@ -3519,11 +3512,7 @@
                 {
                   "wagon": "5",
                   "doors": "3",
-                  "isEscalator": true
-                },
-                {
-                  "wagon": "5",
-                  "doors": "3",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
@@ -3534,24 +3523,20 @@
                 {
                   "wagon": "1",
                   "doors": "2",
-                  "isEscalator": true
-                },
-                {
-                  "wagon": "1",
-                  "doors": "2",
+                  "isEscalator": true,
                   "isLift": true
                 }
               ]
             }
           ]
         }
-      ],
-      "code_st": "224"
+      ]
     },
     {
       "slug": "B.Vystavkovyi_tsentr",
       "name": "Виставковий центр",
       "line": "blue",
+      "code_st": "225",
       "map_zones": [
         {
           "x": 35.5,
@@ -3616,13 +3601,13 @@
             }
           ]
         }
-      ],
-      "code_st": "225"
+      ]
     },
     {
       "slug": "B.Ipodrom",
       "name": "Іподром",
       "line": "blue",
+      "code_st": "226",
       "map_zones": [
         {
           "x": 32.3,
@@ -3744,13 +3729,13 @@
             }
           ]
         }
-      ],
-      "code_st": "226"
+      ]
     },
     {
       "slug": "B.Teremky",
       "name": "Теремки",
       "line": "blue",
+      "code_st": "227",
       "map_zones": [
         {
           "x": 29,
@@ -3852,13 +3837,13 @@
             }
           ]
         }
-      ],
-      "code_st": "227"
+      ]
     },
     {
       "slug": "G.Syrets",
       "name": "Сирець",
       "line": "green",
+      "code_st": "310",
       "map_zones": [
         {
           "x": 25.9,
@@ -3897,13 +3882,13 @@
             }
           ]
         }
-      ],
-      "code_st": "310"
+      ]
     },
     {
       "slug": "G.Dorohozhychi",
       "name": "Дорогожичі",
       "line": "green",
+      "code_st": "311",
       "map_zones": [
         {
           "x": 29.1,
@@ -4000,13 +3985,13 @@
             }
           ]
         }
-      ],
-      "code_st": "311"
+      ]
     },
     {
       "slug": "G.Lukianivska",
       "name": "Лукʼянівська",
       "line": "green",
+      "code_st": "312",
       "map_zones": [
         {
           "x": 32.3,
@@ -4073,13 +4058,13 @@
             }
           ]
         }
-      ],
-      "code_st": "312"
+      ]
     },
     {
       "slug": "G.Zoloti_vorota",
       "name": "Золоті ворота",
       "line": "green",
+      "code_st": "314",
       "map_zones": [
         {
           "x": 38.7,
@@ -4164,13 +4149,13 @@
             }
           ]
         }
-      ],
-      "code_st": "314"
+      ]
     },
     {
       "slug": "G.Palats_sportu",
       "name": "Палац спорту",
       "line": "green",
+      "code_st": "315",
       "map_zones": [
         {
           "x": 51.6,
@@ -4273,13 +4258,13 @@
             }
           ]
         }
-      ],
-      "code_st": "315"
+      ]
     },
     {
       "slug": "G.Klovska",
       "name": "Кловська",
       "line": "green",
+      "code_st": "316",
       "map_zones": [
         {
           "x": 51.6,
@@ -4349,13 +4334,13 @@
             }
           ]
         }
-      ],
-      "code_st": "316"
+      ]
     },
     {
       "slug": "G.Pecherska",
       "name": "Печерська",
       "line": "green",
+      "code_st": "317",
       "map_zones": [
         {
           "x": 54.9,
@@ -4416,13 +4401,13 @@
             }
           ]
         }
-      ],
-      "code_st": "317"
+      ]
     },
     {
       "slug": "G.Zvirynetska",
       "name": "Звіринецька",
       "line": "green",
+      "code_st": "318",
       "map_zones": [
         {
           "x": 58.1,
@@ -4501,13 +4486,13 @@
             }
           ]
         }
-      ],
-      "code_st": "318"
+      ]
     },
     {
       "slug": "G.Vydubychi",
       "name": "Видубичі",
       "line": "green",
+      "code_st": "319",
       "map_zones": [
         {
           "x": 61.3,
@@ -4624,13 +4609,13 @@
             }
           ]
         }
-      ],
-      "code_st": "319"
+      ]
     },
     {
       "slug": "G.Slavutych",
       "name": "Славутич",
       "line": "green",
+      "code_st": "321",
       "map_zones": [
         {
           "x": 67.7,
@@ -4692,13 +4677,13 @@
             }
           ]
         }
-      ],
-      "code_st": "321"
+      ]
     },
     {
       "slug": "G.Osokorky",
       "name": "Осокорки",
       "line": "green",
+      "code_st": "322",
       "map_zones": [
         {
           "x": 74.2,
@@ -4842,13 +4827,13 @@
             }
           ]
         }
-      ],
-      "code_st": "322"
+      ]
     },
     {
       "slug": "G.Pozniaky",
       "name": "Позняки",
       "line": "green",
+      "code_st": "323",
       "map_zones": [
         {
           "x": 77.4,
@@ -4986,13 +4971,13 @@
             }
           ]
         }
-      ],
-      "code_st": "323"
+      ]
     },
     {
       "slug": "G.Kharkivska",
       "name": "Харківська",
       "line": "green",
+      "code_st": "324",
       "map_zones": [
         {
           "x": 80.6,
@@ -5121,13 +5106,13 @@
             }
           ]
         }
-      ],
-      "code_st": "324"
+      ]
     },
     {
       "slug": "G.Vyrlytsia",
       "name": "Вирлиця",
       "line": "green",
+      "code_st": "325",
       "map_zones": [
         {
           "x": 83.9,
@@ -5214,13 +5199,13 @@
             }
           ]
         }
-      ],
-      "code_st": "325"
+      ]
     },
     {
       "slug": "G.Boryspilska",
       "name": "Бориспільська",
       "line": "green",
+      "code_st": "326",
       "map_zones": [
         {
           "x": 87.1,
@@ -5312,13 +5297,13 @@
             }
           ]
         }
-      ],
-      "code_st": "326"
+      ]
     },
     {
       "slug": "G.Chervonyi_khutir",
       "name": "Червоний Хутір",
       "line": "green",
+      "code_st": "327",
       "map_zones": [
         {
           "x": 90.3,
@@ -5381,8 +5366,7 @@
             }
           ]
         }
-      ],
-      "code_st": "327"
+      ]
     }
   ]
 }
