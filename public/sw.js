@@ -36,7 +36,7 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
   if (url.pathname.endsWith('stations.json')) {
-    event.respondWith(networkFirst(event.request));
+    event.respondWith(stationsLocalFirst(event));
     return;
   }
 
@@ -49,49 +49,51 @@ self.addEventListener('fetch', event => {
   event.respondWith(staleWhileRevalidate(event.request));
 });
 
-const NETWORK_TIMEOUT_MS = 4000;
+// stations.json — спершу локальна копія: якщо вона є, віддаємо одразу, а мережу
+// перевіряємо у фоні. Нова версія застосується після тосту «Перезавантажити»
+// або при наступному запуску — інтернет ніколи не гальмує відкриття.
+async function stationsLocalFirst(event) {
+  const request = event.request;
+  const cache   = await caches.open(CACHE_NAME);
+  const cached  = await cache.match(request, { ignoreSearch: true });
+  // Окрема копія для порівняння версій: тіло `cached` споживе сторінка.
+  const cachedForCompare = cached?.clone();
 
-// stations.json: мережа першою, але якщо є збережена копія і мережа повільна —
-// через 4 с віддаємо копію (оновлення докешується у фоні).
-async function networkFirst(request) {
-  const cache  = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request, { ignoreSearch: true });
-
-  const networkPromise = fetch(request).then(async response => {
+  const networkPromise = fetch(request, { cache: 'no-store' }).then(async response => {
     if (!response.ok) return response;
-    if (cached) {
+    if (cachedForCompare) {
       try {
         const [newData, oldData] = await Promise.all([
           response.clone().json(),
-          cached.clone().json(),
+          cachedForCompare.json(),
         ]);
-        if (!newData.version || newData.version !== oldData.version) {
-          // Версія змінилась — повідомляємо всі вкладки.
-          self.clients.matchAll({ type: 'window', includeUncontrolled: false })
-            .then(clients => clients.forEach(client =>
-              client.postMessage({ type: 'STATIONS_UPDATED', version: newData.version ?? null })
-            ))
-            .catch(() => {});  // не критично
+        if (newData.version && newData.version !== oldData.version) {
+          // Версія змінилась — повідомляємо всі вкладки, зокрема ту, що саме
+          // завантажується (її ще може не бути в matchAll — тому й через clientId).
+          const message = { type: 'STATIONS_UPDATED', version: newData.version };
+          const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .catch(() => []);
+          const own = event.clientId ? await self.clients.get(event.clientId).catch(() => null) : null;
+          new Set([...clients, own].filter(Boolean)).forEach(client => client.postMessage(message));
         }
       } catch {
         // Ignore invalid JSON and refresh the cached copy below.
       }
     }
-    await cache.put(request, response.clone());
+    await cache.put(new URL('./stations.json', self.location).href, response.clone());
     return response;
   });
 
-  if (!cached) {
-    try {
-      return await networkPromise;
-    } catch {
-      return new Response('Офлайн', { status: 503 });
-    }
+  // forceFresh у застосунку (cache: 'no-store') — спершу мережа
+  if (cached && request.cache !== 'no-store') {
+    event.waitUntil(networkPromise.catch(() => {}));
+    return cached;
   }
-
-  const timeout = new Promise(resolve => setTimeout(() => resolve(null), NETWORK_TIMEOUT_MS));
-  const fresh = await Promise.race([networkPromise.catch(() => null), timeout]);
-  return fresh?.ok ? fresh : cached;
+  try {
+    return await networkPromise;
+  } catch {
+    return cached || new Response('Офлайн', { status: 503 });
+  }
 }
 
 async function navigationResponse(request) {
