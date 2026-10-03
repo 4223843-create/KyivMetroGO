@@ -74,6 +74,62 @@ export function renderStationConnections(s) {
   return items.length ? `<div class="station-connections">${items.join('')}</div>` : '';
 }
 
+// ══ ГОДИНИ РОБОТИ ТА ІНТЕРВАЛИ ══
+
+const FRACTIONS = { 0: '', 15: '¼', 30: '½', 45: '¾' };
+
+/** 390 с → «6½». */
+function fmtMinutes(sec) {
+  return `${Math.floor(sec / 60)}${FRACTIONS[sec % 60] ?? ''}`;
+}
+
+/** «05:33» → хвилини від початку доби; час до 03:00 вважаємо після опівночі. */
+function toMin(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h < 3 ? h + 24 : h) * 60 + m;
+}
+
+/** Поточний інтервал (пара секунд [мін, макс]) у бік кінцевої або null. */
+function currentInterval(line, terminal, now) {
+  const periods = state.lineIntervals?.[line];
+  if (!periods) return null;
+  const hh = String(now.getHours()).padStart(2, '0');
+  const p = periods.find(x => x.from.startsWith(hh));
+  if (!p) return null;
+  const day = now.getDay();
+  return p[day === 0 || day === 6 ? 'holiday' : 'weekday']?.[terminal] || null;
+}
+
+/** Блок «Вхід 05:33–23:36» + рядок на кожен напрямок: інтервал зараз, перший і останній поїзд. */
+export function renderStationSchedule(s, now = new Date()) {
+  const sch = s.schedule;
+  if (!sch) return '';
+  const nowMin = toMin(`${now.getHours()}:${now.getMinutes()}`);
+  const isOpen = nowMin >= toMin(sch.open) && nowMin < toMin(sch.close);
+  const halls  = sch.halls_open < sch.halls ? ` · діє ${sch.halls_open} з ${sch.halls} вестибюлів` : '';
+  const head   = isOpen
+    ? `Вхід ${sch.open}–${sch.close}${halls}`
+    : `Вхід закрито · відкриття о ${sch.open}`;
+
+  const rows = Object.entries(sch.trains || {}).map(([terminal, t]) => {
+    let now_ = '';
+    if (nowMin >= toMin(t.first) && nowMin <= toMin(t.last)) {
+      const iv = currentInterval(s.line, terminal, now);
+      if (iv) {
+        const [a, b] = iv;
+        now_ = `<span class="schedule-interval">кожні ${a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`}&nbsp;хв</span>`;
+      }
+    } else if (nowMin > toMin(t.last)) {
+      now_ = '<span class="schedule-interval schedule-ended">рух завершено</span>';
+    }
+    return `<div class="schedule-row"><span class="schedule-dir">→ ${terminal}</span>${now_}` +
+      `<span class="schedule-trains">${t.first}–${t.last}</span></div>`;
+  });
+
+  const legend = rows.length ? '<span class="schedule-legend">перший–останній</span>' : '';
+  return `<div class="station-schedule"><div class="schedule-head"><span>${head}</span>${legend}</div>${rows.join('')}</div>`;
+}
+
 // ══ РЕНДЕР ПОЗИЦІЙ ══
 
 function generatePills(wStr, dStr, color) {

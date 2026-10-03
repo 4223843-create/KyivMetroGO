@@ -10,7 +10,7 @@ import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
-import { renderDirections, renderStationConnections } from './renderStation.js';
+import { renderDirections, renderStationConnections, renderStationSchedule } from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
 
 // ══ STATION SHEET ══
@@ -149,7 +149,7 @@ function actualOpenStation(slug) {
       directionsHtml = renderDirections(s, color);
       _directionsHtmlCache.set(slug, directionsHtml);
     }
-    sheetBody.innerHTML = renderStationConnections(s) + onboardingHtml + directionsHtml;
+    sheetBody.innerHTML = renderStationConnections(s) + renderStationSchedule(s) + onboardingHtml + directionsHtml;
   }
 
   sheetBody.scrollTop = 0;
@@ -214,7 +214,7 @@ export function refreshCurrentStation() {
   sheetBody.innerHTML = renderDirections(s, color);
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
   _directionsHtmlCache.set(slug, sheetBody.innerHTML);
-  sheetBody.insertAdjacentHTML('afterbegin', renderStationConnections(s));
+  sheetBody.insertAdjacentHTML('afterbegin', renderStationConnections(s) + renderStationSchedule(s));
 
   applyNavLinks(slug);
   applyInitialFavStyles(sheetBody, slug, color);

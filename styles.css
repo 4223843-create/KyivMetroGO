@@ -5007,6 +5007,49 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   border: 0.5px solid var(--border);
 }
 
+/* Години роботи входу, перший/останній поїзд та інтервал на поточну годину */
+.station-schedule {
+  margin: 0 16px 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.schedule-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  text-align: left;
+}
+.schedule-legend {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.schedule-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+}
+.schedule-dir {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  color: var(--text);
+}
+.schedule-interval {
+  font-weight: 600;
+  color: var(--text);
+}
+.schedule-ended {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 /* Розпластана стрілка-смуга внизу панелі — тап згортає */
 .pos-numbered-exits-collapse {
   display: flex;
