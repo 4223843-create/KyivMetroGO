@@ -3,7 +3,7 @@ import { state }               from '../core/state.js';
 import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
-import { isHideNoLiftEnabled, isShowHoistsEnabled } from '../features/settings.js';
+import { isHideNoLiftEnabled, isShowHoistsEnabled, isShowIntervalsEnabled, getStationHoursMode } from '../features/settings.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -124,6 +124,11 @@ const TERMINAL_GEN = {
  * «відкриється о …», якщо вхід зараз закритий; «вхід до …», якщо до закриття
  * менше двох годин; інтервал у кожен бік на поточну годину.
  */
+/** Чи є що показувати в панелі годинника за поточних налаштувань. */
+export function hasStationClock(s) {
+  return !!s?.schedule && (isShowIntervalsEnabled() || getStationHoursMode() !== 'never');
+}
+
 export function renderStationClock(s, now = new Date()) {
   const sch = s.schedule;
   if (!sch) return '';
@@ -132,13 +137,18 @@ export function renderStationClock(s, now = new Date()) {
   const close  = toMin(sch.close);
   const lines  = [];
 
-  if (nowMin < open || nowMin >= close) {
-    lines.push(`<div class="clock-head">Станція відкриється о ${sch.open}</div>`);
-  } else if (close - nowMin <= 120) {
-    lines.push(`<div class="clock-head">Вхід до ${sch.close}</div>`);
+  const hoursMode = getStationHoursMode();
+  if (hoursMode !== 'never') {
+    if (nowMin < open || nowMin >= close) {
+      lines.push(`<div class="clock-head">Станція відкриється о ${sch.open}</div>`);
+    } else if (hoursMode === 'always') {
+      lines.push(`<div class="clock-head">Вхід ${sch.open}–${sch.close}</div>`);
+    } else if (close - nowMin <= 120) {
+      lines.push(`<div class="clock-head">Вхід до ${sch.close}</div>`);
+    }
   }
 
-  const ivs = Object.entries(sch.trains || {})
+  const ivs = !isShowIntervalsEnabled() ? [] : Object.entries(sch.trains || {})
     .filter(([, t]) => nowMin >= toMin(t.first) && nowMin <= toMin(t.last))
     .map(([terminal]) => [terminal, currentInterval(s.line, terminal, now)])
     .filter(([, iv]) => iv);
@@ -155,7 +165,8 @@ export function renderStationClock(s, now = new Date()) {
       `<span class="clock-interval">${fmtInterval(iv)}</span></div>`));
   }
 
-  if (!lines.length) lines.push('<div class="clock-head">Немає даних про інтервал на цю годину</div>');
+  if (!lines.length && isShowIntervalsEnabled())
+    lines.push('<div class="clock-head">Немає даних про інтервал на цю годину</div>');
   return lines.join('');
 }
 

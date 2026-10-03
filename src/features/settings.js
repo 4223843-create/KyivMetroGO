@@ -107,6 +107,23 @@ export function openSettingsSheet() {
 
 
 
+    // ── Інтервали руху та години роботи станції (панель годинника) ──
+    const showIntervalsToggle = document.getElementById('settingsShowIntervalsToggle');
+    if (showIntervalsToggle) {
+      showIntervalsToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.SHOW_INTERVALS, String(e.target.checked));
+        bus.emit('station:clock-settings');
+      });
+    }
+    const hoursSeg = document.getElementById('settingsStationHoursSeg');
+    hoursSeg?.querySelectorAll('.settings-seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        Storage.set(STORAGE_KEYS.SHOW_STATION_HOURS, btn.dataset.hoursVal);
+        hoursSeg.querySelectorAll('.settings-seg-btn').forEach(b => b.classList.toggle('is-active', b === btn));
+        bus.emit('station:clock-settings');
+      });
+    });
+
     const hideNoLiftToggle = document.getElementById('settingsHideNoLiftToggle');
     if (hideNoLiftToggle) {
       hideNoLiftToggle.checked = isHideNoLiftEnabled();
@@ -426,6 +443,12 @@ export function openSettingsSheet() {
     if (em) em.checked = isEditOn;
     if (nl) nl.checked = isHideNoLiftEnabled();
 
+    const si = document.getElementById('settingsShowIntervalsToggle');
+    if (si) si.checked = isShowIntervalsEnabled();
+    const hoursMode = getStationHoursMode();
+    document.querySelectorAll('#settingsStationHoursSeg .settings-seg-btn').forEach(b =>
+      b.classList.toggle('is-active', b.dataset.hoursVal === hoursMode));
+
     const clearFavsBtn    = document.getElementById('settingsClearFavs');
     const clearCheckinBtn = document.getElementById('settingsClearCheckin');
     const clearLocalBtn   = document.getElementById('settingsClearLocalEdits');
@@ -449,6 +472,17 @@ export function openSettingsSheet() {
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   settingsSheet.classList.add('sheet-open');
   sheetOverlay.classList.add('overlay-visible');
+}
+
+/** Інтервали руху в панелі годинника на картці станції. За замовчуванням — увімкнено. */
+export function isShowIntervalsEnabled() {
+  return Storage.get(STORAGE_KEYS.SHOW_INTERVALS) !== 'false';
+}
+
+/** Коли показувати час відкриття/закриття станції: 'never' | 'soon' (за 2 год до закриття) | 'always'. */
+export function getStationHoursMode() {
+  const v = Storage.get(STORAGE_KEYS.SHOW_STATION_HOURS);
+  return v === 'never' || v === 'always' ? v : 'soon';
 }
 
 /** Повертає true якщо увімкнено приховування виходів без ліфтів. */

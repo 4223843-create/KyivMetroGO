@@ -10,7 +10,7 @@ import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
-import { renderDirections, renderStationConnections, renderStationClock } from './renderStation.js';
+import { renderDirections, renderStationConnections, renderStationClock, hasStationClock } from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
 
 // ══ STATION SHEET ══
@@ -29,6 +29,15 @@ const clockBtn         = document.getElementById('sheetClockBtn');
 const CLOCK_PANEL_HTML = '<div id="stationClockPanel" class="station-clock-panel"></div>';
 
 // ══ ГОДИННИК: години роботи та поточний інтервал ══
+// Налаштування змінились — ховаємо кнопку, якщо показувати нічого, і оновлюємо відкриту панель.
+bus.on('station:clock-settings', () => {
+  const s = state.stationsData?.[state.currentStationSlug];
+  if (clockBtn) clockBtn.hidden = !hasStationClock(s);
+  const clockPanel = document.getElementById('stationClockPanel');
+  if (!clockPanel) return;
+  if (clockBtn?.hidden) clockPanel.classList.remove('panel-open');
+  else if (clockPanel.classList.contains('panel-open')) clockPanel.innerHTML = renderStationClock(s);
+});
 // Вміст рахується в момент натискання — за часом на телефоні.
 clockBtn?.addEventListener('click', e => {
   e.stopPropagation();
@@ -149,7 +158,7 @@ function actualOpenStation(slug) {
     : '';
 
   stationTitleMain.textContent = s.name;
-  if (clockBtn) clockBtn.hidden = !s.schedule;
+  if (clockBtn) clockBtn.hidden = !hasStationClock(s);
 
   const hasDirections  = s.directions?.length > 0;
   const allExitsClosed = hasDirections && !s.directions.some(dir =>

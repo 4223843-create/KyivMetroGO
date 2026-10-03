@@ -4808,6 +4808,11 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   white-space: nowrap;
 }
 
+.settings-seg-wrap .settings-seg-btn {
+  white-space: normal;
+  line-height: 1.2;
+}
+
 .settings-seg-btn.is-active {
   background: var(--bg-card, #3a3a3c);
   color: var(--text-primary);
