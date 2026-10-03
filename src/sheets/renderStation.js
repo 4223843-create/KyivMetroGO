@@ -59,7 +59,7 @@ function connectionExitHint(conn) {
   if (!exits?.length) return '';
   const word = exits.length > 1 ? 'виходи' : 'вихід';
   const dist = Number.isFinite(conn.distance_m)
-    ? `, ≈${Math.max(10, Math.round(conn.distance_m / 10) * 10)}&nbsp;м`
+    ? `, ${Math.max(10, Math.round(conn.distance_m / 10) * 10)}&nbsp;м`
     : '';
   return ` <span class="station-connection-exit">· ${word}&nbsp;${exits.join(', ')}${dist}</span>`;
 }
