@@ -94,10 +94,10 @@ C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
   xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"
   stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle
   cx="66.3" cy="15.6" r="10.3" fill="currentColor" stroke="none"/><circle
-  cx="43.9" cy="67.2" r="21.1" stroke-width="6.3"/><path stroke-width="6.1"
+  cx="43.9" cy="67.2" r="21.1" stroke-width="5.5"/><path stroke-width="5.4"
   d="m23.6 40.2 8.4-8.8q3-3.2 7.5-3.4l10.5-.4"/><path fill="currentColor"
   stroke="none" d="M40 24.05c4-.15 7.5-1.15 10.5-1.05q2 .1 4 1.3l9.8 5q2 1.1 2 3.5v3.7L62 47l3.5 5-5.5 6-2-.3a17 17 0 0 0-7-5.9L46 43l3.3-11.5L40 30Z"/><path
-  stroke-width="8.2" d="m63 53.3 17.5.5-2.1 26.5"/></svg>`,
+  stroke-width="7.2" d="m63 53.3 17.5.5-2.1 26.5"/></svg>`,
 
 elevator: `<svg aria-hidden="true" focusable="false"
 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g
@@ -115,7 +115,7 @@ stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
 
 escalator: `<svg aria-hidden="true" focusable="false"
 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 883 468"
-fill="currentColor" stroke="currentColor" stroke-width="12"
+fill="currentColor" stroke="currentColor" stroke-width="8"
 stroke-linejoin="round"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
 0,6.4 -2.1,29.2 -3.6,38.1 -5.4,33.1 -18.8,65.8 -40,96.7 l -6.3,9.3 h 306.1
 l -0.7,10.8 c -1.7,26.6 -7.4,55.4 -14.8,74.8 -6.2,16.1 -16.7,35.4 -29.3,53.6
