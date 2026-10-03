@@ -53,13 +53,13 @@ export function renderExitRoutes(s, num) {
   return groups.length ? `<span class="pos-numbered-exit-routes">${groups.join('')}</span>` : '';
 }
 
-/** Підпис «вихід N, M м» для пересадки (відстань округлена до 10 м). */
+/** Підпис «вихід N, M м» для пересадки (відстань округлена до 5 м). */
 function connectionExitHint(conn) {
   const exits = conn?.exits;
   if (!exits?.length) return '';
   const word = exits.length > 1 ? 'виходи' : 'вихід';
   const dist = Number.isFinite(conn.distance_m)
-    ? `, ${Math.max(10, Math.round(conn.distance_m / 10) * 10)}&nbsp;м`
+    ? `, ${Math.max(5, Math.round(conn.distance_m / 5) * 5)}&nbsp;м`
     : '';
   return ` <span class="station-connection-exit">· ${word}&nbsp;${exits.join(', ')}${dist}</span>`;
 }
