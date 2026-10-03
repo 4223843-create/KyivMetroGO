@@ -35,6 +35,9 @@ export async function configureEdgeToEdge() {
  * Дозволяє кнопці «назад» на Android закривати шторку замість виходу з додатку.
  */
 export function pushSheetHistory() {
+  // Нативно «Назад» обробляє App.backButton (спершу закриває шторки), тож запис в
+  // історії там зайвий: інакше після закриття шторки ✕ перше «Назад» нічого не робить.
+  if (Capacitor.isNativePlatform()) return;
   if (!history.state?.isSheetOpen) {
     history.pushState({ isSheetOpen: true }, '');
   }
