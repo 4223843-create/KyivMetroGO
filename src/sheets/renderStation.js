@@ -83,8 +83,11 @@ function fmtMinutes(sec) {
   return `${Math.floor(sec / 60)}${FRACTIONS[sec % 60] ?? ''}`;
 }
 
-/** [360, 390] с → «6–6½ хвилини». */
-function fmtInterval([a, b]) {
+/** [360, 390] с → «6–6½ хвилини». Чверті округлюємо до половинок назовні:
+ *  нижню межу вниз, верхню вгору (195–225 с → «3–4»). */
+function fmtInterval([lo, hi]) {
+  const a = Math.floor(lo / 30) * 30;
+  const b = Math.ceil(hi / 30) * 30;
   const n = Math.floor(b / 60) % 100;
   const word = b % 60 ? 'хвилини'
     : n % 10 === 1 && n !== 11 ? 'хвилина'
