@@ -76,14 +76,20 @@ export function renderStationConnections(s) {
 
 // ══ ГОДИНИ РОБОТИ ТА ІНТЕРВАЛИ ══
 
-/** [360, 390] с → «6–7 хвилин» (округлення до цілих хвилин). */
+const FRACTIONS = { 0: '', 15: '¼', 30: '½', 45: '¾' };
+
+/** 390 с → «6½». */
+function fmtMinutes(sec) {
+  return `${Math.floor(sec / 60)}${FRACTIONS[sec % 60] ?? ''}`;
+}
+
+/** [360, 390] с → «6–6½ хвилини». */
 function fmtInterval([a, b]) {
-  const lo = Math.round(a / 60);
-  const hi = Math.round(b / 60);
-  const n  = hi % 100;
-  const word = n % 10 === 1 && n !== 11 ? 'хвилина'
+  const n = Math.floor(b / 60) % 100;
+  const word = b % 60 ? 'хвилини'
+    : n % 10 === 1 && n !== 11 ? 'хвилина'
     : n % 10 >= 2 && n % 10 <= 4 && (n < 12 || n > 14) ? 'хвилини' : 'хвилин';
-  return `${lo === hi ? lo : `${lo}–${hi}`}&nbsp;${word}`;
+  return `${a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`}&nbsp;${word}`;
 }
 
 /** «05:33» → хвилини від початку доби; час до 03:00 вважаємо після опівночі. */
