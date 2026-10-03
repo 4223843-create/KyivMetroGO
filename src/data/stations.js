@@ -123,7 +123,7 @@ export function getSlugByLower(lowerSlug) {
 export function hydrateStations(data) {
   if (!state.stationsData) state.stationsData = {};
   Object.keys(state.stationsData).forEach(key => delete state.stationsData[key]);
-  // Інтервали руху по лініях за годинами (будні / вихідні) — див. renderStationSchedule
+  // Інтервали руху по лініях за годинами (будні / вихідні) — див. renderStationClock
   state.lineIntervals = data.line_intervals || {};
 
   Object.keys(_nameToSlug).forEach(k  => delete _nameToSlug[k]);

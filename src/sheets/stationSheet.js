@@ -10,7 +10,7 @@ import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
-import { renderDirections, renderStationConnections, renderStationSchedule } from './renderStation.js';
+import { renderDirections, renderStationConnections, renderStationClock } from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
 
 // ══ STATION SHEET ══
@@ -23,6 +23,22 @@ const sheet            = document.getElementById('stationSheet');
 const sheetBody        = document.getElementById('sheetBody');
 const sheetOverlay     = document.getElementById('sheetOverlay');
 const stationTitleMain = document.getElementById('stationTitleMain');
+const clockBtn         = document.getElementById('sheetClockBtn');
+// Панель годинника живе на початку sheetBody (під назвою станції) і
+// перемальовується разом з ним.
+const CLOCK_PANEL_HTML = '<div id="stationClockPanel" class="station-clock-panel"></div>';
+
+// ══ ГОДИННИК: години роботи та поточний інтервал ══
+// Вміст рахується в момент натискання — за часом на телефоні.
+clockBtn?.addEventListener('click', e => {
+  e.stopPropagation();
+  const clockPanel = document.getElementById('stationClockPanel');
+  if (!clockPanel) return;
+  if (clockPanel.classList.toggle('panel-open')) {
+    const s = state.stationsData?.[state.currentStationSlug];
+    clockPanel.innerHTML = s ? renderStationClock(s) : '';
+  }
+});
 
 // ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
 bindSheetGestures(
@@ -133,6 +149,7 @@ function actualOpenStation(slug) {
     : '';
 
   stationTitleMain.textContent = s.name;
+  if (clockBtn) clockBtn.hidden = !s.schedule;
 
   const hasDirections  = s.directions?.length > 0;
   const allExitsClosed = hasDirections && !s.directions.some(dir =>
@@ -140,16 +157,16 @@ function actualOpenStation(slug) {
   );
 
   if (!hasDirections) {
-    sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>';
+    sheetBody.innerHTML = CLOCK_PANEL_HTML + '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>';
   } else if (allExitsClosed) {
-    sheetBody.innerHTML = '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
+    sheetBody.innerHTML = CLOCK_PANEL_HTML + '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
   } else {
     let directionsHtml = _directionsHtmlCache.get(slug);
     if (!directionsHtml) {
       directionsHtml = renderDirections(s, color);
       _directionsHtmlCache.set(slug, directionsHtml);
     }
-    sheetBody.innerHTML = renderStationConnections(s) + renderStationSchedule(s) + onboardingHtml + directionsHtml;
+    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationConnections(s) + onboardingHtml + directionsHtml;
   }
 
   sheetBody.scrollTop = 0;
@@ -214,7 +231,7 @@ export function refreshCurrentStation() {
   sheetBody.innerHTML = renderDirections(s, color);
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
   _directionsHtmlCache.set(slug, sheetBody.innerHTML);
-  sheetBody.insertAdjacentHTML('afterbegin', renderStationConnections(s) + renderStationSchedule(s));
+  sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationConnections(s));
 
   applyNavLinks(slug);
   applyInitialFavStyles(sheetBody, slug, color);

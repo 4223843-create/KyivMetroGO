@@ -100,34 +100,37 @@ function currentInterval(line, terminal, now) {
   return p[day === 0 || day === 6 ? 'holiday' : 'weekday']?.[terminal] || null;
 }
 
-/** Блок «Вхід 05:33–23:36» + рядок на кожен напрямок: інтервал зараз, перший і останній поїзд. */
-export function renderStationSchedule(s, now = new Date()) {
+/**
+ * Вміст панелі годинника (кнопка біля серця) станом на час телефону:
+ * «відкриється о …», якщо вхід зараз закритий; «вхід до …», якщо до закриття
+ * менше двох годин; інтервал у кожен бік на поточну годину.
+ */
+export function renderStationClock(s, now = new Date()) {
   const sch = s.schedule;
   if (!sch) return '';
   const nowMin = toMin(`${now.getHours()}:${now.getMinutes()}`);
-  const isOpen = nowMin >= toMin(sch.open) && nowMin < toMin(sch.close);
-  const halls  = sch.halls_open < sch.halls ? ` · діє ${sch.halls_open} з ${sch.halls} вестибюлів` : '';
-  const head   = isOpen
-    ? `Вхід ${sch.open}–${sch.close}${halls}`
-    : `Вхід закрито · відкриття о ${sch.open}`;
+  const open   = toMin(sch.open);
+  const close  = toMin(sch.close);
+  const lines  = [];
 
-  const rows = Object.entries(sch.trains || {}).map(([terminal, t]) => {
-    let now_ = '';
-    if (nowMin >= toMin(t.first) && nowMin <= toMin(t.last)) {
-      const iv = currentInterval(s.line, terminal, now);
-      if (iv) {
-        const [a, b] = iv;
-        now_ = `<span class="schedule-interval">кожні ${a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`}&nbsp;хв</span>`;
-      }
-    } else if (nowMin > toMin(t.last)) {
-      now_ = '<span class="schedule-interval schedule-ended">рух завершено</span>';
-    }
-    return `<div class="schedule-row"><span class="schedule-dir">→ ${terminal}</span>${now_}` +
-      `<span class="schedule-trains">${t.first}–${t.last}</span></div>`;
+  if (nowMin < open || nowMin >= close) {
+    lines.push(`<div class="clock-head">Станція відкриється о ${sch.open}</div>`);
+  } else if (close - nowMin <= 120) {
+    lines.push(`<div class="clock-head">Вхід до ${sch.close}</div>`);
+  }
+
+  Object.entries(sch.trains || {}).forEach(([terminal, t]) => {
+    if (nowMin < toMin(t.first) || nowMin > toMin(t.last)) return;
+    const iv = currentInterval(s.line, terminal, now);
+    if (!iv) return;
+    const [a, b] = iv;
+    const val = a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`;
+    lines.push(`<div class="clock-row"><span class="clock-dir">→ ${terminal}</span>` +
+      `<span class="clock-interval">кожні ${val}&nbsp;хв</span></div>`);
   });
 
-  const legend = rows.length ? '<span class="schedule-legend">перший–останній</span>' : '';
-  return `<div class="station-schedule"><div class="schedule-head"><span>${head}</span>${legend}</div>${rows.join('')}</div>`;
+  if (!lines.length) lines.push('<div class="clock-head">Немає даних про інтервал на цю годину</div>');
+  return lines.join('');
 }
 
 // ══ РЕНДЕР ПОЗИЦІЙ ══

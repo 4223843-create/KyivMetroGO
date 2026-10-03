@@ -5007,48 +5007,40 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   border: 0.5px solid var(--border);
 }
 
-/* Години роботи входу, перший/останній поїзд та інтервал на поточну годину */
-.station-schedule {
-  margin: 0 16px 12px;
-  padding: 8px 12px;
+/* Панель годинника (кнопка біля серця): години роботи та інтервал зараз */
+.sheet-clock-btn[hidden] { display: none; }
+.station-clock-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0 12px;
+  text-align: left;
   border-radius: 12px;
   background: var(--bg-card);
-  border: 0.5px solid var(--border);
+  border: 0.5px solid transparent;
   font-size: var(--fs-sm);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease,
+              padding 0.28s cubic-bezier(0.4,0,0.2,1), margin 0.28s cubic-bezier(0.4,0,0.2,1);
 }
-.schedule-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
-  text-align: left;
+.station-clock-panel.panel-open {
+  max-height: 200px;
+  opacity: 1;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-color: var(--border);
 }
-.schedule-legend {
-  font-size: 11px;
-  white-space: nowrap;
-}
-.schedule-row {
+.clock-head { padding: 2px 0; }
+.clock-row {
   display: flex;
   align-items: baseline;
   gap: 8px;
   padding: 2px 0;
 }
-.schedule-dir {
-  flex: 1;
-  text-align: left;
-  min-width: 0;
-  color: var(--text);
-}
-.schedule-interval {
-  font-weight: 600;
-  color: var(--text);
-}
-.schedule-ended {
-  font-weight: 400;
-  color: var(--text-muted);
-}
+.clock-dir { flex: 1; min-width: 0; color: var(--text); }
+.clock-interval { font-weight: 600; color: var(--text); white-space: nowrap; }
 
 /* Розпластана стрілка-смуга внизу панелі — тап згортає */
 .pos-numbered-exits-collapse {
