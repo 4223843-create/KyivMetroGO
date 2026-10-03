@@ -3530,10 +3530,51 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   z-index: 2;
 }
 
-/* Відступи кнопок одна від одної (галочку прибрали — кнопка підтвердження тепер перша) */
+/* Підтвердження ліворуч; нотатка й фото сховані в меню «⋮» праворуч від піна */
 .dev-confirm-btn { left: 4px; }
-.dev-note-btn    { left: 32px; }
-.dev-photo-btn   { left: 60px; }
+
+.dev-more-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 2;
+}
+.dev-more-btn svg { width: 18px; height: 18px; display: block; }
+
+.dev-more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(50% + 16px);
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  z-index: 5;
+}
+.dev-more-menu.is-open { display: flex; }
+
+.dev-more-menu .dev-note-btn,
+.dev-more-menu .dev-photo-btn {
+  position: static;
+  transform: none;
+  width: 36px;
+  height: 36px;
+}
 
 /* Робимо SVG блочними і ЗАБОРОНЯЄМО браузеру їх стискати */
 .dev-confirm-btn svg,
