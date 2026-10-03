@@ -32,6 +32,8 @@ const DEV_NOTE_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg
 
 const DEV_PHOTO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" width="26" height="20"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="3,22.3 11,14.3 22.5,25.9 "/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="17.4,20.9 22,16.3 28.9,23.2 "/></svg>`;
 // Лічильник підтверджень — кругла стрілка (те саме "оновити/повторно перевірити")
+const DEV_MORE_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>`;
+
 const DEV_CONFIRM_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
@@ -939,6 +941,11 @@ function _toggleStationNotePanel(panel, slug, lineColor, btn, defaultColor) {
  * @param {HTMLElement} container — зазвичай sheetBody
  * @param {string}      slug
  */
+function _closeDevMoreMenus() {
+  document.querySelectorAll('.dev-more-menu.is-open').forEach(m => m.classList.remove('is-open'));
+}
+document.addEventListener('click', _closeDevMoreMenus);
+
 export function attachDevModeUI(container, slug) {
   if (!isDevMode()) return;
   const lineColor = LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)';
@@ -1034,7 +1041,37 @@ export function attachDevModeUI(container, slug) {
     photoBtn.style.color   = defaultColor;
     photoBtn.style.opacity = defaultOpacity;
 
-    row.prepend(photoBtn, noteBtn, confirmBtn);
+    // ── «⋮» праворуч від піна: ховає нотатку і фото, щоб ліворуч лишалась
+    //    тільки кнопка підтвердження і не перекривала значки доступності ──
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'dev-more-btn';
+    moreBtn.type = 'button';
+    moreBtn.setAttribute('aria-label', 'Нотатка і фото');
+    moreBtn.innerHTML = DEV_MORE_SVG;
+
+    const moreMenu = document.createElement('div');
+    moreMenu.className = 'dev-more-menu';
+    moreMenu.append(noteBtn, photoBtn);
+
+    // «⋮» підсвічується кольором лінії, якщо є нотатка або фото
+    const syncMoreColor = () => {
+      const active = [noteBtn, photoBtn].some(b => b.style.color !== defaultColor);
+      moreBtn.style.color = active ? lineColor : defaultColor;
+    };
+    syncMoreColor();
+    const colorObserver = new MutationObserver(syncMoreColor);
+    colorObserver.observe(noteBtn,  { attributes: true, attributeFilter: ['style'] });
+    colorObserver.observe(photoBtn, { attributes: true, attributeFilter: ['style'] });
+
+    row.prepend(confirmBtn);
+    row.append(moreBtn, moreMenu);
+
+    moreBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = !moreMenu.classList.contains('is-open');
+      _closeDevMoreMenus();
+      moreMenu.classList.toggle('is-open', willOpen);
+    });
 
     listPhotosForPosition(slug, posIdx).then(photos => {
       if (photos.length) {
@@ -1050,11 +1087,13 @@ export function attachDevModeUI(container, slug) {
 
     noteBtn.addEventListener('click', e => {
       e.stopPropagation();
+      _closeDevMoreMenus();
       toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor, defaultOpacity);
     });
 
     photoBtn.addEventListener('click', e => {
       e.stopPropagation();
+      _closeDevMoreMenus();
       toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
     });
   });

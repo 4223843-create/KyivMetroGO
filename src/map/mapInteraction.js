@@ -306,11 +306,15 @@ bus.on('data:stations-hydrated', () => {
   invalidateStationZoneCache();
   updateMapAccessibilityIcons();
 });
+// Значок візочка для SVG-карти (однаковий для всіх гілок)
+const MAP_ICON_WHEELCHAIR = {
+  viewBox: '0 0 100 100',
+  attrs: { fill: 'none', stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+  inner: '<circle cx="66.3" cy="15.6" r="10.3" fill="currentColor" stroke="none"/><circle cx="43.9" cy="67.2" r="21.1" stroke-width="7.2"/><path stroke-width="7" d="m23.6 40.2 8.4-8.8q3-3.2 7.5-3.4l10.5-.4"/><path fill="currentColor" stroke="none" d="M40 24.05c4-.15 7.5-1.15 10.5-1.05q2 .1 4 1.3l9.8 5q2 1.1 2 3.5v3.7L62 47l3.5 5-5.5 6-2-.3a17 17 0 0 0-7-5.9L46 43l3.3-11.5L40 30Z"/><path stroke-width="9.3" d="m63 53.3 17.5.5-2.1 26.5"/>',
+};
+
 /**
- * Малює або видаляє знаки візочків біля станцій з ліфтами на SVG-карті.
- */
-/**
- * Малює або видаляє знаки візочків біля станцій з ліфтами на SVG-карті.
+ * Малює або видаляє знаки доступності біля станцій з ліфтами на SVG-карті.
  */
 export function updateMapAccessibilityIcons() {
   if (!inner || !state.stationsData) return;
@@ -338,11 +342,12 @@ export function updateMapAccessibilityIcons() {
     if (!hasLift) return;
     processedSlugs.add(slug);
 
+    const icon = MAP_ICON_WHEELCHAIR;
+
     try {
       const bbox = el.getBBox();
       if (!bbox || bbox.width <= 0) return;
 
-      // Зменшено розмір іконки вдвічі (0.22 замість 0.45)
       const size = round(Math.min(bbox.width, bbox.height) * 0.3);
       const gap  = round(size * 1.1);
 
@@ -354,11 +359,14 @@ export function updateMapAccessibilityIcons() {
       iconGroup.setAttribute('y', String(y));
       iconGroup.setAttribute('width', String(size));
       iconGroup.setAttribute('height', String(size));
-      iconGroup.setAttribute('viewBox', '0 0 24 24');
+      // #mapInner svg { width/height: 100% } з styles.css інакше розтягує вкладений svg на всю карту
+      iconGroup.style.width  = `${size}px`;
+      iconGroup.style.height = `${size}px`;
+      iconGroup.setAttribute('viewBox', icon.viewBox);
       iconGroup.setAttribute('class', 'map-accessibility-icon');
-      iconGroup.setAttribute('fill', 'currentColor');
+      Object.entries(icon.attrs).forEach(([k, v]) => iconGroup.setAttribute(k, v));
       iconGroup.setAttribute('aria-hidden', 'true');
-      iconGroup.innerHTML = `<path d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/>`;
+      iconGroup.innerHTML = icon.inner;
 
       svgEl.appendChild(iconGroup);
     } catch (err) {

@@ -89,10 +89,20 @@ C499.5,116.9,534.3,70.6,487.9,24.1z"/></svg>`,
   fill="currentColor"><path
   d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/></svg>`,
 
+  // Спецпідйомник (часткова доступність) — той самий значок, що й на карті
+  hoist: `<svg aria-hidden="true" focusable="false"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"
+  stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle
+  cx="66.3" cy="15.6" r="10.3" fill="currentColor" stroke="none"/><circle
+  cx="43.9" cy="67.2" r="21.1" stroke-width="4.8"/><path stroke-width="4.7"
+  d="m23.6 40.2 8.4-8.8q3-3.2 7.5-3.4l10.5-.4"/><path fill="currentColor"
+  stroke="none" d="M40 24.05c4-.15 7.5-1.15 10.5-1.05q2 .1 4 1.3l9.8 5q2 1.1 2 3.5v3.7L62 47l3.5 5-5.5 6-2-.3a17 17 0 0 0-7-5.9L46 43l3.3-11.5L40 30Z"/><path
+  stroke-width="6.3" d="m63 53.3 17.5.5-2.1 26.5"/></svg>`,
+
 elevator: `<svg aria-hidden="true" focusable="false"
 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g
 transform="translate(24, 1) scale(-0.85, 0.85)"><path fill="none"
-stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
 stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
 3.764M17 23.5c-1 0-1.75-1.5-1.75-1.5c-.75-1.5-.75-2.5-.75-4v-1.5h-3.207M23
 14c-.265 0-.66.275-.993.553a4.9 4.9 0 0 0-1.088 1.276c-.214.367-.419.813-.419
@@ -105,7 +115,8 @@ stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
 
 escalator: `<svg aria-hidden="true" focusable="false"
 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 883 468"
-fill="currentColor"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
+fill="currentColor" stroke="currentColor" stroke-width="4"
+stroke-linejoin="round"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
 0,6.4 -2.1,29.2 -3.6,38.1 -5.4,33.1 -18.8,65.8 -40,96.7 l -6.3,9.3 h 306.1
 l -0.7,10.8 c -1.7,26.6 -7.4,55.4 -14.8,74.8 -6.2,16.1 -16.7,35.4 -29.3,53.6
 l -5.3,7.8 h 305.9 v 2.9 c
