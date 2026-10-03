@@ -3,7 +3,7 @@ import { state }               from '../core/state.js';
 import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
-import { isHideNoLiftEnabled, isShowHoistsEnabled } from '../features/settings.js';
+import { isHideNoLiftEnabled, isShowHoistsEnabled, isShowIntervalsEnabled, getStationHoursMode } from '../features/settings.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -28,6 +28,145 @@ function formatLabel(raw) {
     }
   }
   return `<span class="exit-label-text">${text}</span>`;
+}
+
+// ══ ПЕРЕСАДКИ НА ІНШИЙ ТРАНСПОРТ (station.connections) ══
+
+const ROUTE_KINDS = [
+  ['bus',     '🚌', 'Автобус'],
+  ['trolley', '🚎', 'Тролейбус'],
+  ['tram',    '🚋', 'Трамвай'],
+  ['minibus', '🚐', 'Маршрутка'],
+];
+
+/** Маршрути наземного транспорту біля виходу з номером num (або ''). */
+export function renderExitRoutes(s, num) {
+  const routes = s.connections?.ground?.[num];
+  if (!routes) return '';
+  const groups = ROUTE_KINDS
+    .filter(([key]) => routes[key]?.length)
+    .map(([key, icon, title]) =>
+      `<span class="exit-routes-group" aria-label="${title}"><span class="exit-routes-icon">${icon}</span>` +
+      routes[key].map(r => `<span class="exit-route-chip">${r}</span>`).join('') +
+      `</span>`
+    );
+  return groups.length ? `<span class="pos-numbered-exit-routes">${groups.join('')}</span>` : '';
+}
+
+/** Підпис «вихід N, M м» для пересадки (відстань округлена до 5 м). */
+function connectionExitHint(conn) {
+  const exits = conn?.exits;
+  if (!exits?.length) return '';
+  const word = exits.length > 1 ? 'виходи' : 'вихід';
+  const dist = Number.isFinite(conn.distance_m)
+    ? `, ${Math.max(5, Math.round(conn.distance_m / 5) * 5)}&nbsp;м`
+    : '';
+  return ` <span class="station-connection-exit">· ${word}&nbsp;${exits.join(', ')}${dist}</span>`;
+}
+
+/** Плашки пересадок на кільцеву електричку / фунікулер для шапки станції. */
+export function renderStationConnections(s) {
+  const c = s.connections;
+  if (!c) return '';
+  const items = [];
+  if (c.city_train) items.push(`<span class="station-connection">🚆 Кільцева електричка${connectionExitHint(c.city_train)}</span>`);
+  if (c.funicular)  items.push(`<span class="station-connection">🚡 Фунікулер${connectionExitHint(c.funicular)}</span>`);
+  return items.length ? `<div class="station-connections">${items.join('')}</div>` : '';
+}
+
+// ══ ГОДИНИ РОБОТИ ТА ІНТЕРВАЛИ ══
+
+const FRACTIONS = { 0: '', 15: '¼', 30: '½', 45: '¾' };
+
+/** 390 с → «6½». */
+function fmtMinutes(sec) {
+  return `${Math.floor(sec / 60)}${FRACTIONS[sec % 60] ?? ''}`;
+}
+
+/** [360, 390] с → «6–6½ хвилини». Чверті округлюємо до половинок назовні:
+ *  нижню межу вниз, верхню вгору (195–225 с → «3–4»). */
+function fmtInterval([lo, hi]) {
+  const a = Math.floor(lo / 30) * 30;
+  const b = Math.ceil(hi / 30) * 30;
+  const n = Math.floor(b / 60) % 100;
+  const word = b % 60 ? 'хвилини'
+    : n % 10 === 1 && n !== 11 ? 'хвилина'
+    : n % 10 >= 2 && n % 10 <= 4 && (n < 12 || n > 14) ? 'хвилини' : 'хвилин';
+  return `${a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`}&nbsp;${word}`;
+}
+
+/** «05:33» → хвилини від початку доби; час до 03:00 вважаємо після опівночі. */
+function toMin(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h < 3 ? h + 24 : h) * 60 + m;
+}
+
+/** Поточний інтервал (пара секунд [мін, макс]) у бік кінцевої або null. */
+function currentInterval(line, terminal, now) {
+  const periods = state.lineIntervals?.[line];
+  if (!periods) return null;
+  const hh = String(now.getHours()).padStart(2, '0');
+  const p = periods.find(x => x.from.startsWith(hh));
+  if (!p) return null;
+  const day = now.getDay();
+  return p[day === 0 || day === 6 ? 'holiday' : 'weekday']?.[terminal] || null;
+}
+
+/** Назви кінцевих у родовому відмінку: «в бік Теремків». */
+const TERMINAL_GEN = {
+  'Теремки': 'Теремків', 'Героїв Дніпра': 'Героїв Дніпра',
+  'Лісова': 'Лісової', 'Академмістечко': 'Академмістечка',
+  'Червоний хутір': 'Червоного хутора', 'Сирець': 'Сирця',
+};
+
+/**
+ * Вміст панелі годинника (кнопка біля серця) станом на час телефону:
+ * «закрита, відкриється о …», якщо вхід зараз закритий; години роботи — залежно
+ * від налаштування; інтервал у кожен бік на поточну годину.
+ */
+/** Чи є що показувати в панелі годинника за поточних налаштувань. */
+export function hasStationClock(s) {
+  return !!s?.schedule && (isShowIntervalsEnabled() || getStationHoursMode() !== 'never');
+}
+
+export function renderStationClock(s, now = new Date()) {
+  const sch = s.schedule;
+  if (!sch) return '';
+  const nowMin = toMin(`${now.getHours()}:${now.getMinutes()}`);
+  const open   = toMin(sch.open);
+  const close  = toMin(sch.close);
+  const lines  = [];
+
+  const hoursMode = getStationHoursMode();
+  if (hoursMode !== 'never') {
+    if (nowMin < open || nowMin >= close) {
+      lines.push(`<span class="clock-pill">Станція закрита, відкриється о ${sch.open}</span>`);
+    } else if (hoursMode === 'always' || close - nowMin <= 120 || nowMin - open < 120) {
+      // 'soon': перші дві години після відкриття та останні дві до закриття
+      lines.push(`<span class="clock-pill">Вхід ${sch.open}–${sch.close}</span>`);
+    }
+  }
+
+  const ivs = !isShowIntervalsEnabled() ? [] : Object.entries(sch.trains || {})
+    .filter(([, t]) => nowMin >= toMin(t.first) && nowMin <= toMin(t.last))
+    .map(([terminal]) => [terminal, currentInterval(s.line, terminal, now)])
+    .filter(([, iv]) => iv);
+
+  // Різниця між напрямками до 60 с — один рядок без назв напрямків
+  const [x, y] = ivs;
+  if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= 60 && Math.abs(x[1][1] - y[1][1]) <= 60) {
+    const iv = [Math.min(x[1][0], y[1][0]), Math.max(x[1][1], y[1][1])];
+    lines.push(`<span class="clock-pill">Інтервал руху: <span class="clock-interval">${fmtInterval(iv)}</span></span>`);
+  } else if (ivs.length) {
+    // Два напрямки — одна пілюля-блок з заголовком і рядком на кожен бік
+    lines.push('<span class="clock-pill clock-pill-multi"><span>Інтервал руху</span>' +
+      ivs.map(([terminal, iv]) => `<span>в бік ${TERMINAL_GEN[terminal] || terminal}: ` +
+        `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
+  }
+
+  if (!lines.length && isShowIntervalsEnabled())
+    lines.push('<span class="clock-pill">Немає даних про інтервал на цю годину</span>');
+  return lines.join('');
 }
 
 // ══ РЕНДЕР ПОЗИЦІЙ ══

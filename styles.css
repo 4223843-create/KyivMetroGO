@@ -4960,6 +4960,92 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   text-align: left;
 }
 
+/* Маршрути наземного транспорту біля виходу (station.connections.ground) */
+.pos-numbered-exit-routes {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+.exit-routes-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+.exit-routes-icon {
+  font-size: var(--fs-sm);
+  line-height: 1;
+  margin-right: 1px;
+}
+.exit-route-chip {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Пересадки на кільцеву електричку / фунікулер — над напрямками */
+.station-connections {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 16px 12px;
+}
+.station-connection {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+}
+
+/* Панель годинника (кнопка біля серця): години роботи та інтервал зараз */
+.sheet-clock-btn[hidden] { display: none; }
+.station-clock-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease,
+              margin 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+.station-clock-panel.panel-open {
+  max-height: 200px;
+  opacity: 1;
+  margin: 0 0 12px;
+}
+/* Пілюлі — як у пересадок на електричку / фунікулер */
+.clock-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+}
+.clock-pill-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 14px;
+  padding: 6px 12px;
+}
+.clock-interval { font-weight: 600; color: var(--text); white-space: nowrap; }
+
 /* Розпластана стрілка-смуга внизу панелі — тап згортає */
 .pos-numbered-exits-collapse {
   display: flex;

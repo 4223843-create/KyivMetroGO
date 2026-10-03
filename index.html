@@ -164,6 +164,9 @@ document.documentElement.setAttribute('data-theme', actual);
   <div id="stationSheet" class="station-sheet">
     <div class="sheet-handle-bar">
       <button class="fav-btn-bar" aria-label="Вибране"></button>
+      <button id="sheetClockBtn" class="sheet-action-btn sheet-clock-btn" aria-label="Години роботи та інтервал" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></svg>
+      </button>
       <button id="devStationNoteBtn" class="dev-station-note-btn is-hidden" aria-label="Загальна нотатка станції"></button>
       <div class="sheet-handle"></div>
       <span class="sheet-station-title" id="stationTitleMain"></span>
@@ -566,6 +569,27 @@ document.documentElement.setAttribute('data-theme', actual);
         <!-- ══ КАРТКА «ДАНІ» ══ -->
         <div class="settings-card">
           <div class="settings-card-header">Дані</div>
+          <div class="settings-rule"></div>
+
+          <div class="settings-row">
+            <span class="settings-label">Відображати інтервали руху</span>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsShowIntervalsToggle">
+              <span class="ios-toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-rule"></div>
+
+          <div class="settings-row">
+            <span class="settings-label">Час відкриття та закриття</span>
+            <div class="settings-seg" id="settingsStationHoursSeg">
+              <button type="button" class="settings-seg-btn" data-hours-val="never">ні</button>
+              <button type="button" class="settings-seg-btn" data-hours-val="soon">за 2 год</button>
+              <button type="button" class="settings-seg-btn" data-hours-val="always">завжди</button>
+            </div>
+          </div>
+
           <div class="settings-rule"></div>
 
           <div class="settings-row">

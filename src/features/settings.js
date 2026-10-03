@@ -53,6 +53,33 @@ function showCheckinLockToast(rowEl) {
   }, 2500);
 }
 
+// ══ ТОСТ-ПОЯСНЕННЯ ДО «ЗА 2 ГОД» ═════════════════════════════
+
+function showHoursSoonToast(btnEl) {
+  document.getElementById('hoursSoonToast')?.remove();
+  const rect  = btnEl.getBoundingClientRect();
+  const toast = document.createElement('div');
+  toast.id        = 'hoursSoonToast';
+  toast.className = 'dev-mode-toast dev-mode-toast-open';
+  toast.style.cssText = `
+    position: fixed;
+    top: ${rect.top - 60}px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: auto;
+    z-index: 10000;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+  `;
+  toast.innerHTML = 'За 2 години до закриття станції<br>і перші дві години після відкриття';
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.remove('dev-mode-toast-open');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 // ══ ВІДКРИТТЯ ШТОРКИ НАЛАШТУВАНЬ ══════════════════════════════
 
 /** Відкриває шторку налаштувань. При першому виклику — ліниво створює DOM з template. */
@@ -106,6 +133,24 @@ export function openSettingsSheet() {
 
 
 
+
+    // ── Інтервали руху та години роботи станції (панель годинника) ──
+    const showIntervalsToggle = document.getElementById('settingsShowIntervalsToggle');
+    if (showIntervalsToggle) {
+      showIntervalsToggle.addEventListener('change', e => {
+        Storage.set(STORAGE_KEYS.SHOW_INTERVALS, String(e.target.checked));
+        bus.emit('station:clock-settings');
+      });
+    }
+    const hoursSeg = document.getElementById('settingsStationHoursSeg');
+    hoursSeg?.querySelectorAll('.settings-seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        Storage.set(STORAGE_KEYS.SHOW_STATION_HOURS, btn.dataset.hoursVal);
+        hoursSeg.querySelectorAll('.settings-seg-btn').forEach(b => b.classList.toggle('is-active', b === btn));
+        bus.emit('station:clock-settings');
+        if (btn.dataset.hoursVal === 'soon') showHoursSoonToast(btn);
+      });
+    });
 
     const hideNoLiftToggle = document.getElementById('settingsHideNoLiftToggle');
     if (hideNoLiftToggle) {
@@ -426,6 +471,12 @@ export function openSettingsSheet() {
     if (em) em.checked = isEditOn;
     if (nl) nl.checked = isHideNoLiftEnabled();
 
+    const si = document.getElementById('settingsShowIntervalsToggle');
+    if (si) si.checked = isShowIntervalsEnabled();
+    const hoursMode = getStationHoursMode();
+    document.querySelectorAll('#settingsStationHoursSeg .settings-seg-btn').forEach(b =>
+      b.classList.toggle('is-active', b.dataset.hoursVal === hoursMode));
+
     const clearFavsBtn    = document.getElementById('settingsClearFavs');
     const clearCheckinBtn = document.getElementById('settingsClearCheckin');
     const clearLocalBtn   = document.getElementById('settingsClearLocalEdits');
@@ -449,6 +500,17 @@ export function openSettingsSheet() {
   document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   settingsSheet.classList.add('sheet-open');
   sheetOverlay.classList.add('overlay-visible');
+}
+
+/** Інтервали руху в панелі годинника на картці станції. За замовчуванням — увімкнено. */
+export function isShowIntervalsEnabled() {
+  return Storage.get(STORAGE_KEYS.SHOW_INTERVALS) !== 'false';
+}
+
+/** Коли показувати час відкриття/закриття станції: 'never' | 'soon' (за 2 год до закриття) | 'always'. */
+export function getStationHoursMode() {
+  const v = Storage.get(STORAGE_KEYS.SHOW_STATION_HOURS);
+  return v === 'never' || v === 'always' ? v : 'soon';
 }
 
 /** Повертає true якщо увімкнено приховування виходів без ліфтів. */
