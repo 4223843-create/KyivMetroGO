@@ -30,6 +30,39 @@ function formatLabel(raw) {
   return `<span class="exit-label-text">${text}</span>`;
 }
 
+// ══ ПЕРЕСАДКИ НА ІНШИЙ ТРАНСПОРТ (station.connections) ══
+
+const ROUTE_KINDS = [
+  ['bus',     '🚌', 'Автобус'],
+  ['trolley', '🚎', 'Тролейбус'],
+  ['tram',    '🚋', 'Трамвай'],
+  ['minibus', '🚐', 'Маршрутка'],
+];
+
+/** Маршрути наземного транспорту біля виходу з номером num (або ''). */
+export function renderExitRoutes(s, num) {
+  const routes = s.connections?.ground?.[num];
+  if (!routes) return '';
+  const groups = ROUTE_KINDS
+    .filter(([key]) => routes[key]?.length)
+    .map(([key, icon, title]) =>
+      `<span class="exit-routes-group" aria-label="${title}"><span class="exit-routes-icon">${icon}</span>` +
+      routes[key].map(r => `<span class="exit-route-chip">${r}</span>`).join('') +
+      `</span>`
+    );
+  return groups.length ? `<span class="pos-numbered-exit-routes">${groups.join('')}</span>` : '';
+}
+
+/** Плашки пересадок на кільцеву електричку / фунікулер для шапки станції. */
+export function renderStationConnections(s) {
+  const c = s.connections;
+  if (!c) return '';
+  const items = [];
+  if (c.city_train) items.push(`<span class="station-connection">🚆 Кільцева електричка</span>`);
+  if (c.funicular)  items.push(`<span class="station-connection">🚡 Фунікулер</span>`);
+  return items.length ? `<div class="station-connections">${items.join('')}</div>` : '';
+}
+
 // ══ РЕНДЕР ПОЗИЦІЙ ══
 
 function generatePills(wStr, dStr, color) {

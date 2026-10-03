@@ -15,7 +15,7 @@ import {
 } from '../features/favorites/index.js';
 import { dismissHintWithDoors } from '../ui/animations.js';
 import { Icons }                from '../ui/icons.js';
-import { applyFavPillStyles }     from './renderStation.js';
+import { applyFavPillStyles, renderExitRoutes } from './renderStation.js';
 import { heartSvg }               from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { isEditModeEnabled }      from '../features/settings.js';
@@ -342,7 +342,7 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor) {
   panel.dataset.type = 'numbered-exits';
   panel.innerHTML =
     exitsList.map(item =>
-      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineColor}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span></div>`
+      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineColor}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span>${renderExitRoutes(station, item.num)}</div>`
     ).join('') +
     `<button type="button" class="pos-numbered-exits-collapse" aria-label="Згорнути">${COLLAPSE_ARROW_SVG}</button>`;
 
