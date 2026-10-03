@@ -115,7 +115,8 @@ stroke-linejoin="round" d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963
 
 escalator: `<svg aria-hidden="true" focusable="false"
 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 883 468"
-fill="currentColor"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
+fill="currentColor" stroke="currentColor" stroke-width="12"
+stroke-linejoin="round"><path d="m 45.8,23.8 153.4,0.2 v 2.9 c
 0,6.4 -2.1,29.2 -3.6,38.1 -5.4,33.1 -18.8,65.8 -40,96.7 l -6.3,9.3 h 306.1
 l -0.7,10.8 c -1.7,26.6 -7.4,55.4 -14.8,74.8 -6.2,16.1 -16.7,35.4 -29.3,53.6
 l -5.3,7.8 h 305.9 v 2.9 c
