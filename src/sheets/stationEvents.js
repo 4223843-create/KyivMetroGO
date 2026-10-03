@@ -406,7 +406,7 @@ export function bindSheetGestures(sheetBody, getCtx) {
     const hoistMark = e.target.closest('.pos-hoist-mark');
     if (hoistMark) {
       e.stopPropagation();
-      _showIconLabelToast(hoistMark, 'Забезпечує часткову доступність');
+      _showIconLabelToast(hoistMark, 'Спецпідйомник (забезпечує часткову доступність)');
       return;
     }
 

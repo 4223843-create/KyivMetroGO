@@ -98,7 +98,7 @@ function renderIcons(p) {
 
   if (p.isHoist) {
     if (isShowHoistsEnabled()) {
-      iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" aria-label="Підйомник">${Icons.wheelchair}</span>`;
+      iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" aria-label="Спецпідйомник">${Icons.hoist}</span>`;
     }
   } else if (p.isLift) {
     iconsHtml += `<span class="pos-lift-mark pos-elevator-mark" aria-label="Ліфт">${Icons.elevator}</span>`;
