@@ -306,36 +306,12 @@ bus.on('data:stations-hydrated', () => {
   invalidateStationZoneCache();
   updateMapAccessibilityIcons();
 });
-// Іконки доступності для SVG-карти.
-// ТЕСТ: синя гілка — новий значок візочка; зелена — як на картках станцій
-// (кнопка ліфта + візочок, а для підйомників — візочок); червона — без змін.
+// Значок візочка для SVG-карти (однаковий для всіх гілок)
 const MAP_ICON_WHEELCHAIR = {
-  viewBox: '0 0 24 24',
-  scale: 1,
-  attrs: { fill: 'currentColor' },
-  inner: '<path d="M12,6.5a2,2,0,1,0-2-2A2,2,0,0,0,12,6.5Zm7.5,14h-1v-5a1,1,0,0,0-1-1h-5v-2h5a1,1,0,0,0,0-2h-5v-2a1,1,0,0,0-2,0v7a1,1,0,0,0,1,1h5v5a1,1,0,0,0,1,1h2a1,1,0,0,0,0-2Zm-6.8-1.6a4,4,0,0,1-7.2-2.4,4,4,0,0,1,2.4-3.66A1,1,0,1,0,7.1,11a6,6,0,1,0,7.2,9.1,1,1,0,0,0-1.6-1.2Z"/>',
-};
-
-const MAP_ICON_WHEELCHAIR_NEW = {
   viewBox: '0 0 100 100',
-  scale: 1,
   attrs: { fill: 'none', stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
   inner: '<circle cx="66.3" cy="15.6" r="10.3" fill="currentColor" stroke="none"/><circle cx="43.9" cy="67.2" r="21.1" stroke-width="7.2"/><path stroke-width="7" d="m23.6 40.2 8.4-8.8q3-3.2 7.5-3.4l10.5-.4"/><path fill="currentColor" stroke="none" d="M40 24.05c4-.15 7.5-1.15 10.5-1.05q2 .1 4 1.3l9.8 5q2 1.1 2 3.5v3.7L62 47l3.5 5-5.5 6-2-.3a17 17 0 0 0-7-5.9L46 43l3.3-11.5L40 30Z"/><path stroke-width="9.3" d="m63 53.3 17.5.5-2.1 26.5"/>',
 };
-
-// Той самий значок, що й Icons.elevator на картках станцій
-const MAP_ICON_ELEVATOR = {
-  viewBox: '0 0 24 24',
-  scale: 1.2,
-  attrs: { fill: 'none', stroke: 'currentColor', 'stroke-width': '1.2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
-  inner: '<g transform="translate(24, 1) scale(-0.85, 0.85)"><path d="M11.5 13V6.5h-1.172a3 3 0 0 0-2.906 2.255l-.963 3.764M17 23.5c-1 0-1.75-1.5-1.75-1.5c-.75-1.5-.75-2.5-.75-4v-1.5h-3.207M23 14c-.265 0-.66.275-.993.553a4.9 4.9 0 0 0-1.088 1.276c-.214.367-.419.813-.419 1.171c0-.358-.205-.804-.42-1.171a4.9 4.9 0 0 0-1.087-1.276C18.661 14.275 18.265 14 18 14m5-4c-.265 0-.66-.275-.993-.553a4.9 4.9 0 0 1-1.088-1.276C20.705 7.804 20.5 7.358 20.5 7c0 .358-.205.804-.42 1.171c-.285.49-.659.918-1.087 1.276c-.332.278-.728.553-.993.553M6 23.5a5.5 5.5 0 1 1 0-11a5.5 5.5 0 0 1 0 11Zm5.35-19s-1.6-1-1.6-2.25a1.747 1.747 0 1 1 3.496 0c0 1.25-1.596 2.25-1.596 2.25z"/></g>',
-};
-
-function _pickMapAccessibilityIcon(line, hasRealLift) {
-  if (line === 'blue') return MAP_ICON_WHEELCHAIR_NEW;
-  if (line === 'green') return hasRealLift ? MAP_ICON_ELEVATOR : MAP_ICON_WHEELCHAIR;
-  return MAP_ICON_WHEELCHAIR;
-}
 
 /**
  * Малює або видаляє знаки доступності біля станцій з ліфтами на SVG-карті.
@@ -359,24 +335,21 @@ export function updateMapAccessibilityIcons() {
     if (!slug || processedSlugs.has(slug)) return;
 
     const stData = state.stationsData[slug];
-    const hasRealLift = stData?.directions?.some(d =>
-      d.exits?.some(e => e.positions?.some(p => p.isLift && !p.isHoist))
-    );
-    const hasLift = hasRealLift || stData?.directions?.some(d =>
-      d.exits?.some(e => e.positions?.some(p => p.isHoist && isShowHoistsEnabled()))
+    const hasLift = stData?.directions?.some(d =>
+      d.exits?.some(e => e.positions?.some(p => p.isLift || (p.isHoist && isShowHoistsEnabled())))
     );
 
     if (!hasLift) return;
     processedSlugs.add(slug);
 
-    const icon = _pickMapAccessibilityIcon(stData.line, hasRealLift);
+    const icon = MAP_ICON_WHEELCHAIR;
 
     try {
       const bbox = el.getBBox();
       if (!bbox || bbox.width <= 0) return;
 
-      const size = round(Math.min(bbox.width, bbox.height) * 0.3 * icon.scale);
-      const gap  = round(Math.min(bbox.width, bbox.height) * 0.3 * 1.1);
+      const size = round(Math.min(bbox.width, bbox.height) * 0.3);
+      const gap  = round(size * 1.1);
 
       const x = round(bbox.x - size - gap);
       const y = round(bbox.y + (bbox.height - size) / 2);
