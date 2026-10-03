@@ -525,7 +525,14 @@
         }
       ],
       "connections": {
-        "city_train": "Святошин",
+        "city_train": {
+          "name": "Святошин",
+          "exits": [
+            "6",
+            "5"
+          ],
+          "distance_m": 5
+        },
         "ground": {
           "1": {
             "bus": [
@@ -929,7 +936,13 @@
         }
       ],
       "connections": {
-        "city_train": "Берестейська",
+        "city_train": {
+          "name": "Берестейська",
+          "exits": [
+            "1"
+          ],
+          "distance_m": 346
+        },
         "ground": {
           "3": {
             "bus": [
@@ -1220,7 +1233,13 @@
         }
       ],
       "connections": {
-        "city_train": "Вокзальна",
+        "city_train": {
+          "name": "Вокзальна",
+          "exits": [
+            "1"
+          ],
+          "distance_m": 86
+        },
         "ground": {
           "1": {
             "bus": [
@@ -1979,7 +1998,13 @@
         }
       ],
       "connections": {
-        "city_train": "Лівобережна",
+        "city_train": {
+          "name": "Лівобережна",
+          "exits": [
+            "2"
+          ],
+          "distance_m": 335
+        },
         "ground": {
           "1": {
             "bus": [
@@ -3214,7 +3239,13 @@
         }
       ],
       "connections": {
-        "city_train": "Почайна",
+        "city_train": {
+          "name": "Почайна",
+          "exits": [
+            "1"
+          ],
+          "distance_m": 29
+        },
         "ground": {
           "1": {
             "minibus": [
@@ -3696,7 +3727,13 @@
         }
       ],
       "connections": {
-        "funicular": "Фунікулер. Нижня станція",
+        "funicular": {
+          "name": "Фунікулер. Нижня станція",
+          "exits": [
+            "1"
+          ],
+          "distance_m": 25
+        },
         "ground": {
           "1": {
             "bus": [
@@ -5439,7 +5476,13 @@
         }
       ],
       "connections": {
-        "city_train": "Сирець",
+        "city_train": {
+          "name": "Сирець",
+          "exits": [
+            "1"
+          ],
+          "distance_m": 67
+        },
         "ground": {
           "1": {
             "bus": [
@@ -6446,7 +6489,13 @@
         }
       ],
       "connections": {
-        "city_train": "Видубичі",
+        "city_train": {
+          "name": "Видубичі",
+          "exits": [
+            "1"
+          ],
+          "distance_m": 36
+        },
         "ground": {
           "1": {
             "trolley": [

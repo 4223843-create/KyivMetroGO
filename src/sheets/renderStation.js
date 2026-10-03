@@ -53,13 +53,22 @@ export function renderExitRoutes(s, num) {
   return groups.length ? `<span class="pos-numbered-exit-routes">${groups.join('')}</span>` : '';
 }
 
+/** Підпис «вихід N» (+ відстань, якщо платформа далеко) для пересадки. */
+function connectionExitHint(conn) {
+  const exits = conn?.exits;
+  if (!exits?.length) return '';
+  const word = exits.length > 1 ? 'виходи' : 'вихід';
+  const far  = conn.distance_m >= 100 ? `, ≈${Math.round(conn.distance_m / 10) * 10}&nbsp;м` : '';
+  return ` <span class="station-connection-exit">· ${word}&nbsp;${exits.join(', ')}${far}</span>`;
+}
+
 /** Плашки пересадок на кільцеву електричку / фунікулер для шапки станції. */
 export function renderStationConnections(s) {
   const c = s.connections;
   if (!c) return '';
   const items = [];
-  if (c.city_train) items.push(`<span class="station-connection">🚆 Кільцева електричка</span>`);
-  if (c.funicular)  items.push(`<span class="station-connection">🚡 Фунікулер</span>`);
+  if (c.city_train) items.push(`<span class="station-connection">🚆 Кільцева електричка${connectionExitHint(c.city_train)}</span>`);
+  if (c.funicular)  items.push(`<span class="station-connection">🚡 Фунікулер${connectionExitHint(c.funicular)}</span>`);
   return items.length ? `<div class="station-connections">${items.join('')}</div>` : '';
 }
 
