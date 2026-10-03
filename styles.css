@@ -5015,7 +5015,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   opacity: 0;
   margin: 0;
   padding: 0 12px;
-  text-align: left;
+  text-align: center;
   border-radius: 12px;
   background: var(--bg-card);
   border: 0.5px solid transparent;
@@ -5033,13 +5033,8 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   border-color: var(--border);
 }
 .clock-head { padding: 2px 0; }
-.clock-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 2px 0;
-}
-.clock-dir { flex: 1; min-width: 0; color: var(--text); }
+.clock-title { padding-top: 2px; }
+.clock-row { padding: 2px 0; color: var(--text); }
 .clock-interval { font-weight: 600; color: var(--text); white-space: nowrap; }
 
 /* Розпластана стрілка-смуга внизу панелі — тап згортає */

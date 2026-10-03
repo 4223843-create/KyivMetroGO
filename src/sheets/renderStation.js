@@ -76,11 +76,14 @@ export function renderStationConnections(s) {
 
 // ══ ГОДИНИ РОБОТИ ТА ІНТЕРВАЛИ ══
 
-const FRACTIONS = { 0: '', 15: '¼', 30: '½', 45: '¾' };
-
-/** 390 с → «6½». */
-function fmtMinutes(sec) {
-  return `${Math.floor(sec / 60)}${FRACTIONS[sec % 60] ?? ''}`;
+/** [360, 390] с → «6–7 хвилин» (округлення до цілих хвилин). */
+function fmtInterval([a, b]) {
+  const lo = Math.round(a / 60);
+  const hi = Math.round(b / 60);
+  const n  = hi % 100;
+  const word = n % 10 === 1 && n !== 11 ? 'хвилина'
+    : n % 10 >= 2 && n % 10 <= 4 && (n < 12 || n > 14) ? 'хвилини' : 'хвилин';
+  return `${lo === hi ? lo : `${lo}–${hi}`}&nbsp;${word}`;
 }
 
 /** «05:33» → хвилини від початку доби; час до 03:00 вважаємо після опівночі. */
@@ -107,12 +110,6 @@ const TERMINAL_GEN = {
   'Червоний хутір': 'Червоного хутора', 'Сирець': 'Сирця',
 };
 
-function clockRow(label, [a, b]) {
-  const val = a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`;
-  return `<div class="clock-row"><span class="clock-dir">${label}</span>` +
-    `<span class="clock-interval">кожні ${val}&nbsp;хв</span></div>`;
-}
-
 /**
  * Вміст панелі годинника (кнопка біля серця) станом на час телефону:
  * «відкриється о …», якщо вхід зараз закритий; «вхід до …», якщо до закриття
@@ -137,13 +134,16 @@ export function renderStationClock(s, now = new Date()) {
     .map(([terminal]) => [terminal, currentInterval(s.line, terminal, now)])
     .filter(([, iv]) => iv);
 
-  // Якщо в обидва боки інтервал різниться не більше ніж на 30 с — один рядок
+  // Різниця між напрямками до 60 с — один рядок без назв напрямків
   const [x, y] = ivs;
-  if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= 30 && Math.abs(x[1][1] - y[1][1]) <= 30) {
+  if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= 60 && Math.abs(x[1][1] - y[1][1]) <= 60) {
     const iv = [Math.min(x[1][0], y[1][0]), Math.max(x[1][1], y[1][1])];
-    lines.push(clockRow('в обидва боки', iv));
-  } else {
-    ivs.forEach(([terminal, iv]) => lines.push(clockRow(`в бік ${TERMINAL_GEN[terminal] || terminal}`, iv)));
+    lines.push(`<div class="clock-row">Інтервал руху: <span class="clock-interval">${fmtInterval(iv)}</span></div>`);
+  } else if (ivs.length) {
+    lines.push('<div class="clock-title">Інтервал руху</div>');
+    ivs.forEach(([terminal, iv]) => lines.push(
+      `<div class="clock-row">в бік ${TERMINAL_GEN[terminal] || terminal}: ` +
+      `<span class="clock-interval">${fmtInterval(iv)}</span></div>`));
   }
 
   if (!lines.length) lines.push('<div class="clock-head">Немає даних про інтервал на цю годину</div>');
