@@ -572,10 +572,7 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-rule"></div>
 
           <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Відображати інтервали руху</span>
-              <span class="settings-sublabel" style="text-align: left;">Відображаються на картці станції</span>
-            </div>
+            <span class="settings-label">Відображати інтервали руху</span>
             <label class="ios-toggle">
               <input type="checkbox" id="settingsShowIntervalsToggle">
               <span class="ios-toggle-slider"></span>
@@ -584,11 +581,11 @@ document.documentElement.setAttribute('data-theme', actual);
 
           <div class="settings-rule"></div>
 
-          <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
-            <span class="settings-label">Відображати час відкриття та закриття станції</span>
-            <div class="settings-seg settings-seg-wrap" id="settingsStationHoursSeg">
-              <button type="button" class="settings-seg-btn" data-hours-val="never">не відображати</button>
-              <button type="button" class="settings-seg-btn" data-hours-val="soon">за дві години до закриття</button>
+          <div class="settings-row">
+            <span class="settings-label">Час відкриття та закриття</span>
+            <div class="settings-seg" id="settingsStationHoursSeg">
+              <button type="button" class="settings-seg-btn" data-hours-val="never">ні</button>
+              <button type="button" class="settings-seg-btn" data-hours-val="soon">за 2 год</button>
               <button type="button" class="settings-seg-btn" data-hours-val="always">завжди</button>
             </div>
           </div>
