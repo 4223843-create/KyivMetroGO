@@ -53,13 +53,15 @@ export function renderExitRoutes(s, num) {
   return groups.length ? `<span class="pos-numbered-exit-routes">${groups.join('')}</span>` : '';
 }
 
-/** Підпис «вихід N» (+ відстань, якщо платформа далеко) для пересадки. */
+/** Підпис «вихід N, ≈M м» для пересадки (відстань округлена до 10 м). */
 function connectionExitHint(conn) {
   const exits = conn?.exits;
   if (!exits?.length) return '';
   const word = exits.length > 1 ? 'виходи' : 'вихід';
-  const far  = conn.distance_m >= 100 ? `, ≈${Math.round(conn.distance_m / 10) * 10}&nbsp;м` : '';
-  return ` <span class="station-connection-exit">· ${word}&nbsp;${exits.join(', ')}${far}</span>`;
+  const dist = Number.isFinite(conn.distance_m)
+    ? `, ≈${Math.max(10, Math.round(conn.distance_m / 10) * 10)}&nbsp;м`
+    : '';
+  return ` <span class="station-connection-exit">· ${word}&nbsp;${exits.join(', ')}${dist}</span>`;
 }
 
 /** Плашки пересадок на кільцеву електричку / фунікулер для шапки станції. */
