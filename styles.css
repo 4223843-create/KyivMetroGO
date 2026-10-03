@@ -5014,27 +5014,36 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   max-height: 0;
   opacity: 0;
   margin: 0;
-  padding: 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
   text-align: center;
-  border-radius: 12px;
-  background: var(--bg-card);
-  border: 0.5px solid transparent;
   font-size: var(--fs-sm);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease,
-              padding 0.28s cubic-bezier(0.4,0,0.2,1), margin 0.28s cubic-bezier(0.4,0,0.2,1);
+              margin 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 .station-clock-panel.panel-open {
   max-height: 200px;
   opacity: 1;
   margin: 0 0 12px;
-  padding: 8px 12px;
-  border-color: var(--border);
 }
-.clock-head { padding: 2px 0; }
-.clock-title { padding-top: 2px; }
-.clock-row { padding: 2px 0; color: var(--text); }
+/* Пілюлі — як у пересадок на електричку / фунікулер */
+.clock-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+}
+.clock-pill-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 14px;
+  padding: 6px 12px;
+}
 .clock-interval { font-weight: 600; color: var(--text); white-space: nowrap; }
 
 /* Розпластана стрілка-смуга внизу панелі — тап згортає */

@@ -140,10 +140,10 @@ export function renderStationClock(s, now = new Date()) {
   const hoursMode = getStationHoursMode();
   if (hoursMode !== 'never') {
     if (nowMin < open || nowMin >= close) {
-      lines.push(`<div class="clock-head">Станція закрита, відкриється о ${sch.open}</div>`);
+      lines.push(`<span class="clock-pill">Станція закрита, відкриється о ${sch.open}</span>`);
     } else if (hoursMode === 'always' || close - nowMin <= 120 || nowMin - open < 120) {
       // 'soon': перші дві години після відкриття та останні дві до закриття
-      lines.push(`<div class="clock-head">Вхід ${sch.open}–${sch.close}</div>`);
+      lines.push(`<span class="clock-pill">Вхід ${sch.open}–${sch.close}</span>`);
     }
   }
 
@@ -156,16 +156,16 @@ export function renderStationClock(s, now = new Date()) {
   const [x, y] = ivs;
   if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= 60 && Math.abs(x[1][1] - y[1][1]) <= 60) {
     const iv = [Math.min(x[1][0], y[1][0]), Math.max(x[1][1], y[1][1])];
-    lines.push(`<div class="clock-row">Інтервал руху: <span class="clock-interval">${fmtInterval(iv)}</span></div>`);
+    lines.push(`<span class="clock-pill">Інтервал руху: <span class="clock-interval">${fmtInterval(iv)}</span></span>`);
   } else if (ivs.length) {
-    lines.push('<div class="clock-title">Інтервал руху</div>');
-    ivs.forEach(([terminal, iv]) => lines.push(
-      `<div class="clock-row">в бік ${TERMINAL_GEN[terminal] || terminal}: ` +
-      `<span class="clock-interval">${fmtInterval(iv)}</span></div>`));
+    // Два напрямки — одна пілюля-блок з заголовком і рядком на кожен бік
+    lines.push('<span class="clock-pill clock-pill-multi"><span>Інтервал руху</span>' +
+      ivs.map(([terminal, iv]) => `<span>в бік ${TERMINAL_GEN[terminal] || terminal}: ` +
+        `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
   }
 
   if (!lines.length && isShowIntervalsEnabled())
-    lines.push('<div class="clock-head">Немає даних про інтервал на цю годину</div>');
+    lines.push('<span class="clock-pill">Немає даних про інтервал на цю годину</span>');
   return lines.join('');
 }
 
