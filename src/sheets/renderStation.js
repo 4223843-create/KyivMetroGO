@@ -53,7 +53,7 @@ export function renderExitRoutes(s, num) {
   return groups.length ? `<span class="pos-numbered-exit-routes">${groups.join('')}</span>` : '';
 }
 
-/** Підпис «вихід N, ≈M м» для пересадки (відстань округлена до 10 м). */
+/** Підпис «вихід N, M м» для пересадки (відстань округлена до 10 м). */
 function connectionExitHint(conn) {
   const exits = conn?.exits;
   if (!exits?.length) return '';
