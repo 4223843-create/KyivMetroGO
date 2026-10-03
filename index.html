@@ -53,7 +53,8 @@
 </style>
 <script>
     /* Миттєво застосовуємо збережену тему ДО малювання сторінки браузером */
-    const t = localStorage.getItem('metro_theme') || 'system';
+    // Preferences на вебі пише з префіксом CapacitorStorage.; без префікса — старі версії
+    const t = localStorage.getItem('CapacitorStorage.metro_theme') || localStorage.getItem('metro_theme') || 'system';
 const actual = t === 'system'
   ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   : t;

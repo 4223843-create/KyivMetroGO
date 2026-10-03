@@ -494,9 +494,13 @@ export function openSettingsSheet() {
     const hasCheckins     = Object.keys(getCheckins()).length > 0;
     const hasAnyData      = BackupService.hasUserData();
 
-    if (clearFavsBtn)    clearFavsBtn.disabled    = !hasFavs;
-    if (clearCheckinBtn) clearCheckinBtn.disabled = !hasCheckins;
-    if (clearLocalBtn)   clearLocalBtn.disabled   = !hasAnyData;
+    // .disabled на div — лише прапорець для обробника кліку; візуально — клас is-empty
+    [[clearFavsBtn, !hasFavs], [clearCheckinBtn, !hasCheckins], [clearLocalBtn, !hasAnyData]]
+      .forEach(([btn, empty]) => {
+        if (!btn) return;
+        btn.disabled = empty;
+        btn.classList.toggle('is-empty', empty);
+      });
 
     const ma = document.getElementById('settingsShowMapAccessibilityToggle');
     if (ma) ma.checked = isShowMapAccessibilityEnabled();

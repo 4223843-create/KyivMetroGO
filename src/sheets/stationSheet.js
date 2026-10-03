@@ -86,6 +86,9 @@ bus.on('fav:updated', () => {
   _updateFavBtn(slug, LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)');
 });
 
+// Вибране змінили в іншій вкладці — оновлюємо серця відкритої картки
+bus.on('fav:externally-updated', () => refreshCurrentStation());
+
 bus.on('station:open', ({ slug }) => openStation(slug));
 
 bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
@@ -244,12 +247,23 @@ export function refreshCurrentStation() {
   const color      = LINE_COLOR[s.line] || 'var(--text-muted)';
   const prevScroll = sheetBody.scrollTop;
 
+  // Відкрита панель годинника не має закриватися від перемальовування (напр. дотик до шпильки check-in)
+  const clockWasOpen = !!document.getElementById('stationClockPanel')?.classList.contains('panel-open');
+
   // Кеш вже інвалідовано в bus.on('station:refresh') вище
   stationTitleMain.textContent = s.name;
   sheetBody.innerHTML = renderDirections(s, color);
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
   _directionsHtmlCache.set(slug, sheetBody.innerHTML);
   sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationConnections(s));
+
+  if (clockBtn) clockBtn.hidden = !hasStationClock(s);
+  if (clockWasOpen && !clockBtn?.hidden) {
+    const clockPanel = document.getElementById('stationClockPanel');
+    clockPanel.innerHTML = renderStationClock(s);
+    clockPanel.classList.add('panel-open');
+  }
+  _updateFavBtn(slug, color);
 
   applyNavLinks(slug);
   applyInitialFavStyles(sheetBody, slug, color);

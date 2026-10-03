@@ -263,7 +263,7 @@ function _insertFavOnlyHint() {
   const hint     = document.createElement('p');
   hint.id        = 'favOnlyHint';
   hint.className = 'fav-empty-text-lg';
-  hint.innerHTML = `Внесли до <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> все, чого&nbsp;потребуєте для&nbsp;швидкої навігації в&nbsp;метро? <br>Активуйте в&nbsp;налаштуваннях режим „Показувати&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибране</span> при&nbsp;запуску"`;
+  hint.innerHTML = `Внесли до <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> все, чого&nbsp;потребуєте для&nbsp;швидкої навігації в&nbsp;метро? <br>Оберіть у&nbsp;налаштуваннях „При&nbsp;запуску:&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">вибране</span>"`;
   favBody.insertBefore(hint, favBody.firstChild);
 }
 

@@ -142,12 +142,17 @@ import { Capacitor } from '@capacitor/core';
 if (!Capacitor.isNativePlatform()) {
   const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
 
+  // Preferences на вебі зберігає ключі в localStorage з префіксом «CapacitorStorage.»
+  const _PREFS_PREFIX = 'CapacitorStorage.';
+
   window.addEventListener('storage', (e) => {
-    if (_VALID_KEYS.has(e.key)) {
+    if (!e.key?.startsWith(_PREFS_PREFIX)) return;
+    const key = e.key.slice(_PREFS_PREFIX.length);
+    if (_VALID_KEYS.has(key)) {
       if (e.newValue === null) {
-        memoryCache.delete(e.key);
+        memoryCache.delete(key);
       } else {
-        memoryCache.set(e.key, e.newValue);
+        memoryCache.set(key, e.newValue);
       }
     }
   });
