@@ -117,8 +117,6 @@ export function openSettingsSheet() {
         // Показуємо/приховуємо рядок "Локальні зміни"
         const localFbRow = document.getElementById('settingsLocalFbRow');
         if (localFbRow) localFbRow.classList.toggle('is-hidden', !isEditOn);
-        
-        bus.emit('editmode:changed', { enabled: isEditOn });
       });
     }
 

@@ -655,7 +655,3 @@ export function openDevMenuSheet() {
 
   showSheet(sheet, 'sheet-fullscreen', 'sheet-scrollable');
 }
-
-// Дозволяє відкрити меню розробника зовні (наприклад, з компактної кнопки
-// в About-шторці, коли розробник ще не залогінений і треба показати форму входу).
-bus.on('devmenu:open', openDevMenuSheet);

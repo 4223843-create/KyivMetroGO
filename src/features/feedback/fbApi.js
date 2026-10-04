@@ -70,7 +70,6 @@ export async function submitFeedback(background = false) {
   // ── Нічого не змінилось ─────────────────────────────────
   if (!posChanges.length && !newExits.length && !labelChanges.length) {
     _isSubmitting = false;
-    bus.emit('feedback:submitted', { slug, hasChanges: false, background });
     return;
   }
 
@@ -103,8 +102,7 @@ export async function submitFeedback(background = false) {
 
   // ── Застосовуємо локально та повідомляємо шини ──────────
   applyLocalLayer();
-  resetFbState();                               // ← стан чистий ДО emit
-  bus.emit('feedback:submitted', { slug, hasChanges: true, background });
+  resetFbState();                               // ← стан чистий ДО station:refresh
   bus.emit('station:refresh');
 
   // ── Відправка на Formspree ───────────────────────────────
