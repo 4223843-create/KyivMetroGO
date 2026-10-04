@@ -5214,3 +5214,17 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   }
   .global-confirm-card { animation: none !important; }
 }
+
+/* ══ БІЛЬША ЗОНА НАТИСКАННЯ ══
+   Невидиме розширення вгору й униз для низьких елементів: вигляд не змінюється,
+   а влучити пальцем легше (перемикачі в налаштуваннях — 24 px, «попередня …» — 15 px). */
+.settings-seg-btn { position: relative; }
+.settings-seg-btn::after,
+.direction-label.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -8px;
+  bottom: -8px;
+}
