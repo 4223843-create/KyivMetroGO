@@ -12,7 +12,7 @@ import { openCheckinSheet, updateCheckinDock } from './features/checkin/index.js
 import { openSearchSheet } from './features/search.js';
 import { openSettingsSheet, isEditModeEnabled } from './features/settings.js';
 import {
-  openStation, closeAllSheets, openAboutSheet
+  closeAllSheets, openAboutSheet
 } from './sheets/sheetsManager.js';
 import { withUnsavedCheck } from './core/unsavedCheck.js';
 import { bus } from './core/eventBus.js';

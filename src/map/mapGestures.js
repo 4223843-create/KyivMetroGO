@@ -1,6 +1,6 @@
 // ══ ЖЕСТИ КАРТИ: PAN + PINCH ZOOM (OPTIMIZED VIA rAF) ══
 
-import { BASE_MAP_WIDTH, BASE_MAP_HEIGHT } from './mapInit.js';
+import { BASE_MAP_WIDTH } from './mapInit.js';
 import { applyVisitedHatchOverlays } from './mapInteraction.js';
 
 const vp           = document.getElementById('mapViewport');

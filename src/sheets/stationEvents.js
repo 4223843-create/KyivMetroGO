@@ -10,7 +10,7 @@ import { bus }                    from '../core/eventBus.js';
 import { slugByName }             from '../data/stations.js';
 import { findPosition }           from '../data/positions.js';
 import {
-  isFav, getExitFavs, isExitFav,
+  isFav, isExitFav,
   toggleExitFav, replaceExitFav,
 } from '../features/favorites/index.js';
 import { dismissHintWithDoors } from '../ui/animations.js';

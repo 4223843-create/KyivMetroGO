@@ -168,7 +168,6 @@ function actualOpenStation(slug) {
   state.currentStationSlug = slug;
   bus.emit('fav:dismiss-hint');
 
-  const fav            = isFav(slug);
   const hideInfoBlocks = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
   const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
     ? `<div class="onboarding-hint" id="onboardingHint">` +

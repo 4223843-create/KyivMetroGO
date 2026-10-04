@@ -1,5 +1,18 @@
 apply plugin: 'com.android.application'
 
+// versionCode росте сам: кількість комітів у гілці (Google Play вимагає, щоб
+// кожна нова збірка мала більший номер). Можна задати вручну: -PversionCode=123.
+def autoVersionCode = { ->
+    def manual = project.findProperty('versionCode')
+    if (manual) return manual.toString().toInteger()
+    try {
+        return providers.exec { commandLine 'git', 'rev-list', '--count', 'HEAD' }
+            .standardOutput.asText.get().trim().toInteger()
+    } catch (ignored) {
+        return 1
+    }
+}
+
 android {
     namespace = "ua.opivnochi.metrogo"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,7 +20,7 @@ android {
         applicationId "ua.opivnochi.metrogo"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode autoVersionCode()
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

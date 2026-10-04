@@ -7,7 +7,7 @@ import { state as appState }        from '../../core/state.js';
 import { bus }                      from '../../core/eventBus.js';
 import { isDevMode, appendDevLog }  from '../devFlags.js';
 import {
-  saveLocalEdit, getLocalEdits, clearAllLocalEdits,
+  saveLocalEdit,
   applyLocalLayer, saveExitLabel,
 } from '../../data/localEdits.js';
 import { fbState, resetFbState }    from './fbState.js';

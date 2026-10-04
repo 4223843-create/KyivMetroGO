@@ -15,7 +15,6 @@ import { STORAGE_KEYS, Storage }           from '../core/storage.js';
 
 // ── Константи ─────────────────────────────────────────────────
 
-const APP_PREFIX   = 'metro_';
 const BACKUP_TOKEN = STORAGE_KEYS.FAVS;
 
 /**

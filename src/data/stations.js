@@ -176,7 +176,7 @@ export function hydrateStations(data) {
     _slugByLower[station.slug.toLowerCase()] = station.slug;
 
     // ── Пошуковий індекс ──
-    const stationWords   = cleanName.split(/[\s\u00a0\u202f\-]+/);
+    const stationWords   = cleanName.split(/[\s\u00a0\u202f-]+/);
     const slugParts      = station.slug.split('.');
     const cleanEnName    = (slugParts.length > 1 ? slugParts[1] : station.slug)
                              .replace(/_/g, ' ').toLowerCase();
@@ -188,7 +188,7 @@ export function hydrateStations(data) {
       ...stationWords,
       ...stationEnWords,
       acronym,
-      ...aliases.flatMap(alias => alias.split(/[\s\u00a0\u202f\-]+/)),
+      ...aliases.flatMap(alias => alias.split(/[\s\u00a0\u202f-]+/)),
     ];
 
     // ── Індекс підписів виходів (для пошуку за назвою вулиці) ──

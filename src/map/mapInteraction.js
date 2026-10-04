@@ -13,7 +13,6 @@ const inner = document.getElementById('mapInner');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
 const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
-const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
 const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
 const HATCH_STEP_PX  = 8;
 
