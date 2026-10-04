@@ -51,6 +51,9 @@ export async function syncSystemBars(theme) {
   });
 }
 
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 /**
  * Додає стан у History API перед відкриттям шторки.
  * Дозволяє кнопці «назад» на Android закривати шторку замість виходу з додатку.
@@ -59,6 +62,9 @@ export function pushSheetHistory() {
   // Нативно «Назад» обробляє App.backButton (спершу закриває шторки), тож запис в
   // історії там зайвий: інакше після закриття шторки ✕ перше «Назад» нічого не робить.
   if (Capacitor.isNativePlatform()) return;
+  // На iPhone кнопки «Назад» немає, а зайвий запис вмикає свайп від лівого краю,
+  // що відсуває весь екран і показує під ним знімок заставки.
+  if (IS_IOS) return;
   if (!history.state?.isSheetOpen) {
     history.pushState({ isSheetOpen: true }, '');
   }
