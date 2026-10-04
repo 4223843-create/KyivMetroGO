@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Панель навігації Android 10–14 у колір фону застосунку (--bg) -->
+    <!-- Панель навігації Android 10–14 у колір фону застосунку (змінна bg у styles.css) -->
     <color name="navigationBar">#E5E5EA</color>
     <bool name="lightNavigationBar">true</bool>
 </resources>
