@@ -51,6 +51,8 @@ import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState
 export function isDevMode() {
   return Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
 }
+// Для раннього обробника помилок в index.html (вікна «CRASH» лише розробнику)
+window.__isDevMode = isDevMode;
 
 /** Перемикає режим розробника. Повертає новий стан. */
 export function toggleDevMode() {
