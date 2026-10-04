@@ -114,11 +114,11 @@ function currentInterval(line, terminal, now) {
   return p[day === 0 || day === 6 ? 'holiday' : 'weekday']?.[terminal] || null;
 }
 
-/** Назви кінцевих у родовому відмінку: «в бік Теремків». */
+/** Назви кінцевих у родовому відмінку: «у бік Теремків». */
 const TERMINAL_GEN = {
   'Теремки': 'Теремків', 'Героїв Дніпра': 'Героїв Дніпра',
   'Лісова': 'Лісової', 'Академмістечко': 'Академмістечка',
-  'Червоний хутір': 'Червоного хутора', 'Сирець': 'Сирця',
+  'Червоний хутір': 'Червоного Хутора', 'Сирець': 'Сирця',
 };
 
 /**
@@ -162,7 +162,7 @@ export function renderStationClock(s, now = new Date()) {
   } else if (ivs.length) {
     // Два напрямки — одна пілюля-блок з заголовком і рядком на кожен бік
     lines.push('<span class="clock-pill clock-pill-multi"><span>Інтервал руху</span>' +
-      ivs.map(([terminal, iv]) => `<span>в бік ${TERMINAL_GEN[terminal] || terminal}: ` +
+      ivs.map(([terminal, iv]) => `<span>у бік ${TERMINAL_GEN[terminal] || terminal}: ` +
         `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
   }
 

@@ -200,7 +200,7 @@ export function openCheckinSheet() {
       listHtml = `
         <div class="fav-empty-state" style="margin-top: 40px;">
           <p class="fav-empty-text-lg">
-            Натисніть ${pinInline} щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий
+            Натисніть ${pinInline}, щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий
           </p>
         </div>`;
 
@@ -245,7 +245,7 @@ export function openCheckinSheet() {
         <div class="ci-sort-bar">
           <button class="ci-sort-btn${ciSortMode === 'date' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
           <button class="ci-sort-btn${ciSortMode === 'alpha' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
-          <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
+          <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Невідвідані</button>
         </div>` : ''}
       `;
 

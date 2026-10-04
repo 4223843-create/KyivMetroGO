@@ -190,7 +190,7 @@ function bindBottomLoader(aboutSheet) {
       if (sending) return;
       const val = input.value.trim();
       if (val.length < 3 || !/^[a-zA-Z0-9.]+$/.test(val)) { flashError(); return; }
-      if (!navigator.onLine) { showToast('Немає з\'єднання з інтернетом'); return; }
+      if (!navigator.onLine) { showToast('Немає зʼєднання з інтернетом'); return; }
 
       sending = true;
       input.blur();
@@ -372,7 +372,7 @@ export function openAboutSheet() {
 
       // Швидка перевірка офлайн-стану ще до fetch
       if (!navigator.onLine) {
-        bugResultMsg.textContent   = 'Немає з\'єднання з інтернетом. Спробуйте пізніше.';
+        bugResultMsg.textContent   = 'Немає зʼєднання з інтернетом. Спробуйте пізніше.';
         bugResultMsg.style.color   = 'var(--line-red)';
         return;
       }
@@ -398,7 +398,7 @@ export function openAboutSheet() {
         if (res.ok) {
           bugTextarea.hidden              = true;
           bugSubmitBtn.parentElement.hidden = true;
-          bugResultMsg.textContent        = '✓ Дякуємо! Помилку надіслано.';
+          bugResultMsg.textContent        = '✓ Дякуємо! Повідомлення надіслано.';
           bugResultMsg.style.color        = 'var(--line-green)';
           bugResultMsg.style.fontWeight   = '600';
           bugResultMsg.style.fontSize     = 'var(--fs-md)';
@@ -412,7 +412,7 @@ export function openAboutSheet() {
         bugSubmitBtn.textContent = 'Відправити';
         bugResultMsg.style.color = 'var(--line-red)';
         bugResultMsg.textContent = err.name === 'AbortError'
-          ? 'Час очікування вичерпано. Перевірте з\'єднання.'
+          ? 'Час очікування вичерпано. Перевірте зʼєднання.'
           : 'Помилка відправки. Спробуйте пізніше.';
       }
     });

@@ -40,8 +40,8 @@ bus.on('feedback:submit-ui', ({ status, background }) => {
       '<p class="fb-note fb-success">✓ Дякуємо! Зміни надіслано та збережено локально.</p>';
   } else if (status === 'network-error') {
     resultEl.innerHTML =
-      '<p class="fb-note fb-warn">Немає з\'єднання з інтернетом — зміни збережено локально ' +
-      'і будуть надіслані при наступному запуску з мережею.</p>';
+      '<p class="fb-note fb-warn">Немає зʼєднання з інтернетом. Зміни збережено на пристрої, ' +
+      'їх буде надіслано, щойно зʼявиться мережа.</p>';
   } else if (status === 'local-only') {
     resultEl.innerHTML =
       '<p class="fb-note fb-success">✓ Зміни збережено локально.</p>';

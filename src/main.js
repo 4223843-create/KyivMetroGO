@@ -89,10 +89,9 @@ async function bootstrap() {
       'color:var(--text,#e8e6e3);font-family:system-ui,sans-serif;text-align:center;z-index:9999';
     msg.innerHTML =
       '<span style="font-size:2rem">⚠️</span>' +
-      '<strong style="font-size:1.1rem">Не вдалося запустити додаток</strong>' +
+      '<strong style="font-size:1.1rem">Не вдалося запустити застосунок</strong>' +
       '<p style="font-size:.9rem;opacity:.7;max-width:320px">' +
-      'Перевірте з\'єднання з інтернетом і спробуйте ще раз.<br>' +
-      '<span style="font-size:.75rem;opacity:.5">' + (err.message || err) + '</span></p>' +
+      'Перевірте зʼєднання з інтернетом і спробуйте ще раз.</p>' +
       '<button onclick="location.reload()" ' +
       'style="margin-top:8px;padding:12px 28px;border-radius:8px;border:none;' +
       'background:#c8523a;color:#fff;font-size:1rem;cursor:pointer">Спробувати ще раз</button>';
