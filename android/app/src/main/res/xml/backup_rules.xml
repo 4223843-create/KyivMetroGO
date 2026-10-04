@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Автоматична резервна копія Android до 11 (android:fullBackupContent).
+    Копіюється лише сховище Capacitor Preferences: вибране, чекіни, локальні
+    правки й налаштування. Кеш stations.json і фото розробника не копіюються.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="CapacitorStorage.xml" />
+</full-backup-content>

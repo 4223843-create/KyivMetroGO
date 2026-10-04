@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Резервна копія й перенесення на новий телефон, Android 12+
+    (android:dataExtractionRules). Ті самі правила, що в backup_rules.xml.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="CapacitorStorage.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="CapacitorStorage.xml" />
+    </device-transfer>
+</data-extraction-rules>
