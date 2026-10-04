@@ -6,13 +6,13 @@
 import { Capacitor } from '@capacitor/core';
 import { App }       from '@capacitor/app';
 
-import { STORAGE_KEYS, Storage } from './core/storage.js';
 import { openFavSheet }    from './features/favorites/index.js';
 import { openCheckinSheet, updateCheckinDock } from './features/checkin/index.js';
 import { openSearchSheet } from './features/search.js';
-import { openSettingsSheet, isEditModeEnabled } from './features/settings.js';
+import { openSettingsSheet } from './features/settings.js';
+import { getPref }           from './core/prefs.js';
 import {
-  openStation, closeAllSheets, openAboutSheet
+  closeAllSheets, openAboutSheet
 } from './sheets/sheetsManager.js';
 import { withUnsavedCheck } from './core/unsavedCheck.js';
 import { bus } from './core/eventBus.js';
@@ -20,7 +20,7 @@ import { state } from './core/state.js';
 import { pushSheetHistory } from './ui/system.js';
 import { hasOpenSheet }     from './ui/sheetNav.js';
 import { showToast }        from './ui/toast.js';
-import { openDevMenuSheet } from './sheets/devMenuSheet.js';
+import { openDevMenuSheet } from './features/devHooks.js';
 
 // ── Bottom bar ─────────────────────────────────────────────────
 document.getElementById('favListBtn')?.addEventListener('click', openFavSheet);
@@ -46,7 +46,7 @@ if (menuBtn && dropMenu) {
   menuBtn.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
-    if (feedbackMenuItem) feedbackMenuItem.hidden = !isEditModeEnabled();
+    if (feedbackMenuItem) feedbackMenuItem.hidden = !getPref('editMode');
     updateCheckinDock();
     const willShow = !dropMenu.classList.contains('show');
     dropMenu.classList.toggle('show', willShow);
@@ -146,7 +146,7 @@ if (Capacitor.isNativePlatform()) {
 const sheetOverlay = document.getElementById('sheetOverlay');
 
 function _maybeOpenFavOnResume() {
-  if (Storage.get(STORAGE_KEYS.START_ON_FAV) !== 'true') return;
+  if (!getPref('startOnFav')) return;
   if (sheetOverlay?.classList.contains('overlay-visible')) return;
   openFavSheet();
 }

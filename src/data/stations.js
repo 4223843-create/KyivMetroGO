@@ -144,6 +144,9 @@ export function hydrateStations(data) {
           if (!ex.label && catalogItem.label) {
             ex.label = catalogItem.label;
           }
+          // Станція, на яку веде підпис: пересадка чи інша станція (кнопка-посилання)
+          ex.transfer_to ??= catalogItem.transfer_to;
+          ex.link_to     ??= catalogItem.link_to;
           if (!ex.numbered_exits) {
             ex.numbered_exits = catalogItem.numbered_exits || catalogItem.exit_numbers;
           }
@@ -176,7 +179,7 @@ export function hydrateStations(data) {
     _slugByLower[station.slug.toLowerCase()] = station.slug;
 
     // ── Пошуковий індекс ──
-    const stationWords   = cleanName.split(/[\s\u00a0\u202f\-]+/);
+    const stationWords   = cleanName.split(/[\s\u00a0\u202f-]+/);
     const slugParts      = station.slug.split('.');
     const cleanEnName    = (slugParts.length > 1 ? slugParts[1] : station.slug)
                              .replace(/_/g, ' ').toLowerCase();
@@ -188,7 +191,7 @@ export function hydrateStations(data) {
       ...stationWords,
       ...stationEnWords,
       acronym,
-      ...aliases.flatMap(alias => alias.split(/[\s\u00a0\u202f\-]+/)),
+      ...aliases.flatMap(alias => alias.split(/[\s\u00a0\u202f-]+/)),
     ];
 
     // ── Індекс підписів виходів (для пошуку за назвою вулиці) ──

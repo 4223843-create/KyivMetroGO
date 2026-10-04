@@ -8,7 +8,7 @@ import { traversePositions, positionId, displayDirOf } from './positions.js';
 // Порівнюємо напрямки без регістру, пробілів, &nbsp; і розділових знаків
 const dirToken = s => String(s ?? '')
   .toLowerCase()
-  .replace(/&nbsp;| | | /g, ' ')
+  .replace(/&nbsp;|[\u00a0\u202f\u2009]/g, ' ')
   .replace(/[^a-z0-9а-яіїєґ]/g, '');
 
 const same = (a, b) => String(a ?? '').trim() === String(b ?? '').trim();

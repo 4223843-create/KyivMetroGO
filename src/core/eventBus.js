@@ -41,8 +41,29 @@ export const bus = {
   },
 };
 
-// Каталог подій (документація — не код):
-// 'feedback:dirty-changed'  { isDirty: boolean }
-// 'feedback:submitted'      { slug: string }
-// 'station:refresh'         void
-// 'station:open'            { slug: string }
+// Каталог подій. tests/eventBus.test.mjs перевіряє, що кожна подія з коду
+// є тут і що в кожної є і відправник, і слухач.
+// 'data:stations-hydrated'   { stationsData }  — дані станцій готові (старт або оновлення)
+// 'stations:updated'         { version }       — завантажено новішу версію stations.json
+// 'station:open'             { slug }
+// 'station:refresh'          void              — перемалювати відкриту картку станції
+// 'station:clock-settings'   void              — змінились налаштування годин/інтервалів
+// 'sheet:close'              { sheetEl }
+// 'sheet:open-feedback'      void
+// 'sheet:open-feedback-for'  { slug }
+// 'feedback:close'           void              — закрити форму правок (з питанням, якщо є зміни)
+// 'feedback:dirty-changed'   { isDirty }
+// 'feedback:submit-silent'   void              — зберегти правки без показу результату
+// 'feedback:submit-ui'       { status: 'sending'|'local-only'|'success'|'network-error', background }
+// 'fav:updated'              void
+// 'fav:externally-updated'   { key }
+// 'fav:render-on-load'       void
+// 'fav:dismiss-hint'         void
+// 'checkin:updated'          void
+// 'checkin:attach-buttons'   { sheetEl, slug, color }
+// 'map:sync-checkins'        void
+// 'map:update-accessibility' void
+// 'devmenu:refresh'          void
+// 'storage:changed'          { key }           — ключ змінено в іншій вкладці (веб)
+// 'storage:write-failed'     { key }
+// 'ui:confirm'               { message, onYes, ... }

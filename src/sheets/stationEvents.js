@@ -7,10 +7,9 @@ import { state }                  from '../core/state.js';
 import { TIMING }                 from '../core/timing.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { bus }                    from '../core/eventBus.js';
-import { slugByName }             from '../data/stations.js';
 import { findPosition }           from '../data/positions.js';
 import {
-  isFav, getExitFavs, isExitFav,
+  isFav, isExitFav,
   toggleExitFav, replaceExitFav,
 } from '../features/favorites/index.js';
 import { dismissHintWithDoors } from '../ui/animations.js';
@@ -18,7 +17,7 @@ import { Icons }                from '../ui/icons.js';
 import { applyFavPillStyles, renderExitRoutes } from './renderStation.js';
 import { heartSvg }               from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
-import { isEditModeEnabled }      from '../features/settings.js';
+import { getPref }                from '../core/prefs.js';
 import { isCheckinMode }          from '../domain/checkin.js';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
@@ -193,7 +192,7 @@ function _maybeDismissOnboarding(lineColor) {
 function _maybeShowCheckinHint(lineColor) {
   // Без увімкненого Check-in шпильок немає — підказку збережемо на потім
   if (!isCheckinMode()) return;
-  if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
+  if (getPref('hideInfoBlocks')) return;
   if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
   const sheetBodyEl = document.getElementById('sheetBody');
   if (!sheetBodyEl || document.getElementById('checkinHint')) return;
@@ -461,7 +460,7 @@ export function bindSheetGestures(sheetBody, getCtx) {
       e.stopPropagation();
       const editSlug = pencil.dataset.slug;
       if (!editSlug) return;
-      if (!isEditModeEnabled()) {
+      if (!getPref('editMode')) {
         _showEditModeLockToast(pencil);
         return;
       }
@@ -475,7 +474,7 @@ export function bindSheetGestures(sheetBody, getCtx) {
     // 4. Nav-label → відкрити іншу станцію
     const navLabel = e.target.closest('.nav-link');
     if (navLabel) {
-      const target = slugByName(navLabel.dataset.name || '');
+      const target = navLabel.dataset.target;
       if (target && target !== slug) bus.emit('station:open', { slug: target });
       return;
     }

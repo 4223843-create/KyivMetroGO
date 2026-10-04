@@ -8,7 +8,6 @@
 //   openSearchSheet()                                → void
 
 import { state } from '../core/state.js';
-import { fuzzyMatchToken } from '../utils/stringMatchers.js';
 import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { bus }                from '../core/eventBus.js';
@@ -82,7 +81,6 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
 
   const rawQuery      = query.toLowerCase().trim().replace(/[''`]/g, '');
   const queryWords    = rawQuery.split(/\s+/).filter(w => w.length > 0);
-  const queryNoSpaces = rawQuery.replace(/\s+/g, '');
 
   const matched = [];
 

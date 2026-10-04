@@ -5,11 +5,11 @@
 
 import { state as appState }         from '../../core/state.js';
 import { bus }                       from '../../core/eventBus.js';
-import { STORAGE_KEYS, Storage }     from '../../core/storage.js';
+import { getPref } from '../../core/prefs.js';
 import { removeLocalEdit, saveLocalEdit, saveExitLabel,
          clearAllLocalEdits,
          applyLocalLayer }                   from '../../data/localEdits.js';
-import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
+import { fbState, computeIsDirty } from './fbState.js';
 import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
 import { renderFeedbackPositions, renderResetBtn,
          stationListHtml }                              from './fbRenderer.js';
@@ -27,6 +27,20 @@ export function closeAllHints() {
     .forEach(b => b.classList.remove('is-active'));
 }
 
+// ── Значення степерів з екрана → fbState ────────────────────
+// Степери змінюють числа в DOM; після кожної зміни переписуємо їх у стан.
+function syncCurrentFromDOM(idx) {
+  const cur = fbState.current[idx];
+  if (!cur) return;
+  const rd = id => document.getElementById(id)?.textContent ?? '-';
+  cur.wMain = rd(`fbW${idx}`);
+  cur.dMain = rd(`fbD${idx}`);
+  cur.wEx   = rd(`fbW_ex${idx}`);
+  cur.dEx   = rd(`fbD_ex${idx}`);
+  cur.wEx2  = rd(`fbW_ex2_${idx}`);
+  cur.dEx2  = rd(`fbD_ex2_${idx}`);
+}
+
 // ── Dirty-tracking ───────────────────────────────────────────
 
 /**
@@ -36,11 +50,7 @@ export function closeAllHints() {
 export function markFeedbackDirty() {
   if (!fbState.slug) return;
 
-  const changedLabels = [...document.querySelectorAll('.fb-exit-label-input')]
-    .filter(inp => inp.dataset.changed === 'true')
-    .map(inp => inp.id);
-
-  fbState.isDirty = computeIsDirty(changedLabels);
+  fbState.isDirty = computeIsDirty();
   bus.emit('feedback:dirty-changed', { isDirty: fbState.isDirty });
 
   const sendBtn = document.getElementById('fbSend');
@@ -115,7 +125,7 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
     document.getElementById('fbChangeStation').hidden  = true;
     document.getElementById('fbStationTitle').hidden   = true;
     
-    const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+    const isLocal = getPref('localOnlyFeedback');
     document.getElementById('fbSheetTitle').textContent = isLocal ? 'Локальні зміни' : 'Запропонувати зміни';
     
     const introText = document.getElementById('fbMainIntroText');
@@ -362,9 +372,13 @@ function _handleStep(btn) {
 }
 
 function _handleLabelChange(input, slug) {
-  input.dataset.changed = 'true';
   const wrapId = input.id.replace('fbLabelInput', '');
-  if (slug && wrapId !== '') saveExitLabel(slug, parseInt(wrapId), input.value);
+  if (wrapId !== '') {
+    const idx = parseInt(wrapId);
+    fbState.changedLabels[idx] = input.value;
+    fbState.labels[idx]        = input.value.trim();   // підпис нового виходу береться звідси
+    if (slug) saveExitLabel(slug, idx, input.value);
+  }
 
   const wrap = document.getElementById(`fbLabelWrap${wrapId}`);
   const row  = wrap?.previousElementSibling;

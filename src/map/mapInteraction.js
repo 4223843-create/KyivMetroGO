@@ -7,13 +7,12 @@ import { getCheckins, isCheckinMode, getStationExitStats } from '../domain/check
 import { bus }                    from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { getSlugByLower }         from '../data/stations.js';
-import { isShowMapAccessibilityEnabled, isShowHoistsEnabled } from '../features/settings.js';
+import { getPref } from '../core/prefs.js';
 
 const inner = document.getElementById('mapInner');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const HATCH_GEOMETRY_SELECTOR = 'path, polygon, rect';
 const HATCH_OVERLAY_CLASS  = 'ci-visited-hatch-overlay';
-const HATCH_GEOMETRY_CLASS = 'ci-visited-hatch-geometry';
 const HATCH_LINE_CLASS     = 'ci-visited-hatch-line';
 const HATCH_STEP_PX  = 8;
 
@@ -323,7 +322,7 @@ export function updateMapAccessibilityIcons() {
   // Очищаємо попередні іконки
   inner.querySelectorAll('.map-accessibility-icon').forEach(el => el.remove());
 
-  if (!isShowMapAccessibilityEnabled()) return;
+  if (!getPref('showMapAccessibility')) return;
 
   const svgEl = inner.querySelector('svg');
   if (!svgEl) return;
@@ -337,7 +336,7 @@ export function updateMapAccessibilityIcons() {
 
     const stData = state.stationsData[slug];
     const hasLift = stData?.directions?.some(d =>
-      d.exits?.some(e => e.positions?.some(p => p.isLift || (p.isHoist && isShowHoistsEnabled())))
+      d.exits?.some(e => e.positions?.some(p => p.isLift || (p.isHoist && getPref('showHoists'))))
     );
 
     if (!hasLift) return;

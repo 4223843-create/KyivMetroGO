@@ -41,13 +41,12 @@ import { state }                  from '../core/state.js';
 import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
-import { renderFeedbackPositions } from './feedback/fbRenderer.js';
 import { getPositionDescriptorsForStation, devRowKey } from '../sheets/renderStation.js';
 import { legacyKeyMap }     from '../data/positions.js';
 import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
 import { escapeHtml } from '../ui/html.js';
 import { showToast }  from '../ui/toast.js';
-import { isDevMode, toggleDevMode } from './devFlags.js';
+import { isDevMode } from './devFlags.js';
 import {
   emptyConfirmationData as _emptyConfirmationData,
   mergeKeyedMap as _mergeKeyedMap,
@@ -506,7 +505,7 @@ function _mutateConfirmation(slug, posIdx, actionType, mutator) {
   const all = _readConfirmations();
   if (!all[slug]) all[slug] = {};
   const current = all[slug][posIdx] || _emptyConfirmationData();
-  const { lastAction, ...snapshot } = current; // знімок без вкладеного lastAction — щоб не росло вглиб
+  const { lastAction: _prev, ...snapshot } = current; // знімок без вкладеного lastAction — щоб не росло вглиб
   const next = mutator({ ...current });
   next.lastAction = { type: actionType, prevSnapshot: snapshot };
   next.updatedAt = Date.now();
@@ -1305,10 +1304,6 @@ export function showDevModeToast(active) {
 
 const DEV_MINI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M9.964 2.686a.5.5 0 1 0-.928-.372l-4 10a.5.5 0 1 0 .928.372zm-6.11 2.46a.5.5 0 0 1 0 .708L2.207 7.5l1.647 1.646a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 0 1 .708 0m7.292 0a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L12.793 7.5l-1.647-1.646a.5.5 0 0 1 0-.708" clip-rule="evenodd"/></svg>`;
 
-// Компактні іконки для швидкої кнопки синхронізації в About-шторці
-// (сама форма входу — тільки в повноекранному меню розробника, тут нема місця).
-const DEV_SYNC_SVG  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>`;
-const DEV_LOGIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>`;
 
 /**
  * Оновлює SVG-іконку dev-режиму в About-шторці (лише індикатор активності —
@@ -1427,33 +1422,13 @@ export function renderDevAuthSection(container) {
 }
 
 // ── Активація Dev Mode прихованим жестом (5 тапів) ──
-export function setupDevModeTapCounter(aboutSheet) {
+/**
+ * Запам'ятовує About-шторку й показує на ній стан режиму розробника.
+ * Лічильник дотиків, що вмикає режим, живе в features/devHooks.js.
+ */
+export function attachAboutSheet(aboutSheet) {
   _lastAboutSheet = aboutSheet;
-  // Відображаємо актуальний стан при відкритті шторки
   updateDevModeIndicator(aboutSheet, isDevMode());
-
-  const trigger = aboutSheet.querySelector('.about-footer') || 
-                  aboutSheet.querySelector('.about-subtitle') || 
-                  aboutSheet.querySelector('.sheet-handle-bar');
-  if (!trigger) return;
-
-  let taps = 0;
-  let tapTimer = null;
-
-  trigger.addEventListener('click', (e) => {
-    taps++;
-    clearTimeout(tapTimer);
-
-    tapTimer = setTimeout(() => {
-      if (taps >= 5) {
-        const active = toggleDevMode();
-        showDevModeToast(active);
-        updateDevModeIndicator(aboutSheet, active);
-        updateDevMenuButtonVisibility();
-      }
-      taps = 0;
-    }, 400);
-  });
 }
 
 /** Показує/ховає плаваючу кнопку меню розробника зверху карти. */
@@ -1651,17 +1626,8 @@ function setupDevDataClear(container) {
   };
 }
 
-// src/features/devmode.js
-
-let isStationNoteOpen = false;
-let activeExitNoteIdx = null;
-
 export function closeAllDevPanels() {
-  // 1. Скидаємо прапорці стану
-  isStationNoteOpen = false;
-  activeExitNoteIdx = null;
-
-  // 2. Закриваємо панелі та видаляємо з DOM лише динамічні панелі виходів
+  // Закриваємо панелі та видаляємо з DOM лише динамічні панелі виходів
   document.querySelectorAll('.dev-note-panel, .dev-station-note-modal, .dev-note-overlay')
     .forEach(el => {
       el.classList.remove('panel-open', 'modal-open');

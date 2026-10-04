@@ -1,33 +1,33 @@
-import { slugByName }          from '../data/stations.js';
 import { positionId }          from '../data/positions.js';
 import { state }               from '../core/state.js';
 import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
-import { isHideNoLiftEnabled, isShowHoistsEnabled, isShowIntervalsEnabled, getStationHoursMode } from '../features/settings.js';
+import { getPref }             from '../core/prefs.js';
 import { richText } from '../ui/html.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
   const match = raw.trim().match(/^([^\s&]+)(?:\s+|&nbsp;)(.*)$/i);
-  if (!match) return raw;
-  return `${match[1].toLowerCase()} <span class="dir-name-caps">${match[2]}</span>`;
+  if (!match) return richText(raw);
+  return `${richText(match[1].toLowerCase())} <span class="dir-name-caps">${richText(match[2])}</span>`;
 }
 
-function formatLabel(raw) {
-  const text      = raw.trim();
-  const cleanText = text.replace(/&nbsp;/g, ' ').toLowerCase();
-  const isTransfer = cleanText.includes('пересадка') || cleanText.includes('перехід');
-  if (isTransfer) {
-    const targetSlug = slugByName(cleanText);
-    if (targetSlug && state.stationsData?.[targetSlug]) {
-      const color = LINE_COLOR[state.stationsData[targetSlug].line];
-      return `<span class="transfer-label">` +
-        `<span class="transfer-line" style="background:${color}"></span>` +
-        `<span class="transfer-text">${richText(text)}</span>` +
-        `<span class="transfer-line" style="background:${color}"></span>` +
-        `</span>`;
-    }
+/** Атрибут data-target для підпису, що веде на іншу станцію (поля з stations.json). */
+const navTargetAttr = slug => slug ? ` data-target="${richText(slug)}"` : '';
+
+// Пересадку позначає поле transfer_to виходу в exits_catalog (stations.json),
+// а не слова «пересадка» / «перехід» у підписі.
+function formatLabel(exit) {
+  const text       = exit.label.trim();
+  const target = state.stationsData?.[exit.transfer_to];
+  if (target) {
+    const color = LINE_COLOR[target.line];
+    return `<span class="transfer-label">` +
+      `<span class="transfer-line" style="background:${color}"></span>` +
+      `<span class="transfer-text">${richText(text)}</span>` +
+      `<span class="transfer-line" style="background:${color}"></span>` +
+      `</span>`;
   }
   return `<span class="exit-label-text">${richText(text)}</span>`;
 }
@@ -139,7 +139,7 @@ export function renderStationClock(s, now = new Date()) {
   const close  = toMin(sch.close);
   const lines  = [];
 
-  const hoursMode = getStationHoursMode();
+  const hoursMode = getPref('stationHours');
   if (hoursMode !== 'never') {
     if (nowMin < open || nowMin >= close) {
       lines.push(`<span class="clock-pill">Станція закрита, відкриється о ${sch.open}</span>`);
@@ -149,7 +149,7 @@ export function renderStationClock(s, now = new Date()) {
     }
   }
 
-  const ivs = !isShowIntervalsEnabled() ? [] : Object.entries(sch.trains || {})
+  const ivs = !getPref('showIntervals') ? [] : Object.entries(sch.trains || {})
     .filter(([, t]) => nowMin >= toMin(t.first) && nowMin <= toMin(t.last))
     .map(([terminal]) => [terminal, currentInterval(s.line, terminal, now)])
     .filter(([, iv]) => iv);
@@ -166,7 +166,7 @@ export function renderStationClock(s, now = new Date()) {
         `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
   }
 
-  if (!lines.length && isShowIntervalsEnabled())
+  if (!lines.length && getPref('showIntervals'))
     lines.push('<span class="clock-pill">Немає даних про інтервал на цю годину</span>');
   return lines.join('');
 }
@@ -232,14 +232,14 @@ function renderIcons(p) {
   let iconsHtml = '';
 
   // Підйомник вимкнено в налаштуваннях — ховаємо і його ескалатор
-  const hoistHidden = p.isHoist && !isShowHoistsEnabled();
+  const hoistHidden = p.isHoist && !getPref('showHoists');
 
   if (p.isEscalator && !hoistHidden) {
     iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" aria-label="Ескалатор">${Icons.escalator}</span>`;
   }
 
   if (p.isHoist) {
-    if (isShowHoistsEnabled()) {
+    if (getPref('showHoists')) {
       iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" aria-label="Спецпідйомник">${Icons.hoist}</span>`;
     }
   } else if (p.isLift) {
@@ -326,9 +326,9 @@ function renderExitLabel(exit) {
   const edited = exit._labelEdited
     ? `<span class="pos-edited-mark label-pencil" data-slug="${exit._slug}">${Icons.pencil}</span>`
     : '';
-  return `<div class="exit-label nav-label" data-name="${richText(exit.label)}">
+  return `<div class="exit-label nav-label" data-name="${richText(exit.label)}"${navTargetAttr(exit.transfer_to || exit.link_to)}>
     <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
-      ${formatLabel(exit.label)}${edited}
+      ${formatLabel(exit)}${edited}
     </div>
   </div>`;
 }
@@ -339,10 +339,10 @@ export function renderDirections(s, color) {
   const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
 
   // Перевірка налаштування та наявності хоча б одного ліфта на станції
-  const hideNoLift = isHideNoLiftEnabled();
+  const hideNoLift = getPref('hideNoLift');
   const hasLift = s.directions?.some(dir =>
     dir.exits?.some(exit =>
-      exit.positions?.some(p => p.isLift || (p.isHoist && isShowHoistsEnabled()))
+      exit.positions?.some(p => p.isLift || (p.isHoist && getPref('showHoists')))
     )
   );
   const filterLiftOnly = hideNoLift && hasLift;
@@ -353,14 +353,14 @@ export function renderDirections(s, color) {
 
     const mainHtml = mainDirs.map(dir => {
       const exitsHtml = dir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
         if (!visiblePos.length) return '';
         return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true, exit)}`;
       }).join('');
 
       if (!exitsHtml) return '';
       return `<div class="direction-block">
-        <div class="direction-label nav-label" data-name="${richText(dir.from)}">${formatDirLabel(dir.from)}</div>
+        <div class="direction-label nav-label" data-name="${richText(dir.from)}"${navTargetAttr(dir.from_slug)}>${formatDirLabel(dir.from)}</div>
         ${exitsHtml}
       </div>`;
     }).join('');
@@ -368,7 +368,7 @@ export function renderDirections(s, color) {
     let longHtml = '';
     if (longDir) {
       const rows = longDir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
         if (!visiblePos.length) return '';
         const posRows = visiblePos.map(p =>
           `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
@@ -403,7 +403,7 @@ export function renderDirections(s, color) {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
-      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
+      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
       if (!visiblePos.length) return '';
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
@@ -424,7 +424,7 @@ export function renderDirections(s, color) {
     if (!exitsHtml) return '';
 
     return `<div class="direction-block">
-      <div class="direction-label nav-label" data-name="${richText(dir.from)}">${formatDirLabel(dir.from)}</div>
+      <div class="direction-label nav-label" data-name="${richText(dir.from)}"${navTargetAttr(dir.from_slug)}>${formatDirLabel(dir.from)}</div>
       ${exitsHtml}
     </div>`;
   }).join('');

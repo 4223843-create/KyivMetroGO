@@ -527,9 +527,7 @@ function _bindExitsClicks(container) {
       const group = toggle.closest('.dev-exits-group');
       if (!group) return;
       const key = group.dataset.group;
-      const nowOpen = group.classList.toggle('is-collapsed') === false;
-      // classList.toggle повертає true якщо клас ДОДАНИЙ (тобто згорнуто)
-      // тому інвертуємо: якщо клас додано — nowOpen = false
+      group.classList.toggle('is-collapsed');
       _exitsGroupOpen[key] = !group.classList.contains('is-collapsed');
     });
   });
@@ -657,7 +655,3 @@ export function openDevMenuSheet() {
 
   showSheet(sheet, 'sheet-fullscreen', 'sheet-scrollable');
 }
-
-// Дозволяє відкрити меню розробника зовні (наприклад, з компактної кнопки
-// в About-шторці, коли розробник ще не залогінений і треба показати форму входу).
-bus.on('devmenu:open', openDevMenuSheet);

@@ -2,12 +2,12 @@
 // Відповідальність: зберегти зміни локально + відправити на Formspree.
 // Не знає про DOM. Спілкується з іншими модулями через bus.
 
-import { STORAGE_KEYS, Storage }    from '../../core/storage.js';
+import { getPref } from '../../core/prefs.js';
 import { state as appState }        from '../../core/state.js';
 import { bus }                      from '../../core/eventBus.js';
 import { isDevMode, appendDevLog }  from '../devFlags.js';
 import {
-  saveLocalEdit, getLocalEdits, clearAllLocalEdits,
+  saveLocalEdit,
   applyLocalLayer, saveExitLabel,
 } from '../../data/localEdits.js';
 import { fbState, resetFbState }    from './fbState.js';
@@ -17,22 +17,19 @@ const FORMSPREE_URL = 'https://formspree.io/f/xrejbjww';
 let _isSubmitting   = false;
 
 /**
- * Зберігає label-зміни з DOM у Storage.
- * Викликається з fbEvents під час submit — єдина точка запису.
+ * Зберігає змінені у формі підписи (fbState.changedLabels) у Storage.
+ * Викликається під час submit — єдина точка запису.
  * @returns {string[]} рядки для Formspree
  */
 export function flushLabelChanges(slug) {
   const s = appState.stationsData?.[slug];
-  const changes = [];
-  document.querySelectorAll('.fb-exit-label-input').forEach(inp => {
-    if (inp.dataset.changed !== 'true') return;
-    const idx = inp.id.replace('fbLabelInput', '');
+  const changes = Object.entries(fbState.changedLabels).map(([idx, text]) => {
     const p   = s?.positions?.[idx];
     const loc = [p?.dir, p?.exit].filter(Boolean).join(' · ');
-    saveExitLabel(slug, parseInt(idx), inp.value);
-    changes.push(`${loc}: НОВИЙ ОПИС [${inp.value}]`);
-    inp.dataset.changed = 'false';
+    saveExitLabel(slug, Number(idx), text);
+    return `${loc}: НОВИЙ ОПИС [${text}]`;
   });
+  fbState.changedLabels = {};
   return changes;
 }
 
@@ -73,7 +70,6 @@ export async function submitFeedback(background = false) {
   // ── Нічого не змінилось ─────────────────────────────────
   if (!posChanges.length && !newExits.length && !labelChanges.length) {
     _isSubmitting = false;
-    bus.emit('feedback:submitted', { slug, hasChanges: false, background });
     return;
   }
 
@@ -106,12 +102,11 @@ export async function submitFeedback(background = false) {
 
   // ── Застосовуємо локально та повідомляємо шини ──────────
   applyLocalLayer();
-  resetFbState();                               // ← стан чистий ДО emit
-  bus.emit('feedback:submitted', { slug, hasChanges: true, background });
+  resetFbState();                               // ← стан чистий ДО station:refresh
   bus.emit('station:refresh');
 
   // ── Відправка на Formspree ───────────────────────────────
-  if (Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true') {
+  if (getPref('localOnlyFeedback')) {
     _isSubmitting = false;
     bus.emit('feedback:submit-ui', { status: 'local-only', background });
     return;
@@ -120,13 +115,7 @@ export async function submitFeedback(background = false) {
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
-  // Блокуємо кнопку та очищаємо попередній результат на час відправки
-  if (!background) {
-    const sendBtn  = document.getElementById('fbSend');
-    const resultEl = document.getElementById('fbResult');
-    if (sendBtn)  { sendBtn.disabled = true; sendBtn.textContent = 'Відправка…'; }
-    if (resultEl)   resultEl.innerHTML = '';
-  }
+  bus.emit('feedback:submit-ui', { status: 'sending', background });
 
   try {
     const formspreeLines = [

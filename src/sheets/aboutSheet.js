@@ -1,7 +1,7 @@
 // ══ ABOUT SHEET ══
 
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
-import { setupDevModeTapCounter } from '../features/devmode.js';
+import { setupDevModeTapCounter } from '../features/devHooks.js';
 import { showSheet, hideSheet } from '../ui/sheetNav.js';
 
 

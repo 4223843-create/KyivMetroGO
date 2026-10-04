@@ -7,13 +7,13 @@ import { bus }                from '../core/eventBus.js';
 import { withUnsavedCheck }  from '../core/unsavedCheck.js';
 import { openStation }       from './stationSheet.js';
 import { openAboutSheet }    from './aboutSheet.js';
-import { isFav, toggleFav } from '../features/favorites/index.js';
+import { toggleFav }        from '../features/favorites/index.js';
 import { heartSvg }          from '../ui/components.js';
 import { getSlugByLower } from '../data/stations.js';
 import { getOpenSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { closeAllDevPanels } from '../features/devmode.js';
+import { closeAllDevPanels } from '../features/devHooks.js';
 
 export { openStation, openAboutSheet, withUnsavedCheck };
 
