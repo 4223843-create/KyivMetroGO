@@ -23,6 +23,19 @@ const SEARCH_ALIASES = {
   'кпі':                 'R.Politekhnychnyi_instytut',
 };
 
+// Латинська розкладка → українська: «[htofnbr» → «хрещатик», якщо людина
+// забула перемкнути мову клавіатури.
+const EN_TO_UK_LAYOUT = {
+  q: 'й', w: 'ц', e: 'у', r: 'к', t: 'е', y: 'н', u: 'г', i: 'ш', o: 'щ', p: 'з',
+  '[': 'х', ']': 'ї', a: 'ф', s: 'і', d: 'в', f: 'а', g: 'п', h: 'р', j: 'о',
+  k: 'л', l: 'д', ';': 'ж', "'": 'є', z: 'я', x: 'ч', c: 'с', v: 'м', b: 'и',
+  n: 'т', m: 'ь', ',': 'б', '.': 'ю', '`': "'",
+};
+
+function _fromEnLayout(query) {
+  return [...query].map(ch => EN_TO_UK_LAYOUT[ch] ?? ch).join('');
+}
+
 // Підняти в module scope — не алокуємо масив в циклі по станціях
 const SEARCH_ALIASES_ENTRIES = Object.entries(SEARCH_ALIASES);
 
@@ -48,7 +61,7 @@ bus.on('station:refresh', invalidateSearchCache);
  * @param {Element} container   — DOM-вузол для вставки результатів
  * @param {Set<string>} lineFilter — активні лінії (порожній Set = всі)
  */
-export function renderSearchResults(query, container, lineFilter = new Set()) {
+export function renderSearchResults(query, container, lineFilter = new Set(), _layoutRetry = false) {
   if (!state.stationsData) {
     container.innerHTML = '<p class="fav-empty-text">Дані ще завантажуються…</p>';
     return;
@@ -126,6 +139,16 @@ for (const s of stations) {
     // 3. Алфавітне сортування для всіх інших (однакових за пріоритетом)
     return a.s.name.localeCompare(b.s.name, 'uk');
   });
+
+  if (matched.length === 0) {
+    const converted = _layoutRetry ? query : _fromEnLayout(query);
+    if (converted !== query) {
+      renderSearchResults(converted, container, lineFilter, true);
+      return;
+    }
+    container.innerHTML = '<p class="fav-empty-text">Нічого не знайдено</p>';
+    return;
+  }
 
   container.innerHTML = matched.map(({ s, isExitOnly, exitHint }) =>
     _renderItem(s, isExitOnly, exitHint)

@@ -5201,3 +5201,48 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   fill: none !important;
   stroke: var(--text-muted);
 }
+/* ══ МЕНШЕ РУХУ ══
+   Якщо в системі ввімкнено «Вимкнути анімацію» (Android) чи «Зменшити рух» (iOS):
+   шторки, «двері ліфта» і тости з'являються одразу, без ковзання.
+   !important перекриває й inline-переходи з animations.js.
+   Спінери (нескінченні анімації) не чіпаємо: вони показують, що йде робота. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+  .global-confirm-card { animation: none !important; }
+}
+
+/* ══ БІЛЬША ЗОНА НАТИСКАННЯ ══
+   Невидиме розширення вгору й униз для низьких елементів: вигляд не змінюється,
+   а влучити пальцем легше (перемикачі в налаштуваннях — 24 px, «попередня …» — 15 px). */
+.settings-seg-btn { position: relative; }
+.settings-seg-btn::after,
+.direction-label.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -8px;
+  bottom: -8px;
+}
+
+/* ══ КОНТРАСТ ══
+   Цифри вагона/дверей: у світлій темі темніший відтінок кольору лінії
+   (на сірій пілюлі колір лінії має контраст 1,7–2,7 при нормі 3).
+   Примітки в «Про застосунок» і неактивні перемикачі — до норми 4,5. */
+:root {
+  --line-red-text:   var(--line-red);
+  --line-blue-text:  var(--line-blue);
+  --line-green-text: var(--line-green);
+}
+[data-theme="light"] {
+  --line-red-text:   #ba4a34;
+  --line-blue-text:  #2c70ad;
+  --line-green-text: #3e794a;
+}
+.about-card-note { opacity: 1; }
+[data-theme="light"] .about-card-note { opacity: 0.75; }
+[data-theme="dark"] .settings-seg-btn:not(.is-active) { color: #bdbdbd; }

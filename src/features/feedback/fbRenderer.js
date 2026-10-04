@@ -213,7 +213,7 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
     posEl.innerHTML = `
       <div style="color:var(--line-red);padding:16px;text-align:center;
                   font-size:14px;background:var(--bg-card);border-radius:12px;">
-        Помилка рендеру:<br>${err.message}
+        Не вдалося показати станцію. Спробуйте ще раз.
       </div>`;
     console.error('[fbRenderer] Render error:', err);
   }

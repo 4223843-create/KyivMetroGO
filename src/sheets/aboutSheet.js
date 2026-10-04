@@ -3,6 +3,10 @@
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { setupDevModeTapCounter } from '../features/devHooks.js';
 import { showSheet, hideSheet } from '../ui/sheetNav.js';
+import { showToast }             from '../ui/toast.js';
+
+// Форма Formspree, куди приходять записи на ранній доступ до Android.
+const BETA_FORM_URL = 'https://formspree.io/f/mgopobnd';
 
 
 // ══ ДОПОМІЖНІ УТИЛІТИ КОЛЬОРУ ══
@@ -175,15 +179,41 @@ function bindBottomLoader(aboutSheet) {
   }
 
   if (form && input) {
-    form.onsubmit = e => {
+    const flashError = () => {
+      const c = input.style.color;
+      input.style.color = 'var(--line-red)';
+      setTimeout(() => { input.style.color = c; }, 1500);
+    };
+    let sending = false;
+    form.onsubmit = async e => {
       e.preventDefault();
+      if (sending) return;
       const val = input.value.trim();
-      if (val.length >= 3 && /^[a-zA-Z0-9.]+$/.test(val)) {
-        input.blur(); window.location.href = 'thanks.html?type=beta';
-      } else {
-        const c = input.style.color;
-        input.style.color = 'var(--line-red)';
-        setTimeout(() => { input.style.color = c; }, 1500);
+      if (val.length < 3 || !/^[a-zA-Z0-9.]+$/.test(val)) { flashError(); return; }
+      if (!navigator.onLine) { showToast('Немає зʼєднання з інтернетом'); return; }
+
+      sending = true;
+      input.blur();
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(BETA_FORM_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body:    JSON.stringify({ _subject: 'Ранній доступ до Android', email: `${val}@gmail.com` }),
+          signal:  controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        input.value       = '';
+        input.placeholder = 'збережено';
+        input.disabled    = true;
+        startSalute('Дякуємо!', 'Напишемо');
+      } catch {
+        showToast('Не вдалося надіслати. Спробуйте пізніше.');
+        flashError();
+      } finally {
+        clearTimeout(timeoutId);
+        sending = false;
       }
     };
   }
@@ -342,13 +372,13 @@ export function openAboutSheet() {
 
       // Швидка перевірка офлайн-стану ще до fetch
       if (!navigator.onLine) {
-        bugResultMsg.textContent   = 'Немає з\'єднання з інтернетом. Спробуйте пізніше.';
+        bugResultMsg.textContent   = 'Немає зʼєднання з інтернетом. Спробуйте пізніше.';
         bugResultMsg.style.color   = 'var(--line-red)';
         return;
       }
 
       bugSubmitBtn.disabled     = true;
-      bugSubmitBtn.textContent  = 'Відправка…';
+      bugSubmitBtn.textContent  = 'Надсилання…';
       bugResultMsg.textContent  = '';
 
       const controller = new AbortController();
@@ -368,7 +398,7 @@ export function openAboutSheet() {
         if (res.ok) {
           bugTextarea.hidden              = true;
           bugSubmitBtn.parentElement.hidden = true;
-          bugResultMsg.textContent        = '✓ Дякуємо! Помилку надіслано.';
+          bugResultMsg.textContent        = '✓ Дякуємо! Повідомлення надіслано.';
           bugResultMsg.style.color        = 'var(--line-green)';
           bugResultMsg.style.fontWeight   = '600';
           bugResultMsg.style.fontSize     = 'var(--fs-md)';
@@ -379,11 +409,11 @@ export function openAboutSheet() {
       } catch (err) {
         clearTimeout(timeoutId);
         bugSubmitBtn.disabled    = false;
-        bugSubmitBtn.textContent = 'Відправити';
+        bugSubmitBtn.textContent = 'Надіслати';
         bugResultMsg.style.color = 'var(--line-red)';
         bugResultMsg.textContent = err.name === 'AbortError'
-          ? 'Час очікування вичерпано. Перевірте з\'єднання.'
-          : 'Помилка відправки. Спробуйте пізніше.';
+          ? 'Час очікування вичерпано. Перевірте зʼєднання.'
+          : 'Не вдалося надіслати. Спробуйте пізніше.';
       }
     });
   }

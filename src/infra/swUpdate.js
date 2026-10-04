@@ -29,7 +29,8 @@ function showDataUpdateToast(version) {
   const toast = document.createElement('div');
   toast.id        = existingId;
   toast.className = 'sw-update-toast';
-  const verLabel  = version ? ` (${version})` : '';
+  const m         = /^(\d{4})(\d{2})(\d{2})$/.exec(version ?? '');
+  const verLabel  = m ? ` від ${m[3]}.${m[2]}.${m[1]}` : '';
   toast.innerHTML = `
     <span class="sw-update-text">Оновлено дані станцій${verLabel}</span>
     <button class="sw-update-btn"     id="swDataUpdateBtn">Перезавантажити</button>

@@ -71,8 +71,8 @@ document.documentElement.setAttribute('data-theme', actual);
   <link rel="icon" type="image/png" href="icon-96x96.png">
   <link rel="apple-touch-icon" href="icon-192x192.png">
   
-  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#e5e5ea" media="(prefers-color-scheme: light)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
@@ -140,7 +140,7 @@ document.documentElement.setAttribute('data-theme', actual);
 </nav>
 
   <div id="dropMenu" class="drop-menu" hidden>
-<button class="drop-item" id="settingsItem">
+<button class="drop-item" id="settingsItem" aria-label="Налаштування">
       <div class="drop-item-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" style="transform: scale(0.95);">
           <path fill-rule="evenodd" d="M6.77208,0.683772 C6.90819,0.27543 7.29033,0 7.72076,0 L8.27924,0 C8.70967,0 9.09181,0.27543 9.22792,0.683772 L9.75342,2.26026 C10.125,2.37363 10.4812,2.52208 10.8183,2.70177 L12.3051,1.9584 C12.6901,1.7659 13.155,1.84136 13.4594,2.14572 L13.8543,2.54062 C14.1587,2.84498 14.2341,3.30995 14.0416,3.69494 L13.2983,5.1817 C13.4779,5.51878 13.6264,5.87503 13.7397,6.24658 L15.3162,6.77208 C15.7246,6.90819 16,7.29033 16,7.72076 L16,8.27924 C16,8.70967 15.7246,9.09181 15.3162,9.22792 L13.7397,9.75342 C13.6264,10.125 13.4779,10.4812 13.2983,10.8183 L14.0416,12.3051 C14.2341,12.69 14.1587,13.155 13.8543,13.4594 L13.4594,13.8543 C13.155,14.1586 12.6901,14.2341 12.3051,14.0416 L10.8183,13.2982 C10.4812,13.4779 10.125,13.6264 9.75342,13.7397 L9.22792,15.3162 C9.09181,15.7246 8.70967,16 8.27924,16 L7.72076,16 C7.29033,16 6.90819,15.7246 6.77208,15.3162 L6.24658,13.7397 C5.87503,13.6264 5.51879,13.4779 5.18172,13.2983 L3.69491,14.0417 C3.30992,14.2342 2.84495,14.1587 2.54059,13.8543 L2.14568,13.4594 C1.84132,13.1551 1.76587,12.6901 1.95836,12.3051 L2.70176,10.8183 C2.52208,10.4812 2.37363,10.125 2.26026,9.75342 L0.683772,9.22792 C0.27543,9.09181 0,8.70967 0,8.27924 L0,7.72076 C0,7.29033 0.27543,6.90819 0.683772,6.77208 L2.26026,6.24658 C2.37363,5.87502 2.52208,5.51876 2.70176,5.18167 L1.95837,3.69488 C1.76587,3.30989 1.84133,2.84492 2.14569,2.54056 L2.54059,2.14565 C2.84495,1.84129 3.30993,1.76584 3.69491,1.95833 L5.18172,2.70174 C5.5188,2.52207 5.87504,2.37362 6.24658,2.26026 L6.77208,0.683772 Z M8,12 C10.2091,12 12,10.2091 12,8 C12,5.79086 10.2091,4 8,4 C5.79086,4 4,5.79086 4,8 C4,10.2091 5.79086,12 8,12 Z"/>
@@ -148,14 +148,14 @@ document.documentElement.setAttribute('data-theme', actual);
       </div>
     </button>
     <button class="drop-item" id="checkinBtn" aria-label="Check-in" hidden></button>
-    <button class="drop-item" id="feedbackItem">
+    <button class="drop-item" id="feedbackItem" aria-label="Запропонувати зміни">
       <div class="drop-item-icon">
         <svg viewBox="-80 -80 672 672" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
           <path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/>
         </svg>
       </div>
     </button>
-    <button class="drop-item" id="aboutItem">
+    <button class="drop-item" id="aboutItem" aria-label="Про застосунок">
       <div class="drop-item-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
           <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
@@ -175,7 +175,7 @@ document.documentElement.setAttribute('data-theme', actual);
       <button id="devStationNoteBtn" class="dev-station-note-btn is-hidden" aria-label="Загальна нотатка станції"></button>
       <div class="sheet-handle"></div>
       <span class="sheet-station-title" id="stationTitleMain"></span>
-      <button id="sheetCheckinBtn" class="sheet-action-btn" aria-label="Журнал check-in" hidden></button>
+      <button id="sheetCheckinBtn" class="sheet-action-btn" aria-label="Журнал Check-in" hidden></button>
       <button id="sheetClose" class="sheet-close-btn" aria-label="Закрити">✕</button>
     </div>
     <div id="devStationNotePanel" class="dev-note-panel dev-station-note-panel"></div>
@@ -198,10 +198,10 @@ document.documentElement.setAttribute('data-theme', actual);
       <button class="sheet-close-btn" id="searchClose" aria-label="Закрити">✕</button>
     </div>
     <div class="search-input-wrap">
-      <input type="text" id="searchInput" class="search-input" autocomplete="off">
+      <input type="text" id="searchInput" class="search-input" aria-label="Назва станції" placeholder="Назва станції або вулиці" autocomplete="off">
     </div>
-    <div id="searchLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
-      <button class="search-line-btn is-active" data-line="">всі</button>
+    <div id="searchLineFilter" class="search-line-filter" role="group" aria-label="Фільтр за лінією">
+      <button class="search-line-btn is-active" data-line="">усі</button>
       <button class="search-line-btn" data-line="red">червона</button>
       <button class="search-line-btn" data-line="blue">синя</button>
       <button class="search-line-btn" data-line="green">зелена</button>
@@ -228,11 +228,11 @@ document.documentElement.setAttribute('data-theme', actual);
           <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="dev-menu-section-body">
-          <div id="devStationNotesLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
-            <button class="search-line-btn is-active" data-line="">Всі</button>
-            <button class="search-line-btn" data-line="red">Червона</button>
-            <button class="search-line-btn" data-line="blue">Синя</button>
-            <button class="search-line-btn" data-line="green">Зелена</button>
+          <div id="devStationNotesLineFilter" class="search-line-filter" role="group" aria-label="Фільтр за лінією">
+            <button class="search-line-btn is-active" data-line="">усі</button>
+            <button class="search-line-btn" data-line="red">червона</button>
+            <button class="search-line-btn" data-line="blue">синя</button>
+            <button class="search-line-btn" data-line="green">зелена</button>
           </div>
           <div id="devMenuStationNotes"></div>
         </div>
@@ -244,11 +244,11 @@ document.documentElement.setAttribute('data-theme', actual);
           <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="dev-menu-section-body">
-          <div id="devExitNotesLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
-            <button class="search-line-btn is-active" data-line="">Всі</button>
-            <button class="search-line-btn" data-line="red">Червона</button>
-            <button class="search-line-btn" data-line="blue">Синя</button>
-            <button class="search-line-btn" data-line="green">Зелена</button>
+          <div id="devExitNotesLineFilter" class="search-line-filter" role="group" aria-label="Фільтр за лінією">
+            <button class="search-line-btn is-active" data-line="">усі</button>
+            <button class="search-line-btn" data-line="red">червона</button>
+            <button class="search-line-btn" data-line="blue">синя</button>
+            <button class="search-line-btn" data-line="green">зелена</button>
           </div>
           <div id="devMenuExitNotes"></div>
         </div>
@@ -260,11 +260,11 @@ document.documentElement.setAttribute('data-theme', actual);
           <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="dev-menu-section-body">
-          <div id="devVerifyLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
-            <button class="search-line-btn is-active" data-line="">Всі</button>
-            <button class="search-line-btn" data-line="red">Червона</button>
-            <button class="search-line-btn" data-line="blue">Синя</button>
-            <button class="search-line-btn" data-line="green">Зелена</button>
+          <div id="devVerifyLineFilter" class="search-line-filter" role="group" aria-label="Фільтр за лінією">
+            <button class="search-line-btn is-active" data-line="">усі</button>
+            <button class="search-line-btn" data-line="red">червона</button>
+            <button class="search-line-btn" data-line="blue">синя</button>
+            <button class="search-line-btn" data-line="green">зелена</button>
           </div>
           <div id="devMenuVerify"></div>
         </div>
@@ -276,11 +276,11 @@ document.documentElement.setAttribute('data-theme', actual);
           <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="dev-menu-section-body">
-          <div id="devExitsLineFilter" class="search-line-filter" role="group" aria-label="Фільтр по гілці">
-            <button class="search-line-btn is-active" data-line="">Всі</button>
-            <button class="search-line-btn" data-line="red">Червона</button>
-            <button class="search-line-btn" data-line="blue">Синя</button>
-            <button class="search-line-btn" data-line="green">Зелена</button>
+          <div id="devExitsLineFilter" class="search-line-filter" role="group" aria-label="Фільтр за лінією">
+            <button class="search-line-btn is-active" data-line="">усі</button>
+            <button class="search-line-btn" data-line="red">червона</button>
+            <button class="search-line-btn" data-line="blue">синя</button>
+            <button class="search-line-btn" data-line="green">зелена</button>
           </div>
           <div id="devMenuExits"></div>
         </div>
@@ -368,7 +368,7 @@ document.documentElement.setAttribute('data-theme', actual);
               <path fill-rule="evenodd" clip-rule="evenodd" d="M16,1C9.925,1,5,5.925,5,12c0,9,11,18,11,18s11-9,11-18C27,5.925,22.075,1,16,1z M16,17c-2.757,0-5-2.243-5-5s2.243-5,5-5s5,2.243,5,5S18.757,17,16,17z" stroke="currentColor" stroke-width="0.5"/>
             </svg>
           </div>
-          <p class="about-card-text">Відмічайте виходи, якими скористались. Переглядайте статистику <span style="font-variant: small-caps;">Check&#8209;in</span>&#8209;ів<span class="about-card-note">Потребує активації в налаштуваннях</span></p>
+          <p class="about-card-text">Відмічайте виходи, якими скористались. Переглядайте статистику відміток<span class="about-card-note">Активуйте <span style="font-variant: small-caps;">Check&#8209;in</span> в&nbsp;налаштуваннях</span></p>
         </div>
 
         <div class="about-card">
@@ -377,7 +377,7 @@ document.documentElement.setAttribute('data-theme', actual);
               <path d="M70.2,337.4l104.4,104.4L441.5,175L337,70.5L70.2,337.4z M0.6,499.8c-2.3,9.3,2.3,13.9,11.6,11.6L151.4,465L47,360.6 L0.6,499.8z M487.9,24.1c-46.3-46.4-92.8-11.6-92.8-11.6c-7.6,5.8-34.8,34.8-34.8,34.8l104.4,104.4c0,0,28.9-27.2,34.8-34.8 C499.5,116.9,534.3,70.6,487.9,24.1z"/>
             </svg>
           </div>
-          <p class="about-card-text">Виправляйте неточності та підписуйте виходи з&nbsp;метро<span class="about-card-note">Потребує активації в налаштуваннях</span></p>
+          <p class="about-card-text">Виправляйте неточності та підписуйте виходи з&nbsp;метро<span class="about-card-note">Увімкніть у налаштуваннях</span></p>
         </div>
 
 <div class="about-card about-support-card" style="padding-top: 16px;">
@@ -390,17 +390,17 @@ document.documentElement.setAttribute('data-theme', actual);
         </svg>
       </div>
       <div style="text-align: center; margin-bottom: 8px;">
-        <div class="about-support-text" style="margin-bottom: 0;">ранній доступ<br>до-Android-версії</div>
+        <div class="about-support-text" style="margin-bottom: 0;">ранній доступ<br>до Android-версії</div>
       </div>
       <div style="position: relative; width: 100%; max-width: 140px; margin: 0 auto;">
-        <button type="button" id="btnInfoAndroid" style="background: none; border: none; color: var(--text-muted); opacity: 0.8; transition: color 0.2s, opacity 0.2s;">
+        <button type="button" id="btnInfoAndroid" aria-label="Докладніше про ранній доступ до Android-версії" style="background: none; border: none; color: var(--text-muted); opacity: 0.8; transition: color 0.2s, opacity 0.2s;">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
             <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
           </svg>
         </button>
         <form class="about-beta-form" id="aboutBetaForm" style="margin-bottom: 0; width: 100%;">
           <div class="about-input-group">
-            <input type="text" name="username" placeholder="" class="about-beta-input" autocomplete="username" inputmode="email" spellcheck="false">
+            <input type="text" name="username" placeholder="ваш логін" class="about-beta-input" aria-label="Ваш Gmail для раннього доступу" autocomplete="username" inputmode="email" spellcheck="false">
             <span class="about-gmail-domain">@gmail.com</span>
           </div>
         </form>
@@ -419,13 +419,13 @@ document.documentElement.setAttribute('data-theme', actual);
         <div class="about-support-text" style="margin-bottom: 0;">підтримати реліз<br>на iOS</div>
       </div>
       <div style="position: relative; width: 100%; max-width: 140px; margin: 0 auto; margin-top: auto; margin-bottom: 0;">
-        <button type="button" id="btnInfoIOS" style="background: none; border: none; color: var(--text-muted); opacity: 0.8; transition: color 0.2s, opacity 0.2s;">
+        <button type="button" id="btnInfoIOS" aria-label="Докладніше про iOS-версію" style="background: none; border: none; color: var(--text-muted); opacity: 0.8; transition: color 0.2s, opacity 0.2s;">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 42" fill="currentColor">
             <path d="m312.043 291.275-2.063 8.438q-9.28 3.656-14.812 5.53-5.531 1.97-12.844 1.97-11.25 0-17.531-5.438-6.188-5.531-6.188-13.969 0-3.28.47-6.656.468-3.469 1.5-7.781l7.687-27.375q1.031-3.938 1.687-7.406.75-3.563.75-6.47 0-5.25-2.156-7.312t-8.25-2.062q-3 0-6.188.937-3.093.938-5.343 1.782l2.062-8.438q7.594-3.094 14.531-5.25 6.938-2.25 13.125-2.25 11.157 0 17.157 5.438 6.093 5.343 6.093 13.968 0 1.782-.468 6.282-.375 4.5-1.5 8.25l-7.688 27.28q-.937 3.282-1.687 7.5-.75 4.22-.75 6.376 0 5.437 2.437 7.406 2.438 1.969 8.438 1.969 2.812 0 6.375-.938 3.562-1.03 5.156-1.78m1.969-114.469q0 7.125-5.438 12.188-5.344 4.969-12.937 4.969-7.594 0-13.032-4.97-5.437-5.062-5.437-12.187t5.437-12.187 13.032-5.063 12.937 5.063q5.438 5.062 5.438 12.187" transform="translate(-65.818 -42.216)scale(.26458)"/>
           </svg>
         </button>
 
-        <a href="https://send.monobank.ua/ПОСИЛАННЯ" target="_blank" rel="noopener" class="about-donate-btn-mono about-colored-btn about-btn-mono-fixed" style="margin: 0 !important; width: 100% !important;">mono</a>
+        <a href="https://send.monobank.ua/jar/ARwH22B8N4" target="_blank" rel="noopener" class="about-donate-btn-mono about-colored-btn about-btn-mono-fixed" style="margin: 0 !important; width: 100% !important;">mono</a>
       </div>
     </div>
   </div> <p class="settings-hint" id="hintAndroid" hidden style="width: 100%; margin-top: 12px; margin-bottom: 0; padding: 0; font-size: 11px; text-align: left; line-height: 1.4; color: var(--text-muted);">
@@ -444,7 +444,7 @@ document.documentElement.setAttribute('data-theme', actual);
           <div id="bugFormWrap" class="bug-form-wrap" hidden>
             <textarea id="bugTextarea" class="bug-textarea" rows="3" placeholder="питання, скарги, пропозиції"></textarea>
             <div class="bug-actions">
-              <button type="button" id="bugSubmitBtn" class="confirm-main-btn confirm-btn-save">Відправити</button>
+              <button type="button" id="bugSubmitBtn" class="confirm-main-btn confirm-btn-save">Надіслати</button>
               <button type="button" id="bugCancelBtn" class="confirm-main-btn confirm-btn-neutral">Скасувати</button>
             </div>
             <div id="bugResultMsg" class="bug-result-msg"></div>
@@ -475,11 +475,11 @@ document.documentElement.setAttribute('data-theme', actual);
 
       <div class="fb-footer-sticky">
         <div id="fbLineFilterWrap">
-          <div id="fbLineFilter" class="search-line-filter fb-line-filter" role="group" aria-label="Фільтр по гілці">
-            <button class="search-line-btn is-active" data-line="">Всі</button>
-            <button class="search-line-btn" data-line="red">Червона</button>
-            <button class="search-line-btn" data-line="blue">Синя</button>
-            <button class="search-line-btn" data-line="green">Зелена</button>
+          <div id="fbLineFilter" class="search-line-filter fb-line-filter" role="group" aria-label="Фільтр за лінією">
+            <button class="search-line-btn is-active" data-line="">усі</button>
+            <button class="search-line-btn" data-line="red">червона</button>
+            <button class="search-line-btn" data-line="blue">синя</button>
+            <button class="search-line-btn" data-line="green">зелена</button>
           </div>
         </div>
         <button id="fbChangeStation" class="fb-change-station-btn" hidden>Обрати іншу станцію</button>
@@ -514,7 +514,7 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-rule"></div>
           
           <div class="settings-row">
-            <span class="settings-label">При запуску</span>
+            <span class="settings-label">Під час запуску</span>
             <div class="settings-seg" id="settingsStartSeg">
               <button type="button" class="settings-seg-btn" data-start-val="false">карта</button>
               <button type="button" class="settings-seg-btn" data-start-val="true">вибране</button>
@@ -527,7 +527,7 @@ document.documentElement.setAttribute('data-theme', actual);
             <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; position: relative; min-height: 32px;">
               <span class="settings-card-header" style="padding: 0; position: absolute; left: 50%; transform: translateX(-50%);">Check-in</span>
               <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinToggle">
+                <input type="checkbox" id="settingsCheckinToggle" aria-label="Check-in">
                 <span class="ios-toggle-slider"></span>
               </label>
             </div>
@@ -538,8 +538,8 @@ document.documentElement.setAttribute('data-theme', actual);
               <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                 <span class="settings-label">Статистика</span>
                 <div class="settings-seg" id="settingsCheckinStatSeg">
-                  <button type="button" class="settings-seg-btn" data-stat-val="station">по станціям</button>
-                  <button type="button" class="settings-seg-btn" data-stat-val="exits">по виходам</button>
+                  <button type="button" class="settings-seg-btn" data-stat-val="station">за станціями</button>
+                  <button type="button" class="settings-seg-btn" data-stat-val="exits">за виходами</button>
                 </div>
               </div>
               <span class="settings-sublabel">Впливає на відсоток охоплення та кола статистики</span>
@@ -547,11 +547,11 @@ document.documentElement.setAttribute('data-theme', actual);
             <div class="settings-rule"></div>
             <div class="settings-row" id="checkinByExitRow">
               <div class="settings-label-wrap">
-                <span class="settings-label">Чекіни по виходам</span>
-                <span class="settings-sublabel" style="text-align: left;">Інакше чекін залежатиме від попередньої станції</span>
+                <span class="settings-label">Check-in за виходами</span>
+                <span class="settings-sublabel" style="text-align: left;">Інакше відмітка залежатиме від попередньої станції</span>
               </div>
               <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinByExitToggle">
+                <input type="checkbox" id="settingsCheckinByExitToggle" aria-label="Check-in за виходами">
                 <span class="ios-toggle-slider"></span>
               </label>
             </div>
@@ -559,10 +559,10 @@ document.documentElement.setAttribute('data-theme', actual);
             <div class="settings-row" id="checkinHatchRow">
               <div class="settings-label-wrap">
                 <span class="settings-label">Штриховка відвіданих станцій</span>
-                <span class="settings-sublabel" style="text-align: left;">Чекін штрихує станцію на карті</span>
+                <span class="settings-sublabel" style="text-align: left;">Відмічена станція штрихується на карті</span>
               </div>
               <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinHatchToggle">
+                <input type="checkbox" id="settingsCheckinHatchToggle" aria-label="Штриховка відвіданих станцій">
                 <span class="ios-toggle-slider"></span>
               </label>
             </div>
@@ -577,9 +577,9 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-rule"></div>
 
           <div class="settings-row">
-            <span class="settings-label">Відображати інтервали руху</span>
+            <span class="settings-label">Показувати інтервали руху</span>
             <label class="ios-toggle">
-              <input type="checkbox" id="settingsShowIntervalsToggle">
+              <input type="checkbox" id="settingsShowIntervalsToggle" aria-label="Показувати інтервали руху">
               <span class="ios-toggle-slider"></span>
             </label>
           </div>
@@ -589,7 +589,7 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-row">
             <span class="settings-label">Час відкриття та закриття</span>
             <div class="settings-seg" id="settingsStationHoursSeg">
-              <button type="button" class="settings-seg-btn" data-hours-val="never">ні</button>
+              <button type="button" class="settings-seg-btn" data-hours-val="never">ніколи</button>
               <button type="button" class="settings-seg-btn" data-hours-val="soon">за 2 год</button>
               <button type="button" class="settings-seg-btn" data-hours-val="always">завжди</button>
             </div>
@@ -600,10 +600,10 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-row">
             <div class="settings-label-wrap">
               <span class="settings-label">Режим редагування</span>
-              <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон-двері</span>
+              <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон і двері</span>
             </div>
             <label class="ios-toggle">
-              <input type="checkbox" id="settingsEditModeToggle">
+              <input type="checkbox" id="settingsEditModeToggle" aria-label="Режим редагування">
               <span class="ios-toggle-slider"></span>
             </label>
           </div>
@@ -617,7 +617,7 @@ document.documentElement.setAttribute('data-theme', actual);
                 <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
               </div>
               <label class="ios-toggle">
-                <input type="checkbox" id="settingsLocalFeedbackToggle">
+                <input type="checkbox" id="settingsLocalFeedbackToggle" aria-label="Локальні зміни">
                 <span class="ios-toggle-slider"></span>
               </label>
             </div>
@@ -627,10 +627,10 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-row">
             <div class="settings-label-wrap">
               <span class="settings-label">Приховати підказки</span>
-              <span class="settings-sublabel" style="text-align: left;">Не показувати навчальні інфоблоки у картках станцій</span>
+              <span class="settings-sublabel" style="text-align: left;">Не показувати підказки у картках станцій</span>
             </div>
             <label class="ios-toggle">
-              <input type="checkbox" id="settingsHideInfoToggle">
+              <input type="checkbox" id="settingsHideInfoToggle" aria-label="Приховати підказки">
               <span class="ios-toggle-slider"></span>
             </label>
           </div>
@@ -643,8 +643,8 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="clear-data-dropdown" id="clearDataDropdown">
             <div class="clear-data-separator"></div>
             <div class="clear-data-item" id="settingsClearFavs">Вибране</div>
-            <div class="clear-data-item" id="settingsClearCheckin">Чекіни</div>
-            <div class="clear-data-item" id="settingsClearLocalEdits">Всі локальні зміни</div>
+            <div class="clear-data-item" id="settingsClearCheckin">Check-in</div>
+            <div class="clear-data-item" id="settingsClearLocalEdits">Усі дані</div>
           </div>
           <div class="settings-rule"></div>
           <div class="settings-row">
@@ -663,11 +663,11 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-rule"></div>
           <div class="settings-row">
             <div class="settings-label-wrap">
-              <span class="settings-label">Відображати доступність на карті</span>
-              <span class="settings-sublabel" style="text-align: left;">Показує знак візочка біля станцій з ліфтами на схемі метро</span>
+              <span class="settings-label">Показувати доступність на карті</span>
+              <span class="settings-sublabel" style="text-align: left;">Показує знак колісного крісла біля станцій з ліфтами на схемі метро</span>
             </div>
             <label class="ios-toggle">
-              <input type="checkbox" id="settingsShowMapAccessibilityToggle">
+              <input type="checkbox" id="settingsShowMapAccessibilityToggle" aria-label="Показувати доступність на карті">
               <span class="ios-toggle-slider"></span>
             </label>
           </div>
@@ -675,10 +675,10 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-row">
             <div class="settings-label-wrap">
               <span class="settings-label">Показувати підйомники на станціях</span>
-              <span class="settings-sublabel" style="text-align: left;">Позначає виходи зі значком крісла там, де доступний лише підйомник</span>
+              <span class="settings-sublabel" style="text-align: left;">Позначає виходи знаком колісного крісла там, де доступний лише підйомник</span>
             </div>
             <label class="ios-toggle">
-              <input type="checkbox" id="settingsShowHoistsToggle">
+              <input type="checkbox" id="settingsShowHoistsToggle" aria-label="Показувати підйомники на станціях">
               <span class="ios-toggle-slider"></span>
             </label>
           </div>
@@ -689,7 +689,7 @@ document.documentElement.setAttribute('data-theme', actual);
               <span class="settings-sublabel" style="text-align: left;">Застосовується, якщо на станції доступні ліфти.</span>
             </div>
             <label class="ios-toggle">
-              <input type="checkbox" id="settingsHideNoLiftToggle">
+              <input type="checkbox" id="settingsHideNoLiftToggle" aria-label="Приховати виходи без ліфтів">
               <span class="ios-toggle-slider"></span>
             </label>
           </div>

@@ -1,6 +1,6 @@
 import { positionId }          from '../data/positions.js';
 import { state }               from '../core/state.js';
-import { pill }                from '../ui/components.js';
+import { pill, pillTextColor } from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
@@ -114,11 +114,11 @@ function currentInterval(line, terminal, now) {
   return p[day === 0 || day === 6 ? 'holiday' : 'weekday']?.[terminal] || null;
 }
 
-/** Назви кінцевих у родовому відмінку: «в бік Теремків». */
+/** Назви кінцевих у родовому відмінку: «у бік Теремків». */
 const TERMINAL_GEN = {
   'Теремки': 'Теремків', 'Героїв Дніпра': 'Героїв Дніпра',
   'Лісова': 'Лісової', 'Академмістечко': 'Академмістечка',
-  'Червоний хутір': 'Червоного хутора', 'Сирець': 'Сирця',
+  'Червоний хутір': 'Червоного Хутора', 'Сирець': 'Сирця',
 };
 
 /**
@@ -162,7 +162,7 @@ export function renderStationClock(s, now = new Date()) {
   } else if (ivs.length) {
     // Два напрямки — одна пілюля-блок з заголовком і рядком на кожен бік
     lines.push('<span class="clock-pill clock-pill-multi"><span>Інтервал руху</span>' +
-      ivs.map(([terminal, iv]) => `<span>в бік ${TERMINAL_GEN[terminal] || terminal}: ` +
+      ivs.map(([terminal, iv]) => `<span>у бік ${TERMINAL_GEN[terminal] || terminal}: ` +
         `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
   }
 
@@ -235,15 +235,15 @@ function renderIcons(p) {
   const hoistHidden = p.isHoist && !getPref('showHoists');
 
   if (p.isEscalator && !hoistHidden) {
-    iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" aria-label="Ескалатор">${Icons.escalator}</span>`;
+    iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" role="img" aria-label="Ескалатор">${Icons.escalator}</span>`;
   }
 
   if (p.isHoist) {
     if (getPref('showHoists')) {
-      iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" aria-label="Спецпідйомник">${Icons.hoist}</span>`;
+      iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" role="img" aria-label="Спецпідйомник">${Icons.hoist}</span>`;
     }
   } else if (p.isLift) {
-    iconsHtml += `<span class="pos-lift-mark pos-elevator-mark" aria-label="Ліфт">${Icons.elevator}</span>`;
+    iconsHtml += `<span class="pos-lift-mark pos-elevator-mark" role="img" aria-label="Ліфт">${Icons.elevator}</span>`;
   }
 
   if (!iconsHtml) return '';
@@ -435,7 +435,7 @@ export function applyFavPillStyles(container, lineColor, isFaved) {
     p.style.background = isFaved ? lineColor : '';
     const num = p.querySelector('.pos-pill-num');
     const lbl = p.querySelector('.pos-pill-label');
-    if (num) num.style.color = isFaved ? 'var(--bg)' : lineColor;
+    if (num) num.style.color = isFaved ? 'var(--bg)' : pillTextColor(lineColor);
     if (lbl) lbl.style.color = isFaved ? 'var(--bg)' : '';
   });
 }

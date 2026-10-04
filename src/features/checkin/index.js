@@ -110,6 +110,8 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
     btn.className = `checkin-btn row-checkin-btn${checked ? ' is-checked' : ''}`;
     btn.innerHTML = checkinPinSvg(checked, checked ? lineColor : null);
     btn.style.color = checked ? lineColor : '';
+    btn.setAttribute('aria-label', 'Позначити вихід як відвіданий');
+    btn.setAttribute('aria-pressed', String(checked));
     row.appendChild(btn);
 
     btn.addEventListener('click', e => {
@@ -120,6 +122,7 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
 
       const nowChecked = toggleCheckin(slug, pos, lineColor);
       btn.classList.toggle('is-checked', nowChecked);
+      btn.setAttribute('aria-pressed', String(nowChecked));
       btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
       btn.style.color = nowChecked ? lineColor : '';
       _checkinCount   = null;
@@ -197,7 +200,7 @@ export function openCheckinSheet() {
       listHtml = `
         <div class="fav-empty-state" style="margin-top: 40px;">
           <p class="fav-empty-text-lg">
-            Натисніть ${pinInline} щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий
+            Натисніть ${pinInline}, щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий
           </p>
         </div>`;
 
@@ -242,7 +245,7 @@ export function openCheckinSheet() {
         <div class="ci-sort-bar">
           <button class="ci-sort-btn${ciSortMode === 'date' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="date">Нові ↓</button>
           <button class="ci-sort-btn${ciSortMode === 'alpha' && ciViewMode === 'visited' ? ' ci-sort-active' : ''}" data-sort="alpha">А→Я</button>
-          <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Не відвідані</button>
+          <button class="ci-sort-btn ci-unvisited-btn${ciViewMode === 'unvisited' ? ' ci-sort-active' : ''}" data-view="unvisited">Невідвідані</button>
         </div>` : ''}
       `;
 
@@ -275,7 +278,7 @@ export function openCheckinSheet() {
                 <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
               </div>
             </button>`;
-          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
+          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Усі виходи відвідані 🎉</p>`;
 
         } else {
           const byStation    = {};

@@ -38,7 +38,7 @@ function showCheckinLockToast(rowEl) {
     bottom: auto;
     z-index: 10000;
   `;
-  toast.innerHTML = 'Спершу активуйте режим <span style="font-variant: small-caps; letter-spacing: 0.04em;">Check-in</span>';
+  toast.innerHTML = 'Спершу увімкніть режим <span style="font-variant: small-caps; letter-spacing: 0.04em;">Check-in</span>';
   document.body.appendChild(toast);
   setTimeout(() => {
     toast.classList.remove('dev-mode-toast-open');
@@ -65,7 +65,7 @@ function showHoursSoonToast(btnEl) {
     max-width: calc(100vw - 32px);
     text-align: center;
   `;
-  toast.innerHTML = 'За 2 години до закриття станції<br>і перші дві години після відкриття';
+  toast.innerHTML = 'За 2 години до закриття<br>і впродовж 2 годин після відкриття';
   document.body.appendChild(toast);
   setTimeout(() => {
     toast.classList.remove('dev-mode-toast-open');
@@ -287,7 +287,7 @@ export function openSettingsSheet() {
       e.stopPropagation();
       if (e.currentTarget.disabled) {
         bus.emit('ui:confirm', {
-          message:  'Список check-in порожній',
+          message:  'Список Check-in порожній',
           onYes:    () => {},
           labelYes: 'Зрозуміло',
           labelNo:  '',
@@ -297,7 +297,7 @@ export function openSettingsSheet() {
         return;
       }
       bus.emit('ui:confirm', {
-        message: 'Очистити історію check-in?',
+        message: 'Очистити історію Check-in?',
         onYes:   () => {
           Storage.remove(STORAGE_KEYS.CHECKINS);
           invalidateCheckinsCache();
@@ -317,7 +317,7 @@ export function openSettingsSheet() {
       e.stopPropagation();
       if (e.currentTarget.disabled) {
         bus.emit('ui:confirm', {
-          message:  'Дані користувача відсутні',
+          message:  'Немає збережених даних',
           onYes:    () => {},
           labelYes: 'Зрозуміло',
           labelNo:  '',

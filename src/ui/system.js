@@ -22,12 +22,33 @@ export async function configureEdgeToEdge() {
     // Вмикаємо прозорий оверлей для Android/iOS
     await StatusBar.setOverlaysWebView({ overlay: true });
     
-    // Встановлюємо початковий стиль іконок залежно від системної теми
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+    // Встановлюємо початковий стиль іконок залежно від теми
+    await syncSystemBars(document.documentElement.getAttribute('data-theme'));
   } catch (err) {
     console.warn('[KyivMetroGO] StatusBar plugin error:', err);
   }
+}
+
+/**
+ * Узгоджує системну панель з темою застосунку, зокрема коли тему обрано
+ * вручну, всупереч системній. Нативно — колір іконок статус-бару; у PWA —
+ * meta theme-color (колір статус-бару встановленого застосунку) = фон сторінки.
+ * @param {'light'|'dark'} theme
+ */
+export async function syncSystemBars(theme) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light });
+    } catch (err) {
+      console.warn('[KyivMetroGO] StatusBar plugin error:', err);
+    }
+    return;
+  }
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  if (!bg) return;
+  document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+    meta.setAttribute('content', bg);
+  });
 }
 
 /**
