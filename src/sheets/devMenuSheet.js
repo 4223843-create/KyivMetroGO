@@ -20,6 +20,7 @@ import {
   getExitsCatalogStatus, getExitsCatalogCount, cycleExitsCatalogStatus,
   setExitsCatalogVerified, resetExitsCatalogVerified,
 } from '../features/devmode.js';
+import { escapeHtml, richText } from '../ui/html.js';
 
 
 // ── Стан кнопок видалення нотаток ─────────────────────────────────────────
@@ -232,8 +233,8 @@ function _noteRowHtml({ deleteId, slug, posIdx, text, extra, expanded, pending }
   return (
     '<div class="dev-note-row-wrap">' +
       '<button type="button" class="dev-menu-row dev-menu-row--with-action" data-slug="' + slug + '">' +
-        '<div class="dev-menu-row-station">' + text + '</div>' +
-        '<div class="dev-menu-row-extra">' + extra + '</div>' +
+        '<div class="dev-menu-row-station">' + richText(text) + '</div>' +
+        '<div class="dev-menu-row-extra">' + escapeHtml(extra) + '</div>' +
       '</button>' +
       '<div class="dev-note-action-zone">' + actionHtml + '</div>' +
     '</div>'

@@ -5,6 +5,7 @@ import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
 import { isHideNoLiftEnabled, isShowHoistsEnabled, isShowIntervalsEnabled, getStationHoursMode } from '../features/settings.js';
+import { richText } from '../ui/html.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -23,12 +24,12 @@ function formatLabel(raw) {
       const color = LINE_COLOR[state.stationsData[targetSlug].line];
       return `<span class="transfer-label">` +
         `<span class="transfer-line" style="background:${color}"></span>` +
-        `<span class="transfer-text">${text}</span>` +
+        `<span class="transfer-text">${richText(text)}</span>` +
         `<span class="transfer-line" style="background:${color}"></span>` +
         `</span>`;
     }
   }
-  return `<span class="exit-label-text">${text}</span>`;
+  return `<span class="exit-label-text">${richText(text)}</span>`;
 }
 
 // ══ ПЕРЕСАДКИ НА ІНШИЙ ТРАНСПОРТ (station.connections) ══
@@ -325,7 +326,7 @@ function renderExitLabel(exit) {
   const edited = exit._labelEdited
     ? `<span class="pos-edited-mark label-pencil" data-slug="${exit._slug}">${Icons.pencil}</span>`
     : '';
-  return `<div class="exit-label nav-label" data-name="${exit.label}">
+  return `<div class="exit-label nav-label" data-name="${richText(exit.label)}">
     <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
       ${formatLabel(exit.label)}${edited}
     </div>
@@ -359,7 +360,7 @@ export function renderDirections(s, color) {
 
       if (!exitsHtml) return '';
       return `<div class="direction-block">
-        <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
+        <div class="direction-label nav-label" data-name="${richText(dir.from)}">${formatDirLabel(dir.from)}</div>
         ${exitsHtml}
       </div>`;
     }).join('');
@@ -376,7 +377,7 @@ export function renderDirections(s, color) {
           ? `<span class="pos-edited-mark" data-slug="${exit._slug}">${Icons.pencil}</span>`
           : '';
         return `<div class="long-transfer-exit">
-          <div class="long-transfer-exit-label" style="position:relative;">${edited}${exit.label}</div>
+          <div class="long-transfer-exit-label" style="position:relative;">${edited}${richText(exit.label)}</div>
           ${posRows}
         </div>`;
       }).filter(Boolean).join('');
@@ -423,7 +424,7 @@ export function renderDirections(s, color) {
     if (!exitsHtml) return '';
 
     return `<div class="direction-block">
-      <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
+      <div class="direction-label nav-label" data-name="${richText(dir.from)}">${formatDirLabel(dir.from)}</div>
       ${exitsHtml}
     </div>`;
   }).join('');

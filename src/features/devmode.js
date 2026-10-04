@@ -45,6 +45,7 @@ import { renderFeedbackPositions } from './feedback/fbRenderer.js';
 import { getPositionDescriptorsForStation, devRowKey } from '../sheets/renderStation.js';
 import { legacyKeyMap }     from '../data/positions.js';
 import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
+import { escapeHtml } from '../ui/html.js';
 
 
 
@@ -993,7 +994,7 @@ function _toggleStationNotePanel(panel, slug, lineColor, btn, defaultColor) {
 
   const currentText = getStationNote(slug);
   panel.innerHTML = `
-    <textarea class="dev-note-textarea dev-station-note-textarea" placeholder="Загальна нотатка по станції…">${currentText}</textarea>
+    <textarea class="dev-note-textarea dev-station-note-textarea" placeholder="Загальна нотатка по станції…">${escapeHtml(currentText)}</textarea>
     <div class="dev-note-actions">
       <button type="button" class="dev-station-note-save confirm-main-btn confirm-btn-save">Готово</button>
       ${currentText ? `<button type="button" class="dev-station-note-delete confirm-btn-discard">Видалити</button>` : ''}
@@ -1372,7 +1373,7 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
   // Додаємо третю кнопку "Видалити" з червоним підсвічуванням (confirm-btn-discard)
   // Вона рендериться тільки якщо нотатка фізично вже існує в базі
   panel.innerHTML = `
-    <textarea class="dev-note-textarea">${existingNote}</textarea> 
+    <textarea class="dev-note-textarea">${escapeHtml(existingNote)}</textarea> 
     <div class="dev-note-actions"> 
       <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button> 
       <button type="button" class="dev-note-cancel confirm-btn-neutral">Скасувати</button> 

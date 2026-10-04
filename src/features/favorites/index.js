@@ -39,6 +39,7 @@ import {
   replaceExitFav,
   clearExitFavs,
 } from '../../domain/favorites.js';
+import { escapeHtml, richText } from '../../ui/html.js';
 
 // ── Ре-експорти для зворотної сумісності ─────────────────────
 // sheetsManager.js, stationSheet.js, stationEvents.js, settings.js
@@ -162,7 +163,7 @@ export function renderFavList(favs) {
       const isCompact      = item.exits.length > 2;
       const containerClass = isCompact ? 'fav-exits-container fav-exits-compact' : 'fav-exits-container';
       const groupsHtml     = item.exits.map(f =>
-        `<div class="fav-exit-group"><div class="fav-pos-square" style="color:${item.color}">${f.wagon}</div><div class="fav-pos-square" style="color:${item.color}">${f.doors}</div></div>`
+        `<div class="fav-exit-group"><div class="fav-pos-square" style="color:${item.color}">${escapeHtml(f.wagon)}</div><div class="fav-pos-square" style="color:${item.color}">${escapeHtml(f.doors)}</div></div>`
       ).join('<div class="fav-exit-sep"></div>');
       squaresHtml = `<div class="${containerClass}">${groupsHtml}</div>`;
     }
@@ -171,7 +172,7 @@ export function renderFavList(favs) {
       <button class="fav-open-btn" data-slug="${item.slug}" style="border-left-color:${item.color}">
         <div class="fav-text-wrap">
           <span class="fav-station-name ${item.exits.length > 1 ? 'fav-small' : ''}">${displayName}</span>
-          ${(formattedDir && item.exits.length > 0) ? `<span class="fav-dir-name ${item.exits.length > 1 ? 'fav-small-dir' : ''}">${formattedDir}</span>` : ''}
+          ${(formattedDir && item.exits.length > 0) ? `<span class="fav-dir-name ${item.exits.length > 1 ? 'fav-small-dir' : ''}">${richText(formattedDir)}</span>` : ''}
         </div>
         ${squaresHtml}
       </button>

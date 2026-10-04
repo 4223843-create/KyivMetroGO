@@ -13,6 +13,7 @@ import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { bus }                from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
+import { richText } from '../ui/html.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
@@ -146,7 +147,7 @@ function _findExitLabel(s, hitTok) {
 function _renderItem(s, isExitOnly, exitHint) {
   const color = LINE_COLOR[s.line];
   const hintHtml = isExitOnly && exitHint
-    ? `<span class="search-item-hint">${exitHint}</span>`
+    ? `<span class="search-item-hint">${richText(exitHint)}</span>`
     : '';
   return `<div class="search-item" data-slug="${s.slug}">
     <div class="search-item-line" style="background-color:${color}"></div>
