@@ -10,7 +10,7 @@ import { updateFavDock, openFavSheet }    from './features/favorites/index.js';
 import { updateCheckinDock }              from './features/checkin/index.js';
 import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
-import { updateDevMenuButtonVisibility }  from './features/devmode.js';
+import { updateDevMenuButtonVisibility }  from './features/devHooks.js';
 
 // Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
 import './map/mapGestures.js';

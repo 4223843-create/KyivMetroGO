@@ -46,7 +46,7 @@ import { legacyKeyMap }     from '../data/positions.js';
 import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
 import { escapeHtml } from '../ui/html.js';
 import { showToast }  from '../ui/toast.js';
-import { isDevMode, toggleDevMode } from './devFlags.js';
+import { isDevMode } from './devFlags.js';
 import {
   emptyConfirmationData as _emptyConfirmationData,
   mergeKeyedMap as _mergeKeyedMap,
@@ -1422,33 +1422,13 @@ export function renderDevAuthSection(container) {
 }
 
 // ── Активація Dev Mode прихованим жестом (5 тапів) ──
-export function setupDevModeTapCounter(aboutSheet) {
+/**
+ * Запам'ятовує About-шторку й показує на ній стан режиму розробника.
+ * Лічильник дотиків, що вмикає режим, живе в features/devHooks.js.
+ */
+export function attachAboutSheet(aboutSheet) {
   _lastAboutSheet = aboutSheet;
-  // Відображаємо актуальний стан при відкритті шторки
   updateDevModeIndicator(aboutSheet, isDevMode());
-
-  const trigger = aboutSheet.querySelector('.about-footer') || 
-                  aboutSheet.querySelector('.about-subtitle') || 
-                  aboutSheet.querySelector('.sheet-handle-bar');
-  if (!trigger) return;
-
-  let taps = 0;
-  let tapTimer = null;
-
-  trigger.addEventListener('click', (e) => {
-    taps++;
-    clearTimeout(tapTimer);
-
-    tapTimer = setTimeout(() => {
-      if (taps >= 5) {
-        const active = toggleDevMode();
-        showDevModeToast(active);
-        updateDevModeIndicator(aboutSheet, active);
-        updateDevMenuButtonVisibility();
-      }
-      taps = 0;
-    }, 400);
-  });
 }
 
 /** Показує/ховає плаваючу кнопку меню розробника зверху карти. */

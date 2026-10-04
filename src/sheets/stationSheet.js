@@ -4,7 +4,7 @@ import { heartSvg }                from '../ui/components.js';
 import { Icons }                   from '../ui/icons.js';
 import { LINE_COLOR }              from '../core/constants.js';
 import { isFav, getExitFavs }      from '../features/favorites/index.js';
-import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
+import { attachDevModeUI, setupDevStationNoteButton } from '../features/devHooks.js';
 import { bus }                     from '../core/eventBus.js';
 import { showSheet, hideSheet }    from '../ui/sheetNav.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';

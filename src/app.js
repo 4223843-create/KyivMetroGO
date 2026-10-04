@@ -20,7 +20,7 @@ import { state } from './core/state.js';
 import { pushSheetHistory } from './ui/system.js';
 import { hasOpenSheet }     from './ui/sheetNav.js';
 import { showToast }        from './ui/toast.js';
-import { openDevMenuSheet } from './sheets/devMenuSheet.js';
+import { openDevMenuSheet } from './features/devHooks.js';
 
 // ── Bottom bar ─────────────────────────────────────────────────
 document.getElementById('favListBtn')?.addEventListener('click', openFavSheet);

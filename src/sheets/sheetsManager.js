@@ -13,7 +13,7 @@ import { getSlugByLower } from '../data/stations.js';
 import { getOpenSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { closeAllDevPanels } from '../features/devmode.js';
+import { closeAllDevPanels } from '../features/devHooks.js';
 
 export { openStation, openAboutSheet, withUnsavedCheck };
 
