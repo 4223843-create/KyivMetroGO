@@ -247,6 +247,28 @@ function renderIcons(p) {
   return `<div class="pos-lift-marks-wrap">${iconsHtml}</div>`;
 }
 
+/**
+ * Стабільний ключ рядка позиції для даних режиму розробника (нотатки,
+ * підтвердження, фото). Похідний від ключа першої позиції рядка
+ * («напрямок|id виходу|номер позиції», data/positions.js), тож не зсувається,
+ * коли в даних з'являються інші виходи. Хеш — щоб ключ був коротким і
+ * безпечним для id елементів, назв файлів фото й полів Firestore.
+ */
+export function devRowKey(positionKey) {
+  if (!positionKey) return '';
+  let h = 0x811c9dc5;
+  for (let i = 0; i < positionKey.length; i++) {
+    h ^= positionKey.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return 'k' + (h >>> 0).toString(36);
+}
+
+const rowKeyAttr = p => {
+  const key = devRowKey(p?._key);
+  return key ? ` data-row-key="${key}"` : '';
+};
+
 function renderPositions(positions, color, multiRow, exit = null) {
   const grouped = groupPositions(positions);
   if (!grouped.length) return '';
@@ -260,7 +282,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
     const icons      = renderIcons(p, exit);
     const hasSpecial = !!icons;
 
-    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
+    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}"${rowKeyAttr(p)}>
       ${edited}${favTargetHtml(p.wagon, p.doors, color)}${icons}
     </div>`;
   }
@@ -276,7 +298,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
       return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}${icons}`;
     }).join('');
 
-    return `<div class="position-row position-row-multi">${edited}${targets}${spacer}</div>`;
+    return `<div class="position-row position-row-multi"${rowKeyAttr(grouped[0])}>${edited}${targets}${spacer}</div>`;
   }
 
   return grouped.map(p => {
@@ -284,7 +306,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
     const icons      = renderIcons(p, exit);
     const hasSpecial = !!icons;
 
-    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}">
+    return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}"${rowKeyAttr(p)}>
       ${favTargetHtml(p.wagon, p.doors, color)}${icons}
     </div>`;
   }).join('');
@@ -431,7 +453,10 @@ export function applyFavPillStyles(container, lineColor, isFaved) {
  *
  * @param {object} s     — об'єкт станції зі state.stationsData
  * @param {string} color — колір лінії (для рендеру пігулок, на сам опис не впливає)
- * @returns {Array<{posIdx:number, dirFrom:string, exitLabel:string, wagonDoors:string}>}
+ * key — стабільний ключ рядка (devRowKey), під яким тепер зберігаються дані розробника;
+ * posIdx лишається для переведення старих записів.
+ *
+ * @returns {Array<{posIdx:number, key:string, dirFrom:string, exitLabel:string, wagonDoors:string}>}
  */
 export function getPositionDescriptorsForStation(s, color) {
   const wrap = document.createElement('div');
@@ -457,6 +482,7 @@ export function getPositionDescriptorsForStation(s, color) {
       .join(' · ');
     descriptors.push({
       posIdx: descriptors.length,
+      key:    el.dataset.rowKey || String(descriptors.length),
       dirFrom: currentDir,
       exitLabel: currentExit,
       wagonDoors,

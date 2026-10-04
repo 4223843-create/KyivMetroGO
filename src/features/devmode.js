@@ -42,6 +42,7 @@ import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
+import { getPositionDescriptorsForStation } from '../sheets/renderStation.js';
 import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/firebaseSync.js';
 
 
@@ -371,6 +372,7 @@ async function _performFullSync() {
 
     // Щотижневе очищення старих tombstone-записів (старші за 7 діб).
     // Відбувається локально перед merge — щоб не тягнути мертвий вантаж у хмару.
+    _ensureDevKeysMigrated();
     let localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
     localNotes             = _purgeTombstones(localNotes);
 
@@ -416,6 +418,10 @@ async function _performFullSync() {
         mergedConfirmations,
         cloudData.verified
       );
+
+      // Хмара (інший пристрій зі старою версією) могла принести старі числові ключі
+      _migrateRowKeys(mergedNotes);
+      _migrateRowKeys(mergedConfirmations);
 
       changed =
         JSON.stringify(mergedNotes) !== JSON.stringify(localNotes)
@@ -590,6 +596,51 @@ export function appendDevLog(entry) {
   Storage.set(STORAGE_KEYS.DEV_LOG, JSON.stringify(log));
 }
 
+// ── Перехід зі старих ключів на стабільні ─────────────
+// Раніше нотатки й підтвердження зберігалися за порядковим номером рядка
+// в картці станції — він зсувався, коли в даних з'являвся чи зникав вихід.
+// Тепер ключ — devRowKey рядка (renderStation.js). Старі числові ключі
+// переводимо за поточним порядком рядків; якщо рядка з таким номером уже
+// немає — запис лишається як є, щоб нічого не загубити.
+let _devKeysMigrated = false;
+bus.on('data:stations-hydrated', () => { _devKeysMigrated = false; });
+
+const _isLegacyRowKey = key => /^\d+$/.test(key);
+const _entryTime = entry =>
+  (entry && typeof entry === 'object') ? (entry.t ?? entry.updatedAt ?? 0) : 0;
+
+function _migrateRowKeys(map) {
+  let changed = false;
+  for (const slug of Object.keys(map || {})) {
+    const entries = map[slug];
+    if (!entries || !Object.keys(entries).some(_isLegacyRowKey)) continue;
+    const station = state.stationsData?.[slug];
+    if (!station) continue;
+    const descriptors = getPositionDescriptorsForStation(station, LINE_COLOR[station.line]);
+    for (const oldKey of Object.keys(entries).filter(_isLegacyRowKey)) {
+      const newKey = descriptors[Number(oldKey)]?.key;
+      if (!newKey || _isLegacyRowKey(newKey)) continue;
+      // Збіг зі свіжішим записом під новим ключем — перемагає новіший
+      if (!entries[newKey] || _entryTime(entries[oldKey]) > _entryTime(entries[newKey])) {
+        entries[newKey] = entries[oldKey];
+      }
+      delete entries[oldKey];
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function _ensureDevKeysMigrated() {
+  if (_devKeysMigrated || !state.stationsData || !Object.keys(state.stationsData).length) return;
+  _devKeysMigrated = true;
+  let notes;
+  try { notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}'); } catch { notes = {}; }
+  if (_migrateRowKeys(notes)) Storage.set(STORAGE_KEYS.DEV_NOTES, JSON.stringify(notes));
+  const confirmations = _readConfirmationsRaw();
+  if (_migrateRowKeys(confirmations)) _writeConfirmations(confirmations);
+}
+
 // ── Верифіковані позиції ─────────────────────────────
 /**
  * @param {string} slug
@@ -608,6 +659,7 @@ export function isVerified(slug, posIdx) {
  * @returns {string}
  */
 export function getDevNote(slug, posIdx) {
+  _ensureDevKeysMigrated();
   try {
     const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
     const raw = notes[slug]?.[posIdx];
@@ -626,6 +678,7 @@ export function getDevNote(slug, posIdx) {
  * @param {string} text
  */
 export function setDevNote(slug, posIdx, text) {
+  _ensureDevKeysMigrated();
   try {
     const notes = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
     if (!notes[slug]) notes[slug] = {};
@@ -642,6 +695,7 @@ export function setDevNote(slug, posIdx, text) {
 
 /** @returns {Record<string, Record<string,string>>} усі нотатки: {slug: {posIdx: текст}} */
 export function getAllDevNotes() {
+  _ensureDevKeysMigrated();
   try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}'); }
   catch(e) { return {}; }
 }
@@ -659,9 +713,14 @@ export function getAllDevVerified() {
 // які саме вагон/двері пропонували замість поточних і скільки разів кожен
 // варіант (щоб бачити консенсус). lastAction зберігає знімок стану ПЕРЕД
 // останньою дією — для одноразового "Скасувати останню дію".
-function _readConfirmations() {
+function _readConfirmationsRaw() {
   try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_CONFIRMATIONS) || '{}'); }
   catch(e) { return {}; }
+}
+
+function _readConfirmations() {
+  _ensureDevKeysMigrated();
+  return _readConfirmationsRaw();
 }
 
 function _writeConfirmations(data) {
@@ -955,10 +1014,13 @@ export function attachDevModeUI(container, slug) {
   const defaultColor   = 'var(--border)';
   const defaultOpacity = '1';
 
-  container.querySelectorAll('.position-row').forEach((row, posIdx) => {
+  container.querySelectorAll('.position-row').forEach((row, rowIdx) => {
     if (row.querySelector('.dev-confirm-btn')) return;
 
-    row.dataset.devPosIdx = posIdx;
+    // Дані розробника зберігаються за стабільним ключем рядка (devRowKey);
+    // rowIdx — старий порядковий номер, потрібен лише для старих фото.
+    const posIdx = row.dataset.rowKey || String(rowIdx);
+    row.dataset.devPosIdx = rowIdx;
     row.dataset.devSlug   = slug;
 
     // ── Кнопка «Підтвердження» (єдина — замінює колишню окрему галочку) ──
@@ -1075,7 +1137,7 @@ export function attachDevModeUI(container, slug) {
       moreMenu.classList.toggle('is-open', willOpen);
     });
 
-    listPhotosForPosition(slug, posIdx).then(photos => {
+    listPhotosForPosition(slug, posIdx, rowIdx).then(photos => {
       if (photos.length) {
         photoBtn.style.color   = lineColor;
         photoBtn.style.opacity = '1';
@@ -1335,12 +1397,19 @@ function _newPhotoId(slug, posIdx) {
   return `${_photoPrefix(slug, posIdx)}${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/** @returns {Promise<Array<{id:string, dataUrl:string}>>} усі фото для конкретної позиції */
-async function listPhotosForPosition(slug, posIdx) {
-  const prefix = _photoPrefix(slug, posIdx);
+/**
+ * @param {string} slug
+ * @param {string} posIdx    — стабільний ключ рядка (devRowKey)
+ * @param {number} [legacyIdx] — старий порядковий номер рядка: фото, зняті до
+ *   переходу на ключі, лишаються під ним (їхні id у хмарі не перейменовуємо)
+ * @returns {Promise<Array<{id:string, dataUrl:string}>>} усі фото для конкретної позиції
+ */
+async function listPhotosForPosition(slug, posIdx, legacyIdx) {
+  const prefixes = [_photoPrefix(slug, posIdx)];
+  if (legacyIdx !== undefined && legacyIdx !== '') prefixes.push(_photoPrefix(slug, legacyIdx));
   const all = await PhotoStorage.getAllPhotos();
   return Object.keys(all)
-    .filter(id => id.startsWith(prefix))
+    .filter(id => prefixes.some(prefix => id.startsWith(prefix)))
     .sort()
     .map(id => ({ id, dataUrl: all[id] }));
 }
@@ -1373,7 +1442,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
   };
 
   const paint = async () => {
-    const photos = await listPhotosForPosition(slug, posIdx);
+    const photos = await listPhotosForPosition(slug, posIdx, row.dataset.devPosIdx);
     updateBtnState(photos.length);
 
     panel.innerHTML = `
@@ -1400,8 +1469,8 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
       btn.addEventListener('click', async e => {
         e.stopPropagation();
         try {
-          await PhotoStorage.removePhoto(btn.dataset.id);
-          _touchSyncTimestamp();
+          // Через tombstone — інакше наступна синхронізація поверне фото з хмари
+          await removeDevPhoto(btn.dataset.id);
           await paint();
         } catch (err) {
           console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
