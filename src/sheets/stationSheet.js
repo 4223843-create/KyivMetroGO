@@ -39,6 +39,7 @@ bus.on('station:clock-settings', () => {
   if (!clockPanel) return;
   if (clockBtn?.hidden) clockPanel.classList.remove('panel-open');
   else if (clockPanel.classList.contains('panel-open')) clockPanel.innerHTML = renderStationClock(s);
+  _syncClockBtn();
 });
 // Вміст рахується в момент натискання — за часом на телефоні.
 clockBtn?.addEventListener('click', e => {
@@ -49,7 +50,17 @@ clockBtn?.addEventListener('click', e => {
     const s = state.stationsData?.[state.currentStationSlug];
     clockPanel.innerHTML = s ? renderStationClock(s) : '';
   }
+  _syncClockBtn();
 });
+
+/** Поки панель годинника розгорнута, кнопка світиться кольором гілки. */
+function _syncClockBtn() {
+  if (!clockBtn) return;
+  const isOpen = !!document.getElementById('stationClockPanel')?.classList.contains('panel-open');
+  const line   = state.stationsData?.[state.currentStationSlug]?.line;
+  clockBtn.classList.toggle('is-active', isOpen);
+  clockBtn.style.color = isOpen ? (LINE_COLOR[line] || '') : '';
+}
 
 // ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
 bindSheetGestures(
@@ -154,6 +165,7 @@ function actualOpenStation(slug) {
   if (state.currentStationSlug === slug && sheet.classList.contains('sheet-open')) {
     // Лише оновлюємо fav-кнопку (стан міг змінитись ззовні)
     _updateFavBtn(slug, color);
+    _syncClockBtn();
     return;
   }
 
@@ -206,6 +218,7 @@ function actualOpenStation(slug) {
   if (handle) handle.style.background = color;
 
   _updateFavBtn(slug, color);
+  _syncClockBtn();
 
   // Закриваємо всі допоміжні шторки (feedback, settings, checkin тощо).
   // querySelectorAll — єдиний коректний спосіб: ці шторки створюються lazily
@@ -266,6 +279,7 @@ export function refreshCurrentStation() {
     clockPanel.classList.add('panel-open');
   }
   _updateFavBtn(slug, color);
+  _syncClockBtn();
 
   applyNavLinks(slug);
   applyInitialFavStyles(sheetBody, slug, color);
