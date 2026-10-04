@@ -287,7 +287,7 @@ export function openSettingsSheet() {
       e.stopPropagation();
       if (e.currentTarget.disabled) {
         bus.emit('ui:confirm', {
-          message:  'Список check-in порожній',
+          message:  'Список Check-in порожній',
           onYes:    () => {},
           labelYes: 'Зрозуміло',
           labelNo:  '',
@@ -297,7 +297,7 @@ export function openSettingsSheet() {
         return;
       }
       bus.emit('ui:confirm', {
-        message: 'Очистити історію check-in?',
+        message: 'Очистити історію Check-in?',
         onYes:   () => {
           Storage.remove(STORAGE_KEYS.CHECKINS);
           invalidateCheckinsCache();
