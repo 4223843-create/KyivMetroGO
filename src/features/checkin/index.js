@@ -14,7 +14,7 @@
 //   'checkin:updated'        → updateCheckinDock() + bus.emit('map:sync-checkins')
 
 import { state }              from '../../core/state.js';
-import { STORAGE_KEYS, Storage } from '../../core/storage.js';
+import { getPref } from '../../core/prefs.js';
 import { bus }                from '../../core/eventBus.js';
 import { Icons }              from '../../ui/icons.js';
 import { LINE_COLOR }         from '../../core/constants.js';
@@ -130,7 +130,7 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
 // ══ РЕНДЕР КІЛЕЦЬ ГІЛОК ══════════════════════════════════════
 
 function renderLineRings(lineStats) {
-  const byExits = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
+  const byExits = getPref('checkinByStation') === 'exits';
   const rings = LINE_ORDER.map(line => {
     const s        = lineStats[line];
     const color    = LINE_COLOR[line] || 'var(--text-muted)';
@@ -213,7 +213,7 @@ export function openCheckinSheet() {
           )
         : 0;
       const totalStationsAll = state.stationsData ? Object.keys(state.stationsData).length : 0;
-      const byExits          = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) === 'exits';
+      const byExits          = getPref('checkinByStation') === 'exits';
 
       let coverageValue = 0;
       let coverageText  = '0%';

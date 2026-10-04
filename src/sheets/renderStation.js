@@ -4,7 +4,7 @@ import { state }               from '../core/state.js';
 import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
-import { isHideNoLiftEnabled, isShowHoistsEnabled, isShowIntervalsEnabled, getStationHoursMode } from '../features/settings.js';
+import { getPref }             from '../core/prefs.js';
 import { richText } from '../ui/html.js';
 
 function formatDirLabel(raw) {
@@ -139,7 +139,7 @@ export function renderStationClock(s, now = new Date()) {
   const close  = toMin(sch.close);
   const lines  = [];
 
-  const hoursMode = getStationHoursMode();
+  const hoursMode = getPref('stationHours');
   if (hoursMode !== 'never') {
     if (nowMin < open || nowMin >= close) {
       lines.push(`<span class="clock-pill">Станція закрита, відкриється о ${sch.open}</span>`);
@@ -149,7 +149,7 @@ export function renderStationClock(s, now = new Date()) {
     }
   }
 
-  const ivs = !isShowIntervalsEnabled() ? [] : Object.entries(sch.trains || {})
+  const ivs = !getPref('showIntervals') ? [] : Object.entries(sch.trains || {})
     .filter(([, t]) => nowMin >= toMin(t.first) && nowMin <= toMin(t.last))
     .map(([terminal]) => [terminal, currentInterval(s.line, terminal, now)])
     .filter(([, iv]) => iv);
@@ -166,7 +166,7 @@ export function renderStationClock(s, now = new Date()) {
         `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
   }
 
-  if (!lines.length && isShowIntervalsEnabled())
+  if (!lines.length && getPref('showIntervals'))
     lines.push('<span class="clock-pill">Немає даних про інтервал на цю годину</span>');
   return lines.join('');
 }
@@ -232,14 +232,14 @@ function renderIcons(p) {
   let iconsHtml = '';
 
   // Підйомник вимкнено в налаштуваннях — ховаємо і його ескалатор
-  const hoistHidden = p.isHoist && !isShowHoistsEnabled();
+  const hoistHidden = p.isHoist && !getPref('showHoists');
 
   if (p.isEscalator && !hoistHidden) {
     iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" aria-label="Ескалатор">${Icons.escalator}</span>`;
   }
 
   if (p.isHoist) {
-    if (isShowHoistsEnabled()) {
+    if (getPref('showHoists')) {
       iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" aria-label="Спецпідйомник">${Icons.hoist}</span>`;
     }
   } else if (p.isLift) {
@@ -339,10 +339,10 @@ export function renderDirections(s, color) {
   const isKhreshchatyk = s.slug === 'R.Khreshchatyk';
 
   // Перевірка налаштування та наявності хоча б одного ліфта на станції
-  const hideNoLift = isHideNoLiftEnabled();
+  const hideNoLift = getPref('hideNoLift');
   const hasLift = s.directions?.some(dir =>
     dir.exits?.some(exit =>
-      exit.positions?.some(p => p.isLift || (p.isHoist && isShowHoistsEnabled()))
+      exit.positions?.some(p => p.isLift || (p.isHoist && getPref('showHoists')))
     )
   );
   const filterLiftOnly = hideNoLift && hasLift;
@@ -353,7 +353,7 @@ export function renderDirections(s, color) {
 
     const mainHtml = mainDirs.map(dir => {
       const exitsHtml = dir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
         if (!visiblePos.length) return '';
         return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true, exit)}`;
       }).join('');
@@ -368,7 +368,7 @@ export function renderDirections(s, color) {
     let longHtml = '';
     if (longDir) {
       const rows = longDir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
         if (!visiblePos.length) return '';
         const posRows = visiblePos.map(p =>
           `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
@@ -403,7 +403,7 @@ export function renderDirections(s, color) {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
-      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && isShowHoistsEnabled()))) || [];
+      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
       if (!visiblePos.length) return '';
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';

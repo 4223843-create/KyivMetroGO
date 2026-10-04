@@ -1,6 +1,7 @@
 // ══ ГОЛОВНА ТОЧКА ВХОДУ (MAIN) ══
 
 import { STORAGE_KEYS, Storage }          from './core/storage.js';
+import { getPref } from './core/prefs.js';
 import { applyTheme }                     from './ui/theme.js';
 import { configureEdgeToEdge }            from './ui/system.js';
 import { initMap }                        from './map/mapInit.js';
@@ -71,7 +72,7 @@ async function bootstrap() {
 
     if      (action === 'search') openSearchSheet();
     else if (action === 'fav')    openFavSheet();
-    else if (Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true') openFavSheet();
+    else if (getPref('startOnFav')) openFavSheet();
 
     if (action) window.history.replaceState({}, document.title, window.location.pathname);
 

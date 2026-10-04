@@ -3,6 +3,7 @@
 // управління темою, check-in, резервними копіями та очищенням даних.
 
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
+import { getPref, setPref } from '../core/prefs.js';
 import { LINE_COLOR }              from '../core/constants.js';
 import { applyTheme }              from '../ui/theme.js';
 import { initKinematicSwipe }      from '../ui/swipe.js';
@@ -18,13 +19,6 @@ import {
 import {
   isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache,
 } from './checkin/index.js';
-
-// ══ РЕЖИМ РЕДАГУВАННЯ ═══════════════════════════════════════
-
-/** Повертає true якщо користувач увімкнув режим редагування. За замовчуванням — вимкнено. */
-export function isEditModeEnabled() {
-  return Storage.get(STORAGE_KEYS.EDIT_MODE) === 'true';
-}
 
 // ══ ТОСТ «CHECK-IN ЩЕ НЕ АКТИВНИЙ» ══════════════════════════
 
@@ -105,7 +99,7 @@ export function openSettingsSheet() {
       startSegButtons.forEach(btn => {
         btn.addEventListener('click', () => {
           const val = btn.dataset.startVal;
-          Storage.set(STORAGE_KEYS.START_ON_FAV, val);
+          setPref('startOnFav', val === 'true');
           startSegButtons.forEach(b => b.classList.remove('is-active'));
           btn.classList.add('is-active');
           if (val === 'true') bus.emit('fav:dismiss-hint');
@@ -115,10 +109,10 @@ export function openSettingsSheet() {
 
     const editModeToggle = document.getElementById('settingsEditModeToggle');
     if (editModeToggle) {
-      editModeToggle.checked = isEditModeEnabled();
+      editModeToggle.checked = getPref('editMode');
       editModeToggle.addEventListener('change', e => {
         const isEditOn = e.target.checked;
-        Storage.set(STORAGE_KEYS.EDIT_MODE, String(isEditOn));
+        setPref('editMode', isEditOn);
         
         // Показуємо/приховуємо рядок "Локальні зміни"
         const localFbRow = document.getElementById('settingsLocalFbRow');
@@ -135,14 +129,14 @@ export function openSettingsSheet() {
     const showIntervalsToggle = document.getElementById('settingsShowIntervalsToggle');
     if (showIntervalsToggle) {
       showIntervalsToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.SHOW_INTERVALS, String(e.target.checked));
+        setPref('showIntervals', e.target.checked);
         bus.emit('station:clock-settings');
       });
     }
     const hoursSeg = document.getElementById('settingsStationHoursSeg');
     hoursSeg?.querySelectorAll('.settings-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        Storage.set(STORAGE_KEYS.SHOW_STATION_HOURS, btn.dataset.hoursVal);
+        setPref('stationHours', btn.dataset.hoursVal);
         hoursSeg.querySelectorAll('.settings-seg-btn').forEach(b => b.classList.toggle('is-active', b === btn));
         bus.emit('station:clock-settings');
         if (btn.dataset.hoursVal === 'soon') showHoursSoonToast(btn);
@@ -151,9 +145,9 @@ export function openSettingsSheet() {
 
     const hideNoLiftToggle = document.getElementById('settingsHideNoLiftToggle');
     if (hideNoLiftToggle) {
-      hideNoLiftToggle.checked = isHideNoLiftEnabled();
+      hideNoLiftToggle.checked = getPref('hideNoLift');
       hideNoLiftToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.HIDE_NO_LIFT, String(e.target.checked));
+        setPref('hideNoLift', e.target.checked);
         bus.emit('station:refresh');
       });
     }
@@ -161,9 +155,9 @@ export function openSettingsSheet() {
     // ── Доступність на карті (ВИПРАВЛЕНО: винесено з закриття) ──
     const showMapAccToggle = document.getElementById('settingsShowMapAccessibilityToggle');
     if (showMapAccToggle) {
-      showMapAccToggle.checked = isShowMapAccessibilityEnabled();
+      showMapAccToggle.checked = getPref('showMapAccessibility');
       showMapAccToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY, String(e.target.checked));
+        setPref('showMapAccessibility', e.target.checked);
         bus.emit('map:update-accessibility');
       });
     }
@@ -171,9 +165,9 @@ export function openSettingsSheet() {
     // ── Показувати підйомники на станціях ──
     const showHoistsToggle = document.getElementById('settingsShowHoistsToggle');
     if (showHoistsToggle) {
-      showHoistsToggle.checked = isShowHoistsEnabled();
+      showHoistsToggle.checked = getPref('showHoists');
       showHoistsToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.SHOW_HOISTS, String(e.target.checked));
+        setPref('showHoists', e.target.checked);
         bus.emit('station:refresh');
         bus.emit('map:update-accessibility');
       });
@@ -192,7 +186,7 @@ export function openSettingsSheet() {
         const isMainOn    = e.target.checked;
         const collapsible = document.getElementById('settingsCheckinCollapsible');
         collapsible?.classList.toggle('is-hidden', !isMainOn);
-        Storage.set(STORAGE_KEYS.CHECKIN_MODE, String(isMainOn));
+        setPref('checkinMode', isMainOn);
         updateCheckinDock();
         const currentSlug = document.getElementById('stationSheet').classList.contains('sheet-open')
           ? (state.currentStationSlug ?? null)
@@ -222,11 +216,11 @@ export function openSettingsSheet() {
     // ── Check-in по виходах ──
     const statSeg = document.getElementById('settingsCheckinStatSeg');
     if (statSeg) {
-      const initStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
+      const initStat = getPref('checkinByStation');
       statSeg.querySelectorAll('.settings-seg-btn').forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.statVal === initStat);
         btn.addEventListener('click', () => {
-          Storage.set(STORAGE_KEYS.CHECKIN_BY_STATION, btn.dataset.statVal);
+          setPref('checkinByStation', btn.dataset.statVal);
           statSeg.querySelectorAll('.settings-seg-btn').forEach(b =>
             b.classList.toggle('is-active', b === btn)
           );
@@ -237,9 +231,9 @@ export function openSettingsSheet() {
     // Ініціалізація та збереження тумблера чекінів по виходах
     const checkinByExitToggle = document.getElementById('settingsCheckinByExitToggle');
     if (checkinByExitToggle) {
-      checkinByExitToggle.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
+      checkinByExitToggle.checked = getPref('checkinByExit');
       checkinByExitToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.CHECKIN_BY_EXIT, String(e.target.checked));
+        setPref('checkinByExit', e.target.checked);
       });
     }
 
@@ -248,15 +242,15 @@ export function openSettingsSheet() {
     const localFbToggle = document.getElementById('settingsLocalFeedbackToggle');
     if (localFbToggle) {
       localFbToggle.addEventListener('change', e => {
-        Storage.set(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK, String(e.target.checked));
+        setPref('localOnlyFeedback', e.target.checked);
       });
     }
 
     const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
     if (hideInfoToggle) {
-      hideInfoToggle.checked = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+      hideInfoToggle.checked = getPref('hideInfoBlocks');
       hideInfoToggle.addEventListener('change', e =>
-        Storage.set(STORAGE_KEYS.HIDE_INFO_BLOCKS, String(e.target.checked))
+        setPref('hideInfoBlocks', e.target.checked)
       );
     }
 
@@ -445,20 +439,20 @@ export function openSettingsSheet() {
     const hatchTgl = document.getElementById('settingsCheckinHatchToggle');
     if (hatchTgl) hatchTgl.checked = Storage.get(STORAGE_KEYS.CHECKIN_HATCH) !== 'false';
 
-    const savedStart = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true' ? 'true' : 'false';
+    const savedStart = String(getPref('startOnFav'));
     document.querySelectorAll('#settingsStartSeg .settings-seg-btn').forEach(btn =>
       btn.classList.toggle('is-active', btn.dataset.startVal === savedStart)
     );
 
-    const savedStat = Storage.get(STORAGE_KEYS.CHECKIN_BY_STATION) || 'station';
+    const savedStat = getPref('checkinByStation');
     document.querySelectorAll('#settingsCheckinStatSeg .settings-seg-btn').forEach(btn =>
       btn.classList.toggle('is-active', btn.dataset.statVal === savedStat)
     );
 
     const eX = document.getElementById('settingsCheckinByExitToggle');
-    if (eX) eX.checked = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
+    if (eX) eX.checked = getPref('checkinByExit');
 
-    const isEditOn = isEditModeEnabled();
+    const isEditOn = getPref('editMode');
     const localFbRow = document.getElementById('settingsLocalFbRow');
     if (localFbRow) localFbRow.classList.toggle('is-hidden', !isEditOn);
 
@@ -469,14 +463,14 @@ export function openSettingsSheet() {
     const nl = document.getElementById('settingsHideNoLiftToggle');
 
     if (c)  c.checked  = isMainOn;
-    if (l)  l.checked  = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
-    if (h)  h.checked  = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+    if (l)  l.checked  = getPref('localOnlyFeedback');
+    if (h)  h.checked  = getPref('hideInfoBlocks');
     if (em) em.checked = isEditOn;
-    if (nl) nl.checked = isHideNoLiftEnabled();
+    if (nl) nl.checked = getPref('hideNoLift');
 
     const si = document.getElementById('settingsShowIntervalsToggle');
-    if (si) si.checked = isShowIntervalsEnabled();
-    const hoursMode = getStationHoursMode();
+    if (si) si.checked = getPref('showIntervals');
+    const hoursMode = getPref('stationHours');
     document.querySelectorAll('#settingsStationHoursSeg .settings-seg-btn').forEach(b =>
       b.classList.toggle('is-active', b.dataset.hoursVal === hoursMode));
 
@@ -496,39 +490,13 @@ export function openSettingsSheet() {
       });
 
     const ma = document.getElementById('settingsShowMapAccessibilityToggle');
-    if (ma) ma.checked = isShowMapAccessibilityEnabled();
+    if (ma) ma.checked = getPref('showMapAccessibility');
 
     const sh = document.getElementById('settingsShowHoistsToggle');
-    if (sh) sh.checked = isShowHoistsEnabled();
+    if (sh) sh.checked = getPref('showHoists');
   }
 
   syncToggles();
 
   showSheet(settingsSheet);
-}
-
-/** Інтервали руху в панелі годинника на картці станції. За замовчуванням — увімкнено. */
-export function isShowIntervalsEnabled() {
-  return Storage.get(STORAGE_KEYS.SHOW_INTERVALS) !== 'false';
-}
-
-/** Коли показувати час відкриття/закриття станції: 'never' | 'soon' (за 2 год до закриття) | 'always'. */
-export function getStationHoursMode() {
-  const v = Storage.get(STORAGE_KEYS.SHOW_STATION_HOURS);
-  return v === 'never' || v === 'always' ? v : 'soon';
-}
-
-/** Повертає true якщо увімкнено приховування виходів без ліфтів. */
-export function isHideNoLiftEnabled() {
-  return Storage.get(STORAGE_KEYS.HIDE_NO_LIFT) === 'true';
-}
-
-/** Повертає true якщо увімкнено відображення доступності на карті. За замовчуванням — увімкнено. */
-export function isShowMapAccessibilityEnabled() {
-  return Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) !== 'false';
-}
-
-/** Повертає true якщо увімкнено показ підйомників на станціях. За замовчуванням — увімкнено. */
-export function isShowHoistsEnabled() {
-  return Storage.get(STORAGE_KEYS.SHOW_HOISTS) !== 'false';
 }

@@ -1,5 +1,5 @@
 import { state }                   from '../core/state.js';
-import { STORAGE_KEYS, Storage }   from '../core/storage.js';
+import { getPref } from '../core/prefs.js';
 import { heartSvg }                from '../ui/components.js';
 import { Icons }                   from '../ui/icons.js';
 import { LINE_COLOR }              from '../core/constants.js';
@@ -168,7 +168,7 @@ function actualOpenStation(slug) {
   state.currentStationSlug = slug;
   bus.emit('fav:dismiss-hint');
 
-  const hideInfoBlocks = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
+  const hideInfoBlocks = getPref('hideInfoBlocks');
   const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
     ? `<div class="onboarding-hint" id="onboardingHint">` +
       `<span class="hint-icon-wrap" style="color:${color}">${Icons.info}</span>` +

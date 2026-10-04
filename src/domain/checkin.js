@@ -6,6 +6,7 @@
 
 import { state }                from '../core/state.js';
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { getPref } from '../core/prefs.js';
 import { bus }                   from '../core/eventBus.js';
 import { traversePositions, findPosition, positionId, isLongTransferDir } from '../data/positions.js';
 import { matchLegacyPosition }   from '../data/legacyExitMatch.js';
@@ -43,7 +44,7 @@ export function getCheckins() {
 // ══ РЕЖИМ CHECK-IN ════════════════════════════════════════════
 
 export function isCheckinMode() {
-  return Storage.get(STORAGE_KEYS.CHECKIN_MODE) !== 'false';
+  return getPref('checkinMode');
 }
 
 // ══ ІДЕНТИФІКАТОР ════════════════════════════════════════════
@@ -67,7 +68,7 @@ const _isCountable = ({ dir, position }) => !isLongTransferDir(dir) && !position
  * Коли CHECKIN_BY_EXIT вимкнено — кожна позиція є окремим виходом.
  */
 export function exitGroupKey(slug, pos) {
-  const isByExit = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
+  const isByExit = getPref('checkinByExit');
   const found    = findPosition(state.stationsData?.[slug], pos);
   if (isByExit && found?.exit.id && !isLongTransferDir(found.dir)) {
     return `${slug}|exit:${found.exit.id}`;

@@ -20,6 +20,7 @@
 import Sortable            from 'sortablejs';
 import { state }           from '../../core/state.js';
 import { STORAGE_KEYS, Storage } from '../../core/storage.js';
+import { getPref } from '../../core/prefs.js';
 import { bus }             from '../../core/eventBus.js';
 import { Icons }           from '../../ui/icons.js';
 import { LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES } from '../../core/constants.js';
@@ -221,8 +222,8 @@ export function openFavSheet() {
   else                     renderFavList(favs);
   showSheet(favSheet);
 
-  const hideInfo   = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
-  const startOnFav = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
+  const hideInfo   = getPref('hideInfoBlocks');
+  const startOnFav = getPref('startOnFav');
   const hasAnyFavs = getFavs().length > 0 || getExitFavs().length > 0;
 
   if (!hideInfo && !startOnFav && hasAnyFavs) {

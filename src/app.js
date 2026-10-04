@@ -6,11 +6,11 @@
 import { Capacitor } from '@capacitor/core';
 import { App }       from '@capacitor/app';
 
-import { STORAGE_KEYS, Storage } from './core/storage.js';
 import { openFavSheet }    from './features/favorites/index.js';
 import { openCheckinSheet, updateCheckinDock } from './features/checkin/index.js';
 import { openSearchSheet } from './features/search.js';
-import { openSettingsSheet, isEditModeEnabled } from './features/settings.js';
+import { openSettingsSheet } from './features/settings.js';
+import { getPref }           from './core/prefs.js';
 import {
   closeAllSheets, openAboutSheet
 } from './sheets/sheetsManager.js';
@@ -46,7 +46,7 @@ if (menuBtn && dropMenu) {
   menuBtn.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
-    if (feedbackMenuItem) feedbackMenuItem.hidden = !isEditModeEnabled();
+    if (feedbackMenuItem) feedbackMenuItem.hidden = !getPref('editMode');
     updateCheckinDock();
     const willShow = !dropMenu.classList.contains('show');
     dropMenu.classList.toggle('show', willShow);
@@ -146,7 +146,7 @@ if (Capacitor.isNativePlatform()) {
 const sheetOverlay = document.getElementById('sheetOverlay');
 
 function _maybeOpenFavOnResume() {
-  if (Storage.get(STORAGE_KEYS.START_ON_FAV) !== 'true') return;
+  if (!getPref('startOnFav')) return;
   if (sheetOverlay?.classList.contains('overlay-visible')) return;
   openFavSheet();
 }

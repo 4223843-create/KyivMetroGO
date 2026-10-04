@@ -5,7 +5,7 @@
 
 import { state as appState }         from '../../core/state.js';
 import { bus }                       from '../../core/eventBus.js';
-import { STORAGE_KEYS, Storage }     from '../../core/storage.js';
+import { getPref } from '../../core/prefs.js';
 import { removeLocalEdit, saveLocalEdit, saveExitLabel,
          clearAllLocalEdits,
          applyLocalLayer }                   from '../../data/localEdits.js';
@@ -115,7 +115,7 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
     document.getElementById('fbChangeStation').hidden  = true;
     document.getElementById('fbStationTitle').hidden   = true;
     
-    const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+    const isLocal = getPref('localOnlyFeedback');
     document.getElementById('fbSheetTitle').textContent = isLocal ? 'Локальні зміни' : 'Запропонувати зміни';
     
     const introText = document.getElementById('fbMainIntroText');

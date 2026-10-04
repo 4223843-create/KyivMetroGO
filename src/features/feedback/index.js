@@ -6,7 +6,7 @@ import { state as appState }                     from '../../core/state.js';
 import { fbState, resetFbState }                 from './fbState.js';
 import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
-import { STORAGE_KEYS, Storage }                 from '../../core/storage.js';
+import { getPref } from '../../core/prefs.js';
 import { showSheet }                     from '../../ui/sheetNav.js';
 
 export { renderFeedbackPositions }               from './fbRenderer.js';
@@ -93,7 +93,7 @@ function _bindOnce() {
 }
 
 function _resetSheetUI() {
-  const isLocal = Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true';
+  const isLocal = getPref('localOnlyFeedback');
   
   const sheetTitle = document.getElementById('fbSheetTitle');
   if (sheetTitle) {

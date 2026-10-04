@@ -2,7 +2,7 @@
 // Відповідальність: зберегти зміни локально + відправити на Formspree.
 // Не знає про DOM. Спілкується з іншими модулями через bus.
 
-import { STORAGE_KEYS, Storage }    from '../../core/storage.js';
+import { getPref } from '../../core/prefs.js';
 import { state as appState }        from '../../core/state.js';
 import { bus }                      from '../../core/eventBus.js';
 import { isDevMode, appendDevLog }  from '../devFlags.js';
@@ -111,7 +111,7 @@ export async function submitFeedback(background = false) {
   bus.emit('station:refresh');
 
   // ── Відправка на Formspree ───────────────────────────────
-  if (Storage.get(STORAGE_KEYS.LOCAL_ONLY_FEEDBACK) === 'true') {
+  if (getPref('localOnlyFeedback')) {
     _isSubmitting = false;
     bus.emit('feedback:submit-ui', { status: 'local-only', background });
     return;
