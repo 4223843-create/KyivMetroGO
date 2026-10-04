@@ -16,6 +16,7 @@
 import { state }              from '../../core/state.js';
 import { getPref } from '../../core/prefs.js';
 import { bus }                from '../../core/eventBus.js';
+import { lineTextColor }      from '../../ui/components.js';
 import { Icons }              from '../../ui/icons.js';
 import { LINE_COLOR }         from '../../core/constants.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
@@ -108,8 +109,8 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
     const btn     = document.createElement('button');
     btn.type      = 'button';
     btn.className = `checkin-btn row-checkin-btn${checked ? ' is-checked' : ''}`;
-    btn.innerHTML = checkinPinSvg(checked, checked ? lineColor : null);
-    btn.style.color = checked ? lineColor : '';
+    btn.innerHTML = checkinPinSvg(checked, checked ? lineTextColor(lineColor) : null);
+    btn.style.color = checked ? lineTextColor(lineColor) : '';
     btn.setAttribute('aria-label', 'Позначити вихід як відвіданий');
     btn.setAttribute('aria-pressed', String(checked));
     row.appendChild(btn);
@@ -123,8 +124,8 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
       const nowChecked = toggleCheckin(slug, pos, lineColor);
       btn.classList.toggle('is-checked', nowChecked);
       btn.setAttribute('aria-pressed', String(nowChecked));
-      btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
-      btn.style.color = nowChecked ? lineColor : '';
+      btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineTextColor(lineColor) : null);
+      btn.style.color = nowChecked ? lineTextColor(lineColor) : '';
       _checkinCount   = null;
     });
   });

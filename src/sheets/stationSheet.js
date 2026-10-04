@@ -1,6 +1,6 @@
 import { state }                   from '../core/state.js';
 import { getPref } from '../core/prefs.js';
-import { heartSvg }                from '../ui/components.js';
+import { heartSvg, lineTextColor } from '../ui/components.js';
 import { Icons }                   from '../ui/icons.js';
 import { LINE_COLOR }              from '../core/constants.js';
 import { isFav, getExitFavs }      from '../features/favorites/index.js';
@@ -55,7 +55,7 @@ function _syncClockBtn() {
   const isOpen = !!document.getElementById('stationClockPanel')?.classList.contains('panel-open');
   const line   = state.stationsData?.[state.currentStationSlug]?.line;
   clockBtn.classList.toggle('is-active', isOpen);
-  clockBtn.style.color = isOpen ? (LINE_COLOR[line] || '') : '';
+  clockBtn.style.color = isOpen ? lineTextColor(LINE_COLOR[line] || '') : '';
 }
 
 // ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
@@ -143,7 +143,7 @@ function actualOpenStation(slug) {
   const hideInfoBlocks = getPref('hideInfoBlocks');
   const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
     ? `<div class="onboarding-hint" id="onboardingHint">` +
-      `<span class="hint-icon-wrap" style="color:${color}">${Icons.info}</span>` +
+      `<span class="hint-icon-wrap" style="color:${lineTextColor(color)}">${Icons.info}</span>` +
       `Натисніть двічі на вагон і двері,<br>щоб зберегти вихід` +
       `</div>`
     : '';
@@ -181,7 +181,7 @@ function actualOpenStation(slug) {
   }
 
   const handle = sheet.querySelector('.sheet-handle');
-  if (handle) handle.style.background = color;
+  if (handle) handle.style.background = lineTextColor(color);
 
   _updateFavBtn(slug, color);
   _syncClockBtn();

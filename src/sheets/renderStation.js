@@ -1,6 +1,6 @@
 import { positionId }          from '../data/positions.js';
 import { state }               from '../core/state.js';
-import { pill, pillTextColor } from '../ui/components.js';
+import { pill, lineTextColor } from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
@@ -103,15 +103,31 @@ function toMin(hhmm) {
   return (h < 3 ? h + 24 : h) * 60 + m;
 }
 
-/** Поточний інтервал (пара секунд [мін, макс]) у бік кінцевої або null. */
-function currentInterval(line, terminal, now) {
+/** Поточний інтервал (пара секунд [мін, макс]) у бік кінцевої або null.
+ *  firstHour: до першої години таблиці (06:00) брати її значення — для ранку. */
+function currentInterval(line, terminal, now, firstHour = false) {
   const periods = state.lineIntervals?.[line];
   if (!periods) return null;
   const hh = String(now.getHours()).padStart(2, '0');
-  const p = periods.find(x => x.from.startsWith(hh));
+  const p = periods.find(x => x.from.startsWith(hh))
+    ?? (firstHour && periods[0] && hh < periods[0].from ? periods[0] : null);
   if (!p) return null;
   const day = now.getDay();
   return p[day === 0 || day === 6 ? 'holiday' : 'weekday']?.[terminal] || null;
+}
+
+/** Інтервал у кожен бік на час першого поїзда найближчого ранку (для ночі). */
+function morningIntervals(s, now) {
+  const morning = new Date(now);
+  if (now.getHours() >= 12) morning.setDate(morning.getDate() + 1);
+  return Object.entries(s.schedule.trains || {})
+    .map(([terminal, t]) => {
+      const [h, m] = t.first.split(':').map(Number);
+      const at = new Date(morning);
+      at.setHours(h, m, 0, 0);
+      return [terminal, currentInterval(s.line, terminal, at, true)];
+    })
+    .filter(([, iv]) => iv);
 }
 
 /** Назви кінцевих у родовому відмінку: «у бік Теремків». */
@@ -149,19 +165,28 @@ export function renderStationClock(s, now = new Date()) {
     }
   }
 
-  const ivs = !getPref('showIntervals') ? [] : Object.entries(sch.trains || {})
+  const trains = Object.entries(sch.trains || {});
+  let ivs = !getPref('showIntervals') ? [] : trains
     .filter(([, t]) => nowMin >= toMin(t.first) && nowMin <= toMin(t.last))
     .map(([terminal]) => [terminal, currentInterval(s.line, terminal, now)])
     .filter(([, iv]) => iv);
+
+  // Уночі (жоден поїзд уже або ще не ходить) — за налаштуванням інтервал після відкриття
+  let title = 'Інтервал руху';
+  const isNight = trains.length && trains.every(([, t]) => nowMin < toMin(t.first) || nowMin > toMin(t.last));
+  if (!ivs.length && isNight && getPref('showIntervals') && getPref('morningInterval')) {
+    ivs = morningIntervals(s, now);
+    title = 'Інтервал руху після відкриття';
+  }
 
   // Різниця між напрямками до 60 с — один рядок без назв напрямків
   const [x, y] = ivs;
   if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= 60 && Math.abs(x[1][1] - y[1][1]) <= 60) {
     const iv = [Math.min(x[1][0], y[1][0]), Math.max(x[1][1], y[1][1])];
-    lines.push(`<span class="clock-pill">Інтервал руху: <span class="clock-interval">${fmtInterval(iv)}</span></span>`);
+    lines.push(`<span class="clock-pill">${title}: <span class="clock-interval">${fmtInterval(iv)}</span></span>`);
   } else if (ivs.length) {
     // Два напрямки — одна пілюля-блок з заголовком і рядком на кожен бік
-    lines.push('<span class="clock-pill clock-pill-multi"><span>Інтервал руху</span>' +
+    lines.push(`<span class="clock-pill clock-pill-multi"><span>${title}</span>` +
       ivs.map(([terminal, iv]) => `<span>у бік ${TERMINAL_GEN[terminal] || terminal}: ` +
         `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
   }
@@ -432,10 +457,10 @@ export function renderDirections(s, color) {
 
 export function applyFavPillStyles(container, lineColor, isFaved) {
   container.querySelectorAll('.pos-pill').forEach(p => {
-    p.style.background = isFaved ? lineColor : '';
+    p.style.background = isFaved ? lineTextColor(lineColor) : '';
     const num = p.querySelector('.pos-pill-num');
     const lbl = p.querySelector('.pos-pill-label');
-    if (num) num.style.color = isFaved ? 'var(--bg)' : pillTextColor(lineColor);
+    if (num) num.style.color = isFaved ? 'var(--bg)' : lineTextColor(lineColor);
     if (lbl) lbl.style.color = isFaved ? 'var(--bg)' : '';
   });
 }

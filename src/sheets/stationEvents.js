@@ -15,7 +15,7 @@ import {
 import { dismissHintWithDoors } from '../ui/animations.js';
 import { Icons }                from '../ui/icons.js';
 import { applyFavPillStyles, renderExitRoutes } from './renderStation.js';
-import { heartSvg }               from '../ui/components.js';
+import { heartSvg, lineTextColor } from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { getPref }                from '../core/prefs.js';
 import { isCheckinMode }          from '../domain/checkin.js';
@@ -201,7 +201,7 @@ function _maybeShowCheckinHint(lineColor) {
   hint.id        = 'checkinHint';
   hint.className = 'onboarding-hint';
   hint.innerHTML =
-    `<span class="hint-icon-wrap" style="color:${lineColor}">${Icons.info}</span>` +
+    `<span class="hint-icon-wrap" style="color:${lineTextColor(lineColor)}">${Icons.info}</span>` +
     `Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід&nbsp;зі&nbsp;станції як&nbsp;відвіданий`;
   sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
 }
@@ -350,7 +350,7 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
   panel.dataset.targetIdx = String([...(sheetBodyEl?.querySelectorAll('.fav-tap-target') ?? [])].indexOf(favTarget));
   panel.innerHTML =
     exitsList.map(item =>
-      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineColor}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span>${renderExitRoutes(station, item.num)}</div>`
+      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineTextColor(lineColor)}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span>${renderExitRoutes(station, item.num)}</div>`
     ).join('') +
     `<button type="button" class="pos-numbered-exits-collapse" aria-label="Згорнути">${COLLAPSE_ARROW_SVG}</button>`;
 

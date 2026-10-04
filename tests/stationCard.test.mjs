@@ -18,6 +18,7 @@ globalThis.localStorage = {
 const { state } = await import('../src/core/state.js');
 const { exitGroupKey } = await import('../src/domain/checkin.js');
 const { setPref } = await import('../src/core/prefs.js');
+setPref('checkinByExit', true);
 
 const { stations } = JSON.parse(readFileSync(new URL('../public/stations.json', import.meta.url)));
 state.stationsData = Object.fromEntries(
@@ -45,4 +46,18 @@ test('Check-in без групування: кожна позиція окрем
   const [a, , b] = groups('B.Demiivska', ['220-1', '220-2', '220-3']);
   assert.notEqual(a, b);
   setPref('checkinByExit', true);
+});
+
+const { renderStationClock } = await import('../src/sheets/renderStation.js');
+state.lineIntervals = JSON.parse(readFileSync(new URL('../public/stations.json', import.meta.url))).line_intervals;
+
+test('Ранковий інтервал: уночі показує інтервал після відкриття', () => {
+  const st = state.stationsData['B.Demiivska'];
+  const night = new Date(2026, 9, 5, 2, 30); // понеділок, 02:30
+  setPref('morningInterval', true);
+  assert.match(renderStationClock(st, night), /Інтервал руху після відкриття/);
+  setPref('morningInterval', false);
+  assert.doesNotMatch(renderStationClock(st, night), /після відкриття/);
+  setPref('morningInterval', true);
+  assert.doesNotMatch(renderStationClock(st, new Date(2026, 9, 5, 12, 0)), /після відкриття/);
 });
