@@ -270,9 +270,9 @@ function _dismissFavOnlyHint() {
 bus.on('fav:updated', updateFavDock);
 
 // Крос-табна синхронізація: domain оновив кеш і емітував подію.
-bus.on('fav:externally-updated', ({ key }) => {
+bus.on('fav:externally-updated', () => {
   updateFavDock();
-  if (key === STORAGE_KEYS.FAVS && favSheet?.classList.contains('sheet-open')) {
+  if (favSheet?.classList.contains('sheet-open')) {
     renderFavList(getFavs());
   }
 });

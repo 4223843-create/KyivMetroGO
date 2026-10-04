@@ -345,7 +345,7 @@ export function openSettingsSheet() {
           Storage.remove(STORAGE_KEYS.FAV_ROWS_ORDER);
           setTimeout(() => {
             document.getElementById('settingsClose').click();
-            setTimeout(() => window.location.reload(), 300);
+            setTimeout(() => Storage.flush().then(() => window.location.reload()), 300);
           }, 180);
         },
         labelYes: 'Очистити',

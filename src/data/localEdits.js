@@ -317,6 +317,13 @@ function _migrateLegacy(stationsData) {
 // EventBus — синхронний: handlers виконуються до повернення bus.emit(),
 // тому правки гарантовано застосовані до того, як hydrateStations поверне дані.
 
+// Правки чи підписи змінили в іншій вкладці
+bus.on('storage:changed', ({ key }) => {
+  if (key !== STORAGE_KEYS.LOCAL_EDITS && key !== STORAGE_KEYS.EXIT_LABELS) return;
+  applyLocalLayer();
+  bus.emit('station:refresh');
+});
+
 bus.on('data:stations-hydrated', ({ stationsData }) => {
   _migrateLegacy(stationsData);
   _base = structuredClone(stationsData);

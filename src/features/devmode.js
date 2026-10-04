@@ -46,6 +46,7 @@ import { getPositionDescriptorsForStation, devRowKey } from '../sheets/renderSta
 import { legacyKeyMap }     from '../data/positions.js';
 import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
 import { escapeHtml } from '../ui/html.js';
+import { showToast }  from '../ui/toast.js';
 import { isDevMode, toggleDevMode } from './devFlags.js';
 import {
   emptyConfirmationData as _emptyConfirmationData,
@@ -1292,18 +1293,7 @@ function showDevPhotoFullscreen(src) {
 }
 
 // ── UI: тост активації ────────────────────────────────
-function _showToast(text) {
-  document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
-  const toast = document.createElement('div');
-  toast.className = 'dev-mode-toast';
-  toast.textContent = text;
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('dev-mode-toast-open'));
-  setTimeout(() => {
-    toast.classList.remove('dev-mode-toast-open');
-    setTimeout(() => toast.remove(), 400);
-  }, 2500);
-}
+const _showToast = showToast;
 
 /**
  * Показує тимчасовий тост про стан dev-режиму.
@@ -1646,7 +1636,7 @@ function setupDevDataClear(container) {
     console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
   );
 
-  setTimeout(() => location.reload(), 180);
+  setTimeout(() => Storage.flush().then(() => location.reload()), 180);
 },
           onNo:      null,
           onCancel:  null,

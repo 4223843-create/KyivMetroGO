@@ -19,6 +19,7 @@ import { bus } from './core/eventBus.js';
 import { state } from './core/state.js';
 import { pushSheetHistory } from './ui/system.js';
 import { hasOpenSheet }     from './ui/sheetNav.js';
+import { showToast }        from './ui/toast.js';
 import { openDevMenuSheet } from './sheets/devMenuSheet.js';
 
 // ── Bottom bar ─────────────────────────────────────────────────
@@ -84,6 +85,15 @@ if (menuBtn && dropMenu) {
     });
   });
 }
+
+// ── Помилка запису на пристрій ─────────────────────────────────
+// Storage пише у фоні; якщо запис не вдався, користувач має про це знати.
+let _writeFailShown = false;
+bus.on('storage:write-failed', () => {
+  if (_writeFailShown) return;     // одне повідомлення на сесію, а не на кожен ключ
+  _writeFailShown = true;
+  showToast('Не вдалося зберегти зміни на пристрої');
+});
 
 // ── Кнопка «Назад» ────────────────────────────────────────────
 // Нативний Android: апаратна кнопка через @capacitor/app.

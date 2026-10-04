@@ -251,17 +251,9 @@ bus.on('data:stations-hydrated', ({ stationsData }) => {
 // Оновлюємо тільки кеш (data-concerns), UI-реакцію делегуємо
 // в features/favorites/index.js через bus.on('fav:externally-updated').
 
-// Preferences на вебі пише в localStorage з префіксом «CapacitorStorage.»
-const _PREFS_PREFIX = 'CapacitorStorage.';
-
-window.addEventListener('storage', e => {
-  if (e.key === _PREFS_PREFIX + STORAGE_KEYS.FAVS) {
-    try { _favCache = JSON.parse(e.newValue || '[]'); }
-    catch { _favCache = []; }
-    bus.emit('fav:externally-updated', { key: e.key });
-  } else if (e.key === _PREFS_PREFIX + STORAGE_KEYS.EXIT_FAVS) {
-    try { _exitFavCache = JSON.parse(e.newValue || '[]'); }
-    catch { _exitFavCache = []; }
-    bus.emit('fav:externally-updated', { key: e.key });
-  }
+bus.on('storage:changed', ({ key }) => {
+  if (key === STORAGE_KEYS.FAVS)           _favCache = null;
+  else if (key === STORAGE_KEYS.EXIT_FAVS) _exitFavCache = null;
+  else return;
+  bus.emit('fav:externally-updated', { key });
 });

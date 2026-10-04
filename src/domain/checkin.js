@@ -23,6 +23,13 @@ export function invalidateCheckinsCache() {
   _checkinsCache = null;
 }
 
+// Чекіни змінили в іншій вкладці
+bus.on('storage:changed', ({ key }) => {
+  if (key !== STORAGE_KEYS.CHECKINS) return;
+  _checkinsCache = null;
+  bus.emit('station:refresh');
+});
+
 export function getCheckins() {
   if (_checkinsCache) return _checkinsCache;
   try {
