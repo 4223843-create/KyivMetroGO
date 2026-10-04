@@ -23,9 +23,8 @@ import { STORAGE_KEYS, Storage } from '../../core/storage.js';
 import { bus }             from '../../core/eventBus.js';
 import { Icons }           from '../../ui/icons.js';
 import { LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES } from '../../core/constants.js';
-import { animateSheetClose }  from '../../ui/animations.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
-import { pushSheetHistory }   from '../../ui/system.js';
+import { showSheet, hideSheet } from '../../ui/sheetNav.js';
 import { slugByName }         from '../../data/stations.js';
 
 import {
@@ -54,7 +53,6 @@ export {
 const favSheet     = document.getElementById('favSheet');
 const favBody      = document.getElementById('favBody');
 const favClose     = document.getElementById('favClose');
-const sheetOverlay = document.getElementById('sheetOverlay');
 
 // ══ ПОРОЖНІЙ СТАН ════════════════════════════════════════════
 
@@ -216,14 +214,11 @@ favBody.addEventListener('click', e => {
 // ══ ВІДКРИТТЯ / ЗАКРИТТЯ ══════════════════════════════════════
 
 export function openFavSheet() {
-  pushSheetHistory();
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   const favs = getFavs();
   if (!state.stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
   else if (!favs.length)   favBody.innerHTML = getEmptyFavHtml();
   else                     renderFavList(favs);
-  favSheet.classList.add('sheet-open');
-  sheetOverlay.classList.add('overlay-visible');
+  showSheet(favSheet);
 
   const hideInfo   = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
   const startOnFav = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
@@ -239,11 +234,7 @@ export function openFavSheet() {
 }
 
 export function closeFavSheet() {
-  animateSheetClose(favSheet, () => {
-    favSheet.classList.remove('sheet-open');
-    if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-      sheetOverlay.classList.remove('overlay-visible');
-  });
+  hideSheet(favSheet);
 }
 
 // ══ DOCK-ІКОНКА ══════════════════════════════════════════════

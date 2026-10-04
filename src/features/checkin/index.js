@@ -18,9 +18,8 @@ import { STORAGE_KEYS, Storage } from '../../core/storage.js';
 import { bus }                from '../../core/eventBus.js';
 import { Icons }              from '../../ui/icons.js';
 import { LINE_COLOR }         from '../../core/constants.js';
-import { animateSheetClose }  from '../../ui/animations.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
-import { pushSheetHistory }   from '../../ui/system.js';
+import { showSheet, hideSheet } from '../../ui/sheetNav.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 import {
@@ -169,17 +168,11 @@ function renderLineRings(lineStats) {
  * Відкриває шторку журналу check-in.
  */
 export function openCheckinSheet() {
-  pushSheetHistory();
   let checkinSheet   = document.getElementById('checkinSheet');
-  const sheetOverlay = document.getElementById('sheetOverlay');
 
   const closeHandler = () => {
     const s = document.getElementById('checkinSheet');
-    animateSheetClose(s, () => {
-      s?.classList.remove('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-      if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-        sheetOverlay.classList.remove('overlay-visible');
-    });
+    hideSheet(s, { removeClasses: ['sheet-fullscreen', 'sheet-scrollable'] });
   };
 
   const renderCheckinContent = () => {
@@ -385,9 +378,7 @@ export function openCheckinSheet() {
     );
   }
 
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  checkinSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-  sheetOverlay.classList.add('overlay-visible');
+  showSheet(checkinSheet, 'sheet-fullscreen', 'sheet-scrollable');
 }
 
 // ══ BUS-ПІДПИСКИ ══════════════════════════════════════════════

@@ -18,6 +18,7 @@ import { withUnsavedCheck } from './core/unsavedCheck.js';
 import { bus } from './core/eventBus.js';
 import { state } from './core/state.js';
 import { pushSheetHistory } from './ui/system.js';
+import { hasOpenSheet }     from './ui/sheetNav.js';
 import { openDevMenuSheet } from './sheets/devMenuSheet.js';
 
 // ── Bottom bar ─────────────────────────────────────────────────
@@ -108,8 +109,7 @@ function closeSheetsOnBack() {
 
 if (Capacitor.isNativePlatform()) {
   App.addListener('backButton', ({ canGoBack }) => {
-    const hasOpenSheet = document.querySelectorAll('.station-sheet.sheet-open').length > 0;
-    if (hasOpenSheet) {
+    if (hasOpenSheet()) {
       closeSheetsOnBack();
     } else if (canGoBack) {
       window.history.back();
@@ -119,7 +119,7 @@ if (Capacitor.isNativePlatform()) {
   });
 } else {
   window.addEventListener('popstate', () => {
-    if (document.querySelectorAll('.station-sheet.sheet-open').length > 0) {
+    if (hasOpenSheet()) {
       closeSheetsOnBack();
     }
   });

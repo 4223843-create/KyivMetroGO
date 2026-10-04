@@ -3,12 +3,11 @@ import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { heartSvg }                from '../ui/components.js';
 import { Icons }                   from '../ui/icons.js';
 import { LINE_COLOR }              from '../core/constants.js';
-import { animateSheetClose }       from '../ui/animations.js';
 import { slugByName }              from '../data/stations.js';
 import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
-import { pushSheetHistory }        from '../ui/system.js';
+import { showSheet, hideSheet }    from '../ui/sheetNav.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
 import { renderDirections, renderStationConnections, renderStationClock, hasStationClock } from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles,
@@ -22,7 +21,6 @@ import { bindSheetGestures, applyInitialFavStyles,
 // ══ DOM-вузли ══
 const sheet            = document.getElementById('stationSheet');
 const sheetBody        = document.getElementById('sheetBody');
-const sheetOverlay     = document.getElementById('sheetOverlay');
 const stationTitleMain = document.getElementById('stationTitleMain');
 const clockBtn         = document.getElementById('sheetClockBtn');
 // Панель годинника живе на початку sheetBody (під назвою станції) і
@@ -103,13 +101,12 @@ bus.on('fav:externally-updated', () => refreshCurrentStation());
 bus.on('station:open', ({ slug }) => openStation(slug));
 
 bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
-  animateSheetClose(sheet, () => {
-    sheet.classList.remove('sheet-open');
+  hideSheet(sheet, { onClosed: () => {
     bus.emit('sheet:open-feedback');
     setTimeout(() => {
       document.querySelector(`.fb-station-item[data-slug="${editSlug}"]`)?.click();
     }, 50);
-  });
+  } });
 });
 
 // ── ОПТИМІЗОВАНИЙ applyNavLinks ───────────────────────────────
@@ -169,7 +166,6 @@ function actualOpenStation(slug) {
   }
 
   state.currentStationSlug = slug;
-  pushSheetHistory();
   bus.emit('fav:dismiss-hint');
 
   const fav            = isFav(slug);
@@ -219,16 +215,7 @@ function actualOpenStation(slug) {
   _updateFavBtn(slug, color);
   _syncClockBtn();
 
-  // Закриваємо всі допоміжні шторки (feedback, settings, checkin тощо).
-  // querySelectorAll — єдиний коректний спосіб: ці шторки створюються lazily
-  // після ініціалізації модуля і не потрапляють у статичний кеш.
-  document.querySelectorAll('.station-sheet').forEach(el => {
-    if (el.id !== 'stationSheet') el.classList.remove('sheet-open');
-  });
-  if (!sheet.classList.contains('sheet-open')) {
-    sheet.classList.add('sheet-open');
-    sheetOverlay?.classList.add('overlay-visible');
-  }
+  showSheet(sheet);   // інші шторки (feedback, settings, checkin тощо) ховаються
 
   applyInitialFavStyles(sheetBody, slug, color);
   attachDevModeUI(sheetBody, slug);

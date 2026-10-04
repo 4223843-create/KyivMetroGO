@@ -2,10 +2,8 @@
 
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { setupDevModeTapCounter } from '../features/devmode.js';
-import { pushSheetHistory }  from '../ui/system.js';
-import { animateSheetClose } from '../ui/animations.js';
+import { showSheet, hideSheet } from '../ui/sheetNav.js';
 
-const sheetOverlay = document.getElementById('sheetOverlay');
 
 // ══ ДОПОМІЖНІ УТИЛІТИ КОЛЬОРУ ══
 const getThemeColors = () => {
@@ -194,7 +192,6 @@ function bindBottomLoader(aboutSheet) {
 
 // ══ ВІДКРИТТЯ ABOUT-ШТОРКИ ══
 export function openAboutSheet() {
-  pushSheetHistory();
 
   // ── Ліниве створення DOM (один раз) ──
   let aboutSheet = document.getElementById('aboutSheet');
@@ -233,11 +230,7 @@ export function openAboutSheet() {
       b1?.classList.remove('info-btn-active');
       b2?.classList.remove('info-btn-active');
 
-      animateSheetClose(aboutSheet, () => {
-  aboutSheet.classList.remove('sheet-open');
-  if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-    sheetOverlay.classList.remove('overlay-visible');
-});
+      hideSheet(aboutSheet);
 
     });
   }
@@ -396,7 +389,5 @@ export function openAboutSheet() {
   }
 
   // ── Відкриваємо шторку ──
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  aboutSheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-  sheetOverlay.classList.add('overlay-visible');
+  showSheet(aboutSheet, 'sheet-fullscreen', 'sheet-scrollable');
 }

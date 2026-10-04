@@ -10,7 +10,7 @@ import { openAboutSheet }    from './aboutSheet.js';
 import { isFav, toggleFav } from '../features/favorites/index.js';
 import { heartSvg }          from '../ui/components.js';
 import { getSlugByLower } from '../data/stations.js';
-import { animateSheetClose }  from '../ui/animations.js';
+import { getOpenSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { closeAllDevPanels } from '../features/devmode.js';
@@ -35,20 +35,12 @@ export function closeAllSheets(force = false) {
   }
   closeAllDevPanels();
 
-  const openSheets = [...document.querySelectorAll('.station-sheet.sheet-open')];
-  const dropMenu   = document.getElementById('dropMenu');
+  const dropMenu = document.getElementById('dropMenu');
   if (dropMenu) { dropMenu.classList.remove('show'); dropMenu.hidden = true; }
 
-  if (!openSheets.length) {
-    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
-    return;
-  }
-
-  const topSheet = openSheets[openSheets.length - 1];
-  animateSheetClose(topSheet, () => {
-    openSheets.forEach(el => el.classList.remove('sheet-open'));
-    if (sheetOverlay) sheetOverlay.classList.remove('overlay-visible');
-  });
+  const openSheet = getOpenSheet();
+  if (openSheet) hideSheet(openSheet);
+  else sheetOverlay?.classList.remove('overlay-visible');
 }
 
 // ══ ОБРОБНИКИ ПОДІЙ ══
@@ -101,11 +93,6 @@ setTimeout(() => {
 // feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
 bus.on('sheet:close', ({ sheetEl }) => {
   if (!sheetEl) return;
-  animateSheetClose(sheetEl, () => {
-    sheetEl.classList.remove('sheet-open');
-    if (!document.querySelectorAll('.station-sheet.sheet-open').length) {
-      sheetOverlay?.classList.remove('overlay-visible');
-    }
-  });
+  hideSheet(sheetEl);
 });
 

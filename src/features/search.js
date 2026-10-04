@@ -9,8 +9,7 @@
 
 import { state } from '../core/state.js';
 import { fuzzyMatchToken } from '../utils/stringMatchers.js';
-import { pushSheetHistory }   from '../ui/system.js';
-import { animateSheetClose }  from '../ui/animations.js';
+import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { bus }                from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
@@ -160,8 +159,6 @@ function _renderItem(s, isExitOnly, exitHint) {
  */
 /** Відкриває шторку пошуку станцій. */
 export function openSearchSheet() {
-  pushSheetHistory();
-  const sheetOverlay = document.getElementById('sheetOverlay');
   let searchSheet    = document.getElementById('searchSheet');
 
   if (!searchSheet) {
@@ -178,11 +175,7 @@ export function openSearchSheet() {
       searchSheet._cleanupVP?.();
       searchSheet.style.maxHeight = '';
       document.getElementById('searchInput').blur();
-      animateSheetClose(searchSheet, () => {
-        searchSheet.classList.remove('sheet-open');
-        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-          sheetOverlay.classList.remove('overlay-visible');
-      });
+      hideSheet(searchSheet);
     });
 
     const input            = document.getElementById('searchInput');
@@ -282,7 +275,5 @@ export function openSearchSheet() {
   renderSearchResults('', resultsContainer, new Set());
 
   // Відкриття шторки
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  searchSheet.classList.add('sheet-open');
-  document.getElementById('sheetOverlay').classList.add('overlay-visible');
+  showSheet(searchSheet);
 }

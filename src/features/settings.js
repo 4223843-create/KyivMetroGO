@@ -5,9 +5,8 @@
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { LINE_COLOR }              from '../core/constants.js';
 import { applyTheme }              from '../ui/theme.js';
-import { animateSheetClose }       from '../ui/animations.js';
 import { initKinematicSwipe }      from '../ui/swipe.js';
-import { pushSheetHistory }        from '../ui/system.js';
+import { showSheet, hideSheet }    from '../ui/sheetNav.js';
 import { bus }                     from '../core/eventBus.js';
 import { state }                   from '../core/state.js';
 import { isDevMode, getDevLog }    from './devmode.js';
@@ -84,8 +83,6 @@ function showHoursSoonToast(btnEl) {
 
 /** Відкриває шторку налаштувань. При першому виклику — ліниво створює DOM з template. */
 export function openSettingsSheet() {
-  pushSheetHistory();
-  const sheetOverlay = document.getElementById('sheetOverlay');
   let settingsSheet  = document.getElementById('settingsSheet');
 
   if (!settingsSheet) {
@@ -184,11 +181,7 @@ export function openSettingsSheet() {
 
     // ── Закрити ──
     document.getElementById('settingsClose').addEventListener('click', () => {
-      animateSheetClose(settingsSheet, () => {
-        settingsSheet.classList.remove('sheet-open');
-        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-          sheetOverlay.classList.remove('overlay-visible');
-      });
+      hideSheet(settingsSheet);
     });
 
     // ── Check-in головний ──
@@ -511,9 +504,7 @@ export function openSettingsSheet() {
 
   syncToggles();
 
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  settingsSheet.classList.add('sheet-open');
-  sheetOverlay.classList.add('overlay-visible');
+  showSheet(settingsSheet);
 }
 
 /** Інтервали руху в панелі годинника на картці станції. За замовчуванням — увімкнено. */
