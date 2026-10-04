@@ -65,7 +65,7 @@ function showHoursSoonToast(btnEl) {
     max-width: calc(100vw - 32px);
     text-align: center;
   `;
-  toast.innerHTML = 'За 2 години до закриття<br>і впродовж 2 годин після відкриття';
+  toast.innerHTML = 'За 2 години до закриття –<br>впродовж 2 годин після відкриття';
   document.body.appendChild(toast);
   setTimeout(() => {
     toast.classList.remove('dev-mode-toast-open');

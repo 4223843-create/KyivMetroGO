@@ -13,10 +13,9 @@ const PREFS = {
   localOnlyFeedback:    { key: STORAGE_KEYS.LOCAL_ONLY_FEEDBACK,    def: false },
   hideNoLift:           { key: STORAGE_KEYS.HIDE_NO_LIFT,           def: false },
   // Знак колісного крісла на карті: ліфти / ліфти та спецпідйомники / нічого.
-  // Поки не обрано — з колишніх тумблерів «доступність на карті» і «підйомники».
-  mapAccessibility:     { key: STORAGE_KEYS.MAP_ACCESSIBILITY,      def: 'hoists',  values: ['lifts', 'hoists', 'none'],
-                          legacy: () => Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) === 'false' ? 'none'
-                            : Storage.get(STORAGE_KEYS.SHOW_HOISTS) === 'false' ? 'lifts' : null },
+  // Поки не обрано: якщо раніше вимкнули «доступність на карті» — нічого, інакше ліфти.
+  mapAccessibility:     { key: STORAGE_KEYS.MAP_ACCESSIBILITY,      def: 'lifts',   values: ['lifts', 'hoists', 'none'],
+                          legacy: () => (Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) === 'false' ? 'none' : null) },
   showHoists:           { key: STORAGE_KEYS.SHOW_HOISTS,            def: true },
   showIntervals:        { key: STORAGE_KEYS.SHOW_INTERVALS,         def: true },
   // Уночі показувати інтервал руху після відкриття
