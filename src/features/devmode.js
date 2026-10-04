@@ -43,7 +43,7 @@ import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
 import { getPositionDescriptorsForStation } from '../sheets/renderStation.js';
-import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/firebaseSync.js';
+import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
 
 
 
@@ -82,16 +82,24 @@ let _devAuthResolved      = false;
 let _lastDevAuthContainer = null; // контейнер форми входу в меню розробника — щоб перемалювати при зміні auth
 let _lastAboutSheet       = null; // остання відкрита About-шторка — щоб оновити іконку швидкого синку
 
-onDevAuthChange(user => {
-  _devUser         = user;
-  _devAuthResolved = true;
-  if (_lastDevAuthContainer?.isConnected) {
-    renderDevAuthSection(_lastDevAuthContainer);
-  }
-  if (_lastAboutSheet?.isConnected) {
-    updateDevModeIndicator(_lastAboutSheet, isDevMode());
-  }
-});
+let _devAuthWatching      = false;
+
+// Firebase завантажується лише в режимі розробника (services/devCloud.js):
+// підписку вмикаємо, коли режим увімкнено — при запуску або перемиканні.
+function _ensureDevAuthWatch() {
+  if (_devAuthWatching) return;
+  _devAuthWatching = true;
+  onDevAuthChange(user => {
+    _devUser         = user;
+    _devAuthResolved = true;
+    if (_lastDevAuthContainer?.isConnected) {
+      renderDevAuthSection(_lastDevAuthContainer);
+    }
+    if (_lastAboutSheet?.isConnected) {
+      updateDevModeIndicator(_lastAboutSheet, isDevMode());
+    }
+  });
+}
 
 // ── Синхронізація: спільний "зайнятий"-прапорець ──────
 // Без цього автосинк (за таймером) і ручна кнопка могли одночасно вдарити
@@ -1587,6 +1595,7 @@ export function updateDevModeIndicator(aboutSheet, active) {
  */
 export function renderDevAuthSection(container) {
   if (!container) return;
+  _ensureDevAuthWatch();
   _lastDevAuthContainer = container;
   container.innerHTML = '';
 
@@ -1706,6 +1715,7 @@ export function setupDevModeTapCounter(aboutSheet) {
 /** Показує/ховає плаваючу кнопку меню розробника зверху карти. */
 export function updateDevMenuButtonVisibility() {
   document.getElementById('devMenuBtn')?.classList.toggle('is-hidden', !isDevMode());
+  if (isDevMode()) _ensureDevAuthWatch();
 }
 
 

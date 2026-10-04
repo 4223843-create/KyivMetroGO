@@ -79,6 +79,9 @@ export default defineConfig({
         injectionPoint: 'self.__WB_MANIFEST',
         globDirectory:  'dist',
         globPatterns:   ['**/*.{js,css,html}'],
+        // Firebase потрібен лише режиму розробника (services/devCloud.js) —
+        // не змушуємо кожного користувача завантажувати його при встановленні SW.
+        globIgnores:    ['**/firebaseSync.*.js'],
       },
       devOptions: { enabled: false },
     }),
