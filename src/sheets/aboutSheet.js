@@ -6,7 +6,7 @@ import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { showToast }             from '../ui/toast.js';
 
 // Форма Formspree, куди приходять записи на ранній доступ до Android.
-const BETA_FORM_URL = 'https://formspree.io/f/xrejbjww';
+const BETA_FORM_URL = 'https://formspree.io/f/mgopobnd';
 
 
 // ══ ДОПОМІЖНІ УТИЛІТИ КОЛЬОРУ ══
