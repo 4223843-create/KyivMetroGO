@@ -2,6 +2,16 @@
 // Чисті функції: string in → HTML string out. Нуль побічних ефектів.
 
 import { Icons } from './icons.js';
+import { LINE_COLOR } from '../core/constants.js';
+
+// Колір цифр на пілюлі: у світлій темі — темніший відтінок лінії, бо колір
+// лінії на сірій пілюлі має замалий контраст (styles.css: --line-*-text).
+const PILL_TEXT_COLOR = Object.fromEntries(
+  Object.entries(LINE_COLOR).map(([line, hex]) => [hex, `var(--line-${line}-text)`]),
+);
+
+/** Колір цифр на пілюлі для кольору лінії. */
+export const pillTextColor = color => PILL_TEXT_COLOR[color] || color;
 
 /**
  * Пілюля «вагон / двері» у картці станції.
@@ -9,7 +19,7 @@ import { Icons } from './icons.js';
 export function pill(label, value, color) {
   return `<div class="pos-pill">
     <div class="pos-pill-label">${label}</div>
-    <div class="pos-pill-num" style="color:${color}">${value}</div>
+    <div class="pos-pill-num" style="color:${pillTextColor(color)}">${value}</div>
   </div>`;
 }
 

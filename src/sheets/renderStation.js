@@ -1,6 +1,6 @@
 import { positionId }          from '../data/positions.js';
 import { state }               from '../core/state.js';
-import { pill }                from '../ui/components.js';
+import { pill, pillTextColor } from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
@@ -435,7 +435,7 @@ export function applyFavPillStyles(container, lineColor, isFaved) {
     p.style.background = isFaved ? lineColor : '';
     const num = p.querySelector('.pos-pill-num');
     const lbl = p.querySelector('.pos-pill-label');
-    if (num) num.style.color = isFaved ? 'var(--bg)' : lineColor;
+    if (num) num.style.color = isFaved ? 'var(--bg)' : pillTextColor(lineColor);
     if (lbl) lbl.style.color = isFaved ? 'var(--bg)' : '';
   });
 }
