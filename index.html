@@ -578,11 +578,11 @@ document.documentElement.setAttribute('data-theme', actual);
 
           <div class="settings-row">
             <div class="settings-label-wrap">
-              <span class="settings-label">Показувати інтервали руху</span>
-              <span class="settings-sublabel" style="text-align: left;">Натисніть на годинник у верхній панелі картки станції</span>
+              <span class="settings-label">Інтервали руху</span>
+              <span class="settings-sublabel" style="text-align: left;">Натисніть на годинник вгорі картки станції</span>
             </div>
             <label class="ios-toggle">
-              <input type="checkbox" id="settingsShowIntervalsToggle" aria-label="Показувати інтервали руху">
+              <input type="checkbox" id="settingsShowIntervalsToggle" aria-label="Інтервали руху">
               <span class="ios-toggle-slider"></span>
             </label>
           </div>
@@ -677,15 +677,14 @@ document.documentElement.setAttribute('data-theme', actual);
         <div class="settings-card">
           <div class="settings-card-header">Доступність</div>
           <div class="settings-rule"></div>
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Показувати доступність на карті</span>
-              <span class="settings-sublabel" style="text-align: left;">Показує знак колісного крісла біля станцій з ліфтами на схемі метро</span>
+          <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
+            <span class="settings-label">Відображати на карті</span>
+            <div class="settings-seg" id="settingsMapAccessibilitySeg" role="group" aria-label="Відображати на карті">
+              <button type="button" class="settings-seg-btn" data-map-acc-val="lifts">ліфти</button>
+              <button type="button" class="settings-seg-btn" data-map-acc-val="hoists">ліфти та спецпідйомники</button>
+              <button type="button" class="settings-seg-btn" data-map-acc-val="none">нічого</button>
             </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsShowMapAccessibilityToggle" aria-label="Показувати доступність на карті">
-              <span class="ios-toggle-slider"></span>
-            </label>
+            <span class="settings-sublabel">Знак колісного крісла на карті</span>
           </div>
           <div class="settings-rule"></div>
           <div class="settings-row">

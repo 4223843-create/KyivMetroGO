@@ -322,7 +322,8 @@ export function updateMapAccessibilityIcons() {
   // Очищаємо попередні іконки
   inner.querySelectorAll('.map-accessibility-icon').forEach(el => el.remove());
 
-  if (!getPref('showMapAccessibility')) return;
+  const mode = getPref('mapAccessibility');
+  if (mode === 'none') return;
 
   const svgEl = inner.querySelector('svg');
   if (!svgEl) return;
@@ -336,7 +337,7 @@ export function updateMapAccessibilityIcons() {
 
     const stData = state.stationsData[slug];
     const hasLift = stData?.directions?.some(d =>
-      d.exits?.some(e => e.positions?.some(p => p.isLift || (p.isHoist && getPref('showHoists'))))
+      d.exits?.some(e => e.positions?.some(p => p.isLift || (p.isHoist && mode === 'hoists')))
     );
 
     if (!hasLift) return;
