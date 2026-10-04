@@ -12,7 +12,8 @@ import { bus }                     from '../core/eventBus.js';
 import { pushSheetHistory }        from '../ui/system.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
 import { renderDirections, renderStationConnections, renderStationClock, hasStationClock } from './renderStation.js';
-import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
+import { bindSheetGestures, applyInitialFavStyles,
+         getOpenNumberedExitsIdx, reopenNumberedExitsPanel } from './stationEvents.js';
 
 // ══ STATION SHEET ══
 // Відповідальність: рендеринг та відкриття картки станції.
@@ -249,6 +250,7 @@ export function refreshCurrentStation() {
 
   // Відкрита панель годинника не має закриватися від перемальовування (напр. дотик до шпильки check-in)
   const clockWasOpen = !!document.getElementById('stationClockPanel')?.classList.contains('panel-open');
+  const numberedExitsIdx = getOpenNumberedExitsIdx(sheetBody);
 
   // Кеш вже інвалідовано в bus.on('station:refresh') вище
   stationTitleMain.textContent = s.name;
@@ -272,6 +274,8 @@ export function refreshCurrentStation() {
   // Всі кнопки, а не тільки перша
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
+
+  if (numberedExitsIdx >= 0) reopenNumberedExitsPanel(sheetBody, numberedExitsIdx, slug, color);
 
   sheetBody.scrollTop = prevScroll;
 }

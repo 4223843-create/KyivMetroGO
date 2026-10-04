@@ -46,6 +46,19 @@ export const STORAGE_KEYS = {
 
 const memoryCache = new Map();
 
+// Ранній скрипт теми в index.html виконується до Storage.init() і може читати
+// лише localStorage. На Android/iOS Preferences живе в нативному сховищі,
+// тому дублюємо туди тему, щоб не було спалаху системної теми при запуску.
+const THEME_BOOT_KEY = 'metro_theme_boot';
+function _mirrorTheme(key) {
+  if (key !== STORAGE_KEYS.THEME) return;
+  try {
+    const value = memoryCache.get(key);
+    if (value == null) localStorage.removeItem(THEME_BOOT_KEY);
+    else localStorage.setItem(THEME_BOOT_KEY, value);
+  } catch { /* localStorage недоступний — лишається спалах, не помилка */ }
+}
+
 export const Storage = {
   /**
    * Наповнює in-memory кеш усіма відомими ключами з нативного сховища.
@@ -64,6 +77,7 @@ export const Storage = {
         memoryCache.set(keys[index], res.value);
       }
     });
+    _mirrorTheme(STORAGE_KEYS.THEME);
   },
 
   /**
@@ -84,7 +98,8 @@ export const Storage = {
   set(key, value) {
     const valStr = String(value);
     memoryCache.set(key, valStr);
-    
+    _mirrorTheme(key);
+
     // Фоновий нативний запис, який не блокує головний потік UI
     Promise.resolve().then(async () => {
       await Preferences.set({ key, value: valStr });
@@ -97,7 +112,8 @@ export const Storage = {
    */
   remove(key) {
     memoryCache.delete(key);
-    
+    _mirrorTheme(key);
+
     Promise.resolve().then(async () => {
       await Preferences.remove({ key });
     });
@@ -131,6 +147,7 @@ export const Storage = {
       setOps.push(Preferences.set({ key, value }));
     }
     await Promise.all(setOps);
+    _mirrorTheme(STORAGE_KEYS.THEME);
   },
 };
 
