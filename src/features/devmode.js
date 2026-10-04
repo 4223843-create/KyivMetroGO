@@ -721,7 +721,7 @@ function _toggleStationNotePanel(panel, slug, lineColor, btn, defaultColor) {
   panel.innerHTML = `
     <textarea class="dev-note-textarea dev-station-note-textarea" placeholder="Загальна нотатка по станції…">${escapeHtml(currentText)}</textarea>
     <div class="dev-note-actions">
-      <button type="button" class="dev-station-note-save confirm-main-btn confirm-btn-save">Готово</button>
+      <button type="button" class="dev-station-note-save confirm-btn-save">Готово</button>
       ${currentText ? `<button type="button" class="dev-station-note-delete confirm-btn-discard">Видалити</button>` : ''}
     </div>`;
 
