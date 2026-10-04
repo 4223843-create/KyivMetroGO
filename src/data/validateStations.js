@@ -68,6 +68,19 @@ export function validateStationsData(data) {
     });
   });
 
+  // Посилання на інші станції (пересадки, попередня станція напрямку)
+  data.stations.forEach(s => {
+    if (!s || typeof s !== 'object') return;
+    const check = (value, where) => {
+      if (value != null && !slugs.has(value)) fail(`${s.slug}: ${where} посилається на невідому станцію ${JSON.stringify(value)}`);
+    };
+    for (const [id, ex] of Object.entries(s.exits_catalog || {})) {
+      check(ex?.transfer_to, `exits_catalog.${id}.transfer_to`);
+      check(ex?.link_to,     `exits_catalog.${id}.link_to`);
+    }
+    (Array.isArray(s.directions) ? s.directions : []).forEach((d, j) => check(d?.from_slug, `directions[${j}].from_slug`));
+  });
+
   return errors;
 }
 

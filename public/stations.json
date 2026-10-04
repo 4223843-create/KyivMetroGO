@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261004",
+  "version": "20261005",
   "line_intervals": {
     "green": [
       {
@@ -1609,6 +1609,7 @@
       "directions": [
         {
           "from": "попередня Святошин",
+          "from_slug": "R.Sviatoshyn",
           "exits": [
             {
               "id": "103",
@@ -1624,6 +1625,7 @@
         },
         {
           "from": "попередня Академмістечко",
+          "from_slug": "R.Akademmistechko",
           "exits": [
             {
               "id": "103",
@@ -1808,6 +1810,7 @@
       "directions": [
         {
           "from": "попередня Нивки",
+          "from_slug": "R.Nyvky",
           "exits": [
             {
               "id": "104",
@@ -1837,6 +1840,7 @@
         },
         {
           "from": "попередня Житомирська",
+          "from_slug": "R.Zhytomyrska",
           "exits": [
             {
               "id": "104",
@@ -2077,6 +2081,7 @@
       "directions": [
         {
           "from": "попередня Берестейська",
+          "from_slug": "R.Beresteiska",
           "exits": [
             {
               "id": "106",
@@ -2102,6 +2107,7 @@
         },
         {
           "from": "попередня Святошин",
+          "from_slug": "R.Sviatoshyn",
           "exits": [
             {
               "id": "106",
@@ -2285,6 +2291,7 @@
       "directions": [
         {
           "from": "попередня Шулявська",
+          "from_slug": "R.Shuliavska",
           "exits": [
             {
               "id": "108",
@@ -2300,6 +2307,7 @@
         },
         {
           "from": "попередня Нивки",
+          "from_slug": "R.Nyvky",
           "exits": [
             {
               "id": "108",
@@ -2415,6 +2423,7 @@
       "directions": [
         {
           "from": "попередня Політехнічний&nbsp;інститут",
+          "from_slug": "R.Politekhnychnyi_instytut",
           "exits": [
             {
               "id": "109",
@@ -2430,6 +2439,7 @@
         },
         {
           "from": "попередня Берестейська",
+          "from_slug": "R.Beresteiska",
           "exits": [
             {
               "id": "109",
@@ -2534,6 +2544,7 @@
       "directions": [
         {
           "from": "попередня Вокзальна",
+          "from_slug": "R.Vokzalna",
           "exits": [
             {
               "id": "110",
@@ -2549,6 +2560,7 @@
         },
         {
           "from": "попередня Шулявська",
+          "from_slug": "R.Shuliavska",
           "exits": [
             {
               "id": "110",
@@ -2636,6 +2648,7 @@
       "directions": [
         {
           "from": "попередня Університет",
+          "from_slug": "R.Universytet",
           "exits": [
             {
               "id": "111",
@@ -2651,6 +2664,7 @@
         },
         {
           "from": "попередня Політехнічний&nbsp;інститут",
+          "from_slug": "R.Politekhnychnyi_instytut",
           "exits": [
             {
               "id": "111",
@@ -2757,6 +2771,7 @@
       "directions": [
         {
           "from": "попередня Театральна",
+          "from_slug": "R.Teatralna",
           "exits": [
             {
               "id": "112",
@@ -2772,6 +2787,7 @@
         },
         {
           "from": "попередня Вокзальна",
+          "from_slug": "R.Vokzalna",
           "exits": [
             {
               "id": "112",
@@ -2841,6 +2857,7 @@
       "exits_catalog": {
         "113": {
           "label": "пересадка на Золоті&nbsp;ворота",
+          "transfer_to": "G.Zoloti_vorota",
           "exit_numbers": [
             {
               "num": "3",
@@ -2889,6 +2906,7 @@
       "directions": [
         {
           "from": "попередня Хрещатик",
+          "from_slug": "R.Khreshchatyk",
           "exits": [
             {
               "id": "113",
@@ -2919,6 +2937,7 @@
         },
         {
           "from": "попередня Університет",
+          "from_slug": "R.Universytet",
           "exits": [
             {
               "id": "113",
@@ -2998,6 +3017,7 @@
       "exits_catalog": {
         "115": {
           "label": "короткий перехід на Майдан&nbsp;Незалежності",
+          "transfer_to": "B.Maidan_Nezalezhnosti",
           "exit_numbers": [
             {
               "num": "1",
@@ -3040,16 +3060,19 @@
         },
         "118": {
           "label": "попередня Театральна",
+          "link_to": "R.Teatralna",
           "exit_numbers": []
         },
         "119": {
           "label": "попередня Арсенальна",
+          "link_to": "R.Arsenalna",
           "exit_numbers": []
         }
       },
       "directions": [
         {
           "from": "попередня Театральна",
+          "from_slug": "R.Teatralna",
           "exits": [
             {
               "id": "115",
@@ -3085,6 +3108,7 @@
         },
         {
           "from": "попередня Арсенальна",
+          "from_slug": "R.Arsenalna",
           "exits": [
             {
               "id": "115",
@@ -3207,6 +3231,7 @@
       "directions": [
         {
           "from": "попередня Хрещатик",
+          "from_slug": "R.Khreshchatyk",
           "exits": [
             {
               "id": "120",
@@ -3222,6 +3247,7 @@
         },
         {
           "from": "попередня Дніпро",
+          "from_slug": "R.Dnipro",
           "exits": [
             {
               "id": "120",
@@ -3316,6 +3342,7 @@
         },
         {
           "from": "попередня Арсенальна",
+          "from_slug": "R.Arsenalna",
           "exits": [
             {
               "id": "121",
@@ -3331,6 +3358,7 @@
         },
         {
           "from": "попередня Гідропарк",
+          "from_slug": "R.Hidropark",
           "exits": [
             {
               "id": "121",
@@ -3416,6 +3444,7 @@
       "directions": [
         {
           "from": "попередня Дніпро",
+          "from_slug": "R.Dnipro",
           "exits": [
             {
               "id": "122",
@@ -3431,6 +3460,7 @@
         },
         {
           "from": "попередня Лівобережна",
+          "from_slug": "R.Livoberezhna",
           "exits": [
             {
               "id": "122",
@@ -3515,6 +3545,7 @@
       "directions": [
         {
           "from": "попередня Гідропарк",
+          "from_slug": "R.Hidropark",
           "exits": [
             {
               "id": "123",
@@ -3543,6 +3574,7 @@
         },
         {
           "from": "попередня Дарниця",
+          "from_slug": "R.Darnytsia",
           "exits": [
             {
               "id": "123",
@@ -3715,6 +3747,7 @@
       "directions": [
         {
           "from": "попередня Лівобережна",
+          "from_slug": "R.Livoberezhna",
           "exits": [
             {
               "id": "125",
@@ -3743,6 +3776,7 @@
         },
         {
           "from": "попередня Чернігівська",
+          "from_slug": "R.Chernihivska",
           "exits": [
             {
               "id": "125",
@@ -3886,6 +3920,7 @@
       "directions": [
         {
           "from": "попередня Дарниця",
+          "from_slug": "R.Darnytsia",
           "exits": [
             {
               "id": "127",
@@ -3911,6 +3946,7 @@
         },
         {
           "from": "попередня Лісова",
+          "from_slug": "R.Lisova",
           "exits": [
             {
               "id": "127",
@@ -4434,6 +4470,7 @@
       "directions": [
         {
           "from": "попередня Оболонь",
+          "from_slug": "B.Obolon",
           "exits": [
             {
               "id": "203",
@@ -4459,6 +4496,7 @@
         },
         {
           "from": "попередня Героїв&nbsp;Дніпра",
+          "from_slug": "B.Heroiv_Dnipra",
           "exits": [
             {
               "id": "203",
@@ -4696,6 +4734,7 @@
       "directions": [
         {
           "from": "попередня Почайна",
+          "from_slug": "B.Pochaina",
           "exits": [
             {
               "id": "205",
@@ -4721,6 +4760,7 @@
         },
         {
           "from": "попередня Мінська",
+          "from_slug": "B.Minska",
           "exits": [
             {
               "id": "205",
@@ -4890,6 +4930,7 @@
       "directions": [
         {
           "from": "попередня Тараса&nbsp;Шевченка",
+          "from_slug": "B.Tarasa_Shevchenko",
           "exits": [
             {
               "id": "207",
@@ -4915,6 +4956,7 @@
         },
         {
           "from": "попередня Оболонь",
+          "from_slug": "B.Obolon",
           "exits": [
             {
               "id": "207",
@@ -5085,6 +5127,7 @@
       "directions": [
         {
           "from": "попередня Контрактова&nbsp;площа",
+          "from_slug": "B.Kontraktova_ploshcha",
           "exits": [
             {
               "id": "209",
@@ -5100,6 +5143,7 @@
         },
         {
           "from": "попередня Почайна",
+          "from_slug": "B.Pochaina",
           "exits": [
             {
               "id": "209",
@@ -5289,6 +5333,7 @@
       "directions": [
         {
           "from": "попередня Поштова&nbsp;площа",
+          "from_slug": "B.Poshtova_ploshcha",
           "exits": [
             {
               "id": "210",
@@ -5314,6 +5359,7 @@
         },
         {
           "from": "попередня Тараса&nbsp;Шевченка",
+          "from_slug": "B.Tarasa_Shevchenko",
           "exits": [
             {
               "id": "210",
@@ -5454,6 +5500,7 @@
       "directions": [
         {
           "from": "попередня Майдан&nbsp;Незалежності",
+          "from_slug": "B.Maidan_Nezalezhnosti",
           "exits": [
             {
               "id": "212",
@@ -5469,6 +5516,7 @@
         },
         {
           "from": "попередня Контрактова&nbsp;площа",
+          "from_slug": "B.Kontraktova_ploshcha",
           "exits": [
             {
               "id": "212",
@@ -5535,6 +5583,7 @@
       "exits_catalog": {
         "213": {
           "label": "пересадка на&nbsp;Хрещатик",
+          "transfer_to": "R.Khreshchatyk",
           "exit_numbers": [
             {
               "num": "4",
@@ -5637,6 +5686,7 @@
       "directions": [
         {
           "from": "попередня Площа&nbsp;Українських&nbsp;Героїв",
+          "from_slug": "B.Ploshcha_Ukrainskikh_heroiv",
           "exits": [
             {
               "id": "213",
@@ -5662,6 +5712,7 @@
         },
         {
           "from": "попередня Поштова&nbsp;площа",
+          "from_slug": "B.Poshtova_ploshcha",
           "exits": [
             {
               "id": "213",
@@ -5718,6 +5769,7 @@
       "exits_catalog": {
         "215": {
           "label": "пересадка на Палац&nbsp;спорту",
+          "transfer_to": "G.Palats_sportu",
           "exit_numbers": [
             {
               "num": "5",
@@ -5793,6 +5845,7 @@
       "directions": [
         {
           "from": "попередня Майдан&nbsp;Незалежності",
+          "from_slug": "B.Maidan_Nezalezhnosti",
           "exits": [
             {
               "id": "215",
@@ -5818,6 +5871,7 @@
         },
         {
           "from": "попередня Олімпійська",
+          "from_slug": "B.Olimpiiska",
           "exits": [
             {
               "id": "215",
@@ -5961,6 +6015,7 @@
       "directions": [
         {
           "from": "попередня Площа&nbsp;Українських&nbsp;Героїв",
+          "from_slug": "B.Ploshcha_Ukrainskikh_heroiv",
           "exits": [
             {
               "id": "217",
@@ -5976,6 +6031,7 @@
         },
         {
           "from": "попередня Палац&nbsp;„Україна“",
+          "from_slug": "B.Palats_Ukraina",
           "exits": [
             {
               "id": "217",
@@ -6132,6 +6188,7 @@
       "directions": [
         {
           "from": "попередня Олімпійська",
+          "from_slug": "B.Olimpiiska",
           "exits": [
             {
               "id": "218",
@@ -6147,6 +6204,7 @@
         },
         {
           "from": "попередня Либідська",
+          "from_slug": "B.Lybidska",
           "exits": [
             {
               "id": "218",
@@ -6292,6 +6350,7 @@
       "directions": [
         {
           "from": "попередня Палац&nbsp;„Україна“",
+          "from_slug": "B.Palats_Ukraina",
           "exits": [
             {
               "id": "219",
@@ -6307,6 +6366,7 @@
         },
         {
           "from": "попередня Деміївська",
+          "from_slug": "B.Demiivska",
           "exits": [
             {
               "id": "219",
@@ -6445,6 +6505,7 @@
       "directions": [
         {
           "from": "попередня Либідська",
+          "from_slug": "B.Lybidska",
           "exits": [
             {
               "id": "220",
@@ -6467,6 +6528,7 @@
         },
         {
           "from": "попередня Голосіївська",
+          "from_slug": "B.Holosiivska",
           "exits": [
             {
               "id": "220",
@@ -6632,6 +6694,7 @@
       "directions": [
         {
           "from": "попередня Деміївська",
+          "from_slug": "B.Demiivska",
           "exits": [
             {
               "id": "221",
@@ -6654,6 +6717,7 @@
         },
         {
           "from": "попередня Васильківська",
+          "from_slug": "B.Vasylkivska",
           "exits": [
             {
               "id": "221",
@@ -6810,6 +6874,7 @@
       "directions": [
         {
           "from": "попередня Голосіївська",
+          "from_slug": "B.Holosiivska",
           "exits": [
             {
               "id": "222",
@@ -6839,6 +6904,7 @@
         },
         {
           "from": "попередня Виставковий&nbsp;центр",
+          "from_slug": "B.Vystavkovyi_tsentr",
           "exits": [
             {
               "id": "222",
@@ -6980,6 +7046,7 @@
       "directions": [
         {
           "from": "попередня Васильківська",
+          "from_slug": "B.Vasylkivska",
           "exits": [
             {
               "id": "224",
@@ -6997,6 +7064,7 @@
         },
         {
           "from": "попередня Іподром",
+          "from_slug": "B.Ipodrom",
           "exits": [
             {
               "id": "224",
@@ -7117,6 +7185,7 @@
       "directions": [
         {
           "from": "попередня Виставковий&nbsp;центр",
+          "from_slug": "B.Vystavkovyi_tsentr",
           "exits": [
             {
               "id": "225",
@@ -7155,6 +7224,7 @@
         },
         {
           "from": "попередня Теремки",
+          "from_slug": "B.Teremky",
           "exits": [
             {
               "id": "225",
@@ -7571,6 +7641,7 @@
       "directions": [
         {
           "from": "попередня Лукʼянівська",
+          "from_slug": "G.Lukianivska",
           "exits": [
             {
               "id": "302",
@@ -7586,6 +7657,7 @@
         },
         {
           "from": "попередня Сирець",
+          "from_slug": "G.Syrets",
           "exits": [
             {
               "id": "302",
@@ -7730,6 +7802,7 @@
       "directions": [
         {
           "from": "попередня Золоті ворота",
+          "from_slug": "G.Zoloti_vorota",
           "exits": [
             {
               "id": "303",
@@ -7745,6 +7818,7 @@
         },
         {
           "from": "попередня Дорогожичі",
+          "from_slug": "G.Dorohozhychi",
           "exits": [
             {
               "id": "303",
@@ -7838,6 +7912,7 @@
       "exits_catalog": {
         "304": {
           "label": "пересадка на Театральну",
+          "transfer_to": "R.Teatralna",
           "exit_numbers": [
             {
               "num": "1",
@@ -7868,6 +7943,7 @@
       "directions": [
         {
           "from": "попередня Палац спорту",
+          "from_slug": "G.Palats_sportu",
           "exits": [
             {
               "id": "304",
@@ -7893,6 +7969,7 @@
         },
         {
           "from": "попередня Лукʼянівська",
+          "from_slug": "G.Lukianivska",
           "exits": [
             {
               "id": "304",
@@ -7949,6 +8026,7 @@
       "exits_catalog": {
         "306": {
           "label": "пересадка на Площу Українських Героїв",
+          "transfer_to": "B.Ploshcha_Ukrainskikh_heroiv",
           "exit_numbers": [
             {
               "num": "1",
@@ -7997,6 +8075,7 @@
       "directions": [
         {
           "from": "попередня Золоті ворота",
+          "from_slug": "G.Zoloti_vorota",
           "exits": [
             {
               "id": "306",
@@ -8022,6 +8101,7 @@
         },
         {
           "from": "попередня Кловська",
+          "from_slug": "G.Klovska",
           "exits": [
             {
               "id": "306",
@@ -8149,6 +8229,7 @@
       "directions": [
         {
           "from": "попередня Палац спорту",
+          "from_slug": "G.Palats_sportu",
           "exits": [
             {
               "id": "308",
@@ -8164,6 +8245,7 @@
         },
         {
           "from": "попередня Печерська",
+          "from_slug": "G.Pecherska",
           "exits": [
             {
               "id": "308",
@@ -8254,6 +8336,7 @@
       "directions": [
         {
           "from": "попередня Кловська",
+          "from_slug": "G.Klovska",
           "exits": [
             {
               "id": "309",
@@ -8269,6 +8352,7 @@
         },
         {
           "from": "попередня Звіринецька",
+          "from_slug": "G.Zvirynetska",
           "exits": [
             {
               "id": "309",
@@ -8391,6 +8475,7 @@
       "directions": [
         {
           "from": "попередня Печерська",
+          "from_slug": "G.Pecherska",
           "exits": [
             {
               "id": "310",
@@ -8406,6 +8491,7 @@
         },
         {
           "from": "попередня Видубичі",
+          "from_slug": "G.Vydubychi",
           "exits": [
             {
               "id": "310",
@@ -8567,6 +8653,7 @@
       "directions": [
         {
           "from": "попередня Звіринецька",
+          "from_slug": "G.Zvirynetska",
           "exits": [
             {
               "id": "311",
@@ -8592,6 +8679,7 @@
         },
         {
           "from": "попередня Славутич",
+          "from_slug": "G.Slavutych",
           "exits": [
             {
               "id": "311",
@@ -8727,6 +8815,7 @@
       "directions": [
         {
           "from": "попередня Видубичі",
+          "from_slug": "G.Vydubychi",
           "exits": [
             {
               "id": "313",
@@ -8742,6 +8831,7 @@
         },
         {
           "from": "попередня Осокорки",
+          "from_slug": "G.Osokorky",
           "exits": [
             {
               "id": "313",
@@ -8900,6 +8990,7 @@
       "directions": [
         {
           "from": "попередня Славутич",
+          "from_slug": "G.Slavutych",
           "exits": [
             {
               "id": "314",
@@ -8925,6 +9016,7 @@
         },
         {
           "from": "попередня Позняки",
+          "from_slug": "G.Pozniaky",
           "exits": [
             {
               "id": "314",
@@ -9101,6 +9193,7 @@
       "directions": [
         {
           "from": "попередня Осокорки",
+          "from_slug": "G.Osokorky",
           "exits": [
             {
               "id": "316",
@@ -9126,6 +9219,7 @@
         },
         {
           "from": "попередня Харківська",
+          "from_slug": "G.Kharkivska",
           "exits": [
             {
               "id": "316",
@@ -9310,6 +9404,7 @@
       "directions": [
         {
           "from": "попередня Позняки",
+          "from_slug": "G.Pozniaky",
           "exits": [
             {
               "id": "318",
@@ -9335,6 +9430,7 @@
         },
         {
           "from": "попередня Вирлиця",
+          "from_slug": "G.Vyrlytsia",
           "exits": [
             {
               "id": "318",
@@ -9482,6 +9578,7 @@
         },
         {
           "from": "попередня Харківська",
+          "from_slug": "G.Kharkivska",
           "exits": [
             {
               "id": "320",
@@ -9499,6 +9596,7 @@
         },
         {
           "from": "попередня Бориспільська",
+          "from_slug": "G.Boryspilska",
           "exits": [
             {
               "id": "320",
@@ -9612,6 +9710,7 @@
       "directions": [
         {
           "from": "попередня Вирлиця",
+          "from_slug": "G.Vyrlytsia",
           "exits": [
             {
               "id": "321",
@@ -9629,6 +9728,7 @@
         },
         {
           "from": "попередня Червоний&nbsp;Хутір",
+          "from_slug": "G.Chervonyi_khutir",
           "exits": [
             {
               "id": "321",

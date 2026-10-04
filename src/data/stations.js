@@ -144,6 +144,9 @@ export function hydrateStations(data) {
           if (!ex.label && catalogItem.label) {
             ex.label = catalogItem.label;
           }
+          // Станція, на яку веде підпис: пересадка чи інша станція (кнопка-посилання)
+          ex.transfer_to ??= catalogItem.transfer_to;
+          ex.link_to     ??= catalogItem.link_to;
           if (!ex.numbered_exits) {
             ex.numbered_exits = catalogItem.numbered_exits || catalogItem.exit_numbers;
           }

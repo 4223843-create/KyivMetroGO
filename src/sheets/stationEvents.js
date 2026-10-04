@@ -7,7 +7,6 @@ import { state }                  from '../core/state.js';
 import { TIMING }                 from '../core/timing.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { bus }                    from '../core/eventBus.js';
-import { slugByName }             from '../data/stations.js';
 import { findPosition }           from '../data/positions.js';
 import {
   isFav, isExitFav,
@@ -475,7 +474,7 @@ export function bindSheetGestures(sheetBody, getCtx) {
     // 4. Nav-label → відкрити іншу станцію
     const navLabel = e.target.closest('.nav-link');
     if (navLabel) {
-      const target = slugByName(navLabel.dataset.name || '');
+      const target = navLabel.dataset.target;
       if (target && target !== slug) bus.emit('station:open', { slug: target });
       return;
     }

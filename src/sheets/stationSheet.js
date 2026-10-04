@@ -3,7 +3,6 @@ import { getPref } from '../core/prefs.js';
 import { heartSvg }                from '../ui/components.js';
 import { Icons }                   from '../ui/icons.js';
 import { LINE_COLOR }              from '../core/constants.js';
-import { slugByName }              from '../data/stations.js';
 import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
@@ -15,7 +14,7 @@ import { bindSheetGestures, applyInitialFavStyles,
 
 // ══ STATION SHEET ══
 // Відповідальність: рендеринг та відкриття картки станції.
-// Кешує HTML рядків renderDirections та маппінги nav-label → slug
+// Кешує HTML рядків renderDirections
 // для уникнення повторних обчислень при повторних відкриттях.
 
 // ══ DOM-вузли ══
@@ -75,11 +74,6 @@ bindSheetGestures(
 // Ключ: slug. Інвалідується при station:refresh (дані змінились).
 const _directionsHtmlCache = new Map(); // slug → html
 
-// Кеш slug-маппінгу для nav-label елементів.
-// Ключ: slug. Значення: Map<labelName, targetSlug|null>.
-// Стабільний між відкриттями (назви напрямків незмінні).
-const _navLinkCache = new Map();
-
 // ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
 
 // При оновленні даних — інвалідуємо кеш HTML поточної станції
@@ -109,40 +103,18 @@ bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
   } });
 });
 
-// ── ОПТИМІЗОВАНИЙ applyNavLinks ───────────────────────────────
+// ── ПОСИЛАННЯ НА ІНШІ СТАНЦІЇ ─────────────────────────────────
+// Підпис веде на станцію, лише якщо в даних є data-target (transfer_to,
+// link_to виходу або from_slug напрямку) — без пошуку назви в тексті.
 
 function applyNavLinks(slug) {
-  const labels = sheetBody.querySelectorAll('.nav-label');
-  let nameToTarget = _navLinkCache.get(slug);
-
-  if (!nameToTarget) {
-    // Перший візит: обчислюємо slugByName() і кешуємо результат
-    nameToTarget = new Map();
-    labels.forEach(el => {
-      const name = el.dataset.name || '';
-      if (!nameToTarget.has(name)) {
-        // slugByName() викликається по одному разу на унікальну назву
-        nameToTarget.set(name, slugByName(name) || null);
-      }
-      const target = nameToTarget.get(name);
-      if (target && target !== slug) {
-        el.classList.add('nav-link');
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
-      }
-    });
-    _navLinkCache.set(slug, nameToTarget);
-  } else {
-    // Повторний візит: нуль slugByName() — тільки DOM writes
-    labels.forEach(el => {
-      const target = nameToTarget.get(el.dataset.name || '');
-      if (target && target !== slug) {
-        el.classList.add('nav-link');
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
-      }
-    });
-  }
+  sheetBody.querySelectorAll('.nav-label[data-target]').forEach(el => {
+    const target = el.dataset.target;
+    if (!target || target === slug || !state.stationsData?.[target]) return;
+    el.classList.add('nav-link');
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+  });
 }
 
 // ── ВІДКРИТТЯ СТАНЦІЇ ─────────────────────────────────────────
