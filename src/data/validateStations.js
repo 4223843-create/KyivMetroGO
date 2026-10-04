@@ -34,6 +34,7 @@ export function validateStationsData(data) {
 
   const slugs = new Set();
   data.stations.forEach((s, i) => {
+    const positionIds = new Set();
     const where = `stations[${i}]${s?.slug ? ` (${s.slug})` : ''}`;
     if (!s || typeof s !== 'object') { fail(`${where}: не об'єкт`); return; }
     if (typeof s.slug !== 'string' || !s.slug) fail(`${where}: немає slug`);
@@ -56,7 +57,12 @@ export function validateStationsData(data) {
         if (!ex || typeof ex !== 'object') { fail(`${eWhere}: не об'єкт`); return; }
         if (ex.positions != null && !Array.isArray(ex.positions)) fail(`${eWhere}: positions має бути масивом`);
         (ex.positions || []).forEach((p, m) => {
-          if (!p || typeof p !== 'object') fail(`${eWhere}.positions[${m}]: не об'єкт`);
+          const pWhere = `${eWhere}.positions[${m}]`;
+          if (!p || typeof p !== 'object') { fail(`${pWhere}: не об'єкт`); return; }
+          // До id прив'язані вибране, чекіни й правки (scripts/assign-position-ids.py)
+          if (typeof p.id !== 'string' || !p.id) fail(`${pWhere}: немає id (запустіть scripts/assign-position-ids.py)`);
+          else if (positionIds.has(p.id)) fail(`${pWhere}: id ${p.id} повторюється на станції`);
+          else positionIds.add(p.id);
         });
       });
     });

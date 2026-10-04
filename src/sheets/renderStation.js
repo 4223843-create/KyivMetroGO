@@ -1,4 +1,5 @@
 import { slugByName }          from '../data/stations.js';
+import { positionId }          from '../data/positions.js';
 import { state }               from '../core/state.js';
 import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
@@ -184,8 +185,9 @@ function generatePills(wStr, dStr, color) {
   return blocks.join('<span class="pos-multi-sep" style="margin: 0 6px;">·</span>');
 }
 
-function favTargetHtml(wStr, dStr, color) {
+function favTargetHtml(wStr, dStr, color, posId) {
   return `<div class="fav-tap-target"
+               data-pos="${posId ?? ''}"
                data-wagon="${wStr}"
                data-doors="${dStr}"
                style="display:flex;gap:6px;align-items:center;">
@@ -248,11 +250,12 @@ function renderIcons(p) {
 }
 
 /**
- * Стабільний ключ рядка позиції для даних режиму розробника (нотатки,
- * підтвердження, фото). Похідний від ключа першої позиції рядка
- * («напрямок|id виходу|номер позиції», data/positions.js), тож не зсувається,
- * коли в даних з'являються інші виходи. Хеш — щоб ключ був коротким і
- * безпечним для id елементів, назв файлів фото й полів Firestore.
+ * Постійний ключ рядка позиції для даних режиму розробника (нотатки,
+ * підтвердження, фото). Похідний від id першої позиції рядка
+ * (positionId, data/positions.js), тож не зсувається й не губиться, коли в
+ * даних з'являються інші виходи чи перейменовують напрямок. Хеш — щоб ключ був
+ * коротким і безпечним для id елементів, назв файлів фото й полів Firestore.
+ * Старі ключі (хеш від «напрямок|id виходу|номер») переводить devmode.js.
  */
 export function devRowKey(positionKey) {
   if (!positionKey) return '';
@@ -283,7 +286,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
     const hasSpecial = !!icons;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}"${rowKeyAttr(p)}>
-      ${edited}${favTargetHtml(p.wagon, p.doors, color)}${icons}
+      ${edited}${favTargetHtml(p.wagon, p.doors, color, positionId(p))}${icons}
     </div>`;
   }
 
@@ -295,7 +298,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
     const spacer  = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
     const targets = grouped.map((p, i) => {
       const icons = renderIcons(p, exit);
-      return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}${icons}`;
+      return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color, positionId(p))}${icons}`;
     }).join('');
 
     return `<div class="position-row position-row-multi"${rowKeyAttr(grouped[0])}>${edited}${targets}${spacer}</div>`;
@@ -307,7 +310,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
     const hasSpecial = !!icons;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}"${rowKeyAttr(p)}>
-      ${favTargetHtml(p.wagon, p.doors, color)}${icons}
+      ${favTargetHtml(p.wagon, p.doors, color, positionId(p))}${icons}
     </div>`;
   }).join('');
 }

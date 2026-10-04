@@ -42,7 +42,8 @@ import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
-import { getPositionDescriptorsForStation } from '../sheets/renderStation.js';
+import { getPositionDescriptorsForStation, devRowKey } from '../sheets/renderStation.js';
+import { legacyKeyMap }     from '../data/positions.js';
 import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
 
 
@@ -617,16 +618,38 @@ const _isLegacyRowKey = key => /^\d+$/.test(key);
 const _entryTime = entry =>
   (entry && typeof entry === 'object') ? (entry.t ?? entry.updatedAt ?? 0) : 0;
 
+// Ключ рядка до появи id позицій у даних — хеш від «напрямок|id виходу|номер».
+// Map<старий ключ рядка, новий> для станції.
+function _oldHashRowKeys(station) {
+  const map = new Map();
+  for (const [oldKey, id] of legacyKeyMap(station)) {
+    const from = devRowKey(oldKey);
+    const to   = devRowKey(id);
+    if (from !== to) map.set(from, to);
+  }
+  return map;
+}
+
+/** Старий ключ рядка (до появи id позицій) для нового або ''. */
+function _oldRowKeyFor(slug, rowKey) {
+  const station = state.stationsData?.[slug];
+  if (!station) return '';
+  for (const [from, to] of _oldHashRowKeys(station)) if (to === rowKey) return from;
+  return '';
+}
+
 function _migrateRowKeys(map) {
   let changed = false;
   for (const slug of Object.keys(map || {})) {
     const entries = map[slug];
-    if (!entries || !Object.keys(entries).some(_isLegacyRowKey)) continue;
     const station = state.stationsData?.[slug];
-    if (!station) continue;
+    if (!entries || !station) continue;
+    const oldHashKeys = _oldHashRowKeys(station);
+    const isOld = key => _isLegacyRowKey(key) || oldHashKeys.has(key);
+    if (!Object.keys(entries).some(isOld)) continue;
     const descriptors = getPositionDescriptorsForStation(station, LINE_COLOR[station.line]);
-    for (const oldKey of Object.keys(entries).filter(_isLegacyRowKey)) {
-      const newKey = descriptors[Number(oldKey)]?.key;
+    for (const oldKey of Object.keys(entries).filter(isOld)) {
+      const newKey = oldHashKeys.get(oldKey) ?? descriptors[Number(oldKey)]?.key;
       if (!newKey || _isLegacyRowKey(newKey)) continue;
       // Збіг зі свіжішим записом під новим ключем — перемагає новіший
       if (!entries[newKey] || _entryTime(entries[oldKey]) > _entryTime(entries[newKey])) {
@@ -1029,6 +1052,8 @@ export function attachDevModeUI(container, slug) {
     // rowIdx — старий порядковий номер, потрібен лише для старих фото.
     const posIdx = row.dataset.rowKey || String(rowIdx);
     row.dataset.devPosIdx = rowIdx;
+    // Фото, зняті до появи id позицій, лежать під старим ключем рядка
+    row.dataset.devOldKey = _oldRowKeyFor(slug, posIdx);
     row.dataset.devSlug   = slug;
 
     // ── Кнопка «Підтвердження» (єдина — замінює колишню окрему галочку) ──
@@ -1145,7 +1170,7 @@ export function attachDevModeUI(container, slug) {
       moreMenu.classList.toggle('is-open', willOpen);
     });
 
-    listPhotosForPosition(slug, posIdx, rowIdx).then(photos => {
+    listPhotosForPosition(slug, posIdx, [rowIdx, row.dataset.devOldKey]).then(photos => {
       if (photos.length) {
         photoBtn.style.color   = lineColor;
         photoBtn.style.opacity = '1';
@@ -1408,13 +1433,16 @@ function _newPhotoId(slug, posIdx) {
 /**
  * @param {string} slug
  * @param {string} posIdx    — стабільний ключ рядка (devRowKey)
- * @param {number} [legacyIdx] — старий порядковий номер рядка: фото, зняті до
- *   переходу на ключі, лишаються під ним (їхні id у хмарі не перейменовуємо)
+ * @param {Array<string|number>} [legacyKeys] — старі ключі рядка (порядковий номер,
+ *   хеш до появи id позицій): фото, зняті раніше, лишаються під ними
+ *   (їхні id у хмарі не перейменовуємо)
  * @returns {Promise<Array<{id:string, dataUrl:string}>>} усі фото для конкретної позиції
  */
-async function listPhotosForPosition(slug, posIdx, legacyIdx) {
+async function listPhotosForPosition(slug, posIdx, legacyKeys = []) {
   const prefixes = [_photoPrefix(slug, posIdx)];
-  if (legacyIdx !== undefined && legacyIdx !== '') prefixes.push(_photoPrefix(slug, legacyIdx));
+  for (const key of legacyKeys) {
+    if (key !== undefined && key !== '') prefixes.push(_photoPrefix(slug, key));
+  }
   const all = await PhotoStorage.getAllPhotos();
   return Object.keys(all)
     .filter(id => prefixes.some(prefix => id.startsWith(prefix)))
@@ -1450,7 +1478,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
   };
 
   const paint = async () => {
-    const photos = await listPhotosForPosition(slug, posIdx, row.dataset.devPosIdx);
+    const photos = await listPhotosForPosition(slug, posIdx, [row.dataset.devPosIdx, row.dataset.devOldKey]);
     updateBtnState(photos.length);
 
     panel.innerHTML = `

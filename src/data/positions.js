@@ -55,10 +55,56 @@ export function mapPositions(station, mapper) {
 }
 
 /**
- * Стабільний ключ позиції для збереження локальних правок і підписів:
- * напрямок + id виходу + номер позиції в межах виходу. На відміну від posIdx,
- * не зсувається, коли в даних чи в користувача з'являються інші виходи.
+ * Постійний id позиції: поле id у stations.json (scripts/assign-position-ids.py),
+ * а для виходів, доданих користувачем, — їхній ключ «new|…» (data/localEdits.js).
+ * До нього прив'язані вибране, чекіни, локальні правки й дані розробника.
  */
-export function positionKey(dir, exit, exitIdx, posInExit) {
+export function positionId(position) {
+  return position?.id ?? position?._key ?? null;
+}
+
+/**
+ * Знаходить позицію станції за id.
+ * @returns {{ dir: object, exit: object, position: object, exitIdx: number, posInExit: number }|null}
+ */
+export function findPosition(station, id) {
+  if (!station || id == null) return null;
+  let found = null;
+  traversePositions(station, ctx => {
+    if (!found && positionId(ctx.position) === id) found = ctx;
+  });
+  return found;
+}
+
+/** Напрямок довгого переходу (Хрещатик) — не окрема колія. */
+export const isLongTransferDir = dir => dir?.from === '__long_transfer__';
+
+/**
+ * Підпис напрямку так, як його показує картка станції (і як його раніше
+ * зберігало Вибране): «кінцева» та «вихід праворуч» — без підпису,
+ * довгий перехід — словами, &nbsp; — справжнім нерозривним пробілом.
+ */
+export function displayDirOf(dir) {
+  const from = String(dir?.from ?? '');
+  const lower = from.trim().toLowerCase();
+  if (lower === 'кінцева' || lower === 'вихід праворуч') return '';
+  if (from === '__long_transfer__') return 'довгий\u00a0перехід на\u00a0Майдан\u00a0Незалежності';
+  return from.replace(/&nbsp;/g, '\u00a0').trim();
+}
+
+/**
+ * Старий ключ позиції (до появи id у даних): напрямок + id виходу + номер
+ * позиції у виході. Потрібен лише щоб перевести збережені записи на id.
+ */
+export function legacyPositionKey(dir, exit, exitIdx, posInExit) {
   return `${dir.from}|${exit.id ?? '#' + exitIdx}|${posInExit}`;
+}
+
+/** Map<старий ключ, id> для станції — для переведення збережених записів. */
+export function legacyKeyMap(station) {
+  const map = new Map();
+  traversePositions(station, ({ dir, exit, position, exitIdx, posInExit }) => {
+    if (position.id) map.set(legacyPositionKey(dir, exit, exitIdx, posInExit), position.id);
+  });
+  return map;
 }

@@ -7,117 +7,13 @@
 import { state }                from '../core/state.js';
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
+import { traversePositions, findPosition, positionId, isLongTransferDir } from '../data/positions.js';
+import { matchLegacyPosition }   from '../data/legacyExitMatch.js';
 
 // ══ КОНСТАНТИ ГІЛОК ══════════════════════════════════════════
 
 export const LINE_NAMES = { blue: 'Синя', red: 'Червона', green: 'Зелена' };
 export const LINE_ORDER = ['blue', 'red', 'green'];
-
-// ══ ВНУТРІШНІ РОЗУМНІ ХЕЛПЕРИ ЗІСТАВЛЕННЯ ════════════════════
-
-const norm = (str) =>
-  String(str || '').trim().toLowerCase().replace(/[\s\u00a0\u202f\u2009]+/g, ' ');
-
-/**
- * Очищувач префіксів. Зрізає «до», «попередня», «ст.» та пробіли.
- * Гарантує стабільне зіставлення колій незалежно від форматування в UI.
- */
-const cleanStr = (s) =>
-  String(s || '')
-    .toLowerCase()
-    // Нормалізуємо &nbsp; (буквальний текст із JSON) та реальний U+00A0
-    // (який browser/DOM textContent повертає після рендеру &nbsp;)
-    // до звичайного пробілу — інакше вони по-різному переживають фільтр нижче
-    // ("&nbsp;" лишає літери n/b/s/p, бо вони у дозволеному діапазоні a-z).
-    .replace(/&nbsp;|\u00a0/g, ' ')
-    .replace(/(?:до|станції|ст\.|напрямок|на|попередня)\s+/g, '')
-    .replace(/^[rbg]\./, '')
-    .replace(/[^a-z0-9а-яіїєґ]/g, '')
-    .trim();
-
-const parseTokens = (s) => {
-  const str = String(s);
-  if (str.includes('-')) {
-    const [start, end] = str.split('-').map(Number);
-    const arr = [];
-    for (let i = start; i <= end; i++) arr.push(i);
-    return arr;
-  }
-  return str.split(',').map(x => parseInt(x.trim())).filter(Boolean);
-};
-
-// ВИНЯТКИ: станції, де токен-перетин (1 входить у "1-3") створює
-// хибну неоднозначність між двома РІЗНИМИ фізичними виходами, що
-// навмисно діляться тим самим вагоном/дверима за даними (напр.
-// Хрещатик: "короткий перехід" 2/"1-3" перетинається з "вихід в
-// місто" 2/"1"). Для них зіставлення йде по точному рядку, а не
-// по перетину токенів. Решту станцій це НЕ зачіпає.
-const EXACT_EXIT_MATCH_STATIONS = new Set(['R.Khreshchatyk']);
-
-const exitContainsPin = (ex, w, d, exact = false) =>
-  (ex.positions || []).some(p => {
-    if (p.closed) return false;
-    if (exact) {
-      return String(p.wagon).trim() === String(w).trim()
-          && String(p.doors).trim() === String(d).trim();
-    }
-    const pW = parseTokens(p.wagon); const cW = parseTokens(w);
-    const pD = parseTokens(p.doors); const cD = parseTokens(d);
-    return cW.some(n => pW.includes(n)) && cD.some(n => pD.includes(n));
-  });
-
-/**
- * Математичне віддзеркалення вагона або дверей (за ідеєю 6 - Вагон, 5 - Двері).
- * Працює навіть з діапазонами ("1-3") та переліками ("1, 2").
- */
-function mirrorValue(str, max) {
-  if (!str || str === '-') return str;
-  if (String(str).includes('-')) {
-    const [start, end] = String(str).split('-').map(Number);
-    return `${max - end + 1}-${max - start + 1}`;
-  }
-  return String(str).split(',').map(x => {
-    const n = parseInt(x.trim());
-    return isNaN(n) ? x.trim() : String(max - n + 1);
-  }).join(', ');
-}
-
-/**
- * Інтелектуальний локатор. Знаходить точний об'єкт виходу та справжню назву колії.
- */
-function resolveDirectionAndExit(slug, dir, wagon, doors) {
-  const station = state.stationsData?.[slug];
-  const exact   = EXACT_EXIT_MATCH_STATIONS.has(slug);
-  let clickedExit = null;
-  let correctedDir = dir;
-
-  if (station?.directions) {
-    const cleanedDir = cleanStr(dir);
-
-    // Етап 1: Шукаємо вихід СУВОРО всередині вказаного напрямку
-    if (cleanedDir !== '') {
-      const targetDir = station.directions.find(d => cleanStr(d.from) === cleanedDir);
-      if (targetDir) {
-        clickedExit = (targetDir.exits || []).find(ex => exitContainsPin(ex, wagon, doors, exact));
-        if (clickedExit) correctedDir = targetDir.from;
-      }
-    }
-
-    // Етап 2: Фолбек-скан (якщо dir порожній через баг розмітки кінцевих)
-    if (!clickedExit) {
-      outerLoop: for (const d of station.directions) {
-        if (norm(d.from) === '__long_transfer__') continue;
-        const ex = (d.exits || []).find(e => exitContainsPin(e, wagon, doors, exact));
-        if (ex) {
-          clickedExit = ex;
-          correctedDir = d.from;
-          break outerLoop;
-        }
-      }
-    }
-  }
-  return { clickedExit, correctedDir };
-}
 
 // ══ КЕШ ══════════════════════════════════════════════════════
 
@@ -144,149 +40,74 @@ export function isCheckinMode() {
 }
 
 // ══ ІДЕНТИФІКАТОР ════════════════════════════════════════════
+// Запис чекіну: ключ «slug|id позиції», значення { slug, pos, dir, wagon, doors, color, ts }.
+// Ідентичність — лише id позиції зі stations.json; dir/wagon/doors — знімок на
+// момент чекіну (для журналу), на зіставлення не впливають.
 
-export function checkinId(slug, dir, wagon, doors) {
-  const cleanDir = String(dir || '').trim().toLowerCase().replace(/[\s\u00a0\u202f\u2009]+/g, ' ');
-  return `${slug}|${cleanDir}|${String(wagon).trim()}|${String(doors).trim()}`;
+export function checkinId(slug, pos) {
+  return `${slug}|${pos}`;
 }
 
+/** Позиції довгого переходу й закриті — не окремі виходи, чекін на них не ставиться. */
+const _isCountable = ({ dir, position }) => !isLongTransferDir(dir) && !position.closed;
+
 /**
- * Повертає канонічний ключ «фізичного виходу» для піна (slug, dir, wagon, doors).
+ * Канонічний ключ «фізичного виходу» для позиції.
  *
  * Коли ввімкнено «Check-in по виходах» (CHECKIN_BY_EXIT), той самий фізичний
- * вихід доступний з обох колій станції — тож піни з протилежних напрямків,
- * що зіставляються між собою (за назвою, дзеркальним номером або індексом —
- * ЗА ТІЄЮ Ж логікою, що й у toggleCheckin), мають належати ОДНІЙ групі.
- * Ключ не залежить від того, з якого боку його порахували, тож його можна
- * однаково використовувати і для «відвіданих», і для «усіх доступних» пінів.
- *
- * Коли CHECKIN_BY_EXIT вимкнено — дзеркалювання не відбувається,
- * тож кожен пін лишається окремим виходом (як і раніше).
+ * вихід доступний з обох колій станції. У stations.json такі позиції посилаються
+ * на той самий запис exits_catalog (однаковий exit.id), тож вони — одна група.
+ * Коли CHECKIN_BY_EXIT вимкнено — кожна позиція є окремим виходом.
  */
-export function exitGroupKey(slug, dir, wagon, doors) {
+export function exitGroupKey(slug, pos) {
   const isByExit = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
-  if (!isByExit) return checkinId(slug, dir, wagon, doors);
-
-  const station = state.stationsData?.[slug];
-  const { clickedExit, correctedDir } = resolveDirectionAndExit(slug, dir, wagon, doors);
-  if (!clickedExit || !station?.directions) return checkinId(slug, dir, wagon, doors);
-
-  const exact        = EXACT_EXIT_MATCH_STATIONS.has(slug);
-  const clickedLabel = norm(clickedExit.label || '');
-  const sourceDir     = station.directions.find(d => d.from === correctedDir);
-  const sourceIndex   = sourceDir ? (sourceDir.exits || []).indexOf(clickedExit) : -1;
-  const mW = mirrorValue(wagon, 5);
-  const mD = mirrorValue(doors, 4);
-
-  const members = [];
-  for (const d of station.directions) {
-    if (norm(d.from) === '__long_transfer__') continue;
-
-    let targetExit = null;
-    if (d.from === correctedDir) {
-      targetExit = clickedExit;
-    } else {
-      if (!targetExit && clickedLabel !== '') {
-        targetExit = (d.exits || []).find(ex => norm(ex.label || '') === clickedLabel);
-      }
-      if (!targetExit) {
-        targetExit = (d.exits || []).find(ex => exitContainsPin(ex, mW, mD, exact));
-      }
-      if (!targetExit && sourceIndex !== -1) {
-        targetExit = (d.exits || [])[sourceIndex];
-      }
-    }
-
-    const firstOpen = targetExit ? (targetExit.positions || []).find(p => !p.closed) : null;
-    if (firstOpen) members.push(`${d.from}\u0001${firstOpen.wagon}\u0001${firstOpen.doors}`);
+  const found    = findPosition(state.stationsData?.[slug], pos);
+  if (isByExit && found?.exit.id && !isLongTransferDir(found.dir)) {
+    return `${slug}|exit:${found.exit.id}`;
   }
-
-  members.sort();
-  return members.length ? `${slug}\u0002${members.join('\u0003')}` : checkinId(slug, dir, wagon, doors);
+  return checkinId(slug, pos);
 }
 
 // ══ ЧИТАННЯ СТАНУ ════════════════════════════════════════════
 
-export function isCheckedIn(slug, dir, wagon, doors) {
-  const { correctedDir } = resolveDirectionAndExit(slug, dir, wagon, doors);
-  return !!getCheckins()[checkinId(slug, correctedDir, wagon, doors)];
+export function isCheckedIn(slug, pos) {
+  return !!pos && !!getCheckins()[checkinId(slug, pos)];
 }
 
-// ══ МУТАЦІЯ СТАНУ (УЛЬТИМАТИВНА КАСКАДНА СИНХРОНІЗАЦІЯ) ══════
+// ══ МУТАЦІЯ СТАНУ ════════════════════════════════════════════
 
-export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
-  const all      = getCheckins();
-  const isByExit = Storage.get(STORAGE_KEYS.CHECKIN_BY_EXIT) !== 'false';
-  const station  = state.stationsData?.[slug];
-  const exact    = EXACT_EXIT_MATCH_STATIONS.has(slug);
+/**
+ * Ставить або знімає чекін позиції. При «Check-in по виходах» — разом з
+ * усіма відкритими позиціями того самого фізичного виходу на інших коліях.
+ * @returns {boolean} true — чекін поставлено
+ */
+export function toggleCheckin(slug, pos, lineColor) {
+  const all     = getCheckins();
+  const station = state.stationsData?.[slug];
+  const found   = findPosition(station, pos);
+  if (!found) return false;
 
-  const { clickedExit, correctedDir } = resolveDirectionAndExit(slug, dir, wagon, doors);
-
-  const targets = new Map();
-  const addPin = (d, w, drs) => {
-    const key = `${norm(d)}\0${String(w).trim()}\0${String(drs).trim()}`;
-    if (!targets.has(key)) {
-      targets.set(key, { dir: d, wagon: String(w).trim(), doors: String(drs).trim() });
+  const group   = exitGroupKey(slug, pos);
+  const targets = [found];
+  traversePositions(station, ctx => {
+    if (ctx.position !== found.position && _isCountable(ctx)
+        && exitGroupKey(slug, positionId(ctx.position)) === group) {
+      targets.push(ctx);
     }
-  };
+  });
 
-  if (isByExit && clickedExit && station?.directions) {
-    const clickedLabel = norm(clickedExit.label || '');
-    const sourceDir    = station.directions.find(d => d.from === correctedDir);
-    const sourceIndex  = sourceDir ? (sourceDir.exits || []).indexOf(clickedExit) : -1;
-
-    // Рахуємо математичне дзеркало для підстраховки
-    const mW = mirrorValue(wagon, 5);
-    const mD = mirrorValue(doors, 4);
-
-    for (const d of station.directions) {
-      if (norm(d.from) === '__long_transfer__') continue;
-
-      let targetExit = null;
-
-      // Якщо це ТА САМА колія — підсвічуємо весь блок клікнутого виходу
-      if (d.from === correctedDir) {
-        targetExit = clickedExit;
-      } else {
-        // КАСКАД ДЗЕРКАЛ ДЛЯ ПРОТИЛЕЖНОЇ КОЛІЇ:
-
-        // 1. Label Sync (Шукаємо таку саму назву, наприклад "до Мінського ринку")
-        if (!targetExit && clickedLabel !== '') {
-          targetExit = (d.exits || []).find(ex => norm(ex.label || '') === clickedLabel);
-        }
-
-        // 2. Math Sync (Шукаємо математичне дзеркало 6-W, 5-D, якщо немає назви)
-        if (!targetExit) {
-          targetExit = (d.exits || []).find(ex => exitContainsPin(ex, mW, mD, exact));
-        }
-
-        // 3. Index Sync (Резервний варіант для станцій з одним виходом)
-        if (!targetExit && sourceIndex !== -1) {
-          targetExit = (d.exits || [])[sourceIndex];
-        }
-      }
-
-      if (targetExit && targetExit.positions) {
-        for (const p of targetExit.positions) {
-          if (!p.closed) addPin(d.from, p.wagon, p.doors);
-        }
-      }
-    }
-  }
-
-  // Завжди додаємо первинний клікнутий елемент як надійний фолбек
-  addPin(correctedDir, wagon, doors);
-
-  const primaryId   = checkinId(slug, correctedDir, wagon, doors);
-  const willCheckIn = !all[primaryId];
-
-  // Транзакція в базу
-  for (const t of targets.values()) {
-    const tId = checkinId(slug, t.dir, t.wagon, t.doors);
+  const willCheckIn = !all[checkinId(slug, pos)];
+  const ts = Date.now();
+  for (const { dir, position } of targets) {
+    const id = positionId(position);
     if (willCheckIn) {
-      all[tId] = { slug, dir: t.dir, wagon: t.wagon, doors: t.doors, color: lineColor, ts: Date.now() };
+      all[checkinId(slug, id)] = {
+        slug, pos: id, dir: dir.from,
+        wagon: String(position.wagon), doors: String(position.doors),
+        color: lineColor, ts,
+      };
     } else {
-      delete all[tId];
+      delete all[checkinId(slug, id)];
     }
   }
 
@@ -296,6 +117,29 @@ export function toggleCheckin(slug, dir, wagon, doors, lineColor) {
   bus.emit('checkin:updated');
   return willCheckIn;
 }
+
+// ══ ПЕРЕХІД ЗІ СТАРОГО ФОРМАТУ ═══════════════════════════════
+// Раніше ключем був «slug|напрямок|вагон|двері». Після завантаження даних
+// зіставляємо такі записи з позиціями; незіставлені лишаються як є (станція
+// рахується відвіданою, але вихід — ні).
+
+bus.on('data:stations-hydrated', ({ stationsData }) => {
+  const all = getCheckins();
+  const legacy = Object.entries(all).filter(([, e]) => e && !e.pos);
+  if (!legacy.length) return;
+  let changed = false;
+  for (const [key, entry] of legacy) {
+    const pos = matchLegacyPosition(stationsData[entry.slug], entry);
+    if (!pos) continue;
+    delete all[key];
+    const newKey = checkinId(entry.slug, pos);
+    if (!all[newKey] || (all[newKey].ts ?? 0) < (entry.ts ?? 0)) all[newKey] = { ...entry, pos };
+    changed = true;
+  }
+  if (!changed) return;
+  Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
+  _checkinsCache = all;
+});
 
 // ══ ФОРМАТУВАННЯ ЧАСУ ════════════════════════════════════════
 
@@ -331,8 +175,8 @@ export function declineVykhid(n) { return `${n} ${exitWord(n)}`; }
 // ══ СТАТИСТКА ПО ГІЛКАХ ══════════════════════════════════════
 
 /**
- * Рахує загальну кількість фізичних виходів станції (з урахуванням
- * дзеркалювання при активному Check-in по виходах) та кількість
+ * Рахує загальну кількість фізичних виходів станції (при активному Check-in
+ * по виходах позиції з однаковим exit.id — один вихід) та кількість
  * фактично відвіданих із них.
  *
  * @param {string} slug
@@ -344,20 +188,15 @@ export function getStationExitStats(slug, entries) {
   if (!station?.directions) return { total: 0, visited: 0 };
 
   const totalKeys = new Set();
-  for (const d of station.directions) {
-    if (norm(d.from) === '__long_transfer__') continue;
-    for (const ex of (d.exits || [])) {
-      for (const p of (ex.positions || [])) {
-        if (p.closed) continue;
-        totalKeys.add(exitGroupKey(slug, d.from, p.wagon, p.doors));
-      }
-    }
-  }
+  traversePositions(station, ctx => {
+    if (_isCountable(ctx)) totalKeys.add(exitGroupKey(slug, positionId(ctx.position)));
+  });
 
   const visitedKeys = new Set();
   for (const e of entries) {
-    if (e.slug !== slug) continue;
-    visitedKeys.add(exitGroupKey(slug, e.dir, e.wagon, e.doors));
+    if (e.slug !== slug || !e.pos) continue;
+    const key = exitGroupKey(slug, e.pos);
+    if (totalKeys.has(key)) visitedKeys.add(key);
   }
 
   return { total: totalKeys.size, visited: visitedKeys.size };

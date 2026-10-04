@@ -1,14 +1,15 @@
 // ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
 // Відповідальність: читання/запис локальних правок позицій та підписів виходів.
 //
-// Формат зберігання: { [slug]: { [key]: … } }, де key — стабільний ключ позиції
-// «напрямок|id виходу|номер позиції у виході» (positionKey, data/positions.js),
-// а для доданих користувачем виходів — «new|…». Так правки не з'їжджають на чужий
-// вихід, коли в даних змінюється кількість чи порядок виходів.
+// Формат зберігання: { [slug]: { [key]: … } }, де key — постійний id позиції з
+// stations.json (positionId, data/positions.js), а для доданих користувачем
+// виходів — «new|…». Так правки не з'їжджають на чужий вихід, коли в даних
+// змінюється кількість, порядок чи назви виходів і напрямків.
 //
 // Решта застосунку працює з posIdx (індекс у station.positions) — тут він
 // перекладається в ключ і назад через station.positions[i]._key.
-// Записи старого формату (ключ — posIdx) переводяться в нові при завантаженні даних.
+// Записи старих форматів (ключ — posIdx або «напрямок|id виходу|номер») переводяться
+// на id при завантаженні даних.
 //
 // applyLocalEdits / applyExitLabels залишаються публічними — їх безпосередньо
 // викликають fbEvents.js, fbApi.js та stationSheet.js (прямий ESM-імпорт).
@@ -16,7 +17,7 @@
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
 import { state }                 from '../core/state.js';
-import { traversePositions }     from './positions.js';
+import { traversePositions, legacyKeyMap } from './positions.js';
 
 const NEW_PREFIX = 'new|';
 
@@ -256,22 +257,30 @@ export function applyLocalEdits(stationsData) {
   }
 }
 
-// ══ ПЕРЕХІД ЗІ СТАРОГО ФОРМАТУ (ключ = posIdx) ════════════════
-// Старі ключі — числа. Позиції з даних нумерувалися обходом чистих даних,
-// тобто збігаються з station.positions до застосування правок; нові виходи
-// мали номери за межами цього списку.
+// ══ ПЕРЕХІД ЗІ СТАРИХ ФОРМАТІВ ════════════════════════════════
+// 1) Ключ — posIdx (число). Позиції з даних нумерувалися обходом чистих даних,
+//    тобто збігаються з station.positions до застосування правок; нові виходи
+//    мали номери за межами цього списку.
+// 2) Ключ — «напрямок|id виходу|номер позиції у виході» (до появи id у даних).
 
-const _isLegacyKey = key => /^\d+$/.test(key);
+const _isLegacyKey   = key => /^\d+$/.test(key);
+const _isOldPathKey  = key => key.includes('|') && !key.startsWith(NEW_PREFIX);
 
 function _migrateLegacy(stationsData) {
   const convert = (stored, write) => {
     let changed = false;
     for (const [slug, entries] of Object.entries(stored)) {
-      if (!Object.keys(entries).some(_isLegacyKey)) continue;
+      if (!Object.keys(entries).some(k => _isLegacyKey(k) || _isOldPathKey(k))) continue;
       const positions = stationsData[slug]?.positions;
       if (!positions) continue;           // станції немає — лишаємо як є
+      const oldKeys = legacyKeyMap(stationsData[slug]);
       const next = {};
       for (const [key, value] of Object.entries(entries)) {
+        if (_isOldPathKey(key)) {
+          // Позиції з таким старим ключем уже немає — лишаємо запис як є
+          next[oldKeys.get(key) ?? key] = value;
+          continue;
+        }
         if (!_isLegacyKey(key)) { next[key] = value; continue; }
         const idx    = Number(key);
         const newKey = positions[idx]?._key
@@ -279,6 +288,7 @@ function _migrateLegacy(stationsData) {
         if (!positions[idx]?._key && value && typeof value === 'object' && !value.isNew) continue;
         next[newKey] = value;
       }
+      if (JSON.stringify(next) === JSON.stringify(entries)) continue;
       stored[slug] = next;
       changed = true;
     }

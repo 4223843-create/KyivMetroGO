@@ -4,7 +4,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 import { state, startupSlug } from '../core/state.js';
 import { bus }                from '../core/eventBus.js';
-import { traversePositions, positionKey } from './positions.js';
+import { traversePositions } from './positions.js';
 import { validateStationsData, isValidStationsData, stationsVersion } from './validateStations.js';
 
 // ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
@@ -155,9 +155,9 @@ export function hydrateStations(data) {
     
     // ── Плаский масив позицій (для feedback та пошуку) ──
     station.positions = [];
-    traversePositions(station, ({ dir, exit, position, exitIdx, posInExit }) => {
-      // _key — стабільний ключ для локальних правок і підписів (див. data/localEdits.js)
-      position._key = positionKey(dir, exit, exitIdx, posInExit);
+    traversePositions(station, ({ dir, exit, position }) => {
+      // _key — постійний id позиції для локальних правок і підписів (див. data/localEdits.js)
+      position._key = position.id;
       station.positions.push({
         dir:   dir.from,
         exit:  exit.label || '',

@@ -101,19 +101,11 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
   if (!body) return;
 
   body.querySelectorAll('.position-row').forEach(row => {
-    const pills = row.querySelectorAll('.pos-pill');
-    if (!pills.length) return;
-    const wagon = pills[0]?.querySelector('.pos-pill-num')?.textContent?.trim();
-    const doors = pills[1]?.querySelector('.pos-pill-num')?.textContent?.trim();
-    if (!wagon || !doors) return;
+    // id позиції — з першої пігулки рядка (renderStation.js: data-pos)
+    const pos = row.querySelector('.fav-tap-target')?.dataset.pos;
+    if (!pos) return;
 
-    const dirBlock = row.closest('.direction-block') || row.closest('.long-transfer-block');
-    const labelEl  = dirBlock
-      ? (dirBlock.querySelector('.direction-label') || dirBlock.querySelector('.transfer-text'))
-      : null;
-    const dir = labelEl?.textContent?.trim() || '';
-
-    const checked = isCheckedIn(slug, dir, wagon, doors);
+    const checked = isCheckedIn(slug, pos);
     const btn     = document.createElement('button');
     btn.type      = 'button';
     btn.className = `checkin-btn row-checkin-btn${checked ? ' is-checked' : ''}`;
@@ -127,7 +119,7 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
       // Легкий тактильний «клік» при натисканні на шпильку чекіна
       Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
 
-      const nowChecked = toggleCheckin(slug, dir, wagon, doors, lineColor);
+      const nowChecked = toggleCheckin(slug, pos, lineColor);
       btn.classList.toggle('is-checked', nowChecked);
       btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
       btn.style.color = nowChecked ? lineColor : '';
@@ -221,7 +213,7 @@ export function openCheckinSheet() {
       selectedLines = new Set();
     } else {
       const uniqueStations     = new Set(entries.map(e => e.slug)).size;
-      const uniqueExitsVisited = new Set(entries.map(e => exitGroupKey(e.slug, e.dir, e.wagon, e.doors))).size;
+      const uniqueExitsVisited = new Set(entries.filter(e => e.pos).map(e => exitGroupKey(e.slug, e.pos))).size;
       const totalExitsAll      = state.stationsData
         ? Object.keys(state.stationsData).reduce(
             (sum, slug) => sum + getStationExitStats(slug, entries).total, 0
