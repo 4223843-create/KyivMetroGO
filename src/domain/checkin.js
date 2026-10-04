@@ -65,15 +65,31 @@ const _isCountable = ({ dir, position }) => !isLongTransferDir(dir) && !position
  * Коли ввімкнено «Check-in по виходах» (CHECKIN_BY_EXIT), той самий фізичний
  * вихід доступний з обох колій станції. У stations.json такі позиції посилаються
  * на той самий запис exits_catalog (однаковий exit.id), тож вони — одна група.
+ * Якщо в одного виходу на кожній колії кілька позицій (Деміївська, Голосіївська:
+ * ескалатор і ліфт), пара — позиції з тим самим порядковим номером на обох коліях,
+ * а не всі одразу. Коли кількість на коліях різна — група на весь вихід.
  * Коли CHECKIN_BY_EXIT вимкнено — кожна позиція є окремим виходом.
  */
 export function exitGroupKey(slug, pos) {
   const isByExit = getPref('checkinByExit');
-  const found    = findPosition(state.stationsData?.[slug], pos);
-  if (isByExit && found?.exit.id && !isLongTransferDir(found.dir)) {
-    return `${slug}|exit:${found.exit.id}`;
+  const station  = state.stationsData?.[slug];
+  const found    = findPosition(station, pos);
+  if (!isByExit || !found?.exit.id || !_isCountable(found)) return checkinId(slug, pos);
+
+  const exitKey = `${slug}|exit:${found.exit.id}`;
+  const counts  = new Set();
+  for (const dir of station.directions) {
+    if (isLongTransferDir(dir)) continue;
+    for (const exit of dir.exits ?? []) {
+      if (exit.id === found.exit.id) {
+        counts.add((exit.positions ?? []).filter(p => !p.closed).length);
+      }
+    }
   }
-  return checkinId(slug, pos);
+  if (counts.size !== 1 || counts.has(1)) return exitKey;
+
+  const openInExit = (found.exit.positions ?? []).filter(p => !p.closed);
+  return `${exitKey}#${openInExit.indexOf(found.position)}`;
 }
 
 // ══ ЧИТАННЯ СТАНУ ════════════════════════════════════════════
