@@ -784,6 +784,7 @@ color: var(--text-muted);
 /* Панель загальної нотатки — під шапкою, над списком напрямків */
 .dev-station-note-panel {
   margin: 0 16px;
+  flex-shrink: 0; /* у високій картці не стискається — стискається список під нею */
 }
 .dev-station-note-panel.panel-open {
   margin: 6px 16px 2px;
