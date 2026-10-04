@@ -1,4 +1,6 @@
 /* eslint-disable no-undef */
+import { isValidStationsData, stationsVersion } from '../src/data/validateStations.js';
+
 const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'dev';
 const CACHE_NAME = `kyivmetro-${BUILD_DATE}`;
 
@@ -61,13 +63,19 @@ async function stationsLocalFirst(event) {
 
   const networkPromise = fetch(request, { cache: 'no-store' }).then(async response => {
     if (!response.ok) return response;
+    let newData;
+    try {
+      newData = await response.clone().json();
+    } catch {
+      newData = null;
+    }
+    // Зіпсований чи несумісний файл не кешуємо: лишається попередня робоча копія.
+    if (!isValidStationsData(newData)) return cached ? cachedForCompare.clone() : response;
+
     if (cachedForCompare) {
       try {
-        const [newData, oldData] = await Promise.all([
-          response.clone().json(),
-          cachedForCompare.json(),
-        ]);
-        if (newData.version && newData.version !== oldData.version) {
+        const oldData = await cachedForCompare.clone().json();
+        if (stationsVersion(newData) > stationsVersion(oldData)) {
           // Версія змінилась — повідомляємо всі вкладки, зокрема ту, що саме
           // завантажується (її ще може не бути в matchAll — тому й через clientId).
           const message = { type: 'STATIONS_UPDATED', version: newData.version };
@@ -77,7 +85,7 @@ async function stationsLocalFirst(event) {
           new Set([...clients, own].filter(Boolean)).forEach(client => client.postMessage(message));
         }
       } catch {
-        // Ignore invalid JSON and refresh the cached copy below.
+        // Стара копія не читається — просто замінюємо її нижче.
       }
     }
     await cache.put(new URL('./stations.json', self.location).href, response.clone());

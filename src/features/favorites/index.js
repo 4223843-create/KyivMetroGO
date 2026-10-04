@@ -23,9 +23,8 @@ import { STORAGE_KEYS, Storage } from '../../core/storage.js';
 import { bus }             from '../../core/eventBus.js';
 import { Icons }           from '../../ui/icons.js';
 import { LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES } from '../../core/constants.js';
-import { animateSheetClose }  from '../../ui/animations.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
-import { pushSheetHistory }   from '../../ui/system.js';
+import { showSheet, hideSheet } from '../../ui/sheetNav.js';
 import { slugByName }         from '../../data/stations.js';
 
 import {
@@ -40,6 +39,7 @@ import {
   replaceExitFav,
   clearExitFavs,
 } from '../../domain/favorites.js';
+import { escapeHtml, richText } from '../../ui/html.js';
 
 // ── Ре-експорти для зворотної сумісності ─────────────────────
 // sheetsManager.js, stationSheet.js, stationEvents.js, settings.js
@@ -54,7 +54,6 @@ export {
 const favSheet     = document.getElementById('favSheet');
 const favBody      = document.getElementById('favBody');
 const favClose     = document.getElementById('favClose');
-const sheetOverlay = document.getElementById('sheetOverlay');
 
 // ══ ПОРОЖНІЙ СТАН ════════════════════════════════════════════
 
@@ -164,7 +163,7 @@ export function renderFavList(favs) {
       const isCompact      = item.exits.length > 2;
       const containerClass = isCompact ? 'fav-exits-container fav-exits-compact' : 'fav-exits-container';
       const groupsHtml     = item.exits.map(f =>
-        `<div class="fav-exit-group"><div class="fav-pos-square" style="color:${item.color}">${f.wagon}</div><div class="fav-pos-square" style="color:${item.color}">${f.doors}</div></div>`
+        `<div class="fav-exit-group"><div class="fav-pos-square" style="color:${item.color}">${escapeHtml(f.wagon)}</div><div class="fav-pos-square" style="color:${item.color}">${escapeHtml(f.doors)}</div></div>`
       ).join('<div class="fav-exit-sep"></div>');
       squaresHtml = `<div class="${containerClass}">${groupsHtml}</div>`;
     }
@@ -173,7 +172,7 @@ export function renderFavList(favs) {
       <button class="fav-open-btn" data-slug="${item.slug}" style="border-left-color:${item.color}">
         <div class="fav-text-wrap">
           <span class="fav-station-name ${item.exits.length > 1 ? 'fav-small' : ''}">${displayName}</span>
-          ${(formattedDir && item.exits.length > 0) ? `<span class="fav-dir-name ${item.exits.length > 1 ? 'fav-small-dir' : ''}">${formattedDir}</span>` : ''}
+          ${(formattedDir && item.exits.length > 0) ? `<span class="fav-dir-name ${item.exits.length > 1 ? 'fav-small-dir' : ''}">${richText(formattedDir)}</span>` : ''}
         </div>
         ${squaresHtml}
       </button>
@@ -216,14 +215,11 @@ favBody.addEventListener('click', e => {
 // ══ ВІДКРИТТЯ / ЗАКРИТТЯ ══════════════════════════════════════
 
 export function openFavSheet() {
-  pushSheetHistory();
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
   const favs = getFavs();
   if (!state.stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
   else if (!favs.length)   favBody.innerHTML = getEmptyFavHtml();
   else                     renderFavList(favs);
-  favSheet.classList.add('sheet-open');
-  sheetOverlay.classList.add('overlay-visible');
+  showSheet(favSheet);
 
   const hideInfo   = Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true';
   const startOnFav = Storage.get(STORAGE_KEYS.START_ON_FAV) === 'true';
@@ -239,11 +235,7 @@ export function openFavSheet() {
 }
 
 export function closeFavSheet() {
-  animateSheetClose(favSheet, () => {
-    favSheet.classList.remove('sheet-open');
-    if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-      sheetOverlay.classList.remove('overlay-visible');
-  });
+  hideSheet(favSheet);
 }
 
 // ══ DOCK-ІКОНКА ══════════════════════════════════════════════
@@ -278,9 +270,9 @@ function _dismissFavOnlyHint() {
 bus.on('fav:updated', updateFavDock);
 
 // Крос-табна синхронізація: domain оновив кеш і емітував подію.
-bus.on('fav:externally-updated', ({ key }) => {
+bus.on('fav:externally-updated', () => {
   updateFavDock();
-  if (key === STORAGE_KEYS.FAVS && favSheet?.classList.contains('sheet-open')) {
+  if (favSheet?.classList.contains('sheet-open')) {
     renderFavList(getFavs());
   }
 });

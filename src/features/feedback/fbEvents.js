@@ -7,8 +7,8 @@ import { state as appState }         from '../../core/state.js';
 import { bus }                       from '../../core/eventBus.js';
 import { STORAGE_KEYS, Storage }     from '../../core/storage.js';
 import { removeLocalEdit, saveLocalEdit, saveExitLabel,
-         clearAllLocalEdits, invalidateLocalEditsCache,
-         applyLocalEdits, applyExitLabels }  from '../../data/localEdits.js';
+         clearAllLocalEdits,
+         applyLocalLayer }                   from '../../data/localEdits.js';
 import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
 import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
 import { renderFeedbackPositions, renderResetBtn,
@@ -241,16 +241,11 @@ function _handlePosClick(e, stationHidden, afterRender) {
 
 function _handleRestore(idx, slug, afterRender) {
   removeLocalEdit(slug, idx);
-  invalidateLocalEditsCache();
   if (fbState.current[idx]) fbState.current[idx].isClosed = false;
-  // applyLocalEdits лише накладає правки, що лишились, а не повертає змінену
-  // позицію до вихідних даних — тому перечитуємо дані повністю.
-  bus.emit('data:reload-stations', {
-    onDone: () => {
-      renderFeedbackPositions(slug, { onAfterRender: afterRender });
-      renderResetBtn({ onReset: () => _handleReset(afterRender) });
-    },
-  });
+  applyLocalLayer();   // позиція повертається до значень із даних
+  bus.emit('station:refresh');
+  renderFeedbackPositions(slug, { onAfterRender: afterRender });
+  renderResetBtn({ onReset: () => _handleReset(afterRender) });
 }
 
 function _handleCloseExit(idx, slug, afterRender) {
@@ -259,6 +254,8 @@ function _handleCloseExit(idx, slug, afterRender) {
     delete fbState.labels[idx];
     delete fbState.original[idx];
     removeLocalEdit(slug, idx);
+    applyLocalLayer();
+    bus.emit('station:refresh');
     renderFeedbackPositions(slug, { onAfterRender: afterRender });
     renderResetBtn({ onReset: () => _handleReset(afterRender) });
     return;
@@ -281,8 +278,7 @@ function _handleCloseExit(idx, slug, afterRender) {
   const p = appState.stationsData[fbState.slug]?.positions[idx];
   if (!p) return;
   saveLocalEdit(slug, idx, { wagon: p.wagon, doors: p.doors, closed: true });
-  applyLocalEdits(appState.stationsData);
-  invalidateLocalEditsCache();
+  applyLocalLayer();
   fbState.current[idx].isClosed = true;
   bus.emit('station:refresh');
   renderFeedbackPositions(slug, { onAfterRender: afterRender });
@@ -389,7 +385,7 @@ function _handleLabelChange(input, slug) {
     editBtn.textContent = 'додати опис';
   }
 
-  if (appState.stationsData) applyExitLabels(appState.stationsData);
+  applyLocalLayer();
   bus.emit('station:refresh');
 }
 
@@ -446,15 +442,13 @@ function _handleAddDoors(idx) {
 function _handleReset(afterRender) {
   bus.emit('ui:confirm', {
     message: 'Скинути всі локальні зміни та повернутись до стандартних даних?',
-    onYes: async () => {
+    onYes: () => {
       clearAllLocalEdits();
-      bus.emit('data:reload-stations', {
-        onDone: () => {
-          document.getElementById('fbResetWrap').innerHTML =
-            '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
-          renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
-        },
-      });
+      applyLocalLayer();
+      bus.emit('station:refresh');
+      document.getElementById('fbResetWrap').innerHTML =
+        '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
+      renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
     },
     onNo:     () => {},
     onCancel: () => {},

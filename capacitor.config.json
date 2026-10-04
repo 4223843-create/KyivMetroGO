@@ -2,16 +2,6 @@
   "appId": "ua.opivnochi.metrogo",
   "appName": "KyivMetroGO",
   "webDir": "dist",
-  "bundledWebRuntime": false,
-  "plugins": {
-    "SplashScreen": {
-      "launchAutoHide": true
-    },
-    "Keyboard": {
-      "resize": "body",
-      "resizeOnFullScreen": true
-    }
-  },
   "android": {
     "backgroundColor": "#000000"
   }

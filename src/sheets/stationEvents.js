@@ -8,7 +8,7 @@ import { TIMING }                 from '../core/timing.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { bus }                    from '../core/eventBus.js';
 import { slugByName }             from '../data/stations.js';
-import { applyExitLabels }        from '../data/localEdits.js';
+import { findPosition }           from '../data/positions.js';
 import {
   isFav, getExitFavs, isExitFav,
   toggleExitFav, replaceExitFav,
@@ -65,7 +65,7 @@ function _showExitFavToast(row) {
 }
 
 // ── Replace-confirm inline card ──────────────────────────────
-function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoors, lineColor) {
+function _showExitReplaceConfirm(row, existing, slug, newPos) {
   document.querySelectorAll('.exit-replace-confirm').forEach(el => {
     el.classList.remove('exit-replace-open');
     setTimeout(() => el.remove(), 280);
@@ -91,7 +91,7 @@ function _showExitReplaceConfirm(row, existing, slug, dirLabel, newWagon, newDoo
   // Ці два listeners — не витік: вони живуть рівно стільки, скільки confirmEl
   confirmEl.querySelector('.confirm-btn-save').addEventListener('click', e => {
     e.stopPropagation();
-    replaceExitFav(slug, dirLabel, existing.wagon, existing.doors, newWagon, newDoors);
+    replaceExitFav(slug, existing, newPos);
     close();
     bus.emit('station:refresh');
   });
@@ -151,19 +151,15 @@ function _showIconLabelToast(el, text) {
 
 // ── Ядро: toggle exit fav ─────────────────────────────────────
 function _triggerExitFav(favTarget, slug, lineColor) {
-  const wagon    = favTarget.dataset.wagon;
-  const doors    = favTarget.dataset.doors;
-  if (!wagon || !doors) return;
+  const pos = favTarget.dataset.pos;
+  if (!pos) return;
 
-  const row      = favTarget.closest('.position-row');
-  const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
-  const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
-  const dirLabel = labelEl?.textContent.trim() ?? '';
+  const row    = favTarget.closest('.position-row');
+  const result = toggleExitFav(slug, pos);
 
-  const result = toggleExitFav(slug, dirLabel, wagon, doors);
-
+  if (result.status === 'unknown') return;
   if (result.status === 'replace') {
-    _showExitReplaceConfirm(row, result.existing, slug, dirLabel, wagon, doors, lineColor);
+    _showExitReplaceConfirm(row, result.existing, slug, pos);
     return;
   }
 
@@ -235,6 +231,9 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
   const wagon = favTarget.dataset.wagon;
   const doors = favTarget.dataset.doors;
 
+  // 0. Вихід за id позиції; пошук за текстом нижче — запасний варіант
+  let targetExit = findPosition(station, favTarget.dataset.pos)?.exit;
+
   // 1. Пошук текстової мітки напрямку (з поточного блоку або попереднього сусіда)
   const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
   let labelEl = dirBlock?.querySelector('.direction-label, .transfer-text');
@@ -256,7 +255,7 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
   }
 
   // 3. Знаходимо вихід у напрямку (або скан по всій станції як крайній фолбек)
-  let targetExit = targetDir?.exits?.find(ex =>
+  targetExit ??= targetDir?.exits?.find(ex =>
     ex.positions?.some(p => String(p.wagon).trim() === String(wagon).trim() && String(p.doors).trim() === String(doors).trim())
   );
 
@@ -516,16 +515,8 @@ export function bindSheetGestures(sheetBody, getCtx) {
  */
 export function applyInitialFavStyles(sheetBody, slug, lineColor) {
   sheetBody.querySelectorAll('.fav-tap-target').forEach(favTarget => {
-    const wagon    = favTarget.dataset.wagon;
-    const doors    = favTarget.dataset.doors;
-    if (!wagon || !doors) return;
-
-    const row      = favTarget.closest('.position-row');
-    const dirBlock = favTarget.closest('.direction-block, .long-transfer-block');
-    const labelEl  = dirBlock?.querySelector('.direction-label, .transfer-text');
-    const dirLabel = labelEl?.textContent.trim() ?? '';
-
-    if (row && isExitFav(slug, dirLabel, wagon, doors)) {
+    const row = favTarget.closest('.position-row');
+    if (row && isExitFav(slug, favTarget.dataset.pos)) {
       applyFavPillStyles(row, lineColor, true);
     }
   });

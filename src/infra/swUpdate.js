@@ -76,7 +76,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── Нативна платформа: SW інертний, тому stations.js емітує подію через bus ──
+// ── Нативна платформа: SW не реєструється, тому stations.js емітує подію через bus ──
 // Дзеркало SW-логіки: той самий тост, той самий UX — незалежно від платформи.
 import { bus } from '../core/eventBus.js';
 bus.on('stations:updated', ({ version }) => showDataUpdateToast(version));

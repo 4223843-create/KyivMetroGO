@@ -4,6 +4,7 @@
 
 export const state = {
   stationsData:          null,   // { [slug]: StationObject }
+  lineIntervals:         {},     // інтервали руху по лініях з stations.json (line_intervals)
   currentStationSlug:    null,   // slug відкритої зараз картки
   isMapReady:            false,  // SVG карта вставлена і відцентрована
   isZonesReady:          false,  // зони кліків на карті готові

@@ -8,6 +8,7 @@ import { hasLocalEdits }                          from '../../data/localEdits.js
 import { fbState, initFeedbackState }             from './fbState.js';
 import { Icons }                                  from '../../ui/icons.js';
 import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '../../core/constants.js';
+import { richText } from '../../ui/html.js';
 
 const INFO_SVG = Icons.info;
 const UNDO_SVG = Icons.undo;
@@ -29,14 +30,14 @@ function stepperHtml(id, value, min, max, label) {
 }
 
 function exitLabelHtml(idx, rawExit) {
-  const escaped = rawExit.replace(/"/g, '&quot;');
+  const escaped = richText(rawExit);
   const editOrAdd = rawExit
     ? `<button type="button" class="fb-exit-label-edit-btn" data-item-idx="${idx}" aria-label="Редагувати">${PENCIL}</button>`
     : `<button type="button" class="fb-add-desc-btn" data-item-idx="${idx}">додати опис</button>`;
 
   return `<div class="fb-exit-label-row">
     <div class="fb-exit-label-row-inner">
-      <span class="fb-exit-label-text">${rawExit}</span>
+      <span class="fb-exit-label-text">${richText(rawExit)}</span>
       ${editOrAdd}
     </div>
   </div>
@@ -147,7 +148,7 @@ function dirGroupHtml(g, slug, lineColor) {
   const hasNewAlrdy = Object.values(fbState.current).some(s => s.isNew && s.dir === g.dir);
   const addBtnHtml  = (canAddMore && !hasNewAlrdy)
     ? `<div class="fb-add-exit-row">
-         <button type="button" class="fb-add-exit-btn" data-dir="${g.dir}">
+         <button type="button" class="fb-add-exit-btn" data-dir="${richText(g.dir)}">
            + Додати ще один вихід
          </button>
        </div>`

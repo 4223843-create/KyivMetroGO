@@ -7,7 +7,7 @@ import { fbState, resetFbState }                 from './fbState.js';
 import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
 import { STORAGE_KEYS, Storage }                 from '../../core/storage.js';
-import { pushSheetHistory }                      from '../../ui/system.js';
+import { showSheet }                     from '../../ui/sheetNav.js';
 
 export { renderFeedbackPositions }               from './fbRenderer.js';
 
@@ -121,10 +121,7 @@ function _resetSheetUI() {
 }
 
 function _openSheetDOM() {
-  pushSheetHistory();
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  _sheetEl.classList.add('sheet-open');
-  document.getElementById('sheetOverlay').classList.add('overlay-visible');
+  showSheet(_sheetEl);
 }
 
 function _forceClose() {

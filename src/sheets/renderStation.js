@@ -1,9 +1,11 @@
 import { slugByName }          from '../data/stations.js';
+import { positionId }          from '../data/positions.js';
 import { state }               from '../core/state.js';
 import { pill }                from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
 import { isHideNoLiftEnabled, isShowHoistsEnabled, isShowIntervalsEnabled, getStationHoursMode } from '../features/settings.js';
+import { richText } from '../ui/html.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -22,12 +24,12 @@ function formatLabel(raw) {
       const color = LINE_COLOR[state.stationsData[targetSlug].line];
       return `<span class="transfer-label">` +
         `<span class="transfer-line" style="background:${color}"></span>` +
-        `<span class="transfer-text">${text}</span>` +
+        `<span class="transfer-text">${richText(text)}</span>` +
         `<span class="transfer-line" style="background:${color}"></span>` +
         `</span>`;
     }
   }
-  return `<span class="exit-label-text">${text}</span>`;
+  return `<span class="exit-label-text">${richText(text)}</span>`;
 }
 
 // ══ ПЕРЕСАДКИ НА ІНШИЙ ТРАНСПОРТ (station.connections) ══
@@ -184,8 +186,9 @@ function generatePills(wStr, dStr, color) {
   return blocks.join('<span class="pos-multi-sep" style="margin: 0 6px;">·</span>');
 }
 
-function favTargetHtml(wStr, dStr, color) {
+function favTargetHtml(wStr, dStr, color, posId) {
   return `<div class="fav-tap-target"
+               data-pos="${posId ?? ''}"
                data-wagon="${wStr}"
                data-doors="${dStr}"
                style="display:flex;gap:6px;align-items:center;">
@@ -248,11 +251,12 @@ function renderIcons(p) {
 }
 
 /**
- * Стабільний ключ рядка позиції для даних режиму розробника (нотатки,
- * підтвердження, фото). Похідний від ключа першої позиції рядка
- * («напрямок|id виходу|номер позиції», data/positions.js), тож не зсувається,
- * коли в даних з'являються інші виходи. Хеш — щоб ключ був коротким і
- * безпечним для id елементів, назв файлів фото й полів Firestore.
+ * Постійний ключ рядка позиції для даних режиму розробника (нотатки,
+ * підтвердження, фото). Похідний від id першої позиції рядка
+ * (positionId, data/positions.js), тож не зсувається й не губиться, коли в
+ * даних з'являються інші виходи чи перейменовують напрямок. Хеш — щоб ключ був
+ * коротким і безпечним для id елементів, назв файлів фото й полів Firestore.
+ * Старі ключі (хеш від «напрямок|id виходу|номер») переводить devmode.js.
  */
 export function devRowKey(positionKey) {
   if (!positionKey) return '';
@@ -283,7 +287,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
     const hasSpecial = !!icons;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}"${rowKeyAttr(p)}>
-      ${edited}${favTargetHtml(p.wagon, p.doors, color)}${icons}
+      ${edited}${favTargetHtml(p.wagon, p.doors, color, positionId(p))}${icons}
     </div>`;
   }
 
@@ -295,7 +299,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
     const spacer  = editedPos ? `<span class="pos-edited-spacer"></span>` : '';
     const targets = grouped.map((p, i) => {
       const icons = renderIcons(p, exit);
-      return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color)}${icons}`;
+      return `${i > 0 ? '<span class="pos-multi-sep">·</span>' : ''}${favTargetHtml(p.wagon, p.doors, color, positionId(p))}${icons}`;
     }).join('');
 
     return `<div class="position-row position-row-multi"${rowKeyAttr(grouped[0])}>${edited}${targets}${spacer}</div>`;
@@ -307,7 +311,7 @@ function renderPositions(positions, color, multiRow, exit = null) {
     const hasSpecial = !!icons;
 
     return `<div class="position-row ${isMulti ? 'position-row-multi' : ''} ${hasSpecial ? 'position-row-lift' : ''}"${rowKeyAttr(p)}>
-      ${favTargetHtml(p.wagon, p.doors, color)}${icons}
+      ${favTargetHtml(p.wagon, p.doors, color, positionId(p))}${icons}
     </div>`;
   }).join('');
 }
@@ -322,7 +326,7 @@ function renderExitLabel(exit) {
   const edited = exit._labelEdited
     ? `<span class="pos-edited-mark label-pencil" data-slug="${exit._slug}">${Icons.pencil}</span>`
     : '';
-  return `<div class="exit-label nav-label" data-name="${exit.label}">
+  return `<div class="exit-label nav-label" data-name="${richText(exit.label)}">
     <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
       ${formatLabel(exit.label)}${edited}
     </div>
@@ -356,7 +360,7 @@ export function renderDirections(s, color) {
 
       if (!exitsHtml) return '';
       return `<div class="direction-block">
-        <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
+        <div class="direction-label nav-label" data-name="${richText(dir.from)}">${formatDirLabel(dir.from)}</div>
         ${exitsHtml}
       </div>`;
     }).join('');
@@ -373,7 +377,7 @@ export function renderDirections(s, color) {
           ? `<span class="pos-edited-mark" data-slug="${exit._slug}">${Icons.pencil}</span>`
           : '';
         return `<div class="long-transfer-exit">
-          <div class="long-transfer-exit-label" style="position:relative;">${edited}${exit.label}</div>
+          <div class="long-transfer-exit-label" style="position:relative;">${edited}${richText(exit.label)}</div>
           ${posRows}
         </div>`;
       }).filter(Boolean).join('');
@@ -420,7 +424,7 @@ export function renderDirections(s, color) {
     if (!exitsHtml) return '';
 
     return `<div class="direction-block">
-      <div class="direction-label nav-label" data-name="${dir.from}">${formatDirLabel(dir.from)}</div>
+      <div class="direction-label nav-label" data-name="${richText(dir.from)}">${formatDirLabel(dir.from)}</div>
       ${exitsHtml}
     </div>`;
   }).join('');

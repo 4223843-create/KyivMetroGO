@@ -2,8 +2,13 @@
 // Відповідальність: збереження даних користувача через Capacitor Preferences.
 // Дані зберігаються надійно у системних сховищах iOS (UserDefaults) та Android (SharedPreferences).
 // Читання синхронне з in-memory кешу, запис — асинхронний у фоні.
+// Помилка фонового запису повідомляється подією 'storage:write-failed';
+// перед перезавантаженням сторінки чекайте Storage.flush().
+// Зміни ключів з іншої вкладки (лише веб) — подія 'storage:changed' { key }.
 
 import { Preferences } from '@capacitor/preferences';
+import { Capacitor }   from '@capacitor/core';
+import { bus }         from './eventBus.js';
 
 export const STORAGE_KEYS = {
   THEME:          'metro_theme',
@@ -45,6 +50,19 @@ export const STORAGE_KEYS = {
 };
 
 const memoryCache = new Map();
+
+// Незавершені фонові записи — для Storage.flush()
+const _pending = new Set();
+
+function _track(key, write) {
+  const op = write()
+    .catch(err => {
+      console.error('[Storage] запис не вдався:', key, err);
+      bus.emit('storage:write-failed', { key });
+    })
+    .finally(() => _pending.delete(op));
+  _pending.add(op);
+}
 
 // Ранній скрипт теми в index.html виконується до Storage.init() і може читати
 // лише localStorage. На Android/iOS Preferences живе в нативному сховищі,
@@ -101,9 +119,7 @@ export const Storage = {
     _mirrorTheme(key);
 
     // Фоновий нативний запис, який не блокує головний потік UI
-    Promise.resolve().then(async () => {
-      await Preferences.set({ key, value: valStr });
-    });
+    _track(key, () => Preferences.set({ key, value: valStr }));
   },
 
   /**
@@ -114,9 +130,15 @@ export const Storage = {
     memoryCache.delete(key);
     _mirrorTheme(key);
 
-    Promise.resolve().then(async () => {
-      await Preferences.remove({ key });
-    });
+    _track(key, () => Preferences.remove({ key }));
+  },
+
+  /**
+   * Чекає завершення всіх фонових записів (наприклад, перед location.reload()).
+   * @returns {Promise<void>}
+   */
+  async flush() {
+    while (_pending.size) await Promise.allSettled([..._pending]);
   },
 
   /**
@@ -154,7 +176,7 @@ export const Storage = {
 // ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ (ДЛЯ ВЕБ-ВЕРСІЇ) ══
 // На нативному Android Storage event між вкладками ніколи не тригериться
 // (WebView — єдиний процес, вкладок немає). Реєструємо тільки на вебі.
-import { Capacitor } from '@capacitor/core';
+// Модулі з власним кешем (вибране, чекіни, правки) слухають 'storage:changed'.
 
 if (!Capacitor.isNativePlatform()) {
   const _VALID_KEYS = new Set(Object.values(STORAGE_KEYS));
@@ -171,6 +193,7 @@ if (!Capacitor.isNativePlatform()) {
       } else {
         memoryCache.set(key, e.newValue);
       }
+      bus.emit('storage:changed', { key });
     }
   });
 }

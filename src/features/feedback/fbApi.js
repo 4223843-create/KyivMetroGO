@@ -5,10 +5,10 @@
 import { STORAGE_KEYS, Storage }    from '../../core/storage.js';
 import { state as appState }        from '../../core/state.js';
 import { bus }                      from '../../core/eventBus.js';
-import { isDevMode, appendDevLog }  from '../devmode.js';
+import { isDevMode, appendDevLog }  from '../devFlags.js';
 import {
   saveLocalEdit, getLocalEdits, clearAllLocalEdits,
-  invalidateLocalEditsCache, applyLocalEdits, saveExitLabel,
+  applyLocalLayer, saveExitLabel,
 } from '../../data/localEdits.js';
 import { fbState, resetFbState }    from './fbState.js';
 import { extractFinalValues, buildChangeText } from './fbUtils.js';
@@ -105,8 +105,7 @@ export async function submitFeedback(background = false) {
   }
 
   // ── Застосовуємо локально та повідомляємо шини ──────────
-  invalidateLocalEditsCache();
-  applyLocalEdits(appState.stationsData);
+  applyLocalLayer();
   resetFbState();                               // ← стан чистий ДО emit
   bus.emit('feedback:submitted', { slug, hasChanges: true, background });
   bus.emit('station:refresh');

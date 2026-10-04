@@ -42,25 +42,28 @@ import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { renderFeedbackPositions } from './feedback/fbRenderer.js';
-import { getPositionDescriptorsForStation } from '../sheets/renderStation.js';
-import { onDevAuthChange, getCurrentDevUser, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/firebaseSync.js';
+import { getPositionDescriptorsForStation, devRowKey } from '../sheets/renderStation.js';
+import { legacyKeyMap }     from '../data/positions.js';
+import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
+import { escapeHtml } from '../ui/html.js';
+import { showToast }  from '../ui/toast.js';
+import { isDevMode, toggleDevMode } from './devFlags.js';
+import {
+  emptyConfirmationData as _emptyConfirmationData,
+  mergeKeyedMap as _mergeKeyedMap,
+  purgeTombstones as _purgeTombstones,
+  mergeConfirmations as _mergeConfirmations,
+  deriveVerifiedFromConfirmations as _deriveVerifiedFromConfirmations,
+  applyCloudVerifiedIntoConfirmations as _applyCloudVerifiedIntoConfirmations,
+  mergeBacklog as _mergeBacklog,
+  mergeStationNotes as _mergeStationNotes,
+} from '../domain/devMerge.js';
+
+export { isDevMode, toggleDevMode, getDevLog, appendDevLog } from './devFlags.js';
 
 
 
 // ── Активація / деактивація ──────────────────────────
-/** Повертає true якщо режим розробника активний. */
-export function isDevMode() {
-  return Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
-}
-// Для раннього обробника помилок в index.html (вікна «CRASH» лише розробнику)
-window.__isDevMode = isDevMode;
-
-/** Перемикає режим розробника. Повертає новий стан. */
-export function toggleDevMode() {
-  const next = !isDevMode();
-  Storage.set(STORAGE_KEYS.DEV_MODE, String(next));
-  return next;
-}
 
 // ── Локальний таймстамп останньої зміни (планування автосинку) ──
 // DEV_SYNC_LOCAL_TS більше не бере участі у порівнянні "хто новіший" —
@@ -82,16 +85,24 @@ let _devAuthResolved      = false;
 let _lastDevAuthContainer = null; // контейнер форми входу в меню розробника — щоб перемалювати при зміні auth
 let _lastAboutSheet       = null; // остання відкрита About-шторка — щоб оновити іконку швидкого синку
 
-onDevAuthChange(user => {
-  _devUser         = user;
-  _devAuthResolved = true;
-  if (_lastDevAuthContainer?.isConnected) {
-    renderDevAuthSection(_lastDevAuthContainer);
-  }
-  if (_lastAboutSheet?.isConnected) {
-    updateDevModeIndicator(_lastAboutSheet, isDevMode());
-  }
-});
+let _devAuthWatching      = false;
+
+// Firebase завантажується лише в режимі розробника (services/devCloud.js):
+// підписку вмикаємо, коли режим увімкнено — при запуску або перемиканні.
+function _ensureDevAuthWatch() {
+  if (_devAuthWatching) return;
+  _devAuthWatching = true;
+  onDevAuthChange(user => {
+    _devUser         = user;
+    _devAuthResolved = true;
+    if (_lastDevAuthContainer?.isConnected) {
+      renderDevAuthSection(_lastDevAuthContainer);
+    }
+    if (_lastAboutSheet?.isConnected) {
+      updateDevModeIndicator(_lastAboutSheet, isDevMode());
+    }
+  });
+}
 
 // ── Синхронізація: спільний "зайнятий"-прапорець ──────
 // Без цього автосинк (за таймером) і ручна кнопка могли одночасно вдарити
@@ -106,262 +117,7 @@ let _syncInFlight = false;
  * "останній запис виграє цілком", не по-польове злиття.
  * @returns {Promise<'downloaded'|'uploaded'|'busy'>}
  */
-// ── Об'єднання даних синхронізації з підтримкою tombstone ──
-// Кожна нотатка тепер зберігається як об'єкт { v: string, t: number, d?: true }
-// замість голого рядка. Поле d:true означає «навмисно видалено».
-// Переможець визначається виключно за таймстампом t — останній запис виграє,
-// незалежно від того, це додавання чи видалення. Це гарантує, що явне
-// видалення (tombstone) не скасовується старим значенням із хмари.
-//
-// Зворотна сумісність: якщо при читанні зустрічається голий рядок (старий
-// формат) — він обгортається у { v: string, t: 0 } і тихо мігрує при
-// наступному записі. Оскільки t:0 < будь-якого реального таймстампу — при
-// конфлікті зі свіжим tombstone tombstone перемагає, що є правильною
-// поведінкою (нового видаляє старе).
-function _wrapLegacyEntry(raw) {
-  if (raw === null || raw === undefined) return null;
-  if (typeof raw === 'object') return raw;            // вже новий формат
-  return { v: String(raw), t: 0 };                   // старий голий рядок
-}
-
-function _mergeKeyedMap(local, cloud) {
-  const merged = {};
-  const outerKeys = new Set([
-    ...Object.keys(local || {}),
-    ...Object.keys(cloud || {}),
-  ]);
-  for (const outerKey of outerKeys) {
-    const innerKeys = new Set([
-      ...Object.keys(local?.[outerKey] || {}),
-      ...Object.keys(cloud?.[outerKey] || {}),
-    ]);
-    const innerMerged = {};
-    for (const innerKey of innerKeys) {
-      const l = _wrapLegacyEntry(local?.[outerKey]?.[innerKey]);
-      const c = _wrapLegacyEntry(cloud?.[outerKey]?.[innerKey]);
-      if (!l && !c) continue;
-      // Переможець — з більшим таймстампом; рівний — перевага локальному
-      innerMerged[innerKey] = (!c || (l && (l.t ?? 0) >= (c.t ?? 0))) ? l : c;
-    }
-    // Не зберігаємо порожній slug — але tombstone-записи (d:true) зберігаємо,
-    // щоб видалення дійшло до іншого пристрою при наступній синхронізації
-    if (Object.keys(innerMerged).length) merged[outerKey] = innerMerged;
-  }
-  return merged;
-}
-
-/**
- * Видаляє tombstone-записи, старші за maxAgeMs (за замовчуванням 7 діб).
- * Викликається один раз на старті у _performFullSync — лише якщо є авторизація.
- * @param {object} map  — структура {slug: {posIdx: entry}}
- * @param {number} [maxAgeMs]
- * @returns {object}
- */
-function _purgeTombstones(map, maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
-  const now = Date.now();
-  const result = {};
-  for (const [outerKey, inner] of Object.entries(map || {})) {
-    const cleaned = {};
-    for (const [innerKey, entry] of Object.entries(inner || {})) {
-      const e = _wrapLegacyEntry(entry);
-      if (e?.d && (now - (e.t ?? 0)) > maxAgeMs) continue; // прибираємо старий tombstone
-      cleaned[innerKey] = e;
-    }
-    if (Object.keys(cleaned).length) result[outerKey] = cleaned;
-  }
-  return result;
-}
-
-function _mergeConfirmations(local, cloud) {
-  const merged = {};
-  const slugs = new Set([...Object.keys(local || {}), ...Object.keys(cloud || {})]);
-  for (const slug of slugs) {
-    merged[slug] = {};
-    const posIdxs = new Set([
-      ...Object.keys(local?.[slug] || {}),
-      ...Object.keys(cloud?.[slug] || {}),
-    ]);
-    for (const posIdx of posIdxs) {
-      const l = local?.[slug]?.[posIdx] || _emptyConfirmationData();
-      const c = cloud?.[slug]?.[posIdx] || _emptyConfirmationData();
-
-      // resetAt — таймстамп явного скидання цієї позиції (resetConfirmationData).
-      // Якщо скидання відбулось ПІСЛЯ останнього оновлення іншого боку —
-      // скидання перемагає, і ми не відновлюємо старі лічильники з хмари.
-      const lResetAt   = l.resetAt ?? 0;
-      const cResetAt   = c.resetAt ?? 0;
-      const lUpdatedAt = l.updatedAt ?? 0;
-      const cUpdatedAt = c.updatedAt ?? 0;
-
-      // Локальне скидання новіше за хмарні дані → беремо локальний (порожній) стан
-      if (lResetAt > cUpdatedAt && lResetAt >= cResetAt) {
-        merged[slug][posIdx] = { ...l };
-        continue;
-      }
-      // Хмарне скидання новіше за локальні дані → беремо хмарний (порожній) стан
-      if (cResetAt > lUpdatedAt && cResetAt > lResetAt) {
-        merged[slug][posIdx] = { ...c };
-        continue;
-      }
-
-      // Звичайний merge — монотонні лічильники, OR для finalConfirmed
-      const corrections = {};
-      const corrKeys = new Set([
-        ...Object.keys(l.corrections || {}),
-        ...Object.keys(c.corrections || {}),
-      ]);
-      for (const k of corrKeys) {
-        corrections[k] = Math.max(l.corrections?.[k] || 0, c.corrections?.[k] || 0);
-      }
-
-      merged[slug][posIdx] = {
-        finalConfirmed: !!(l.finalConfirmed || c.finalConfirmed),
-        confirmCount:   Math.max(l.confirmCount  || 0, c.confirmCount  || 0),
-        disputeCount:   Math.max(l.disputeCount  || 0, c.disputeCount  || 0),
-        corrections,
-        lastAction:     l.lastAction || null,
-        updatedAt:      Math.max(lUpdatedAt, cUpdatedAt),
-        resetAt:        Math.max(lResetAt,   cResetAt) || null,
-      };
-    }
-    if (!Object.keys(merged[slug]).length) delete merged[slug];
-  }
-  return merged;
-}
-
-/** Похідний {slug:{posIdx:true}} з finalConfirmed — для сумісного формату дроту у Firestore. */
-function _deriveVerifiedFromConfirmations(confirmations) {
-  const verified = {};
-  for (const slug of Object.keys(confirmations || {})) {
-    for (const posIdx of Object.keys(confirmations[slug] || {})) {
-      if (confirmations[slug][posIdx]?.finalConfirmed) {
-        if (!verified[slug]) verified[slug] = {};
-        verified[slug][posIdx] = true;
-      }
-    }
-  }
-  return verified;
-}
-
-/** Застосовує застарілий verified-формат із хмари.
- *  Не виставляє finalConfirmed якщо для цієї позиції є свіжий resetAt —
- *  це означає, що розробник явно скинув підтвердження після того, як
- *  verified-запис потрапив у хмару.
- */
-function _applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified) {
-  if (!cloudVerified) return confirmations;
-  const result = { ...confirmations };
-  for (const slug of Object.keys(cloudVerified)) {
-    if (!result[slug]) result[slug] = {};
-    for (const posIdx of Object.keys(cloudVerified[slug])) {
-      const current = result[slug][posIdx] || _emptyConfirmationData();
-      // Якщо є resetAt і він новіший ніж updatedAt — скидання вже відбулось,
-      // ігноруємо старий verified із хмари
-      if (current.resetAt && current.resetAt >= (current.updatedAt ?? 0)) continue;
-      result[slug][posIdx] = { ...current, finalConfirmed: true };
-    }
-  }
-  return result;
-}
 const DEV_BACKLOG_SYNC_BASE_KEY = 'dev_backlog_last_synced';
-function _mergeBacklog(local, cloud, base) {
-  const l = (local || '').trim();
-  const c = (cloud || '').trim();
-  const b = (base || '').trim();
-
-  // Нічого немає
-  if (!l && !c) return '';
-
-  // Перший запуск / немає попередньої синхронізованої версії
-  if (!b) {
-    if (!l) return c;
-    if (!c) return l;
-    if (l === c) return l;
-
-    // Якщо cloud є частиною local — локальна версія вже містить cloud
-    if (l.startsWith(c + '\n') || l === c) return l;
-
-    // Якщо local є частиною cloud — хмарна версія вже містить local
-    if (c.startsWith(l + '\n')) return c;
-
-    // Справді незалежні тексти
-    return `${l}\n\n— з іншого пристрою —\n${c}`;
-  }
-
-  // Нічого не змінилося локально
-  if (l === b) return c;
-
-  // Нічого не змінилося в хмарі
-  if (c === b) return l;
-
-  // Зміни відбулися тільки локально
-  if (l !== b && c === b) return l;
-
-  // Зміни відбулися тільки в cloud
-  if (l === b && c !== b) return c;
-
-  // Обидві сторони змінилися.
-  // Визначаємо додані частини відносно останньої
-  // синхронізованої версії.
-  const baseLines = b.split('\n');
-  const localLines = l.split('\n');
-  const cloudLines = c.split('\n');
-
-  function getAddedLines(currentLines) {
-    let i = 0;
-
-    while (
-      i < baseLines.length &&
-      i < currentLines.length &&
-      baseLines[i] === currentLines[i]
-    ) {
-      i++;
-    }
-
-    return currentLines.slice(i);
-  }
-
-  const localAdded = getAddedLines(localLines);
-  const cloudAdded = getAddedLines(cloudLines);
-
-  // Починаємо з базової версії.
-  const result = [...baseLines];
-
-  // Додаємо зміни cloud
-  for (const line of cloudAdded) {
-    if (!result.includes(line)) {
-      result.push(line);
-    }
-  }
-
-  // Додаємо локальні зміни
-  for (const line of localAdded) {
-    if (!result.includes(line)) {
-      result.push(line);
-    }
-  }
-
-  return result.join('\n').trim();
-}
-
-/** Merge нотаток станцій: переможець — запис з більшим таймстампом.
- *  Tombstone { d:true, t } зберігається, щоб видалення дійшло до іншого пристрою. */
-function _mergeStationNotes(local, cloud) {
-  const merged = {};
-  const slugs = new Set([
-    ...Object.keys(local || {}),
-    ...Object.keys(cloud || {}),
-  ]);
-  for (const slug of slugs) {
-    const l = _wrapLegacyEntry(local?.[slug]);
-    const c = _wrapLegacyEntry(cloud?.[slug]);
-    if (!l && !c) continue;
-    // Переможець — з більшим t; при рівності — локальний
-    const winner = (!c || (l && (l.t ?? 0) >= (c.t ?? 0))) ? l : c;
-    merged[slug] = winner;
-  }
-  return merged;
-}
 
 async function _performFullSync() {
   if (_syncInFlight) return 'busy';
@@ -579,22 +335,6 @@ function _requestSync(immediate = false) {
 // всередині _touchSyncTimestamp (беклог, DEV_SYNC_LOCAL_TS тощо).
 function _scheduleAutoSync() { _requestSync(false); }
 
-// ── Лог змін ────────────────────────────────────────
-/** @returns {object[]} масив записів про всі зміни позицій у dev-режимі */
-export function getDevLog() {
-  try { return JSON.parse(Storage.get(STORAGE_KEYS.DEV_LOG) || '[]'); }
-  catch(e) { return []; }
-}
-
-/**
- * Додає запис до dev-лога.
- * @param {{ station:string, slug:string, dir:string, exit:string, posIdx:number, field:string, from:*, to:* }} entry
- */
-export function appendDevLog(entry) {
-  const log = getDevLog();
-  log.push({ ts: Date.now(), ...entry });
-  Storage.set(STORAGE_KEYS.DEV_LOG, JSON.stringify(log));
-}
 
 // ── Перехід зі старих ключів на стабільні ─────────────
 // Раніше нотатки й підтвердження зберігалися за порядковим номером рядка
@@ -609,16 +349,38 @@ const _isLegacyRowKey = key => /^\d+$/.test(key);
 const _entryTime = entry =>
   (entry && typeof entry === 'object') ? (entry.t ?? entry.updatedAt ?? 0) : 0;
 
+// Ключ рядка до появи id позицій у даних — хеш від «напрямок|id виходу|номер».
+// Map<старий ключ рядка, новий> для станції.
+function _oldHashRowKeys(station) {
+  const map = new Map();
+  for (const [oldKey, id] of legacyKeyMap(station)) {
+    const from = devRowKey(oldKey);
+    const to   = devRowKey(id);
+    if (from !== to) map.set(from, to);
+  }
+  return map;
+}
+
+/** Старий ключ рядка (до появи id позицій) для нового або ''. */
+function _oldRowKeyFor(slug, rowKey) {
+  const station = state.stationsData?.[slug];
+  if (!station) return '';
+  for (const [from, to] of _oldHashRowKeys(station)) if (to === rowKey) return from;
+  return '';
+}
+
 function _migrateRowKeys(map) {
   let changed = false;
   for (const slug of Object.keys(map || {})) {
     const entries = map[slug];
-    if (!entries || !Object.keys(entries).some(_isLegacyRowKey)) continue;
     const station = state.stationsData?.[slug];
-    if (!station) continue;
+    if (!entries || !station) continue;
+    const oldHashKeys = _oldHashRowKeys(station);
+    const isOld = key => _isLegacyRowKey(key) || oldHashKeys.has(key);
+    if (!Object.keys(entries).some(isOld)) continue;
     const descriptors = getPositionDescriptorsForStation(station, LINE_COLOR[station.line]);
-    for (const oldKey of Object.keys(entries).filter(_isLegacyRowKey)) {
-      const newKey = descriptors[Number(oldKey)]?.key;
+    for (const oldKey of Object.keys(entries).filter(isOld)) {
+      const newKey = oldHashKeys.get(oldKey) ?? descriptors[Number(oldKey)]?.key;
       if (!newKey || _isLegacyRowKey(newKey)) continue;
       // Збіг зі свіжішим записом під новим ключем — перемагає новіший
       if (!entries[newKey] || _entryTime(entries[oldKey]) > _entryTime(entries[newKey])) {
@@ -726,10 +488,6 @@ function _readConfirmations() {
 function _writeConfirmations(data) {
   Storage.set(STORAGE_KEYS.DEV_CONFIRMATIONS, JSON.stringify(data));
   _touchSyncTimestamp();
-}
-
-function _emptyConfirmationData() {
-  return { finalConfirmed: false, confirmCount: 0, disputeCount: 0, corrections: {}, lastAction: null, updatedAt: 0 };
 }
 
 /** @returns {{finalConfirmed:boolean, confirmCount:number, disputeCount:number, corrections:Record<string,number>, lastAction:object|null}} */
@@ -962,7 +720,7 @@ function _toggleStationNotePanel(panel, slug, lineColor, btn, defaultColor) {
 
   const currentText = getStationNote(slug);
   panel.innerHTML = `
-    <textarea class="dev-note-textarea dev-station-note-textarea" placeholder="Загальна нотатка по станції…">${currentText}</textarea>
+    <textarea class="dev-note-textarea dev-station-note-textarea" placeholder="Загальна нотатка по станції…">${escapeHtml(currentText)}</textarea>
     <div class="dev-note-actions">
       <button type="button" class="dev-station-note-save confirm-main-btn confirm-btn-save">Готово</button>
       ${currentText ? `<button type="button" class="dev-station-note-delete confirm-btn-discard">Видалити</button>` : ''}
@@ -1021,6 +779,8 @@ export function attachDevModeUI(container, slug) {
     // rowIdx — старий порядковий номер, потрібен лише для старих фото.
     const posIdx = row.dataset.rowKey || String(rowIdx);
     row.dataset.devPosIdx = rowIdx;
+    // Фото, зняті до появи id позицій, лежать під старим ключем рядка
+    row.dataset.devOldKey = _oldRowKeyFor(slug, posIdx);
     row.dataset.devSlug   = slug;
 
     // ── Кнопка «Підтвердження» (єдина — замінює колишню окрему галочку) ──
@@ -1137,7 +897,7 @@ export function attachDevModeUI(container, slug) {
       moreMenu.classList.toggle('is-open', willOpen);
     });
 
-    listPhotosForPosition(slug, posIdx, rowIdx).then(photos => {
+    listPhotosForPosition(slug, posIdx, [rowIdx, row.dataset.devOldKey]).then(photos => {
       if (photos.length) {
         photoBtn.style.color   = lineColor;
         photoBtn.style.opacity = '1';
@@ -1339,7 +1099,7 @@ function toggleDevNotePanel(row, slug, posIdx, lineColor, noteBtn, defaultColor,
   // Додаємо третю кнопку "Видалити" з червоним підсвічуванням (confirm-btn-discard)
   // Вона рендериться тільки якщо нотатка фізично вже існує в базі
   panel.innerHTML = `
-    <textarea class="dev-note-textarea">${existingNote}</textarea> 
+    <textarea class="dev-note-textarea">${escapeHtml(existingNote)}</textarea> 
     <div class="dev-note-actions"> 
       <button type="button" class="dev-note-save confirm-btn-save">Зберегти</button> 
       <button type="button" class="dev-note-cancel confirm-btn-neutral">Скасувати</button> 
@@ -1400,13 +1160,16 @@ function _newPhotoId(slug, posIdx) {
 /**
  * @param {string} slug
  * @param {string} posIdx    — стабільний ключ рядка (devRowKey)
- * @param {number} [legacyIdx] — старий порядковий номер рядка: фото, зняті до
- *   переходу на ключі, лишаються під ним (їхні id у хмарі не перейменовуємо)
+ * @param {Array<string|number>} [legacyKeys] — старі ключі рядка (порядковий номер,
+ *   хеш до появи id позицій): фото, зняті раніше, лишаються під ними
+ *   (їхні id у хмарі не перейменовуємо)
  * @returns {Promise<Array<{id:string, dataUrl:string}>>} усі фото для конкретної позиції
  */
-async function listPhotosForPosition(slug, posIdx, legacyIdx) {
+async function listPhotosForPosition(slug, posIdx, legacyKeys = []) {
   const prefixes = [_photoPrefix(slug, posIdx)];
-  if (legacyIdx !== undefined && legacyIdx !== '') prefixes.push(_photoPrefix(slug, legacyIdx));
+  for (const key of legacyKeys) {
+    if (key !== undefined && key !== '') prefixes.push(_photoPrefix(slug, key));
+  }
   const all = await PhotoStorage.getAllPhotos();
   return Object.keys(all)
     .filter(id => prefixes.some(prefix => id.startsWith(prefix)))
@@ -1442,7 +1205,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
   };
 
   const paint = async () => {
-    const photos = await listPhotosForPosition(slug, posIdx, row.dataset.devPosIdx);
+    const photos = await listPhotosForPosition(slug, posIdx, [row.dataset.devPosIdx, row.dataset.devOldKey]);
     updateBtnState(photos.length);
 
     panel.innerHTML = `
@@ -1530,18 +1293,7 @@ function showDevPhotoFullscreen(src) {
 }
 
 // ── UI: тост активації ────────────────────────────────
-function _showToast(text) {
-  document.querySelectorAll('.dev-mode-toast').forEach(t => t.remove());
-  const toast = document.createElement('div');
-  toast.className = 'dev-mode-toast';
-  toast.textContent = text;
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('dev-mode-toast-open'));
-  setTimeout(() => {
-    toast.classList.remove('dev-mode-toast-open');
-    setTimeout(() => toast.remove(), 400);
-  }, 2500);
-}
+const _showToast = showToast;
 
 /**
  * Показує тимчасовий тост про стан dev-режиму.
@@ -1587,6 +1339,7 @@ export function updateDevModeIndicator(aboutSheet, active) {
  */
 export function renderDevAuthSection(container) {
   if (!container) return;
+  _ensureDevAuthWatch();
   _lastDevAuthContainer = container;
   container.innerHTML = '';
 
@@ -1706,6 +1459,7 @@ export function setupDevModeTapCounter(aboutSheet) {
 /** Показує/ховає плаваючу кнопку меню розробника зверху карти. */
 export function updateDevMenuButtonVisibility() {
   document.getElementById('devMenuBtn')?.classList.toggle('is-hidden', !isDevMode());
+  if (isDevMode()) _ensureDevAuthWatch();
 }
 
 
@@ -1882,7 +1636,7 @@ function setupDevDataClear(container) {
     console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
   );
 
-  setTimeout(() => location.reload(), 180);
+  setTimeout(() => Storage.flush().then(() => location.reload()), 180);
 },
           onNo:      null,
           onCancel:  null,

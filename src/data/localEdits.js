@@ -1,22 +1,25 @@
 // ══ ЛОКАЛЬНІ ПРАВКИ ТА ОПИСИ ВИХОДІВ ══
 // Відповідальність: читання/запис локальних правок позицій та підписів виходів.
 //
-// Формат зберігання: { [slug]: { [key]: … } }, де key — стабільний ключ позиції
-// «напрямок|id виходу|номер позиції у виході» (positionKey, data/positions.js),
-// а для доданих користувачем виходів — «new|…». Так правки не з'їжджають на чужий
-// вихід, коли в даних змінюється кількість чи порядок виходів.
+// Формат зберігання: { [slug]: { [key]: … } }, де key — постійний id позиції з
+// stations.json (positionId, data/positions.js), а для доданих користувачем
+// виходів — «new|…». Так правки не з'їжджають на чужий вихід, коли в даних
+// змінюється кількість, порядок чи назви виходів і напрямків.
 //
 // Решта застосунку працює з posIdx (індекс у station.positions) — тут він
 // перекладається в ключ і назад через station.positions[i]._key.
-// Записи старого формату (ключ — posIdx) переводяться в нові при завантаженні даних.
+// Записи старих форматів (ключ — posIdx або «напрямок|id виходу|номер») переводяться
+// на id при завантаженні даних.
 //
-// applyLocalEdits / applyExitLabels залишаються публічними — їх безпосередньо
-// викликають fbEvents.js, fbApi.js та stationSheet.js (прямий ESM-імпорт).
+// Шари даних. Дані з stations.json після гідратації зберігаються незмінною
+// копією (_base). state.stationsData — це «вид»: копія бази з накладеними
+// правками й підписами. Після будь-якої зміни правок виклик applyLocalLayer()
+// складає вид заново з бази, тож скасована правка зникає без перечитування файлу.
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
 import { state }                 from '../core/state.js';
-import { traversePositions }     from './positions.js';
+import { traversePositions, legacyKeyMap } from './positions.js';
 
 const NEW_PREFIX = 'new|';
 
@@ -24,6 +27,9 @@ const NEW_PREFIX = 'new|';
 
 let localEditsCache = null;
 let exitLabelsCache = null;
+
+/** slug → станція з даних без локальних правок (не змінюється до наступної гідратації). */
+let _base = {};
 
 export function invalidateLocalEditsCache() {
   localEditsCache = null;
@@ -110,15 +116,12 @@ export function getExitLabel(slug, posIdx) {
 }
 
 /**
- * Застосовує всі збережені підписи виходів до об'єктів stationsData.
- * Мутує exit.label та exit._labelEdited на місці.
- * Викликається:
- *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
- *   – явно з fbEvents.js та stationSheet.js при ручних змінах.
+ * Накладає збережені підписи виходів на свіжу копію даних (exit.label,
+ * exit._labelEdited). Викликається лише з applyLocalLayer.
  *
  * @param {Record<string, object>} stationsData
  */
-export function applyExitLabels(stationsData) {
+function _applyExitLabels(stationsData) {
   const labels = _getStoredLabels();
   for (const [slug, keyLabels] of Object.entries(labels)) {
     if (!stationsData[slug]) continue;
@@ -198,17 +201,14 @@ export function hasLocalEdits() {
 }
 
 /**
- * Застосовує всі локальні правки до об'єктів stationsData.
- * Мутує position на місці (wagon, doors, closed тощо).
- * Для isNew-правок — додає новий exit до відповідного direction.
+ * Накладає локальні правки на свіжу копію даних: змінює position (wagon,
+ * doors, closed тощо), для isNew-правок додає новий exit у свій direction.
  * Правки, чия позиція зникла з даних, лишаються у сховищі, але не показуються.
- * Викликається:
- *   – автоматично з bus.on('data:stations-hydrated') при завантаженні даних;
- *   – явно з fbEvents.js та fbApi.js при ручних змінах у формі фідбеку.
+ * Викликається лише з applyLocalLayer.
  *
  * @param {Record<string, object>} stationsData
  */
-export function applyLocalEdits(stationsData) {
+function _applyLocalEdits(stationsData) {
   const edits = _getStoredEdits();
 
   for (const [slug, keyEdits] of Object.entries(edits)) {
@@ -256,22 +256,46 @@ export function applyLocalEdits(stationsData) {
   }
 }
 
-// ══ ПЕРЕХІД ЗІ СТАРОГО ФОРМАТУ (ключ = posIdx) ════════════════
-// Старі ключі — числа. Позиції з даних нумерувалися обходом чистих даних,
-// тобто збігаються з station.positions до застосування правок; нові виходи
-// мали номери за межами цього списку.
+// ══ ВИД = БАЗА + ПРАВКИ ═════════════════════════════════════════
 
-const _isLegacyKey = key => /^\d+$/.test(key);
+/**
+ * Складає state.stationsData заново: копія незмінних даних + поточні правки
+ * й підписи. Викликайте після saveLocalEdit / removeLocalEdit / saveExitLabel /
+ * clearAllLocalEdits, а потім bus.emit('station:refresh') для перемальовування.
+ */
+export function applyLocalLayer() {
+  const view = state.stationsData;
+  if (!view) return;
+  invalidateLocalEditsCache();
+  for (const slug of Object.keys(_base)) view[slug] = structuredClone(_base[slug]);
+  _applyLocalEdits(view);
+  _applyExitLabels(view);
+}
+
+// ══ ПЕРЕХІД ЗІ СТАРИХ ФОРМАТІВ ════════════════════════════════
+// 1) Ключ — posIdx (число). Позиції з даних нумерувалися обходом чистих даних,
+//    тобто збігаються з station.positions до застосування правок; нові виходи
+//    мали номери за межами цього списку.
+// 2) Ключ — «напрямок|id виходу|номер позиції у виході» (до появи id у даних).
+
+const _isLegacyKey   = key => /^\d+$/.test(key);
+const _isOldPathKey  = key => key.includes('|') && !key.startsWith(NEW_PREFIX);
 
 function _migrateLegacy(stationsData) {
   const convert = (stored, write) => {
     let changed = false;
     for (const [slug, entries] of Object.entries(stored)) {
-      if (!Object.keys(entries).some(_isLegacyKey)) continue;
+      if (!Object.keys(entries).some(k => _isLegacyKey(k) || _isOldPathKey(k))) continue;
       const positions = stationsData[slug]?.positions;
       if (!positions) continue;           // станції немає — лишаємо як є
+      const oldKeys = legacyKeyMap(stationsData[slug]);
       const next = {};
       for (const [key, value] of Object.entries(entries)) {
+        if (_isOldPathKey(key)) {
+          // Позиції з таким старим ключем уже немає — лишаємо запис як є
+          next[oldKeys.get(key) ?? key] = value;
+          continue;
+        }
         if (!_isLegacyKey(key)) { next[key] = value; continue; }
         const idx    = Number(key);
         const newKey = positions[idx]?._key
@@ -279,6 +303,7 @@ function _migrateLegacy(stationsData) {
         if (!positions[idx]?._key && value && typeof value === 'object' && !value.isNew) continue;
         next[newKey] = value;
       }
+      if (JSON.stringify(next) === JSON.stringify(entries)) continue;
       stored[slug] = next;
       changed = true;
     }
@@ -292,8 +317,15 @@ function _migrateLegacy(stationsData) {
 // EventBus — синхронний: handlers виконуються до повернення bus.emit(),
 // тому правки гарантовано застосовані до того, як hydrateStations поверне дані.
 
+// Правки чи підписи змінили в іншій вкладці
+bus.on('storage:changed', ({ key }) => {
+  if (key !== STORAGE_KEYS.LOCAL_EDITS && key !== STORAGE_KEYS.EXIT_LABELS) return;
+  applyLocalLayer();
+  bus.emit('station:refresh');
+});
+
 bus.on('data:stations-hydrated', ({ stationsData }) => {
   _migrateLegacy(stationsData);
-  applyLocalEdits(stationsData);
-  applyExitLabels(stationsData);
+  _base = structuredClone(stationsData);
+  applyLocalLayer();
 });

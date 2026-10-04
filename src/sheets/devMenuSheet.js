@@ -11,8 +11,7 @@ import { state }   from '../core/state.js';
 import { bus }     from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { LINE_COLOR } from '../core/constants.js';
-import { pushSheetHistory }  from '../ui/system.js';
-import { animateSheetClose } from '../ui/animations.js';
+import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { getPositionDescriptorsForStation } from './renderStation.js';
 import {
   renderDevAuthSection, getAllDevNotes, getAllStationNotes,
@@ -21,8 +20,8 @@ import {
   getExitsCatalogStatus, getExitsCatalogCount, cycleExitsCatalogStatus,
   setExitsCatalogVerified, resetExitsCatalogVerified,
 } from '../features/devmode.js';
+import { escapeHtml, richText } from '../ui/html.js';
 
-const sheetOverlay = document.getElementById('sheetOverlay');
 
 // ── Стан кнопок видалення нотаток ─────────────────────────────────────────
 // _expandedRows: стрілку натиснуто → видно кнопку «Видалити»
@@ -234,8 +233,8 @@ function _noteRowHtml({ deleteId, slug, posIdx, text, extra, expanded, pending }
   return (
     '<div class="dev-note-row-wrap">' +
       '<button type="button" class="dev-menu-row dev-menu-row--with-action" data-slug="' + slug + '">' +
-        '<div class="dev-menu-row-station">' + text + '</div>' +
-        '<div class="dev-menu-row-extra">' + extra + '</div>' +
+        '<div class="dev-menu-row-station">' + richText(text) + '</div>' +
+        '<div class="dev-menu-row-extra">' + escapeHtml(extra) + '</div>' +
       '</button>' +
       '<div class="dev-note-action-zone">' + actionHtml + '</div>' +
     '</div>'
@@ -635,7 +634,6 @@ function _renderAll(sheet) {
 }
 
 export function openDevMenuSheet() {
-  pushSheetHistory();
 
   let sheet = document.getElementById('devMenuSheet');
   if (!sheet) {
@@ -647,11 +645,7 @@ export function openDevMenuSheet() {
     document.body.appendChild(sheet);
 
     sheet.querySelector('#devMenuClose')?.addEventListener('click', () => {
-      animateSheetClose(sheet, () => {
-        sheet.classList.remove('sheet-open');
-        if (!document.querySelectorAll('.station-sheet.sheet-open').length)
-          sheetOverlay.classList.remove('overlay-visible');
-      });
+      hideSheet(sheet);
     });
 
     // Перемальовуємо нотатки/верифікацію, якщо синхронізація щось підтягнула
@@ -661,9 +655,7 @@ export function openDevMenuSheet() {
 
   _renderAll(sheet);
 
-  document.querySelectorAll('.station-sheet').forEach(el => el.classList.remove('sheet-open'));
-  sheet.classList.add('sheet-open', 'sheet-fullscreen', 'sheet-scrollable');
-  sheetOverlay.classList.add('overlay-visible');
+  showSheet(sheet, 'sheet-fullscreen', 'sheet-scrollable');
 }
 
 // Дозволяє відкрити меню розробника зовні (наприклад, з компактної кнопки
