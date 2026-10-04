@@ -356,8 +356,10 @@ async function _fetchRemoteStations(timeoutMs) {
  */
 async function _refreshStationsInBackground(currentVersion) {
   const fresh = await _fetchRemoteStations(BACKGROUND_FETCH_TIMEOUT_MS);
-  if (!fresh || stationsVersion(fresh) <= Number(currentVersion ?? 0)) return;
+  const base  = Math.max(Number(currentVersion ?? 0), _newestKnownVersion);
+  if (!fresh || stationsVersion(fresh) <= base) return;
   await _writeFilesystemCache(fresh);
+  _newestKnownVersion = stationsVersion(fresh);
   // Дзеркало SW-логіки: там postMessage({ type: 'STATIONS_UPDATED' }),
   // тут — bus.emit, який swUpdate.js перехоплює через підписку.
   bus.emit('stations:updated', { version: fresh.version });
@@ -387,6 +389,24 @@ async function _fetchStationsNative(forceFresh = false) {
   return local;
 }
 
+// Найновіша версія даних, про яку знаємо: завантажена або вже збережена у фоні.
+// Повторна перевірка не показує тост вдруге про ту саму версію.
+let _newestKnownVersion = 0;
+
+/**
+ * Перевірка оновлень даних при поверненні застосунку з фону. Встановлений
+ * застосунок на телефоні роками може не перезапускатися «з нуля», тож перевірки
+ * лише при старті замало. Нова версія — той самий тост «Перезавантажити».
+ * Веб: запит іде через SW, який віддає копію й перевіряє мережу у фоні.
+ */
+export function checkStationsUpdate() {
+  if (Capacitor.isNativePlatform()) {
+    _refreshStationsInBackground(_newestKnownVersion);
+  } else {
+    fetch(getStationsUrl()).catch(() => {});
+  }
+}
+
 // ══ ЗАВАНТАЖЕННЯ (публічне) ════════════════════════════════════
 
 /**
@@ -401,6 +421,7 @@ export async function reloadStationsData(forceFresh = false) {
   const data = Capacitor.isNativePlatform()
     ? await _fetchStationsNative(forceFresh)
     : await _fetchStationsWeb(forceFresh);
+  _newestKnownVersion = Math.max(_newestKnownVersion, stationsVersion(data));
 
   let hydrated;
   try {

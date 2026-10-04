@@ -3,6 +3,7 @@
 // Перемикання без перехідної анімації (transition: none на час зміни атрибута).
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { syncSystemBars }         from './system.js';
 
 const root = document.documentElement;
 
@@ -31,6 +32,7 @@ export function applyTheme(preference, save = true) {
 
   root.setAttribute('data-theme', actualTheme);
   root.style.colorScheme = actualTheme;
+  syncSystemBars(actualTheme);
   if (save) {
     Storage.set(STORAGE_KEYS.THEME, pref);
   }

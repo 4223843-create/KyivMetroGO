@@ -17,6 +17,7 @@ import './map/mapGestures.js';
 import './map/mapInteraction.js';
 import './infra/offline.js';
 import './infra/swUpdate.js';
+import './infra/resumeUpdates.js';
 import './features/feedback/index.js';
 import './features/checkin/index.js';
 import './features/favorites/index.js';
