@@ -65,10 +65,23 @@ export const isFav = slug => _readFavCache().includes(slug);
  */
 export function toggleFav(slug) {
   let favs = getFavs();
-  favs = favs.includes(slug)
+  const removing = favs.includes(slug);
+  favs = removing
     ? favs.filter(s => s !== slug)
     : [...favs, slug];
   saveFavs(favs);
+
+  // Станцію прибрали з Обраного — прибираємо й її збережені виходи,
+  // інакше пілюлі лишаються зафарбованими, а станції в Обраному вже немає.
+  if (removing) {
+    const exits = _readExitFavCache();
+    if (exits.some(f => f.slug === slug)) {
+      _exitFavCache = exits.filter(f => f.slug !== slug);
+      Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(_exitFavCache));
+      bus.emit('station:refresh');
+    }
+  }
+
   bus.emit('fav:updated');
   return favs.includes(slug);
 }
@@ -86,6 +99,12 @@ function _readExitFavCache() {
     _exitFavCache = [];
   }
   return _exitFavCache;
+}
+
+/** Очищує всі обрані виходи (і в сховищі, і в пам'яті). */
+export function clearExitFavs() {
+  _exitFavCache = [];
+  Storage.remove(STORAGE_KEYS.EXIT_FAVS);
 }
 
 /**
@@ -149,6 +168,7 @@ export function toggleExitFav(slug, dir, wagon, doors) {
   }
 
   Storage.set(STORAGE_KEYS.EXIT_FAVS, JSON.stringify(favs));
+  bus.emit('fav:updated');
   return { status: 'added' };
 }
 
@@ -183,12 +203,15 @@ export function replaceExitFav(slug, dir, oldWagon, oldDoors, newWagon, newDoors
 // Оновлюємо тільки кеш (data-concerns), UI-реакцію делегуємо
 // в features/favorites/index.js через bus.on('fav:externally-updated').
 
+// Preferences на вебі пише в localStorage з префіксом «CapacitorStorage.»
+const _PREFS_PREFIX = 'CapacitorStorage.';
+
 window.addEventListener('storage', e => {
-  if (e.key === STORAGE_KEYS.FAVS) {
+  if (e.key === _PREFS_PREFIX + STORAGE_KEYS.FAVS) {
     try { _favCache = JSON.parse(e.newValue || '[]'); }
     catch { _favCache = []; }
     bus.emit('fav:externally-updated', { key: e.key });
-  } else if (e.key === STORAGE_KEYS.EXIT_FAVS) {
+  } else if (e.key === _PREFS_PREFIX + STORAGE_KEYS.EXIT_FAVS) {
     try { _exitFavCache = JSON.parse(e.newValue || '[]'); }
     catch { _exitFavCache = []; }
     bus.emit('fav:externally-updated', { key: e.key });

@@ -45,7 +45,24 @@ function showDataUpdateToast(version) {
 }
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('controllerchange', showUpdateToast);
+  // Перше встановлення SW (clients.claim) теж дає controllerchange — тоді це не оновлення.
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', async () => {
+    if (!hadController) return;
+    // Сторінка могла вже завантажитися з новою збіркою (навігація йде з мережі),
+    // а новий SW активувався слідом. Якщо наш головний скрипт є в кеші нового SW,
+    // то ми й так на новій версії. Кеш нового SW — kyivmetro-<час збірки> з
+    // найбільшим часом (старий у цей момент ще може існувати).
+    const mainScript = document.querySelector('script[type="module"][src]')?.src;
+    try {
+      const newest = (await caches.keys())
+        .filter(k => /^kyivmetro-\d+$/.test(k))
+        .sort((a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1]))
+        .pop();
+      if (mainScript && newest && await (await caches.open(newest)).match(mainScript)) return;
+    } catch { /* немає доступу до кешу — показуємо тост */ }
+    showUpdateToast();
+  });
 
   // Слухаємо повідомлення від SW — зокрема STATIONS_UPDATED.
   navigator.serviceWorker.addEventListener('message', event => {

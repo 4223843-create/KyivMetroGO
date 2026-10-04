@@ -76,7 +76,9 @@ function _validate(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return { valid: false, reason: 'Файл не є обʼєктом JSON.' };
   }
-  const hasKnownKey = USER_DATA_KEYS.some(k => k in data)
+  // Будь-який ключ застосунку — зокрема бекап лише з налаштуваннями
+  const knownKeys   = new Set(Object.values(STORAGE_KEYS));
+  const hasKnownKey = Object.keys(data).some(k => knownKeys.has(k))
     || BACKUP_TOKEN in data
     || 'metro_favs' in data; // legacy ключ до міграції STORAGE_KEYS
   if (!hasKnownKey) {
@@ -119,11 +121,17 @@ async function _exportNative(json, filename) {
     directory: Directory.Cache,
     path:      filename,
   });
-  await Share.share({
-    title:       'KyivMetroGO — резервна копія',
-    url:         uri,
-    dialogTitle: 'Зберегти резервну копію',
-  });
+  try {
+    await Share.share({
+      title:       'KyivMetroGO — резервна копія',
+      url:         uri,
+      dialogTitle: 'Зберегти резервну копію',
+    });
+  } catch (err) {
+    // Закриття вікна «Поділитися» — не помилка (Android: «Share canceled»)
+    if (/cancel/i.test(err?.message || '')) return;
+    throw err;
+  }
 }
 
 /**
@@ -282,10 +290,12 @@ async function _pickNative() {
 
   const file = result.files[0];
 
-  // file.data — base64-рядок; atob() декодує в UTF-8 текст
+  // file.data — base64-рядок. atob() дає байти (Latin-1), тому декодуємо
+  // їх як UTF-8, інакше кирилиця перетворюється на «Ð’Ð¸Ñ…»
   let text;
   try {
-    text = atob(file.data);
+    const bytes = Uint8Array.from(atob(file.data), ch => ch.charCodeAt(0));
+    text = new TextDecoder('utf-8').decode(bytes);
   } catch {
     return { status: 'invalid', reason: 'Не вдалося прочитати вміст файлу.' };
   }

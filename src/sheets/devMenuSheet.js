@@ -125,7 +125,8 @@ function _renderExitNotesSection(container, lineFilter) {
       const text = _noteText(entry);
       if (!text) continue;
 
-      const d = descriptors[Number(posIdx)];
+      // Ключ — devRowKey рядка; числовий — старий запис, який не вдалося перевести
+      const d = descriptors.find(x => x.key === posIdx) ?? descriptors[Number(posIdx)];
       if (!d) continue;
 
       entries.push({
@@ -158,7 +159,7 @@ function _renderExitNotesSection(container, lineFilter) {
 
   _bindNotesClicks(container);
   _bindNoteRowControls(container, (deleteId, slug, posIdx) => {
-    setDevNote(slug, Number(posIdx), '');
+    setDevNote(slug, posIdx, '');
   }, (container) => _renderExitNotesSection(container, _exitNotesLine));
 }
 
@@ -181,7 +182,7 @@ function _renderVerificationSection(container) {
     .map(([slug, station]) => {
       const color       = LINE_COLOR[station.line] || '#888888';
       const descriptors = getPositionDescriptorsForStation(station, color);
-      const unverified   = descriptors.filter(d => !isVerified(slug, d.posIdx));
+      const unverified   = descriptors.filter(d => !isVerified(slug, d.key));
       return { slug, station, color, count: unverified.length };
     })
     .filter(e => e.count > 0 && (_verifyLine === '' || e.station.line === _verifyLine))

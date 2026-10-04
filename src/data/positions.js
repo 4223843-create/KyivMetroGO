@@ -16,6 +16,7 @@
  *   dirIdx:  number,
  *   exitIdx: number,
  *   posIdx:  number,
+ *   posInExit: number,
  * }) => void} callback
  */
 export function traversePositions(station, callback) {
@@ -28,7 +29,7 @@ export function traversePositions(station, callback) {
       const exit = dir.exits[exitIdx];
       const positions = exit.positions ?? [];
       for (let i = 0; i < positions.length; i++) {
-        callback({ dir, exit, position: positions[i], dirIdx, exitIdx, posIdx });
+        callback({ dir, exit, position: positions[i], dirIdx, exitIdx, posIdx, posInExit: i });
         posIdx++;
       }
     }
@@ -51,4 +52,13 @@ export function mapPositions(station, mapper) {
     if (result !== undefined) results.push(result);
   });
   return results;
+}
+
+/**
+ * Стабільний ключ позиції для збереження локальних правок і підписів:
+ * напрямок + id виходу + номер позиції в межах виходу. На відміну від posIdx,
+ * не зсувається, коли в даних чи в користувача з'являються інші виходи.
+ */
+export function positionKey(dir, exit, exitIdx, posInExit) {
+  return `${dir.from}|${exit.id ?? '#' + exitIdx}|${posInExit}`;
 }

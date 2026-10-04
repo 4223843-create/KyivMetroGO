@@ -38,6 +38,9 @@ export function invalidateSearchCache() {
   _emptyQueryDataRef = null;
 }
 
+// stationsData оновлюється на місці (посилання те саме) — скидаємо кеш явно
+bus.on('station:refresh', invalidateSearchCache);
+
 /**
  * Відмальовує результати пошуку у container.innerHTML.
  * При порожньому query без фільтра повертає кешований HTML.
@@ -85,7 +88,9 @@ export function renderSearchResults(query, container, lineFilter = new Set()) {
 
 for (const s of stations) {
     const isAlias = SEARCH_ALIASES_ENTRIES.some(([alias, slug]) =>
-      slug === s.slug && (alias.startsWith(rawQuery) || alias.includes(rawQuery))
+      slug === s.slug && (alias.startsWith(rawQuery)
+        // кожне слово запиту — початок якогось слова псевдоніма («ар» не знаходить «народів»)
+        || queryWords.every(qWord => alias.split(/\s+/).some(aw => aw.startsWith(qWord))))
     );
 
     // ПРОСТА ЛОГІКА: кожне слово з пошуку має збігатися з початком хоча б одного слова в індексі станції

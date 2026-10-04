@@ -53,7 +53,12 @@
 </style>
 <script>
     /* Миттєво застосовуємо збережену тему ДО малювання сторінки браузером */
-    const t = localStorage.getItem('metro_theme') || 'system';
+    // Веб: Preferences пише з префіксом CapacitorStorage.; Android/iOS: копія metro_theme_boot (core/storage.js)
+    let t = 'system';
+    try {
+      t = localStorage.getItem('CapacitorStorage.metro_theme') || localStorage.getItem('metro_theme_boot')
+        || localStorage.getItem('metro_theme') || 'system';
+    } catch (_) {}
 const actual = t === 'system'
   ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   : t;
@@ -827,13 +832,18 @@ const center = document.getElementById("loaderCenter");
   })();
 </script>
 <script>
-  // Цей радар зловить помилку ДО запуску модулів і покаже її на екрані
+  // Цей радар зловить помилку ДО запуску модулів. Вікно «CRASH» бачить лише режим розробника:
+  // після старту модулів — через devmode.js, до того — з localStorage (веб).
+  function crashAlertsEnabled() {
+    if (typeof window.__isDevMode === 'function') return window.__isDevMode();
+    try { return localStorage.getItem('CapacitorStorage.metro_dev_mode') === 'true'; } catch (_) { return false; }
+  }
   window.addEventListener('error', function(e) {
-    alert('CRASH: ' + (e.message || e.error));
+    if (crashAlertsEnabled()) alert('CRASH: ' + (e.message || e.error));
     document.getElementById('startupLoader').style.display = 'none';
   });
   window.addEventListener('unhandledrejection', function(e) {
-    alert('PROMISE CRASH: ' + e.reason);
+    if (crashAlertsEnabled()) alert('PROMISE CRASH: ' + e.reason);
     document.getElementById('startupLoader').style.display = 'none';
   });
 </script>

@@ -19,6 +19,7 @@ import { applyFavPillStyles, renderExitRoutes } from './renderStation.js';
 import { heartSvg }               from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { isEditModeEnabled }      from '../features/settings.js';
+import { isCheckinMode }          from '../domain/checkin.js';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -175,7 +176,6 @@ function _triggerExitFav(favTarget, slug, lineColor) {
     // Соковитий подвійний нативний вібровідгук «Успіх»
     Haptics.notification({ type: NotificationType.Success }).catch(() => {});
 
-    _maybeShowCheckinHint(lineColor);
     _maybeDismissOnboarding(lineColor);
   }
 
@@ -195,6 +195,8 @@ function _maybeDismissOnboarding(lineColor) {
 }
 
 function _maybeShowCheckinHint(lineColor) {
+  // Без увімкненого Check-in шпильок немає — підказку збережемо на потім
+  if (!isCheckinMode()) return;
   if (Storage.get(STORAGE_KEYS.HIDE_INFO_BLOCKS) === 'true') return;
   if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
   const sheetBodyEl = document.getElementById('sheetBody');
@@ -223,7 +225,7 @@ const COLLAPSE_ARROW_SVG = `<svg viewBox="0 0 32 10" xmlns="http://www.w3.org/20
 
 // ── Панель "виходи за номерами" — виїжджає ЗНИЗУ, розширюючи блок ──
 // ── Панель "виходи за номерами" ──
-function _openNumberedExitsPanel(favTarget, slug, lineColor) {
+function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false } = {}) {
   const station = state.stationsData?.[slug];
   if (!station) return;
 
@@ -324,11 +326,16 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor) {
 
   if (!exitsList.length) return;
 
-  // 5. Відкриття / закриття панелі
-  const next = row.nextElementSibling;
-  if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'numbered-exits') {
-    next.classList.remove('panel-open');
-    setTimeout(() => next.remove(), 280);
+  // 5. Відкриття / закриття панелі. Панель вставляється ПЕРЕД рядком (або перед
+  // підписом напрямку над ним) — там і шукаємо вже відкриту.
+  const anchor = row.previousElementSibling?.classList.contains('direction-label')
+    ? row.previousElementSibling
+    : row;
+  const prev = anchor.previousElementSibling;
+  if (prev?.classList.contains('dev-note-panel') && prev.dataset.type === 'numbered-exits'
+      && prev.classList.contains('panel-open')) {
+    prev.classList.remove('panel-open');
+    setTimeout(() => prev.remove(), 280);
     return;
   }
 
@@ -340,6 +347,9 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor) {
   const panel = document.createElement('div');
   panel.className = 'dev-note-panel pos-numbered-exits';
   panel.dataset.type = 'numbered-exits';
+  // Номер пігулки серед усіх у картці — щоб відновити панель після перемальовування
+  const sheetBodyEl = favTarget.closest('.sheet-body');
+  panel.dataset.targetIdx = String([...(sheetBodyEl?.querySelectorAll('.fav-tap-target') ?? [])].indexOf(favTarget));
   panel.innerHTML =
     exitsList.map(item =>
       `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineColor}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span>${renderExitRoutes(station, item.num)}</div>`
@@ -350,13 +360,33 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor) {
     ? row.previousElementSibling
     : row;
   dirLabel.before(panel);
-  requestAnimationFrame(() => panel.classList.add('panel-open'));
+  if (instant) {
+    // Відновлення після перемальовування — без анімації розгортання
+    panel.style.transition = 'none';
+    panel.classList.add('panel-open');
+    void panel.offsetHeight;
+    panel.style.transition = '';
+  } else {
+    requestAnimationFrame(() => panel.classList.add('panel-open'));
+  }
 
   panel.querySelector('.pos-numbered-exits-collapse').addEventListener('click', e => {
     e.stopPropagation();
     panel.classList.remove('panel-open');
     setTimeout(() => panel.remove(), 280);
   });
+}
+
+/** Номер пігулки, під якою відкрита панель номерів виходів, або -1. */
+export function getOpenNumberedExitsIdx(sheetBody) {
+  const panel = sheetBody.querySelector('.dev-note-panel.panel-open[data-type="numbered-exits"]');
+  return panel ? Number(panel.dataset.targetIdx ?? -1) : -1;
+}
+
+/** Відкриває панель номерів виходів під пігулкою з номером idx без анімації. */
+export function reopenNumberedExitsPanel(sheetBody, idx, slug, lineColor) {
+  const target = sheetBody.querySelectorAll('.fav-tap-target')[idx];
+  if (target) _openNumberedExitsPanel(target, slug, lineColor, { instant: true });
 }
 
 // ── Головний bind — викликається ОДИН РАЗ ────────────────────

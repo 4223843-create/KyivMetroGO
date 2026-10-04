@@ -16,6 +16,8 @@ import {
 } from './sheets/sheetsManager.js';
 import { withUnsavedCheck } from './core/unsavedCheck.js';
 import { bus } from './core/eventBus.js';
+import { state } from './core/state.js';
+import { pushSheetHistory } from './ui/system.js';
 import { openDevMenuSheet } from './sheets/devMenuSheet.js';
 
 // ── Bottom bar ─────────────────────────────────────────────────
@@ -92,11 +94,23 @@ if (menuBtn && dropMenu) {
 //   На нативному popstate НЕ реєструємо: Capacitor може тригерити обидві події
 //   одночасно, що призводить до подвійного виклику closeAllSheets.
 
+// Незбережені правки у формі — «Назад» питає, як і ✕, а не викидає їх мовчки.
+function closeSheetsOnBack() {
+  const feedbackOpen = document.getElementById('feedbackSheet')?.classList.contains('sheet-open');
+  if (feedbackOpen && state.hasUnsavedFeedback) {
+    // На вебі popstate вже з'їв запис історії — повертаємо його на випадок «Скасувати»
+    if (!Capacitor.isNativePlatform()) pushSheetHistory();
+    bus.emit('feedback:close');
+    return;
+  }
+  closeAllSheets(true);
+}
+
 if (Capacitor.isNativePlatform()) {
   App.addListener('backButton', ({ canGoBack }) => {
     const hasOpenSheet = document.querySelectorAll('.station-sheet.sheet-open').length > 0;
     if (hasOpenSheet) {
-      closeAllSheets(true);
+      closeSheetsOnBack();
     } else if (canGoBack) {
       window.history.back();
     } else {
@@ -106,7 +120,7 @@ if (Capacitor.isNativePlatform()) {
 } else {
   window.addEventListener('popstate', () => {
     if (document.querySelectorAll('.station-sheet.sheet-open').length > 0) {
-      closeAllSheets(true);
+      closeSheetsOnBack();
     }
   });
 }

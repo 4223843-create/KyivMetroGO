@@ -9,9 +9,11 @@ import { applyExitLabels }         from '../data/localEdits.js';
 import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
+import { pushSheetHistory }        from '../ui/system.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
 import { renderDirections, renderStationConnections, renderStationClock, hasStationClock } from './renderStation.js';
-import { bindSheetGestures, applyInitialFavStyles } from './stationEvents.js';
+import { bindSheetGestures, applyInitialFavStyles,
+         getOpenNumberedExitsIdx, reopenNumberedExitsPanel } from './stationEvents.js';
 
 // ══ STATION SHEET ══
 // Відповідальність: рендеринг та відкриття картки станції.
@@ -77,6 +79,16 @@ bus.on('station:refresh', () => {
   _directionsHtmlCache.clear();
   refreshCurrentStation();
 });
+
+// Обране змінилось (зокрема при заміні виходу) — оновлюємо серце в шапці
+bus.on('fav:updated', () => {
+  const slug = state.currentStationSlug;
+  if (!slug || !sheet.classList.contains('sheet-open')) return;
+  _updateFavBtn(slug, LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)');
+});
+
+// Вибране змінили в іншій вкладці — оновлюємо серця відкритої картки
+bus.on('fav:externally-updated', () => refreshCurrentStation());
 
 bus.on('station:open', ({ slug }) => openStation(slug));
 
@@ -146,6 +158,7 @@ function actualOpenStation(slug) {
   }
 
   state.currentStationSlug = slug;
+  pushSheetHistory();
   bus.emit('fav:dismiss-hint');
 
   const fav            = isFav(slug);
@@ -235,12 +248,24 @@ export function refreshCurrentStation() {
   const color      = LINE_COLOR[s.line] || 'var(--text-muted)';
   const prevScroll = sheetBody.scrollTop;
 
+  // Відкрита панель годинника не має закриватися від перемальовування (напр. дотик до шпильки check-in)
+  const clockWasOpen = !!document.getElementById('stationClockPanel')?.classList.contains('panel-open');
+  const numberedExitsIdx = getOpenNumberedExitsIdx(sheetBody);
+
   // Кеш вже інвалідовано в bus.on('station:refresh') вище
   stationTitleMain.textContent = s.name;
   sheetBody.innerHTML = renderDirections(s, color);
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
   _directionsHtmlCache.set(slug, sheetBody.innerHTML);
   sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationConnections(s));
+
+  if (clockBtn) clockBtn.hidden = !hasStationClock(s);
+  if (clockWasOpen && !clockBtn?.hidden) {
+    const clockPanel = document.getElementById('stationClockPanel');
+    clockPanel.innerHTML = renderStationClock(s);
+    clockPanel.classList.add('panel-open');
+  }
+  _updateFavBtn(slug, color);
 
   applyNavLinks(slug);
   applyInitialFavStyles(sheetBody, slug, color);
@@ -249,6 +274,8 @@ export function refreshCurrentStation() {
   // Всі кнопки, а не тільки перша
   sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
   bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug, color });
+
+  if (numberedExitsIdx >= 0) reopenNumberedExitsPanel(sheetBody, numberedExitsIdx, slug, color);
 
   sheetBody.scrollTop = prevScroll;
 }
