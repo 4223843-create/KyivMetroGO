@@ -6,7 +6,7 @@
 import { state as appState }         from '../../core/state.js';
 import { bus }                       from '../../core/eventBus.js';
 import { STORAGE_KEYS, Storage }     from '../../core/storage.js';
-import { getLocalEdits, saveExitLabel,
+import { removeLocalEdit, saveLocalEdit, saveExitLabel,
          clearAllLocalEdits, invalidateLocalEditsCache,
          applyLocalEdits, applyExitLabels }  from '../../data/localEdits.js';
 import { fbState, syncCurrentFromDOM, computeIsDirty } from './fbState.js';
@@ -240,13 +240,7 @@ function _handlePosClick(e, stationHidden, afterRender) {
 // ── Атомарні обробники ─────────────────────────────────────────
 
 function _handleRestore(idx, slug, afterRender) {
-  const edits = getLocalEdits();
-  if (edits[slug]?.[idx]) {
-    delete edits[slug][idx];
-    if (!Object.keys(edits[slug]).length) delete edits[slug];
-    if (!Object.keys(edits).length)       clearAllLocalEdits();
-    else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
-  }
+  removeLocalEdit(slug, idx);
   invalidateLocalEditsCache();
   if (fbState.current[idx]) fbState.current[idx].isClosed = false;
   // applyLocalEdits лише накладає правки, що лишились, а не повертає змінену
@@ -264,13 +258,7 @@ function _handleCloseExit(idx, slug, afterRender) {
     delete fbState.current[idx];
     delete fbState.labels[idx];
     delete fbState.original[idx];
-    const edits = getLocalEdits();
-    if (edits[slug]?.[idx]) {
-      delete edits[slug][idx];
-      if (!Object.keys(edits[slug]).length) delete edits[slug];
-      if (!Object.keys(edits).length)       clearAllLocalEdits();
-      else Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(edits));
-    }
+    removeLocalEdit(slug, idx);
     renderFeedbackPositions(slug, { onAfterRender: afterRender });
     renderResetBtn({ onReset: () => _handleReset(afterRender) });
     return;
