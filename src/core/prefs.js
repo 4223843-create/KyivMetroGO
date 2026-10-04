@@ -15,8 +15,11 @@ const PREFS = {
   showMapAccessibility: { key: STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY, def: true },
   showHoists:           { key: STORAGE_KEYS.SHOW_HOISTS,            def: true },
   showIntervals:        { key: STORAGE_KEYS.SHOW_INTERVALS,         def: true },
+  // Уночі показувати інтервал руху після відкриття
+  morningInterval:      { key: STORAGE_KEYS.MORNING_INTERVAL,       def: true },
   checkinMode:          { key: STORAGE_KEYS.CHECKIN_MODE,           def: true },
-  checkinByExit:        { key: STORAGE_KEYS.CHECKIN_BY_EXIT,        def: true },
+  // false — відмітка залежить від попередньої станції (у налаштуваннях «Check-in за попередньою станцією» увімкнено)
+  checkinByExit:        { key: STORAGE_KEYS.CHECKIN_BY_EXIT,        def: false },
   // Коли показувати години роботи станції: ніколи / за 2 год до закриття / завжди
   stationHours:         { key: STORAGE_KEYS.SHOW_STATION_HOURS,     def: 'soon',    values: ['never', 'soon', 'always'] },
   // Що рахувати в журналі check-in: станції чи виходи

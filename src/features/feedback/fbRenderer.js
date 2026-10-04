@@ -9,6 +9,7 @@ import { fbState, initFeedbackState }             from './fbState.js';
 import { Icons }                                  from '../../ui/icons.js';
 import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '../../core/constants.js';
 import { richText } from '../../ui/html.js';
+import { lineTextColor } from '../../ui/components.js';
 
 const INFO_SVG = Icons.info;
 const UNDO_SVG = Icons.undo;
@@ -62,7 +63,7 @@ function positionItemHtml(item, st, lineColor) {
     <div class="fb-pos-wrap">
       <div class="fb-side-actions-left">
         <button type="button" class="fb-add-doors-info"
-          style="color:${lineColor}" data-idx="${i}">${INFO_SVG}</button>
+          style="color:${lineTextColor(lineColor)}" data-idx="${i}">${INFO_SVG}</button>
       </div>
       <div class="fb-pos-inputs">
         ${stepperHtml(`fbW${i}`, st.wMain, 1, 5, 'вагон')}
@@ -70,7 +71,7 @@ function positionItemHtml(item, st, lineColor) {
       </div>
       <div class="fb-side-actions">
         <button type="button" class="fb-close-exit"
-          style="color:${lineColor}" data-idx="${i}">✕</button>
+          style="color:${lineTextColor(lineColor)}" data-idx="${i}">✕</button>
       </div>
     </div>
 
@@ -83,7 +84,7 @@ function positionItemHtml(item, st, lineColor) {
         </div>
         <div class="fb-side-actions">
           <button type="button" class="fb-cancel-extra-btn"
-            style="color:${lineColor}" data-idx="${i}">✕</button>
+            style="color:${lineTextColor(lineColor)}" data-idx="${i}">✕</button>
         </div>
       </div>
     </div>
@@ -97,7 +98,7 @@ function positionItemHtml(item, st, lineColor) {
         </div>
         <div class="fb-side-actions">
           <button type="button" class="fb-cancel-third-btn"
-            style="color:${lineColor}" data-idx="${i}">✕</button>
+            style="color:${lineTextColor(lineColor)}" data-idx="${i}">✕</button>
         </div>
       </div>
     </div>

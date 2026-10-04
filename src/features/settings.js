@@ -131,6 +131,11 @@ export function openSettingsSheet() {
         bus.emit('station:clock-settings');
       });
     }
+    const morningToggle = document.getElementById('settingsMorningIntervalToggle');
+    morningToggle?.addEventListener('change', e => {
+      setPref('morningInterval', e.target.checked);
+      bus.emit('station:clock-settings');
+    });
     const hoursSeg = document.getElementById('settingsStationHoursSeg');
     hoursSeg?.querySelectorAll('.settings-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -229,9 +234,10 @@ export function openSettingsSheet() {
     // Ініціалізація та збереження тумблера чекінів по виходах
     const checkinByExitToggle = document.getElementById('settingsCheckinByExitToggle');
     if (checkinByExitToggle) {
-      checkinByExitToggle.checked = getPref('checkinByExit');
+      // Тумблер «Check-in за попередньою станцією» — обернене значення checkinByExit
+      checkinByExitToggle.checked = !getPref('checkinByExit');
       checkinByExitToggle.addEventListener('change', e => {
-        setPref('checkinByExit', e.target.checked);
+        setPref('checkinByExit', !e.target.checked);
       });
     }
 
@@ -448,7 +454,7 @@ export function openSettingsSheet() {
     );
 
     const eX = document.getElementById('settingsCheckinByExitToggle');
-    if (eX) eX.checked = getPref('checkinByExit');
+    if (eX) eX.checked = !getPref('checkinByExit');
 
     const isEditOn = getPref('editMode');
     const localFbRow = document.getElementById('settingsLocalFbRow');
@@ -468,6 +474,8 @@ export function openSettingsSheet() {
 
     const si = document.getElementById('settingsShowIntervalsToggle');
     if (si) si.checked = getPref('showIntervals');
+    const mi = document.getElementById('settingsMorningIntervalToggle');
+    if (mi) mi.checked = getPref('morningInterval');
     const hoursMode = getPref('stationHours');
     document.querySelectorAll('#settingsStationHoursSeg .settings-seg-btn').forEach(b =>
       b.classList.toggle('is-active', b.dataset.hoursVal === hoursMode));
