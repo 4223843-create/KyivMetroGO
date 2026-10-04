@@ -13,6 +13,20 @@ def autoVersionCode = { ->
     }
 }
 
+// Релізний підпис: ключ ніколи не потрапляє в репозиторій. Дані беруться
+// з android/keystore.properties (локально) або зі змінних середовища (CI):
+// KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD.
+// Без них release-збірка просто лишається непідписаною.
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+def signingValue = { String key, String env ->
+    keystoreProps.getProperty(key) ?: System.getenv(env)
+}
+def releaseStoreFile = signingValue('storeFile', 'KEYSTORE_FILE')
+
 android {
     namespace = "ua.opivnochi.metrogo"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -29,8 +43,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (releaseStoreFile) {
+            release {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword signingValue('storePassword', 'KEYSTORE_PASSWORD')
+                keyAlias signingValue('keyAlias', 'KEY_ALIAS')
+                keyPassword signingValue('keyPassword', 'KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseStoreFile) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
