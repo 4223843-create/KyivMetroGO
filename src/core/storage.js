@@ -28,7 +28,8 @@ export const STORAGE_KEYS = {
   FAV_ONLY_STREAK:     'metro_fav_only_streak',
   EDIT_MODE:           'metro_edit_mode',
   HIDE_NO_LIFT:        'metro_hide_no_lift',
-  SHOW_MAP_ACCESSIBILITY:  'metro_show_map_accessibility',
+  SHOW_MAP_ACCESSIBILITY:  'metro_show_map_accessibility', // старий тумблер, лише для переходу на MAP_ACCESSIBILITY
+  MAP_ACCESSIBILITY:       'metro_map_accessibility',
   SHOW_HOISTS:             'metro_show_hoists',
   SHOW_INTERVALS:          'metro_show_intervals',
   MORNING_INTERVAL:        'metro_morning_interval',

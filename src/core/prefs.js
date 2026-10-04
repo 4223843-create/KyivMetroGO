@@ -12,7 +12,10 @@ const PREFS = {
   hideInfoBlocks:       { key: STORAGE_KEYS.HIDE_INFO_BLOCKS,       def: false },
   localOnlyFeedback:    { key: STORAGE_KEYS.LOCAL_ONLY_FEEDBACK,    def: false },
   hideNoLift:           { key: STORAGE_KEYS.HIDE_NO_LIFT,           def: false },
-  showMapAccessibility: { key: STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY, def: true },
+  // Знак колісного крісла на карті: ліфти / ліфти та спецпідйомники / нічого.
+  // Поки не обрано: якщо раніше вимкнули «доступність на карті» — нічого, інакше ліфти.
+  mapAccessibility:     { key: STORAGE_KEYS.MAP_ACCESSIBILITY,      def: 'lifts',   values: ['lifts', 'hoists', 'none'],
+                          legacy: () => (Storage.get(STORAGE_KEYS.SHOW_MAP_ACCESSIBILITY) === 'false' ? 'none' : null) },
   showHoists:           { key: STORAGE_KEYS.SHOW_HOISTS,            def: true },
   showIntervals:        { key: STORAGE_KEYS.SHOW_INTERVALS,         def: true },
   // Уночі показувати інтервал руху після відкриття
@@ -34,9 +37,9 @@ function _def(name) {
 
 /** Значення налаштування: boolean або одне з def.values. */
 export function getPref(name) {
-  const { key, def, values } = _def(name);
+  const { key, def, values, legacy } = _def(name);
   const raw = Storage.get(key);
-  if (values) return values.includes(raw) ? raw : def;
+  if (values) return values.includes(raw) ? raw : (raw == null && legacy?.()) || def;
   if (raw === 'true')  return true;
   if (raw === 'false') return false;
   return def;

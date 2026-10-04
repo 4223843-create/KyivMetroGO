@@ -65,7 +65,7 @@ function showHoursSoonToast(btnEl) {
     max-width: calc(100vw - 32px);
     text-align: center;
   `;
-  toast.innerHTML = 'За 2 години до закриття<br>і впродовж 2 годин після відкриття';
+  toast.innerHTML = 'За 2 години до закриття –<br>впродовж 2 годин після відкриття';
   document.body.appendChild(toast);
   setTimeout(() => {
     toast.classList.remove('dev-mode-toast-open');
@@ -155,15 +155,15 @@ export function openSettingsSheet() {
       });
     }
 
-    // ── Доступність на карті (ВИПРАВЛЕНО: винесено з закриття) ──
-    const showMapAccToggle = document.getElementById('settingsShowMapAccessibilityToggle');
-    if (showMapAccToggle) {
-      showMapAccToggle.checked = getPref('showMapAccessibility');
-      showMapAccToggle.addEventListener('change', e => {
-        setPref('showMapAccessibility', e.target.checked);
+    // ── Знак колісного крісла на карті ──
+    const mapAccSeg = document.getElementById('settingsMapAccessibilitySeg');
+    mapAccSeg?.querySelectorAll('.settings-seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setPref('mapAccessibility', btn.dataset.mapAccVal);
+        mapAccSeg.querySelectorAll('.settings-seg-btn').forEach(b => b.classList.toggle('is-active', b === btn));
         bus.emit('map:update-accessibility');
       });
-    }
+    });
 
     // ── Показувати підйомники на станціях ──
     const showHoistsToggle = document.getElementById('settingsShowHoistsToggle');
@@ -172,7 +172,6 @@ export function openSettingsSheet() {
       showHoistsToggle.addEventListener('change', e => {
         setPref('showHoists', e.target.checked);
         bus.emit('station:refresh');
-        bus.emit('map:update-accessibility');
       });
     }
 
@@ -495,8 +494,9 @@ export function openSettingsSheet() {
         btn.classList.toggle('is-empty', empty);
       });
 
-    const ma = document.getElementById('settingsShowMapAccessibilityToggle');
-    if (ma) ma.checked = getPref('showMapAccessibility');
+    const mapAcc = getPref('mapAccessibility');
+    document.querySelectorAll('#settingsMapAccessibilitySeg .settings-seg-btn').forEach(b =>
+      b.classList.toggle('is-active', b.dataset.mapAccVal === mapAcc));
 
     const sh = document.getElementById('settingsShowHoistsToggle');
     if (sh) sh.checked = getPref('showHoists');
