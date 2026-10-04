@@ -218,6 +218,13 @@ function _maybeShowCheckinHint(lineColor) {
 // інакше одинарний тап просто нічого не робить (як і раніше).
 const COLLAPSE_ARROW_SVG = `<svg viewBox="0 0 32 10" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8 L16 2 L30 8"/></svg>`;
 
+// «вихід в місто (Хрещатик)» → «Хрещатик»; порожній підпис → «вихід в місто»
+function exitLabelText(label) {
+  const text = String(label || '').trim();
+  if (!text) return 'вихід в місто';
+  return text.match(/^вихід в місто \((.+)\)$/)?.[1] ?? text;
+}
+
 // ── Панель "виходи за номерами" — виїжджає ЗНИЗУ, розширюючи блок ──
 // ── Панель "виходи за номерами" ──
 function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false } = {}) {
@@ -308,11 +315,13 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
 
   // Якщо rawExits самі містять об'єкти чи текстові описи
   if (exitsList.length === 0 && Array.isArray(rawExits) && rawExits.length > 0) {
+    // Без опису вулиці (Хрещатик, Майдан, Дніпро, Гідропарк) — підпис виходу
+    const fallbackText = exitLabelText(targetExit.label);
     exitsList = rawExits.map((item, index) => {
       if (typeof item === 'object' && item !== null) {
         return {
           num: String(item.num || item.number || (index + 1)),
-          text: String(item.text || '')
+          text: String(item.text || '').trim() || fallbackText
         };
       }
       return {
