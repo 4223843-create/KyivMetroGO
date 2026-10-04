@@ -5,7 +5,7 @@
 import { STORAGE_KEYS, Storage }    from '../../core/storage.js';
 import { state as appState }        from '../../core/state.js';
 import { bus }                      from '../../core/eventBus.js';
-import { isDevMode, appendDevLog }  from '../devmode.js';
+import { isDevMode, appendDevLog }  from '../devFlags.js';
 import {
   saveLocalEdit, getLocalEdits, clearAllLocalEdits,
   applyLocalLayer, saveExitLabel,

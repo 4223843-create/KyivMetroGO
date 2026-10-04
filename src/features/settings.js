@@ -9,7 +9,7 @@ import { initKinematicSwipe }      from '../ui/swipe.js';
 import { showSheet, hideSheet }    from '../ui/sheetNav.js';
 import { bus }                     from '../core/eventBus.js';
 import { state }                   from '../core/state.js';
-import { isDevMode, getDevLog }    from './devmode.js';
+import { isDevMode, getDevLog }    from './devFlags.js';
 import { BackupService }           from '../services/backup.js';
 
 import {
