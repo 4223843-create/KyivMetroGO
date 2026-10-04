@@ -113,8 +113,9 @@ export function getSlugByLower(lowerSlug) {
  * Викликається з reloadStationsData після кожного fetch.
  *
  * Після наповнення stationsData синхронно емітує 'data:stations-hydrated'.
- * data/localEdits.js підписаний на цю подію і застосовує localEdits + exitLabels
- * до тих самих об'єктів (EventBus — синхронний, handlers запускаються до повернення emit).
+ * data/localEdits.js підписаний на цю подію: зберігає ці дані як незмінну базу і
+ * кладе в stationsData копії з правками (EventBus синхронний, тож це відбувається
+ * до повернення emit).
  *
  * @param {{ stations: Array }} data — розібраний stations.json
  * @returns {Record<string, object>} state.stationsData
@@ -208,8 +209,8 @@ export function hydrateStations(data) {
     state.stationsData[station.slug] = station;
   });
 
-  // data/localEdits.js підписаний через bus.on('data:stations-hydrated') і виконує
-  // applyLocalEdits + applyExitLabels синхронно перед поверненням цієї функції.
+  // data/localEdits.js підписаний через bus.on('data:stations-hydrated'): запам'ятовує
+  // ці дані як незмінну базу й підміняє станції в stationsData копіями з правками.
   bus.emit('data:stations-hydrated', { stationsData: state.stationsData });
 
   return state.stationsData;

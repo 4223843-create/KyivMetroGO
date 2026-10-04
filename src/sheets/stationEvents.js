@@ -8,7 +8,6 @@ import { TIMING }                 from '../core/timing.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { bus }                    from '../core/eventBus.js';
 import { slugByName }             from '../data/stations.js';
-import { applyExitLabels }        from '../data/localEdits.js';
 import { findPosition }           from '../data/positions.js';
 import {
   isFav, getExitFavs, isExitFav,

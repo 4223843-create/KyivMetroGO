@@ -5,7 +5,6 @@ import { Icons }                   from '../ui/icons.js';
 import { LINE_COLOR }              from '../core/constants.js';
 import { animateSheetClose }       from '../ui/animations.js';
 import { slugByName }              from '../data/stations.js';
-import { applyExitLabels }         from '../data/localEdits.js';
 import { isFav, getExitFavs }      from '../features/favorites/index.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devmode.js';
 import { bus }                     from '../core/eventBus.js';
@@ -252,7 +251,6 @@ function _updateFavBtn(slug, color) {
 
 export function refreshCurrentStation() {
   if (!state.currentStationSlug) return;
-  applyExitLabels(state.stationsData);
 
   const s = state.stationsData?.[state.currentStationSlug];
   if (!s || !sheet.classList.contains('sheet-open')) return;

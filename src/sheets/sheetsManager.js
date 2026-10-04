@@ -9,7 +9,7 @@ import { openStation }       from './stationSheet.js';
 import { openAboutSheet }    from './aboutSheet.js';
 import { isFav, toggleFav } from '../features/favorites/index.js';
 import { heartSvg }          from '../ui/components.js';
-import { reloadStationsData, getSlugByLower } from '../data/stations.js';
+import { getSlugByLower } from '../data/stations.js';
 import { animateSheetClose }  from '../ui/animations.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -109,14 +109,3 @@ bus.on('sheet:close', ({ sheetEl }) => {
   });
 });
 
-// fbEvents.js емітує 'data:reload-stations' після скидання локальних змін.
-bus.on('data:reload-stations', async ({ onDone } = {}) => {
-  try {
-    await reloadStationsData();
-    // Дані перечитано без локальних правок — скидаємо кеш HTML картки станції
-    bus.emit('station:refresh');
-    onDone?.();
-  } catch (err) {
-    console.error('[sheetsManager] data:reload-stations failed:', err);
-  }
-});
