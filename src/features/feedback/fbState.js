@@ -17,6 +17,8 @@ export const fbState = {
   current:  {},
   /** @type {Record<number, string>} */
   labels:   {},
+  /** Підписи, змінені у формі й ще не застосовані: idx → текст. @type {Record<number, string>} */
+  changedLabels: {},
   isDirty:  false,
 };
 
@@ -25,13 +27,11 @@ export function resetFbState() {
   fbState.original = {};
   fbState.current  = {};
   fbState.labels   = {};
+  fbState.changedLabels = {};
   fbState.isDirty  = false;
 }
 
-/**
- * @param {string[]} changedLabelKeys — масив ключів inputs із data-changed="true"
- */
-export function computeIsDirty(changedLabelKeys = []) {
+export function computeIsDirty() {
   for (const i in fbState.current) {
     if (fbState.current[i]?.isNew) return true;
   }
@@ -46,19 +46,7 @@ export function computeIsDirty(changedLabelKeys = []) {
       o.isClosed !== c.isClosed
     ) return true;
   }
-  return changedLabelKeys.length > 0;
-}
-
-export function syncCurrentFromDOM(idx) {
-  const cur = fbState.current[idx];
-  if (!cur) return;
-  const rd = id => document.getElementById(id)?.textContent ?? '-';
-  cur.wMain = rd(`fbW${idx}`);
-  cur.dMain = rd(`fbD${idx}`);
-  cur.wEx   = rd(`fbW_ex${idx}`);
-  cur.dEx   = rd(`fbD_ex${idx}`);
-  cur.wEx2  = rd(`fbW_ex2_${idx}`);
-  cur.dEx2  = rd(`fbD_ex2_${idx}`);
+  return Object.keys(fbState.changedLabels).length > 0;
 }
 
 export function initFeedbackState(slug) {

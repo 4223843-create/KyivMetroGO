@@ -17,22 +17,19 @@ const FORMSPREE_URL = 'https://formspree.io/f/xrejbjww';
 let _isSubmitting   = false;
 
 /**
- * Зберігає label-зміни з DOM у Storage.
- * Викликається з fbEvents під час submit — єдина точка запису.
+ * Зберігає змінені у формі підписи (fbState.changedLabels) у Storage.
+ * Викликається під час submit — єдина точка запису.
  * @returns {string[]} рядки для Formspree
  */
 export function flushLabelChanges(slug) {
   const s = appState.stationsData?.[slug];
-  const changes = [];
-  document.querySelectorAll('.fb-exit-label-input').forEach(inp => {
-    if (inp.dataset.changed !== 'true') return;
-    const idx = inp.id.replace('fbLabelInput', '');
+  const changes = Object.entries(fbState.changedLabels).map(([idx, text]) => {
     const p   = s?.positions?.[idx];
     const loc = [p?.dir, p?.exit].filter(Boolean).join(' · ');
-    saveExitLabel(slug, parseInt(idx), inp.value);
-    changes.push(`${loc}: НОВИЙ ОПИС [${inp.value}]`);
-    inp.dataset.changed = 'false';
+    saveExitLabel(slug, Number(idx), text);
+    return `${loc}: НОВИЙ ОПИС [${text}]`;
   });
+  fbState.changedLabels = {};
   return changes;
 }
 
@@ -120,13 +117,7 @@ export async function submitFeedback(background = false) {
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
-  // Блокуємо кнопку та очищаємо попередній результат на час відправки
-  if (!background) {
-    const sendBtn  = document.getElementById('fbSend');
-    const resultEl = document.getElementById('fbResult');
-    if (sendBtn)  { sendBtn.disabled = true; sendBtn.textContent = 'Відправка…'; }
-    if (resultEl)   resultEl.innerHTML = '';
-  }
+  bus.emit('feedback:submit-ui', { status: 'sending', background });
 
   try {
     const formspreeLines = [

@@ -23,6 +23,13 @@ bus.on('feedback:submit-ui', ({ status, background }) => {
   const sendBtn  = document.getElementById('fbSend');
   if (!resultEl) return;
 
+  // Кнопка заблокована на час відправки, попередній результат прибрано
+  if (status === 'sending') {
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Відправка…'; }
+    resultEl.innerHTML = '';
+    return;
+  }
+
   if (sendBtn) {
     sendBtn.disabled    = false;
     sendBtn.textContent = 'Застосувати';
