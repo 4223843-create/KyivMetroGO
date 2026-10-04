@@ -665,9 +665,17 @@ export function setStationNote(slug, text, debounce = true) {
 let _lastStationNoteSlug = null;
 
 export function setupDevStationNoteButton(sheet, slug, lineColor) {
-  const btn   = sheet.querySelector('#devStationNoteBtn');
-  const panel = sheet.querySelector('#devStationNotePanel');
-  if (!btn || !panel) return;
+  const btn = sheet.querySelector('#devStationNoteBtn');
+  if (!btn) return;
+  // Панель з index.html; якщо її колись видалили з DOM — створюємо заново,
+  // інакше кнопка нотатки до перезапуску нічого не відкриває.
+  let panel = sheet.querySelector('#devStationNotePanel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'devStationNotePanel';
+    panel.className = 'dev-note-panel dev-station-note-panel';
+    sheet.querySelector('#sheetBody')?.before(panel);
+  }
 
   const active = isDevMode();
   btn.classList.toggle('is-hidden', !active);
@@ -721,7 +729,7 @@ function _toggleStationNotePanel(panel, slug, lineColor, btn, defaultColor) {
   panel.innerHTML = `
     <textarea class="dev-note-textarea dev-station-note-textarea" placeholder="Загальна нотатка по станції…">${escapeHtml(currentText)}</textarea>
     <div class="dev-note-actions">
-      <button type="button" class="dev-station-note-save confirm-main-btn confirm-btn-save">Готово</button>
+      <button type="button" class="dev-station-note-save confirm-btn-save">Готово</button>
       ${currentText ? `<button type="button" class="dev-station-note-delete confirm-btn-discard">Видалити</button>` : ''}
     </div>`;
 

@@ -337,9 +337,11 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
     return;
   }
 
+  // Постійну панель нотатки станції (#devStationNotePanel) лише закриваємо:
+  // якщо її видалити з DOM, кнопка нотатки до перезапуску нічого не відкриває.
   document.querySelectorAll('.dev-note-panel').forEach(p => {
     p.classList.remove('panel-open');
-    setTimeout(() => p.remove(), 280);
+    if (p.id !== 'devStationNotePanel') setTimeout(() => p.remove(), 280);
   });
 
   const panel = document.createElement('div');
