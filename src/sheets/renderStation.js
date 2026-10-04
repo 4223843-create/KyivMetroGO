@@ -235,15 +235,15 @@ function renderIcons(p) {
   const hoistHidden = p.isHoist && !getPref('showHoists');
 
   if (p.isEscalator && !hoistHidden) {
-    iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" aria-label="Ескалатор">${Icons.escalator}</span>`;
+    iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" role="img" aria-label="Ескалатор">${Icons.escalator}</span>`;
   }
 
   if (p.isHoist) {
     if (getPref('showHoists')) {
-      iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" aria-label="Спецпідйомник">${Icons.hoist}</span>`;
+      iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" role="img" aria-label="Спецпідйомник">${Icons.hoist}</span>`;
     }
   } else if (p.isLift) {
-    iconsHtml += `<span class="pos-lift-mark pos-elevator-mark" aria-label="Ліфт">${Icons.elevator}</span>`;
+    iconsHtml += `<span class="pos-lift-mark pos-elevator-mark" role="img" aria-label="Ліфт">${Icons.elevator}</span>`;
   }
 
   if (!iconsHtml) return '';

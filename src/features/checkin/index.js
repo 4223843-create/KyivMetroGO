@@ -110,6 +110,8 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
     btn.className = `checkin-btn row-checkin-btn${checked ? ' is-checked' : ''}`;
     btn.innerHTML = checkinPinSvg(checked, checked ? lineColor : null);
     btn.style.color = checked ? lineColor : '';
+    btn.setAttribute('aria-label', 'Позначити вихід як відвіданий');
+    btn.setAttribute('aria-pressed', String(checked));
     row.appendChild(btn);
 
     btn.addEventListener('click', e => {
@@ -120,6 +122,7 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
 
       const nowChecked = toggleCheckin(slug, pos, lineColor);
       btn.classList.toggle('is-checked', nowChecked);
+      btn.setAttribute('aria-pressed', String(nowChecked));
       btn.innerHTML   = checkinPinSvg(nowChecked, nowChecked ? lineColor : null);
       btn.style.color = nowChecked ? lineColor : '';
       _checkinCount   = null;

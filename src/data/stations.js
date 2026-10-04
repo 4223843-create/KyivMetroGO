@@ -247,6 +247,14 @@ export function renderMapZones() {
     el.setAttribute('aria-label', `Станція ${state.stationsData[slug].name}`);
   });
 
+  // Написи на схемі — контури з aria-label без ролі (недопустимо для читача
+  // екрана). Назву станції вже озвучує кнопка-зона вище, тож написи ховаємо.
+  // aria-label лишається: на нього спирається стиль у mapInit.js.
+  svgEl.querySelectorAll('[aria-label]:not([role])').forEach(el => {
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-hidden', 'true');
+  });
+
   state.isZonesReady = true;
   checkAppReady();
 }

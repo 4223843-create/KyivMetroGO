@@ -5201,3 +5201,16 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   fill: none !important;
   stroke: var(--text-muted);
 }
+/* ══ МЕНШЕ РУХУ ══
+   Якщо в системі ввімкнено «Вимкнути анімацію» (Android) чи «Зменшити рух» (iOS):
+   шторки, «двері ліфта» і тости з'являються одразу, без ковзання.
+   !important перекриває й inline-переходи з animations.js.
+   Спінери (нескінченні анімації) не чіпаємо: вони показують, що йде робота. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+  .global-confirm-card { animation: none !important; }
+}
