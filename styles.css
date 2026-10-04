@@ -5246,3 +5246,16 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 .about-card-note { opacity: 1; }
 [data-theme="light"] .about-card-note { opacity: 0.75; }
 [data-theme="dark"] .settings-seg-btn:not(.is-active) { color: #bdbdbd; }
+
+/* ══ ПАРИ КНОПОК ОДНАКОВОГО РОЗМІРУ ══
+   Кнопки, що стоять поруч, мають однакову ширину незалежно від довжини
+   підпису («Зберегти» / «Не зберігати», «Замінити» / «Скасувати»). */
+.global-confirm-btns-main .confirm-main-btn,
+.exit-replace-btn,
+.bug-actions button,
+.dev-note-actions button {
+  box-sizing: border-box;
+  flex: 1 1 0;
+}
+/* Рамка «Скасувати» 0,5 px — така ж прозора в «Замінити», інакше ширина різна */
+.exit-replace-btn { border: 0.5px solid transparent; }

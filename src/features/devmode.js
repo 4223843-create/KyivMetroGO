@@ -665,9 +665,17 @@ export function setStationNote(slug, text, debounce = true) {
 let _lastStationNoteSlug = null;
 
 export function setupDevStationNoteButton(sheet, slug, lineColor) {
-  const btn   = sheet.querySelector('#devStationNoteBtn');
-  const panel = sheet.querySelector('#devStationNotePanel');
-  if (!btn || !panel) return;
+  const btn = sheet.querySelector('#devStationNoteBtn');
+  if (!btn) return;
+  // Панель з index.html; якщо її колись видалили з DOM — створюємо заново,
+  // інакше кнопка нотатки до перезапуску нічого не відкриває.
+  let panel = sheet.querySelector('#devStationNotePanel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'devStationNotePanel';
+    panel.className = 'dev-note-panel dev-station-note-panel';
+    sheet.querySelector('#sheetBody')?.before(panel);
+  }
 
   const active = isDevMode();
   btn.classList.toggle('is-hidden', !active);
