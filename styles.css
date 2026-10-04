@@ -150,17 +150,6 @@ button { font-family: inherit; }
   align-items: center;
   gap: 16px;
   /* Dock завжди симетричний: серце — центр — лупа */
-  /* Підкладка: без неї сірі значки губляться на синій лінії посередині схеми */
-  padding: 2px 10px;
-  border-radius: 26px;
-  background: rgba(229, 229, 234, 0.88);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-[data-theme="dark"] .bottom-nav-dock {
-  background: rgba(28, 28, 30, 0.88);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 /* Кнопка Check-in: фіксована строго вгорі по центру */
 .dock-btn {
