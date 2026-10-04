@@ -25,5 +25,8 @@ jobs:
       - name: Validate stations.json
         run: npm run validate:data
 
+      - name: Unit tests
+        run: npm test
+
       - name: Build
         run: npm run build
