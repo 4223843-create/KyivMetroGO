@@ -278,7 +278,7 @@ export function openCheckinSheet() {
                 <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
               </div>
             </button>`;
-          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Всі виходи відвідані 🎉</p>`;
+          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Усі виходи відвідані 🎉</p>`;
 
         } else {
           const byStation    = {};

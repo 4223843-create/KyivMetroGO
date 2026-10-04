@@ -144,7 +144,7 @@ function actualOpenStation(slug) {
   const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
     ? `<div class="onboarding-hint" id="onboardingHint">` +
       `<span class="hint-icon-wrap" style="color:${color}">${Icons.info}</span>` +
-      `Натисніть двічі на вагон та двері,<br>щоб зберегти вихід` +
+      `Натисніть двічі на вагон і двері,<br>щоб зберегти вихід` +
       `</div>`
     : '';
 

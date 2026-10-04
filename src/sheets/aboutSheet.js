@@ -378,7 +378,7 @@ export function openAboutSheet() {
       }
 
       bugSubmitBtn.disabled     = true;
-      bugSubmitBtn.textContent  = 'Відправка…';
+      bugSubmitBtn.textContent  = 'Надсилання…';
       bugResultMsg.textContent  = '';
 
       const controller = new AbortController();
@@ -409,11 +409,11 @@ export function openAboutSheet() {
       } catch (err) {
         clearTimeout(timeoutId);
         bugSubmitBtn.disabled    = false;
-        bugSubmitBtn.textContent = 'Відправити';
+        bugSubmitBtn.textContent = 'Надіслати';
         bugResultMsg.style.color = 'var(--line-red)';
         bugResultMsg.textContent = err.name === 'AbortError'
           ? 'Час очікування вичерпано. Перевірте зʼєднання.'
-          : 'Помилка відправки. Спробуйте пізніше.';
+          : 'Не вдалося надіслати. Спробуйте пізніше.';
       }
     });
   }

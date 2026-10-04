@@ -73,7 +73,7 @@ export function getEmptyFavHtml() {
       </p>
     <br>
       <p class="fav-empty-text-lg">
-        Двічі тапніть по вагону і дверям,<br>
+        Натисніть двічі на вагон і двері,<br>
         щоб додати до <span style="font-variant:small-caps;letter-spacing:0.04em">Вибраного</span><br>потрібний вихід
         <br><svg xmlns="http://www.w3.org/2000/svg" viewBox="30 30 340 160" aria-hidden="true" style="width: 72px; display: inline-block; vertical-align: -6px; margin: 0 4px;">
           <rect width="160" height="160" x="30" y="30" fill="var(--bg-card)" rx="36"/>

@@ -25,7 +25,7 @@ bus.on('feedback:submit-ui', ({ status, background }) => {
 
   // Кнопка заблокована на час відправки, попередній результат прибрано
   if (status === 'sending') {
-    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Відправка…'; }
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Надсилання…'; }
     resultEl.innerHTML = '';
     return;
   }
