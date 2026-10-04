@@ -5,6 +5,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { state, startupSlug } from '../core/state.js';
 import { bus }                from '../core/eventBus.js';
 import { traversePositions, positionKey } from './positions.js';
+import { validateStationsData, isValidStationsData, stationsVersion } from './validateStations.js';
 
 // ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
 // SW обробляє stations.json для веб/PWA (спершу локальна копія, мережа у фоні + postMessage).
@@ -271,9 +272,19 @@ async function _readFilesystemCache() {
       encoding:  Encoding.UTF8,
     });
     const data = JSON.parse(cached.data);
+    if (!isValidStationsData(data)) throw new Error('invalid');
     return { data, version: data.version ?? null };
   } catch {
-    return null; // кеш відсутній або JSON пошкоджений
+    return null; // кеш відсутній, пошкоджений або несумісний з цією версією застосунку
+  }
+}
+
+/** Видаляє кеш з мережі — наступне читання візьме копію, вшиту в APK. */
+async function _deleteFilesystemCache() {
+  try {
+    await Filesystem.deleteFile({ path: NATIVE_CACHE_PATH, directory: Directory.Cache });
+  } catch {
+    // кешу немає
   }
 }
 
@@ -296,18 +307,22 @@ async function _writeFilesystemCache(data) {
   }
 }
 
+/** Копія stations.json, вшита в APK (або null). */
+async function _readBundledStations() {
+  try {
+    const response = await fetch(getStationsUrl());
+    return response.ok ? await response.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Новіша з двох локальних копій: Filesystem.Cache (з мережі) або вшита в APK. */
 async function _readLocalStations() {
-  const cached = await _readFilesystemCache();
-  let bundled  = null;
-  try {
-    const bundledResponse = await fetch(getStationsUrl());
-    if (bundledResponse.ok) bundled = await bundledResponse.json();
-  } catch {
-    // нижче — кеш або нічого
-  }
+  const cached  = await _readFilesystemCache();
+  const bundled = await _readBundledStations();
   // Після оновлення APK вшиті дані можуть бути новішими за кеш з мережі.
-  if (cached && (!bundled || String(cached.version ?? '') >= String(bundled.version ?? ''))) {
+  if (cached && (!bundled || stationsVersion(cached.data) >= stationsVersion(bundled))) {
     return cached.data;
   }
   return bundled;
@@ -322,7 +337,8 @@ async function _fetchRemoteStations(timeoutMs) {
     if (!response.ok) return null;
     // raw.githubusercontent.com віддає .json як text/plain — тому перевіряємо вміст, а не content-type.
     const data = await response.json();
-    return Array.isArray(data?.stations) ? data : null;
+    // Зіпсований або несумісний файл не потрапляє в кеш і не ламає запуск.
+    return isValidStationsData(data) ? data : null;
   } catch {
     return null;
   } finally {
@@ -336,7 +352,7 @@ async function _fetchRemoteStations(timeoutMs) {
  */
 async function _refreshStationsInBackground(currentVersion) {
   const fresh = await _fetchRemoteStations(BACKGROUND_FETCH_TIMEOUT_MS);
-  if (!fresh || fresh.version == null || String(fresh.version) <= String(currentVersion ?? '')) return;
+  if (!fresh || stationsVersion(fresh) <= Number(currentVersion ?? 0)) return;
   await _writeFilesystemCache(fresh);
   // Дзеркало SW-логіки: там postMessage({ type: 'STATIONS_UPDATED' }),
   // тут — bus.emit, який swUpdate.js перехоплює через підписку.
@@ -363,7 +379,7 @@ async function _fetchStationsNative(forceFresh = false) {
 
   const local = await _readLocalStations();
   if (!local) throw new Error('stations.json: немає ні кешу, ні вшитої копії');
-  if (!forceFresh) _refreshStationsInBackground(local.version);
+  if (!forceFresh) _refreshStationsInBackground(stationsVersion(local));
   return local;
 }
 
@@ -378,47 +394,21 @@ async function _fetchStationsNative(forceFresh = false) {
  * @returns {Promise<Record<string, object>>} state.stationsData після гідратації
  */
 export async function reloadStationsData(forceFresh = false) {
-  let data;
+  const data = Capacitor.isNativePlatform()
+    ? await _fetchStationsNative(forceFresh)
+    : await _fetchStationsWeb(forceFresh);
 
-  if (Capacitor.isNativePlatform()) {
-    data = await _fetchStationsNative(forceFresh);
-  } else {
-    // Веб/PWA: SW перехоплює цей fetch: віддає збережену копію, мережу перевіряє у фоні.
-    const stationsUrl = getStationsUrl();
-    const response    = await fetch(
-      stationsUrl,
-      forceFresh ? { cache: 'no-store' } : undefined,
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
-      );
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('json')) {
-      throw new Error(
-        `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
-      );
-    }
-
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      throw new Error(
-        `stations.json contains invalid JSON (${stationsUrl.href}): ${parseError.message}`,
-      );
-    }
+  let hydrated;
+  try {
+    hydrated = _hydrateChecked(data);
+  } catch (err) {
+    // Локальна копія зіпсована чи несумісна — не лишаємо застосунок «цеглиною»
+    // до наступного оновлення даних, а беремо запасну копію.
+    console.error('[stations] дані непридатні, беремо запасну копію:', err);
+    const fallback = await _loadFallbackStations();
+    if (!fallback) throw err;
+    hydrated = _hydrateChecked(fallback);
   }
-
-  if (!data || !Array.isArray(data.stations) || data.stations.length === 0) {
-    throw new Error(
-      'stations.json has unexpected structure: missing or empty "stations" array',
-    );
-  }
-
-  const hydrated = hydrateStations(data);
 
   if (!forceFresh) {
     renderMapZones();
@@ -428,6 +418,59 @@ export async function reloadStationsData(forceFresh = false) {
   bus.emit('fav:render-on-load');
 
   return hydrated;
+}
+
+function _hydrateChecked(data) {
+  const errors = validateStationsData(data);
+  if (errors.length) throw new Error(`stations.json: ${errors.join('; ')}`);
+  return hydrateStations(data);
+}
+
+/**
+ * Запасна копія, якщо основна непридатна.
+ * Нативно — видаляємо кеш з мережі й беремо вшиту в APK.
+ * Веб — питаємо мережу повз збережену копію SW.
+ */
+async function _loadFallbackStations() {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await _deleteFilesystemCache();
+      return await _readBundledStations();
+    }
+    return await _fetchStationsWeb(true);
+  } catch {
+    return null;
+  }
+}
+
+/** Веб/PWA: SW перехоплює цей fetch — віддає збережену копію, мережу перевіряє у фоні. */
+async function _fetchStationsWeb(forceFresh) {
+  const stationsUrl = getStationsUrl();
+  const response    = await fetch(
+    stationsUrl,
+    forceFresh ? { cache: 'no-store' } : undefined,
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `stations.json request failed: ${response.status} ${response.statusText} (${stationsUrl.href})`,
+    );
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('json')) {
+    throw new Error(
+      `stations.json returned non-JSON content: ${contentType || 'unknown'} (${stationsUrl.href})`,
+    );
+  }
+
+  try {
+    return await response.json();
+  } catch (parseError) {
+    throw new Error(
+      `stations.json contains invalid JSON (${stationsUrl.href}): ${parseError.message}`,
+    );
+  }
 }
 
 // Станцію з посилання ?station= відкриваємо лише при першому завантаженні,
