@@ -8,7 +8,7 @@ import { traversePositions, positionKey } from './positions.js';
 
 // ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
 // SW обробляє stations.json для веб/PWA (спершу локальна копія, мережа у фоні + postMessage).
-// На нативній платформі SW інертний — реалізуємо ту саму логіку вручну:
+// На нативній платформі SW не реєструється (infra/serviceWorker.js) — та сама логіка тут:
 //   1. одразу — новіша з копій: Filesystem.Cache або bundled в APK (localhost/stations.json)
 //   2. у фоні — fetch(REMOTE_STATIONS_URL); нова версія → Filesystem.Cache + тост
 
