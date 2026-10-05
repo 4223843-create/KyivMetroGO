@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261006",
+  "version": "20261007",
   "line_intervals": {
     "green": [
       {
@@ -5655,7 +5655,7 @@
             },
             {
               "num": "11",
-              "text": "",
+              "text": "Лядські ворота",
               "id": 1040,
               "coordinates": [
                 30.5239,
