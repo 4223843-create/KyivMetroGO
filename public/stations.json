@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261008",
+  "version": "20261009",
   "line_intervals": {
     "green": [
       {
@@ -1435,7 +1435,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "from_slug": "R.Zhytomyrska"
         }
       ],
       "connections": {
@@ -4126,7 +4127,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "from_slug": "R.Chernihivska"
         }
       ],
       "connections": {
@@ -4297,7 +4299,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "from_slug": "B.Minska"
         }
       ],
       "connections": {
@@ -5449,7 +5452,146 @@
               "119"
             ]
           }
-        }
+        },
+        "stops": [
+          {
+            "name": "пл. Контрактова",
+            "exit": "3",
+            "distance_m": 22,
+            "routes": {
+              "tram": [
+                "18"
+              ]
+            }
+          },
+          {
+            "name": "пл. Контрактова",
+            "exit": "4",
+            "distance_m": 10,
+            "routes": {
+              "tram": [
+                "11",
+                "12",
+                "14",
+                "16",
+                "19"
+              ]
+            }
+          },
+          {
+            "name": "пл. Контрактова",
+            "exit": "4",
+            "distance_m": 72,
+            "routes": {
+              "bus": [
+                "119"
+              ]
+            }
+          },
+          {
+            "name": "ст. м. «Контрактова площа»",
+            "exit": "4",
+            "distance_m": 72,
+            "routes": {
+              "bus": [
+                "62"
+              ]
+            }
+          },
+          {
+            "name": "пл. Контрактова",
+            "exit": "5",
+            "distance_m": 148,
+            "routes": {
+              "bus": [
+                "62",
+                "115"
+              ]
+            }
+          },
+          {
+            "name": "вул. Верхній Вал",
+            "exit": "7",
+            "distance_m": 129,
+            "routes": {
+              "bus": [
+                "53",
+                "112"
+              ]
+            }
+          },
+          {
+            "name": "ст. м. «Контрактова площа»",
+            "exit": "8",
+            "distance_m": 9,
+            "routes": {
+              "bus": [
+                "53",
+                "72",
+                "112"
+              ]
+            }
+          },
+          {
+            "name": "вул. Верхній Вал",
+            "exit": "9",
+            "distance_m": 38,
+            "routes": {
+              "tram": [
+                "14",
+                "18"
+              ]
+            }
+          },
+          {
+            "name": "вул. Нижній Вал",
+            "exit": "9",
+            "distance_m": 45,
+            "routes": {
+              "bus": [
+                "112",
+                "119"
+              ]
+            }
+          },
+          {
+            "name": "вул. Ярославська",
+            "exit": "9",
+            "distance_m": 179,
+            "routes": {
+              "tram": [
+                "11",
+                "12",
+                "16",
+                "19"
+              ]
+            }
+          },
+          {
+            "name": "вул. Нижній Вал",
+            "exit": "12",
+            "distance_m": 28,
+            "routes": {
+              "tram": [
+                "11",
+                "12",
+                "16",
+                "19"
+              ]
+            }
+          },
+          {
+            "name": "Житній ринок",
+            "exit": "13",
+            "distance_m": 157,
+            "routes": {
+              "bus": [
+                "112",
+                "119"
+              ]
+            }
+          }
+        ]
       },
       "schedule": {
         "open": "05:37",
@@ -7424,7 +7566,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "from_slug": "B.Ipodrom"
         }
       ],
       "connections": {
@@ -7520,7 +7663,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "from_slug": "G.Dorohozhychi"
         }
       ],
       "connections": {

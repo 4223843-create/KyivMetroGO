@@ -41,17 +41,35 @@ const ROUTE_KINDS = [
   ['minibus', '🚐', 'Маршрутка'],
 ];
 
-/** Маршрути наземного транспорту біля виходу з номером num (або ''). */
-export function renderExitRoutes(s, num) {
-  const routes = s.connections?.ground?.[num];
-  if (!routes) return '';
-  const groups = ROUTE_KINDS
+function routeGroups(routes) {
+  return ROUTE_KINDS
     .filter(([key]) => routes[key]?.length)
     .map(([key, icon, title]) =>
       `<span class="exit-routes-group" aria-label="${title}"><span class="exit-routes-icon">${icon}</span>` +
       routes[key].map(r => `<span class="exit-route-chip">${r}</span>`).join('') +
       `</span>`
     );
+}
+
+const roundMeters = m => Math.max(5, Math.round(m / 5) * 5);
+
+/**
+ * Наземний транспорт біля виходу з номером num (або '').
+ * Якщо в даних є зупинки (connections.stops) — кожна окремим рядком з назвою
+ * й відстанню від виходу; інакше лише маршрути (connections.ground).
+ */
+export function renderExitRoutes(s, num) {
+  const stops = s.connections?.stops?.filter(st => String(st.exit) === String(num));
+  if (stops?.length) {
+    return `<span class="pos-numbered-exit-stops">` + stops.map(st =>
+      `<span class="exit-stop"><span class="exit-stop-name">${richText(st.name)}` +
+      (Number.isFinite(st.distance_m) ? `, ${roundMeters(st.distance_m)}&nbsp;м` : '') +
+      `</span><span class="pos-numbered-exit-routes">${routeGroups(st.routes || {}).join('')}</span></span>`
+    ).join('') + `</span>`;
+  }
+  const routes = s.connections?.ground?.[num];
+  if (!routes) return '';
+  const groups = routeGroups(routes);
   return groups.length ? `<span class="pos-numbered-exit-routes">${groups.join('')}</span>` : '';
 }
 
@@ -432,6 +450,15 @@ export function renderDirections(s, color) {
       if (!visiblePos.length) return '';
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
+
+    // Кінцева з from_slug — підписуємо попередню станцію, як на інших станціях
+    const prevStation = fromLower === 'кінцева' && state.stationsData?.[dir.from_slug];
+    if (prevStation && exitsHtml) {
+      return `<div class="direction-block">
+      <div class="direction-label nav-label" data-name="${richText(dir.from)}"${navTargetAttr(dir.from_slug)}>${formatDirLabel(`попередня ${prevStation.name}`)}</div>
+      ${exitsHtml}
+    </div>`;
+    }
 
     if (fromLower === 'вихід праворуч' || fromLower === 'кінцева') {
       const headerBlock = `<div class="direction-block direction-exit-right" style="${dir.exits?.length ? 'margin-bottom:10px;' : ''}">

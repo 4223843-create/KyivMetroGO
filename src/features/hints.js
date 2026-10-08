@@ -43,7 +43,7 @@ const HINTS = [
   {
     id:      'neighbour',
     applies: s => !!s.directions?.some(d => d.from_slug && d.from_slug !== s.slug && state.stationsData?.[d.from_slug]),
-    text:    () => 'Ви можете швидко перейти до&nbsp;сусідньої станції, натиснувши на&nbsp;назву попередньої або&nbsp;наступної станції',
+    text:    () => 'Ви можете швидко перейти до&nbsp;сусідньої станції, натиснувши на&nbsp;назву попередньої станції',
   },
   {
     id:      'checkin',

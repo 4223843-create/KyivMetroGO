@@ -4995,6 +4995,17 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   gap: 4px 10px;
   margin-top: 4px;
 }
+/* Зупинки біля виходу (station.connections.stops): назва, відстань, маршрути */
+.pos-numbered-exit-stops {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.exit-stop { display: flex; flex-direction: column; text-align: left; }
+.exit-stop-name { font-size: 12px; }
+.exit-stop .pos-numbered-exit-routes { margin-top: 2px; }
 .exit-routes-group {
   display: inline-flex;
   flex-wrap: wrap;
