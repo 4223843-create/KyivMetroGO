@@ -27,6 +27,9 @@ const PREFS = {
   stationHours:         { key: STORAGE_KEYS.SHOW_STATION_HOURS,     def: 'soon',    values: ['never', 'soon', 'always'] },
   // Що рахувати в журналі check-in: станції чи виходи
   checkinByStation:     { key: STORAGE_KEYS.CHECKIN_BY_STATION,     def: 'station', values: ['station', 'exits'] },
+  // Вимкнути анімацію. Поки не обрано — як у системі («Вимкнути анімацію» / «Зменшення руху»).
+  reduceMotion:         { key: STORAGE_KEYS.REDUCE_MOTION,          def: false,
+                          auto: () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches },
 };
 
 function _def(name) {
@@ -37,12 +40,12 @@ function _def(name) {
 
 /** Значення налаштування: boolean або одне з def.values. */
 export function getPref(name) {
-  const { key, def, values, legacy } = _def(name);
+  const { key, def, values, legacy, auto } = _def(name);
   const raw = Storage.get(key);
   if (values) return values.includes(raw) ? raw : (raw == null && legacy?.()) || def;
   if (raw === 'true')  return true;
   if (raw === 'false') return false;
-  return def;
+  return auto ? auto() : def;
 }
 
 /** Зберігає налаштування; недозволене значення ігнорується. */

@@ -74,11 +74,15 @@ export default defineConfig({
       srcDir:          'public',
       filename:        'sw.js',
       manifest:        false,
+      // SW реєструє infra/serviceWorker.js лише у веб-версії. Автоматичний
+      // registerSW.js реєстрував би його і в застосунку Android/iOS.
+      injectRegister:  false,
       injectManifest:  {
         rollupFormat:   'iife',
         injectionPoint: 'self.__WB_MANIFEST',
         globDirectory:  'dist',
-        globPatterns:   ['**/*.{js,css,html}'],
+        // Іконки теж: без них встановлений офлайн PWA лишився б без значка й заставки.
+        globPatterns:   ['**/*.{js,css,html,png,woff2,json}'],
         // Firebase потрібен лише режиму розробника (services/devCloud.js) —
         // не змушуємо кожного користувача завантажувати його при встановленні SW.
         globIgnores:    ['**/firebaseSync.*.js'],

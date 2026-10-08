@@ -5,20 +5,17 @@
 
 import { state }                  from '../core/state.js';
 import { TIMING }                 from '../core/timing.js';
-import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { bus }                    from '../core/eventBus.js';
 import { findPosition }           from '../data/positions.js';
 import {
   isFav, isExitFav,
   toggleExitFav, replaceExitFav,
 } from '../features/favorites/index.js';
-import { dismissHintWithDoors } from '../ui/animations.js';
-import { Icons }                from '../ui/icons.js';
+import { useHint }              from '../features/hints.js';
 import { applyFavPillStyles, renderExitRoutes } from './renderStation.js';
 import { heartSvg, lineTextColor } from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { getPref }                from '../core/prefs.js';
-import { isCheckinMode }          from '../domain/checkin.js';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -171,7 +168,7 @@ function _triggerExitFav(favTarget, slug, lineColor) {
     // Соковитий подвійний нативний вібровідгук «Успіх»
     Haptics.notification({ type: NotificationType.Success }).catch(() => {});
 
-    _maybeDismissOnboarding(lineColor);
+    useHint('exitFav', state.stationsData?.[slug]);
   }
 
   // Оновлюємо серце в шапці (тепер цей блок чітко всередині функції)
@@ -181,29 +178,6 @@ function _triggerExitFav(favTarget, slug, lineColor) {
     favBtnBar.innerHTML = heartSvg(nowFav, slug, lineColor);
     favBtnBar.classList.toggle('fav-active', nowFav);
   }
-}
-
-function _maybeDismissOnboarding(lineColor) {
-  const hint = document.getElementById('onboardingHint');
-  if (hint) dismissHintWithDoors(hint, () => _maybeShowCheckinHint(lineColor));
-  else      _maybeShowCheckinHint(lineColor);
-}
-
-function _maybeShowCheckinHint(lineColor) {
-  // Без увімкненого Check-in шпильок немає — підказку збережемо на потім
-  if (!isCheckinMode()) return;
-  if (getPref('hideInfoBlocks')) return;
-  if (Storage.get(STORAGE_KEYS.CHECKIN_HINT_SEEN) === 'true') return;
-  const sheetBodyEl = document.getElementById('sheetBody');
-  if (!sheetBodyEl || document.getElementById('checkinHint')) return;
-  Storage.set(STORAGE_KEYS.CHECKIN_HINT_SEEN, 'true');
-  const hint = document.createElement('div');
-  hint.id        = 'checkinHint';
-  hint.className = 'onboarding-hint';
-  hint.innerHTML =
-    `<span class="hint-icon-wrap" style="color:${lineTextColor(lineColor)}">${Icons.info}</span>` +
-    `Натисніть на&nbsp;шпильку, щоб&nbsp;позначити вихід&nbsp;зі&nbsp;станції як&nbsp;відвіданий`;
-  sheetBodyEl.insertBefore(hint, sheetBodyEl.firstChild);
 }
 
 // ── Панель "виходи за номерами" — виїжджає ЗНИЗУ, розширюючи блок ──
@@ -377,6 +351,7 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
     panel.style.transition = '';
   } else {
     requestAnimationFrame(() => panel.classList.add('panel-open'));
+    useHint('exitNumbers', station);
   }
 
   panel.querySelector('.pos-numbered-exits-collapse').addEventListener('click', e => {

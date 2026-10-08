@@ -1,9 +1,8 @@
 import { state }                   from '../core/state.js';
-import { getPref } from '../core/prefs.js';
 import { heartSvg, lineTextColor } from '../ui/components.js';
-import { Icons }                   from '../ui/icons.js';
 import { LINE_COLOR }              from '../core/constants.js';
-import { isFav, getExitFavs }      from '../features/favorites/index.js';
+import { isFav }                   from '../features/favorites/index.js';
+import { renderHintSlot, useHint, initHintGestures } from '../features/hints.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devHooks.js';
 import { bus }                     from '../core/eventBus.js';
 import { showSheet, hideSheet }    from '../ui/sheetNav.js';
@@ -45,6 +44,7 @@ clockBtn?.addEventListener('click', e => {
   if (clockPanel.classList.toggle('panel-open')) {
     const s = state.stationsData?.[state.currentStationSlug];
     clockPanel.innerHTML = s ? renderStationClock(s) : '';
+    useHint('clock', s);
   }
   _syncClockBtn();
 });
@@ -67,6 +67,7 @@ bindSheetGestures(
                ?? 'var(--text-muted)',
   }),
 );
+initHintGestures(sheetBody);
 
 // ══ КЕШІ (module scope) ══════════════════════════════════════
 
@@ -140,14 +141,6 @@ function actualOpenStation(slug) {
   state.currentStationSlug = slug;
   bus.emit('fav:dismiss-hint');
 
-  const hideInfoBlocks = getPref('hideInfoBlocks');
-  const onboardingHtml = (!hideInfoBlocks && getExitFavs().length === 0)
-    ? `<div class="onboarding-hint" id="onboardingHint">` +
-      `<span class="hint-icon-wrap" style="color:${lineTextColor(color)}">${Icons.info}</span>` +
-      `Натисніть двічі на вагон і двері,<br>щоб зберегти вихід` +
-      `</div>`
-    : '';
-
   stationTitleMain.textContent = s.name;
   if (clockBtn) clockBtn.hidden = !hasStationClock(s);
 
@@ -166,7 +159,7 @@ function actualOpenStation(slug) {
       directionsHtml = renderDirections(s, color);
       _directionsHtmlCache.set(slug, directionsHtml);
     }
-    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationConnections(s) + onboardingHtml + directionsHtml;
+    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationConnections(s) + renderHintSlot(s, color) + directionsHtml;
   }
 
   sheetBody.scrollTop = 0;
@@ -226,7 +219,7 @@ export function refreshCurrentStation() {
   sheetBody.innerHTML = renderDirections(s, color);
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
   _directionsHtmlCache.set(slug, sheetBody.innerHTML);
-  sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationConnections(s));
+  sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationConnections(s) + renderHintSlot(s, color));
 
   if (clockBtn) clockBtn.hidden = !hasStationClock(s);
   if (clockWasOpen && !clockBtn?.hidden) {
