@@ -54,23 +54,38 @@ function routeGroups(routes) {
 const roundMeters = m => Math.max(5, Math.round(m / 5) * 5);
 
 /**
- * Наземний транспорт біля виходу з номером num (або '').
- * Якщо в даних є зупинки (connections.stops) — кожна окремим рядком з назвою
- * й відстанню від виходу; інакше лише маршрути (connections.ground).
+ * Окремий блок «Зупинки громадського транспорту» під списком виходів панелі.
+ * nums — номери виходів, що є в панелі. Для кожної зупинки (connections.stops):
+ * назва, найближчий вихід із відстанню по прямій, маршрути. Зупинки без виходу
+ * (у виходів станції немає координат) — без підпису виходу. Виходи без зупинок,
+ * але з маршрутами в connections.ground — рядком «вихід N» з маршрутами.
+ * Вимикається в налаштуваннях («Дані»).
  */
-export function renderExitRoutes(s, num) {
-  const stops = s.connections?.stops?.filter(st => String(st.exit) === String(num));
-  if (stops?.length) {
-    return `<span class="pos-numbered-exit-stops">` + stops.map(st =>
-      `<span class="exit-stop"><span class="exit-stop-name">${richText(st.name)}` +
-      (Number.isFinite(st.distance_m) ? `, ${roundMeters(st.distance_m)}&nbsp;м` : '') +
-      `</span><span class="pos-numbered-exit-routes">${routeGroups(st.routes || {}).join('')}</span></span>`
-    ).join('') + `</span>`;
-  }
-  const routes = s.connections?.ground?.[num];
-  if (!routes) return '';
-  const groups = routeGroups(routes);
-  return groups.length ? `<span class="pos-numbered-exit-routes">${groups.join('')}</span>` : '';
+export function renderExitStops(s, nums) {
+  if (!getPref('showGroundTransport')) return '';
+  const stops = s.connections?.stops || [];
+  const rows = [];
+  nums.forEach(num => {
+    const atExit = stops.filter(st => String(st.exit) === String(num));
+    atExit.forEach(st => rows.push(_stopRow(st.name, _exitMeta(num, st.distance_m), st.routes)));
+    if (!atExit.length && s.connections?.ground?.[num]) {
+      rows.push(_stopRow('', _exitMeta(num), s.connections.ground[num]));
+    }
+  });
+  stops.filter(st => st.exit == null).forEach(st => rows.push(_stopRow(st.name, '', st.routes)));
+  if (!rows.some(Boolean)) return '';
+  return `<div class="exit-stops"><div class="exit-stops-title">Зупинки громадського транспорту</div>${rows.join('')}</div>`;
+}
+
+const _exitMeta = (num, dist) =>
+  `вихід&nbsp;${num}` + (Number.isFinite(dist) ? `, ${roundMeters(dist)}&nbsp;м` : '');
+
+function _stopRow(name, meta, routes) {
+  const groups = routeGroups(routes || {});
+  if (!groups.length) return '';
+  const title = [name && richText(name), meta && `<span class="exit-stop-meta">${meta}</span>`].filter(Boolean).join(' · ');
+  return `<div class="exit-stop"><span class="exit-stop-name">${title}</span>` +
+    `<span class="exit-stop-routes">${groups.join('')}</span></div>`;
 }
 
 /** Підпис «вихід N, M м» для пересадки (відстань округлена до 5 м). */

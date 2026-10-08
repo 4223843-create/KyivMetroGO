@@ -132,6 +132,9 @@ export function openSettingsSheet() {
         bus.emit('station:clock-settings');
       });
     }
+    document.getElementById('settingsShowGroundTransportToggle')?.addEventListener('change', e => {
+      setPref('showGroundTransport', e.target.checked);
+    });
     const morningToggle = document.getElementById('settingsMorningIntervalToggle');
     morningToggle?.addEventListener('change', e => {
       setPref('morningInterval', e.target.checked);
@@ -481,6 +484,8 @@ export function openSettingsSheet() {
     if (si) si.checked = getPref('showIntervals');
     const mi = document.getElementById('settingsMorningIntervalToggle');
     if (mi) mi.checked = getPref('morningInterval');
+    const gt = document.getElementById('settingsShowGroundTransportToggle');
+    if (gt) gt.checked = getPref('showGroundTransport');
     const hoursMode = getPref('stationHours');
     document.querySelectorAll('#settingsStationHoursSeg .settings-seg-btn').forEach(b =>
       b.classList.toggle('is-active', b.dataset.hoursVal === hoursMode));

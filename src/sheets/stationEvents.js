@@ -12,7 +12,7 @@ import {
   toggleExitFav, replaceExitFav,
 } from '../features/favorites/index.js';
 import { useHint }              from '../features/hints.js';
-import { applyFavPillStyles, renderExitRoutes } from './renderStation.js';
+import { applyFavPillStyles, renderExitStops } from './renderStation.js';
 import { heartSvg, lineTextColor } from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { getPref }                from '../core/prefs.js';
@@ -335,14 +335,18 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
   panel.dataset.targetIdx = String([...(sheetBodyEl?.querySelectorAll('.fav-tap-target') ?? [])].indexOf(favTarget));
   panel.innerHTML =
     exitsList.map(item =>
-      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineTextColor(lineColor)}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span>${renderExitRoutes(station, item.num)}</div>`
+      `<div class="pos-numbered-exit-row"><span class="pos-numbered-exit-num" style="color:${lineTextColor(lineColor)}">${item.num}</span><span class="pos-numbered-exit-text">${item.text}</span></div>`
     ).join('') +
+    renderExitStops(station, exitsList.map(item => item.num)) +
     `<button type="button" class="pos-numbered-exits-collapse" aria-label="Згорнути">${COLLAPSE_ARROW_SVG}</button>`;
 
   const dirLabel = row.previousElementSibling?.classList.contains('direction-label')
     ? row.previousElementSibling
     : row;
   dirLabel.before(panel);
+  // Висота розгорнутої панелі — за вмістом (зі зупинками вона буває довгою);
+  // +20 — внутрішні відступи, яких у згорнутої панелі немає
+  panel.style.setProperty('--open-h', `${panel.scrollHeight + 20}px`);
   if (instant) {
     // Відновлення після перемальовування — без анімації розгортання
     panel.style.transition = 'none';
