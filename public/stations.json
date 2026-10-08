@@ -14213,7 +14213,7 @@
       ],
       "exits_catalog": {
         "322": {
-          "label": "",
+          "label": "вихід праворуч",
           "exit_numbers": [
             {
               "num": "1",
