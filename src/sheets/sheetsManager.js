@@ -30,8 +30,11 @@ const dropMenuEl   = document.getElementById('dropMenu');
  * @param {boolean} [force=false]
  */
 export function closeAllSheets(force = false) {
+  // withUnsavedCheck сам викликає closeAllSheets(true) — одразу або після
+  // відповіді в діалозі. Далі не йдемо, інакше шторка закривалась двічі.
   if (!force) {
-    if (withUnsavedCheck(() => closeAllSheets(true))) return false;
+    withUnsavedCheck(() => closeAllSheets(true));
+    return;
   }
   closeAllDevPanels();
 

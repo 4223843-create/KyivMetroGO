@@ -3,6 +3,9 @@
 
 import { TIMING } from '../core/timing.js';
 
+// «Вимкнути анімацію» (ui/motion.js): елемент зникає одразу, без «дверей».
+const reduceMotion = () => document.documentElement.classList.contains('reduce-motion');
+
 /**
  * Базова анімація «двері ліфта» — клонує елемент і розсуває клони.
  * Використовується як animateSheetClose, так і showCustomConfirm.
@@ -13,11 +16,15 @@ import { TIMING } from '../core/timing.js';
  * @param {HTMLElement} parent   - куди додати клони (body або overlay)
  */
 export function runDoorAnimation(el, rect, callback, parent = document.body) {
+  if (reduceMotion()) { if (callback) callback(); return; }
+
   const baseStyle = [
     'position:fixed',
     `top:${rect.top}px`, `left:${rect.left}px`,
     `width:${rect.width}px`, `height:${rect.height}px`,
     'margin:0', 'transform:none', 'pointer-events:none', 'z-index:9999',
+    // Окремий шар для кожної половини: на телефоні рух не смикається
+    'will-change:transform,opacity',
     'transition:transform 0.6s cubic-bezier(0.32,0.72,0,1),opacity 0.45s ease',
   ].join(';');
 
@@ -43,18 +50,26 @@ export function runDoorAnimation(el, rect, callback, parent = document.body) {
  */
 export function animateSheetClose(sheetEl, callback) {
   if (!sheetEl || !sheetEl.classList.contains('sheet-open')) { callback?.(); return; }
+  // Уже закривається (напр. два виклики поспіль) — другі «двері» не потрібні
+  if (sheetEl.dataset.closing) return;
   const rect = sheetEl.getBoundingClientRect();
-  if (rect.height < 10) { callback?.(); return; }
+  if (rect.height < 10 || reduceMotion()) { callback?.(); return; }
 
+  // Справжня шторка одразу їде за край екрана без переходу: поки «двері»
+  // розсуваються, ціла картка не може з'явитись на своєму місці.
+  sheetEl.dataset.closing = '1';
   sheetEl.style.transition = 'none';
   sheetEl.style.visibility = 'hidden';
+  sheetEl.style.transform  = 'translateY(100%)';
 
   runDoorAnimation(sheetEl, rect, callback, document.body);
 
   setTimeout(() => {
     requestAnimationFrame(() => requestAnimationFrame(() => {
+      sheetEl.style.transform  = '';
       sheetEl.style.transition = '';
       sheetEl.style.visibility = '';
+      delete sheetEl.dataset.closing;
     }));
   }, TIMING.DOOR_CLEANUP);
 }
@@ -66,7 +81,7 @@ export function animateSheetClose(sheetEl, callback) {
 export function dismissHintWithDoors(el, onDone) {
   if (!el || !document.body.contains(el)) { onDone?.(); return; }
   const rect = el.getBoundingClientRect();
-  if (rect.height < 4) { el.remove(); onDone?.(); return; }
+  if (rect.height < 4 || reduceMotion()) { el.remove(); onDone?.(); return; }
 
   const baseStyle = [
     'position:fixed',
