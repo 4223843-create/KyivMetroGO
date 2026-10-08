@@ -4988,32 +4988,25 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   text-align: left;
 }
 
-/* Блок «Зупинки громадського транспорту» під виходами (station.connections) */
-.exit-stops {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 2px;
-  padding-top: 8px;
-  border-top: 0.5px solid var(--border);
-  text-align: left;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  line-height: 1.35;
-}
-.exit-stops-title {
-  font-size: 12px;
-  font-weight: var(--fw-medium);
-  color: var(--text);
-}
-.exit-stop { display: flex; flex-direction: column; gap: 3px; }
-.exit-stop-name { font-size: 12px; }
-.exit-stop-meta { white-space: nowrap; }
-.exit-stop-routes {
+/* Маршрути наземного транспорту біля виходу (station.connections.ground) */
+.pos-numbered-exit-routes {
+  grid-column: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
+  margin-top: 4px;
 }
+/* Зупинки біля виходу (station.connections.stops): назва, відстань, маршрути */
+.pos-numbered-exit-stops {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.exit-stop { display: flex; flex-direction: column; text-align: left; }
+.exit-stop-name { font-size: 12px; }
+.exit-stop .pos-numbered-exit-routes { margin-top: 2px; }
 .exit-routes-group {
   display: inline-flex;
   flex-wrap: wrap;
