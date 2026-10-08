@@ -41,6 +41,11 @@ const HINTS = [
     text:    c => `Натисніть ${inlineIcon(CLOCK_ICON, c)} угорі, щоб&nbsp;побачити інтервал руху та&nbsp;попередження про&nbsp;скоре закриття станції`,
   },
   {
+    id:      'neighbour',
+    applies: s => !!s.directions?.some(d => d.from_slug && d.from_slug !== s.slug && state.stationsData?.[d.from_slug]),
+    text:    () => 'Ви можете швидко перейти до&nbsp;сусідньої станції, натиснувши на&nbsp;назву попередньої або&nbsp;наступної станції',
+  },
+  {
     id:      'checkin',
     applies: () => isCheckinMode(),
     used:    () => Object.keys(getCheckins()).length > 0,
