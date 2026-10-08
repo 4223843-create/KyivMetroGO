@@ -467,15 +467,9 @@ export function renderDirections(s, color) {
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
 
-    // Кінцева з from_slug — підписуємо попередню станцію, як на інших станціях.
-    // Без виходів (Червоний Хутір) — лише заголовок, позиції йдуть під «вихід праворуч».
+    // Кінцева з from_slug — підписуємо попередню станцію, як на інших станціях
     const prevStation = fromLower === 'кінцева' && state.stationsData?.[dir.from_slug];
-    if (prevStation && !exitsHtml) {
-      return `<div class="direction-block direction-exit-right" style="margin-bottom:10px;">
-      <div class="direction-label nav-label" style="margin:0;" data-name="${richText(dir.from)}"${navTargetAttr(dir.from_slug)}>${formatDirLabel(`попередня ${prevStation.name}`)}</div>
-    </div>`;
-    }
-    if (prevStation) {
+    if (prevStation && exitsHtml) {
       return `<div class="direction-block">
       <div class="direction-label nav-label" data-name="${richText(dir.from)}"${navTargetAttr(dir.from_slug)}>${formatDirLabel(`попередня ${prevStation.name}`)}</div>
       ${exitsHtml}
