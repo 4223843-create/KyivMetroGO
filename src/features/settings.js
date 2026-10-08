@@ -6,6 +6,7 @@ import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { getPref, setPref } from '../core/prefs.js';
 import { LINE_COLOR }              from '../core/constants.js';
 import { applyTheme }              from '../ui/theme.js';
+import { setReduceMotion }         from '../ui/motion.js';
 import { initKinematicSwipe }      from '../ui/swipe.js';
 import { showSheet, hideSheet }    from '../ui/sheetNav.js';
 import { bus }                     from '../core/eventBus.js';
@@ -249,6 +250,9 @@ export function openSettingsSheet() {
       });
     }
 
+    const reduceMotionToggle = document.getElementById('settingsReduceMotionToggle');
+    reduceMotionToggle?.addEventListener('change', e => setReduceMotion(e.target.checked));
+
     const hideInfoToggle = document.getElementById('settingsHideInfoToggle');
     if (hideInfoToggle) {
       hideInfoToggle.checked = getPref('hideInfoBlocks');
@@ -468,6 +472,8 @@ export function openSettingsSheet() {
     if (c)  c.checked  = isMainOn;
     if (l)  l.checked  = getPref('localOnlyFeedback');
     if (h)  h.checked  = getPref('hideInfoBlocks');
+    const rm = document.getElementById('settingsReduceMotionToggle');
+    if (rm) rm.checked = getPref('reduceMotion');
     if (em) em.checked = isEditOn;
     if (nl) nl.checked = getPref('hideNoLift');
 

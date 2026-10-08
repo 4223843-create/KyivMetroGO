@@ -3,6 +3,7 @@
 import { STORAGE_KEYS, Storage }          from './core/storage.js';
 import { getPref } from './core/prefs.js';
 import { applyTheme }                     from './ui/theme.js';
+import { applyReduceMotion }              from './ui/motion.js';
 import { configureEdgeToEdge }            from './ui/system.js';
 import { initMap }                        from './map/mapInit.js';
 import { reloadStationsData }             from './data/stations.js';
@@ -58,6 +59,7 @@ async function bootstrap() {
     // Передаємо false другим параметром, щоб не фіксувати світлу/темну тему в базі при першому старті
     const savedTheme = Storage.get(STORAGE_KEYS.THEME) || 'system';
     applyTheme(savedTheme, false);
+    applyReduceMotion();
 
     initMap();
     await configureEdgeToEdge();
