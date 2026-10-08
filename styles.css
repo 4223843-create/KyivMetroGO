@@ -5232,9 +5232,11 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
    Шторки, «двері ліфта», підказки й тости з'являються та зникають одразу.
    !important перекриває й inline-переходи з animations.js.
    Спінери (нескінченні анімації) не чіпаємо: вони показують, що йде робота. */
+/* Саме none, а не коротка тривалість: з будь-якою тривалістю браузер «переводить»
+   і visibility, тож вкладені елементи ховаються по черзі, кадр за кадром,
+   і закриту картку видно, як вона «зменшується». */
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
-  transition-duration: 0.01ms !important;
-  transition-delay: 0s !important;
+  transition: none !important;
   scroll-behavior: auto !important;
 }
 html.reduce-motion .global-confirm-card { animation: none !important; }
