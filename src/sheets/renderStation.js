@@ -458,7 +458,7 @@ export function renderDirections(s, color) {
     return mainHtml + longHtml;
   }
 
-  return s.directions.map(dir => {
+  return s.directions.map((dir, dirIdx) => {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
@@ -467,15 +467,9 @@ export function renderDirections(s, color) {
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
 
-    // Кінцева з from_slug — підписуємо попередню станцію, як на інших станціях.
-    // Без виходів (Червоний Хутір) — лише заголовок, позиції йдуть під «вихід праворуч».
+    // Кінцева з from_slug — підписуємо попередню станцію, як на інших станціях
     const prevStation = fromLower === 'кінцева' && state.stationsData?.[dir.from_slug];
-    if (prevStation && !exitsHtml) {
-      return `<div class="direction-block direction-exit-right" style="margin-bottom:10px;">
-      <div class="direction-label nav-label" style="margin:0;" data-name="${richText(dir.from)}"${navTargetAttr(dir.from_slug)}>${formatDirLabel(`попередня ${prevStation.name}`)}</div>
-    </div>`;
-    }
-    if (prevStation) {
+    if (prevStation && exitsHtml) {
       return `<div class="direction-block">
       <div class="direction-label nav-label" data-name="${richText(dir.from)}"${navTargetAttr(dir.from_slug)}>${formatDirLabel(`попередня ${prevStation.name}`)}</div>
       ${exitsHtml}
@@ -483,7 +477,9 @@ export function renderDirections(s, color) {
     }
 
     if (fromLower === 'вихід праворуч' || fromLower === 'кінцева') {
-      const headerBlock = `<div class="direction-block direction-exit-right" style="${dir.exits?.length ? 'margin-bottom:10px;' : ''}">
+      // Відступ знизу, якщо під заголовком є позиції — свої чи наступного напрямку
+      const hasBelow = dir.exits?.length || dirIdx < s.directions.length - 1;
+      const headerBlock = `<div class="direction-block direction-exit-right" style="${hasBelow ? 'margin-bottom:10px;' : ''}">
         <div class="direction-label" style="margin:0;">${fromLower}</div>
       </div>`;
 
