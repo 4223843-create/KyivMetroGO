@@ -33,12 +33,12 @@ const HINTS = [
   {
     id:      'exitNumbers',
     applies: s => hasNumberedExits(s),
-    text:    () => 'Натисніть один раз на&nbsp;вагон і&nbsp;двері, щоб&nbsp;побачити, куди ведуть виходи',
+    text:    () => 'Натисніть на&nbsp;вагон і&nbsp;двері, щоб&nbsp;побачити номери виходів та&nbsp;назви орієнтирів',
   },
   {
     id:      'clock',
     applies: s => hasStationClock(s),
-    text:    c => `Натисніть ${inlineIcon(CLOCK_ICON, c)} угорі, щоб&nbsp;побачити години роботи та&nbsp;інтервал руху`,
+    text:    c => `Натисніть ${inlineIcon(CLOCK_ICON, c)} угорі, щоб&nbsp;побачити інтервал руху та&nbsp;попередження про&nbsp;скоре закриття станції`,
   },
   {
     id:      'checkin',
