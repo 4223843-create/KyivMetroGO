@@ -461,7 +461,10 @@ export function bindSheetGestures(sheetBody, getCtx) {
     const navLabel = e.target.closest('.nav-link');
     if (navLabel) {
       const target = navLabel.dataset.target;
-      if (target && target !== slug) bus.emit('station:open', { slug: target });
+      if (target && target !== slug) {
+        useHint('neighbour');
+        bus.emit('station:open', { slug: target });
+      }
       return;
     }
 
