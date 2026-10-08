@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261009",
+  "version": "20261010",
   "line_intervals": {
     "green": [
       {
@@ -9981,7 +9981,8 @@
       "directions": [
         {
           "from": "кінцева",
-          "exits": []
+          "exits": [],
+          "from_slug": "G.Boryspilska"
         },
         {
           "from": "вихід праворуч",
