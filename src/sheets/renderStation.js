@@ -458,7 +458,7 @@ export function renderDirections(s, color) {
     return mainHtml + longHtml;
   }
 
-  return s.directions.map(dir => {
+  return s.directions.map((dir, dirIdx) => {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
@@ -477,7 +477,9 @@ export function renderDirections(s, color) {
     }
 
     if (fromLower === 'вихід праворуч' || fromLower === 'кінцева') {
-      const headerBlock = `<div class="direction-block direction-exit-right" style="${dir.exits?.length ? 'margin-bottom:10px;' : ''}">
+      // Відступ знизу, якщо під заголовком є позиції — свої чи наступного напрямку
+      const hasBelow = dir.exits?.length || dirIdx < s.directions.length - 1;
+      const headerBlock = `<div class="direction-block direction-exit-right" style="${hasBelow ? 'margin-bottom:10px;' : ''}">
         <div class="direction-label" style="margin:0;">${fromLower}</div>
       </div>`;
 
