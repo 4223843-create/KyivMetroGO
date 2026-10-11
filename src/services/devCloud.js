@@ -34,8 +34,7 @@ const _call = name => async (...args) => (await _load())[name](...args);
 
 export const loginDev         = _call('loginDev');
 export const logoutDev        = _call('logoutDev');
-export const uploadDevState   = _call('uploadDevState');
-export const downloadDevState = _call('downloadDevState');
+export const syncDevState     = _call('syncDevState');
 export const uploadDevPhoto   = _call('uploadDevPhoto');
 export const deleteDevPhoto   = _call('deleteDevPhoto');
 export const listDevPhotoIds  = _call('listDevPhotoIds');
