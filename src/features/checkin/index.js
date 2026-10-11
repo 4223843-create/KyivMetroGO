@@ -158,7 +158,7 @@ function renderLineRings(lineStats) {
           stroke-dasharray="${fill} ${C}"
           transform="rotate(-90 32 32)"/>
       </svg>
-      <span class="ci-ring-label" style="color:${color}">${name}</span>
+      <span class="ci-ring-label" style="color:${lineTextColor(color)}">${name}</span>
       <span class="ci-ring-sub">${stLabel} ст.</span>
     </button>`;
   }).join('');

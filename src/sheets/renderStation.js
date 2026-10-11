@@ -22,7 +22,7 @@ function formatLabel(exit) {
   const text       = exit.label.trim();
   const target = state.stationsData?.[exit.transfer_to];
   if (target) {
-    const color = LINE_COLOR[target.line];
+    const color = lineTextColor(LINE_COLOR[target.line]);
     return `<span class="transfer-label">` +
       `<span class="transfer-line" style="background:${color}"></span>` +
       `<span class="transfer-text">${richText(text)}</span>` +
