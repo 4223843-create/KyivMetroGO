@@ -131,6 +131,21 @@ function fmtInterval([lo, hi]) {
   return `${a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`}&nbsp;${word}`;
 }
 
+// Експеримент: на одній гілці показуємо точні значення без округлення
+const EXACT_INTERVAL_LINES = new Set(['red']);
+
+/** 375 с → «6&nbsp;хв&nbsp;15&nbsp;сек», 360 с → «6&nbsp;хв». */
+function fmtExact(sec) {
+  const m = Math.floor(sec / 60), r = sec % 60;
+  if (!m) return `${r}&nbsp;сек`;
+  return r ? `${m}&nbsp;хв&nbsp;${r}&nbsp;сек` : `${m}&nbsp;хв`;
+}
+
+/** [270, 480] с → «4 хв 30 сек – 8 хв» (без округлення). */
+function fmtIntervalExact([lo, hi]) {
+  return lo === hi ? fmtExact(lo) : `${fmtExact(lo)} – ${fmtExact(hi)}`;
+}
+
 /** «05:33» → хвилини від початку доби; час до 03:00 вважаємо після опівночі. */
 function toMin(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
@@ -199,6 +214,7 @@ export function renderStationClock(s, now = new Date()) {
     }
   }
 
+  const fmt = EXACT_INTERVAL_LINES.has(s.line) ? fmtIntervalExact : fmtInterval;
   const trains = Object.entries(sch.trains || {});
   let ivs = !getPref('showIntervals') ? [] : trains
     .filter(([, t]) => nowMin >= toMin(t.first) && nowMin <= toMin(t.last))
@@ -217,12 +233,12 @@ export function renderStationClock(s, now = new Date()) {
   const [x, y] = ivs;
   if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= 60 && Math.abs(x[1][1] - y[1][1]) <= 60) {
     const iv = [Math.min(x[1][0], y[1][0]), Math.max(x[1][1], y[1][1])];
-    lines.push(`<span class="clock-pill">${title}: <span class="clock-interval">${fmtInterval(iv)}</span></span>`);
+    lines.push(`<span class="clock-pill">${title}: <span class="clock-interval">${fmt(iv)}</span></span>`);
   } else if (ivs.length) {
     // Два напрямки — одна пілюля-блок з заголовком і рядком на кожен бік
     lines.push(`<span class="clock-pill clock-pill-multi"><span>${title}</span>` +
       ivs.map(([terminal, iv]) => `<span>у бік ${TERMINAL_GEN[terminal] || terminal}: ` +
-        `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
+        `<span class="clock-interval">${fmt(iv)}</span></span>`).join('') + '</span>');
   }
 
   if (!lines.length && getPref('showIntervals'))
