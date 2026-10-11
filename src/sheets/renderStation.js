@@ -230,8 +230,10 @@ export function renderStationClock(s, now = new Date()) {
   }
 
   // Різниця між напрямками до 60 с — один рядок без назв напрямків
+  // (у точному форматі об'єднуємо лише однакові інтервали)
   const [x, y] = ivs;
-  if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= 60 && Math.abs(x[1][1] - y[1][1]) <= 60) {
+  const tol = fmt === fmtIntervalExact ? 0 : 60;
+  if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= tol && Math.abs(x[1][1] - y[1][1]) <= tol) {
     const iv = [Math.min(x[1][0], y[1][0]), Math.max(x[1][1], y[1][1])];
     lines.push(`<span class="clock-pill">${title}: <span class="clock-interval">${fmt(iv)}</span></span>`);
   } else if (ivs.length) {
