@@ -45,6 +45,10 @@ body#map-page .map-viewport {
   --line-red:   #c8523a;
   --line-blue:  #5b9bd5;
   --line-green: #5aaa6a;
+  /* Логотип у «Про застосунок» — завжди початкові кольори ліній, в обох темах */
+  --logo-red:   #c8523a;
+  --logo-blue:  #5b9bd5;
+  --logo-green: #5aaa6a;
   --hatch-color: #0d0d0d;
 
   --border:     rgba(255,255,255,0.08);
