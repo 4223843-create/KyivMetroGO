@@ -48,6 +48,7 @@ export const STORAGE_KEYS = {
   DEV_EXITS_VERIFIED:    'metro_dev_exits_verified',
   DEV_DELETED_PHOTOS:    'metro_dev_deleted_photos',
   DEV_BACKLOG_SYNC_BASE: 'metro_dev_backlog_sync_base',
+  DEV_BACKLOG_T:         'metro_dev_backlog_t',
   LOGO_STATE:     'metro_logo_state',
   LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
   CHECKIN_HATCH:  'metro_checkin_hatch',

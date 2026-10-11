@@ -1,6 +1,6 @@
 import { auth, db, storage } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, runTransaction } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 
 // ── Стан авторизації (реактивний, не читаємо auth.currentUser напряму) ──
@@ -64,37 +64,28 @@ function _devDocRef() {
 }
 
 // 2. Відправка локальних даних у хмару
-export async function uploadDevState(notes, verified, backlog, confirmations, stationNotes) {
-  const docRef = _devDocRef();
-  if (!docRef) return;
-
-  await setDoc(docRef, {
-    notes: notes,
-    verified: verified,
-    backlog: backlog || '',
-    confirmations: confirmations || {},
-    stationNotes: stationNotes || {},
-    updatedAt: Date.now()
-  });
-}
-
-// 3. Завантаження даних з хмари
-export async function downloadDevState() {
+/**
+ * Атомарна синхронізація документа розробника: читає хмарний стан, передає
+ * його в merge(cloudData|null) і записує результат у тій самій транзакції.
+ * Якщо інший пристрій встиг записати між читанням і записом, Firestore
+ * повторить транзакцію з його даними — раніше (окремі getDoc + setDoc) запис
+ * іншого пристрою просто затирався. merge може викликатись кілька разів,
+ * тож він має бути чистим.
+ * @param {(cloudData: object|null) => object} merge
+ * @returns {Promise<object|null>} записаний стан або null без авторизації
+ */
+export async function syncDevState(merge) {
   const docRef = _devDocRef();
   if (!docRef) return null;
 
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    return docSnap.data();
-  }
-  return null;
+  return runTransaction(db, async tx => {
+    const snap    = await tx.get(docRef);
+    const payload = { ...merge(snap.exists() ? snap.data() : null), updatedAt: Date.now() };
+    tx.set(docRef, payload);
+    return payload;
+  });
 }
 
-// ── Фото: Firebase Storage, окремими файлами (не base64 в Firestore) ──
-// Firestore-документ обмежений 1 МіБ — кілька фото в base64 його б
-// переповнили миттєво. Тому фото зберігаються в Storage як окремі об'єкти
-// dev_photos/{uid}/{photoId}.jpg, а Firestore-документ їх узагалі не бачить.
 function _photoRef(photoId) {
   if (!auth.currentUser) return null;
   return ref(storage, `dev_photos/${auth.currentUser.uid}/${photoId}.jpg`);

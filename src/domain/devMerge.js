@@ -51,14 +51,19 @@ export function mergeKeyedMap(local, cloud) {
   return merged;
 }
 
+// Скільки тримати позначки видалення. Пристрій, який не синхронізувався
+// довше, поверне видалене, тож строк великий: записи крихітні. Раніше було
+// 7 діб — і нотатки, видалені тиждень тому, оживали з телефону, який
+// довго не відкривали.
+export const TOMBSTONE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
+
 /**
- * Видаляє tombstone-записи, старші за maxAgeMs (за замовчуванням 7 діб).
- * Викликається один раз на старті у _performFullSync — лише якщо є авторизація.
+ * Видаляє tombstone-записи, старші за maxAgeMs (за замовчуванням рік).
  * @param {object} map  — структура {slug: {posIdx: entry}}
  * @param {number} [maxAgeMs]
  * @returns {object}
  */
-export function purgeTombstones(map, maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
+export function purgeTombstones(map, maxAgeMs = TOMBSTONE_MAX_AGE_MS) {
   const now = Date.now();
   const result = {};
   for (const [outerKey, inner] of Object.entries(map || {})) {
@@ -73,59 +78,29 @@ export function purgeTombstones(map, maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
   return result;
 }
 
+/**
+ * Підтвердження позиції — один запис, переможець за часом останньої дії
+ * (updatedAt; resetAt — для скидань). Раніше лічильники брали максимум, а
+ * «100%» — OR, тож зняте на одному пристрої підтвердження чи скасована
+ * дія поверталися з іншого. Рівний час — перевага локальному.
+ */
 export function mergeConfirmations(local, cloud) {
+  const time = r => Math.max(r?.updatedAt ?? 0, r?.resetAt ?? 0);
   const merged = {};
   const slugs = new Set([...Object.keys(local || {}), ...Object.keys(cloud || {})]);
   for (const slug of slugs) {
-    merged[slug] = {};
     const posIdxs = new Set([
       ...Object.keys(local?.[slug] || {}),
       ...Object.keys(cloud?.[slug] || {}),
     ]);
+    const inner = {};
     for (const posIdx of posIdxs) {
-      const l = local?.[slug]?.[posIdx] || emptyConfirmationData();
-      const c = cloud?.[slug]?.[posIdx] || emptyConfirmationData();
-
-      // resetAt — таймстамп явного скидання цієї позиції (resetConfirmationData).
-      // Якщо скидання відбулось ПІСЛЯ останнього оновлення іншого боку —
-      // скидання перемагає, і ми не відновлюємо старі лічильники з хмари.
-      const lResetAt   = l.resetAt ?? 0;
-      const cResetAt   = c.resetAt ?? 0;
-      const lUpdatedAt = l.updatedAt ?? 0;
-      const cUpdatedAt = c.updatedAt ?? 0;
-
-      // Локальне скидання новіше за хмарні дані → беремо локальний (порожній) стан
-      if (lResetAt > cUpdatedAt && lResetAt >= cResetAt) {
-        merged[slug][posIdx] = { ...l };
-        continue;
-      }
-      // Хмарне скидання новіше за локальні дані → беремо хмарний (порожній) стан
-      if (cResetAt > lUpdatedAt && cResetAt > lResetAt) {
-        merged[slug][posIdx] = { ...c };
-        continue;
-      }
-
-      // Звичайний merge — монотонні лічильники, OR для finalConfirmed
-      const corrections = {};
-      const corrKeys = new Set([
-        ...Object.keys(l.corrections || {}),
-        ...Object.keys(c.corrections || {}),
-      ]);
-      for (const k of corrKeys) {
-        corrections[k] = Math.max(l.corrections?.[k] || 0, c.corrections?.[k] || 0);
-      }
-
-      merged[slug][posIdx] = {
-        finalConfirmed: !!(l.finalConfirmed || c.finalConfirmed),
-        confirmCount:   Math.max(l.confirmCount  || 0, c.confirmCount  || 0),
-        disputeCount:   Math.max(l.disputeCount  || 0, c.disputeCount  || 0),
-        corrections,
-        lastAction:     l.lastAction || null,
-        updatedAt:      Math.max(lUpdatedAt, cUpdatedAt),
-        resetAt:        Math.max(lResetAt,   cResetAt) || null,
-      };
+      const l = local?.[slug]?.[posIdx];
+      const c = cloud?.[slug]?.[posIdx];
+      const winner = (!c || (l && time(l) >= time(c))) ? l : c;
+      if (winner) inner[posIdx] = { ...winner };
     }
-    if (!Object.keys(merged[slug]).length) delete merged[slug];
+    if (Object.keys(inner).length) merged[slug] = inner;
   }
   return merged;
 }
@@ -149,8 +124,11 @@ export function deriveVerifiedFromConfirmations(confirmations) {
  *  це означає, що розробник явно скинув підтвердження після того, як
  *  verified-запис потрапив у хмару.
  */
-export function applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified) {
-  if (!cloudVerified) return confirmations;
+export function applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified, cloudHasConfirmations = false) {
+  // Поточні версії пишуть повні confirmations; verified лише дублює їх для
+  // зовсім старих версій. Застосовувати його поверх — означало б повертати
+  // «100%», зняте на іншому пристрої.
+  if (!cloudVerified || cloudHasConfirmations) return confirmations;
   const result = { ...confirmations };
   for (const slug of Object.keys(cloudVerified)) {
     if (!result[slug]) result[slug] = {};
@@ -164,84 +142,40 @@ export function applyCloudVerifiedIntoConfirmations(confirmations, cloudVerified
   }
   return result;
 }
+/**
+ * Беклог — один спільний текст на всі пристрої.
+ * Раніше незалежні версії склеювались через «— з іншого пристрою —», а при
+ * змінах з обох боків додавались лише нові рядки: видалене на одному пристрої
+ * поверталось з іншого, і з'являлись дублікати. Тепер текст береться цілком:
+ *  – змінився лише один бік відносно base (останнього синхронізованого тексту) — береться він;
+ *  – змінились обидва — новіший за t (час останнього редагування) замінює інший.
+ * @param {{v:string,t:number}} local
+ * @param {{v:string,t:number}} cloud
+ * @param {string} base
+ * @returns {{v:string,t:number}}
+ */
 export function mergeBacklog(local, cloud, base) {
-  const l = (local || '').trim();
-  const c = (cloud || '').trim();
+  const l = { v: (local?.v || '').trim(), t: local?.t || 0 };
+  const c = { v: (cloud?.v || '').trim(), t: cloud?.t || 0 };
   const b = (base || '').trim();
 
-  // Нічого немає
-  if (!l && !c) return '';
+  if (l.v === c.v) return { v: l.v, t: Math.max(l.t, c.t) };
+  if (l.v === b)   return c;          // змінилась лише хмара
+  if (c.v === b)   return l;          // змінився лише цей пристрій
+  return l.t >= c.t ? l : c;          // обидва: новіша правка, рівні — локальна
+}
 
-  // Перший запуск / немає попередньої синхронізованої версії
-  if (!b) {
-    if (!l) return c;
-    if (!c) return l;
-    if (l === c) return l;
+/** Видалені фото {id: t}: об'єднання, при збігу — пізніший час. */
+export function mergePhotoTombstones(local, cloud) {
+  const merged = { ...(local || {}) };
+  for (const [id, t] of Object.entries(cloud || {})) merged[id] = Math.max(merged[id] || 0, t || 0);
+  return merged;
+}
 
-    // Якщо cloud є частиною local — локальна версія вже містить cloud
-    if (l.startsWith(c + '\n') || l === c) return l;
-
-    // Якщо local є частиною cloud — хмарна версія вже містить local
-    if (c.startsWith(l + '\n')) return c;
-
-    // Справді незалежні тексти
-    return `${l}\n\n— з іншого пристрою —\n${c}`;
-  }
-
-  // Нічого не змінилося локально
-  if (l === b) return c;
-
-  // Нічого не змінилося в хмарі
-  if (c === b) return l;
-
-  // Зміни відбулися тільки локально
-  if (l !== b && c === b) return l;
-
-  // Зміни відбулися тільки в cloud
-  if (l === b && c !== b) return c;
-
-  // Обидві сторони змінилися.
-  // Визначаємо додані частини відносно останньої
-  // синхронізованої версії.
-  const baseLines = b.split('\n');
-  const localLines = l.split('\n');
-  const cloudLines = c.split('\n');
-
-  function getAddedLines(currentLines) {
-    let i = 0;
-
-    while (
-      i < baseLines.length &&
-      i < currentLines.length &&
-      baseLines[i] === currentLines[i]
-    ) {
-      i++;
-    }
-
-    return currentLines.slice(i);
-  }
-
-  const localAdded = getAddedLines(localLines);
-  const cloudAdded = getAddedLines(cloudLines);
-
-  // Починаємо з базової версії.
-  const result = [...baseLines];
-
-  // Додаємо зміни cloud
-  for (const line of cloudAdded) {
-    if (!result.includes(line)) {
-      result.push(line);
-    }
-  }
-
-  // Додаємо локальні зміни
-  for (const line of localAdded) {
-    if (!result.includes(line)) {
-      result.push(line);
-    }
-  }
-
-  return result.join('\n').trim();
+/** Прибирає записи видалених фото, старші за maxAgeMs. */
+export function purgePhotoTombstones(map, maxAgeMs = TOMBSTONE_MAX_AGE_MS) {
+  const now = Date.now();
+  return Object.fromEntries(Object.entries(map || {}).filter(([, t]) => now - (t || 0) <= maxAgeMs));
 }
 
 /** Merge нотаток станцій: переможець — запис з більшим таймстампом.

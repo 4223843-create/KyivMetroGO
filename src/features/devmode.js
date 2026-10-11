@@ -37,13 +37,15 @@ const DEV_MORE_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg
 const DEV_CONFIRM_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { Capacitor }              from '@capacitor/core';
+import { App }                    from '@capacitor/app';
 import { state }                  from '../core/state.js';
 import { PhotoStorage }           from '../data/photoStorage.js';
 import { bus }        from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { getPositionDescriptorsForStation, devRowKey } from '../sheets/renderStation.js';
 import { legacyKeyMap }     from '../data/positions.js';
-import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
+import { onDevAuthChange, loginDev, logoutDev, syncDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
 import { escapeHtml } from '../ui/html.js';
 import { showToast }  from '../ui/toast.js';
 import { isDevMode } from './devFlags.js';
@@ -56,6 +58,8 @@ import {
   applyCloudVerifiedIntoConfirmations as _applyCloudVerifiedIntoConfirmations,
   mergeBacklog as _mergeBacklog,
   mergeStationNotes as _mergeStationNotes,
+  mergePhotoTombstones as _mergePhotoTombstones,
+  purgePhotoTombstones as _purgePhotoTombstones,
 } from '../domain/devMerge.js';
 
 export { isDevMode, toggleDevMode, getDevLog, appendDevLog } from './devFlags.js';
@@ -92,8 +96,10 @@ function _ensureDevAuthWatch() {
   if (_devAuthWatching) return;
   _devAuthWatching = true;
   onDevAuthChange(user => {
+    const signedIn   = !!user && !_devUser;
     _devUser         = user;
     _devAuthResolved = true;
+    if (signedIn) _requestSync(false); // вхід або запуск — забрати зміни інших пристроїв
     if (_lastDevAuthContainer?.isConnected) {
       renderDevAuthSection(_lastDevAuthContainer);
     }
@@ -103,131 +109,118 @@ function _ensureDevAuthWatch() {
   });
 }
 
-// ── Синхронізація: спільний "зайнятий"-прапорець ──────
-// Без цього автосинк (за таймером) і ручна кнопка могли одночасно вдарити
-// в Firestore — не критично для цілісності даних (обидва пишуть у той самий
-// документ), але непередбачувано щодо того, чий запит "виграє". Прапорець
-// гарантує, що в моменті синхронізується щось одне.
+// ── Синхронізація ─────────────────────────────────────
+// Мета: на всіх пристроях розробника однаковий вміст, і видалене на одному
+// зникає на інших. Як це забезпечено:
+//  – нотатки виходів і станцій — записи з часом { v, t } або позначка
+//    видалення { d:true, t }; перемагає новіший (domain/devMerge.js);
+//  – підтвердження позиції — запис цілком, перемагає новіша дія;
+//  – беклог — текст цілком (без склеювання версій), див. mergeBacklog;
+//  – видалені фото — спільний список у хмарі, за ним фото прибираються
+//    і з інших пристроїв;
+//  – читання, злиття і запис у хмару — одна транзакція Firestore, тож два
+//    пристрої не затирають записи один одного;
+//  – синхронізація запускається не лише після змін, а й при вході, запуску
+//    й поверненні з фону — щоб пристрій без власних змін теж отримав чужі.
 let _syncInFlight = false;
+let _syncAgain    = false; // зміни під час синхронізації — ще одне коло після неї
+
+function _readJson(key) {
+  try { return JSON.parse(Storage.get(key) || '{}'); } catch { return {}; }
+}
+
+/** Знімок локального стану розробника в форматі документа в хмарі. */
+function _readLocalDevState() {
+  _ensureDevKeysMigrated();
+  return {
+    notes:         _purgeTombstones(_readJson(STORAGE_KEYS.DEV_NOTES)),
+    confirmations: getAllDevConfirmations(),
+    stationNotes:  getAllStationNotes(),
+    backlog:       { v: Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '', t: Number(Storage.get(STORAGE_KEYS.DEV_BACKLOG_T)) || 0 },
+    backlogBase:   Storage.get(STORAGE_KEYS.DEV_BACKLOG_SYNC_BASE) || '',
+    deletedPhotos: _purgePhotoTombstones(_getPhotoTombstones()),
+  };
+}
+
+/** Чисте злиття локального стану з хмарним документом (або з уже записаним станом). */
+function _mergeDevState(local, cloud) {
+  if (!cloud) return local;
+  const notes = _mergeKeyedMap(local.notes, cloud.notes);
+  const confirmations = _applyCloudVerifiedIntoConfirmations(
+    _mergeConfirmations(local.confirmations, cloud.confirmations),
+    cloud.verified,
+    !!cloud.confirmations,
+  );
+  // Хмара (інший пристрій зі старою версією) могла принести старі ключі рядків
+  _migrateRowKeys(notes);
+  _migrateRowKeys(confirmations);
+  return {
+    notes,
+    confirmations,
+    stationNotes:  _mergeStationNotes(local.stationNotes, cloud.stationNotes),
+    backlog:       _mergeBacklog(local.backlog, { v: cloud.backlog, t: cloud.backlogT }, local.backlogBase),
+    backlogBase:   local.backlogBase,
+    deletedPhotos: _purgePhotoTombstones(_mergePhotoTombstones(local.deletedPhotos, cloud.deletedPhotos)),
+  };
+}
+
+const _same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+/** Записує в Storage ті частини стану, що відрізняються від поточних. @returns {boolean} чи щось змінилось */
+function _writeLocalDevState(next, current) {
+  let changed = false;
+  const put = (key, a, b, value = JSON.stringify(a)) => {
+    if (_same(a, b)) return;
+    Storage.set(key, value);
+    changed = true;
+  };
+  put(STORAGE_KEYS.DEV_NOTES,          next.notes,         current.notes);
+  put(STORAGE_KEYS.DEV_CONFIRMATIONS,  next.confirmations, current.confirmations);
+  put(STORAGE_KEYS.DEV_STATION_NOTES,  next.stationNotes,  current.stationNotes);
+  put(STORAGE_KEYS.DEV_DELETED_PHOTOS, next.deletedPhotos, current.deletedPhotos);
+  if (next.backlog.v !== current.backlog.v.trim()) {
+    Storage.set(STORAGE_KEYS.DEV_BACKLOG, next.backlog.v);
+    changed = true;
+  }
+  if (next.backlog.t !== current.backlog.t) Storage.set(STORAGE_KEYS.DEV_BACKLOG_T, String(next.backlog.t));
+  return changed;
+}
 
 /**
- * Повна синхронізація: якщо в хмарі дані новіші за локальні (за updatedAt) —
- * застосовує їх локально, інакше — вивантажує локальний стан. Правило
- * "останній запис виграє цілком", не по-польове злиття.
+ * Повна синхронізація з хмарою (див. опис вище).
  * @returns {Promise<'downloaded'|'uploaded'|'busy'>}
  */
-const DEV_BACKLOG_SYNC_BASE_KEY = 'dev_backlog_last_synced';
-
 async function _performFullSync() {
-  if (_syncInFlight) return 'busy';
+  if (_syncInFlight) { _syncAgain = true; return 'busy'; }
   _syncInFlight = true;
+  _syncAgain    = false;
 
   try {
-    const cloudData = await downloadDevState();
+    const written = await syncDevState(cloudData => {
+      const merged = _mergeDevState(_readLocalDevState(), cloudData);
+      return {
+        notes:         merged.notes,
+        verified:      _deriveVerifiedFromConfirmations(merged.confirmations), // для старих версій
+        confirmations: merged.confirmations,
+        stationNotes:  merged.stationNotes,
+        backlog:       merged.backlog.v,
+        backlogT:      merged.backlog.t,
+        deletedPhotos: merged.deletedPhotos,
+      };
+    });
+    if (!written) return 'uploaded';
 
-    // Щотижневе очищення старих tombstone-записів (старші за 7 діб).
-    // Відбувається локально перед merge — щоб не тягнути мертвий вантаж у хмару.
-    _ensureDevKeysMigrated();
-    let localNotes         = JSON.parse(Storage.get(STORAGE_KEYS.DEV_NOTES) || '{}');
-    localNotes             = _purgeTombstones(localNotes);
-
-    const localBacklog       = Storage.get(STORAGE_KEYS.DEV_BACKLOG) || '';
-    const localConfirmations = getAllDevConfirmations();
-    let localStationNotes    = getAllStationNotes();
-
-    // Остання версія backlog, яка була успішно синхронізована
-    // цим пристроєм.
-    const lastSyncedBacklog =
-      Storage.get(DEV_BACKLOG_SYNC_BASE_KEY) || '';
-
-    let mergedNotes         = localNotes;
-    let mergedBacklog       = localBacklog;
-    let mergedConfirmations = localConfirmations;
-    let mergedStationNotes  = localStationNotes;
-    let changed = false;
-
-    if (cloudData) {
-      mergedNotes = _mergeKeyedMap(
-        localNotes,
-        cloudData.notes
-      );
-
-      mergedBacklog = _mergeBacklog(
-        localBacklog,
-        cloudData.backlog || '',
-        lastSyncedBacklog
-      );
-
-      mergedConfirmations = _mergeConfirmations(
-        localConfirmations,
-        cloudData.confirmations
-      );
-
-      mergedStationNotes = _mergeStationNotes(
-        localStationNotes,
-        cloudData.stationNotes
-      );
-
-      // "verified" — застарілий формат дроту.
-      mergedConfirmations = _applyCloudVerifiedIntoConfirmations(
-        mergedConfirmations,
-        cloudData.verified
-      );
-
-      // Хмара (інший пристрій зі старою версією) могла принести старі числові ключі
-      _migrateRowKeys(mergedNotes);
-      _migrateRowKeys(mergedConfirmations);
-
-      changed =
-        JSON.stringify(mergedNotes) !== JSON.stringify(localNotes)
-        || mergedBacklog !== localBacklog
-        || JSON.stringify(mergedConfirmations) !== JSON.stringify(localConfirmations)
-        || JSON.stringify(mergedStationNotes) !== JSON.stringify(localStationNotes);
-
-      if (changed) {
-        Storage.set(
-          STORAGE_KEYS.DEV_NOTES,
-          JSON.stringify(mergedNotes)
-        );
-
-        Storage.set(
-          STORAGE_KEYS.DEV_BACKLOG,
-          mergedBacklog
-        );
-
-        Storage.set(
-          STORAGE_KEYS.DEV_CONFIRMATIONS,
-          JSON.stringify(mergedConfirmations)
-        );
-
-        Storage.set(
-          STORAGE_KEYS.DEV_STATION_NOTES,
-          JSON.stringify(mergedStationNotes)
-        );
-
-        bus.emit('station:refresh');
-        bus.emit('devmenu:refresh');
-      }
+    // Записаний у хмару стан зливаємо зі свіжим локальним: правки, зроблені
+    // поки йшов запит, не губляться, а підуть наступним колом.
+    const current = _readLocalDevState();
+    const next    = _mergeDevState(current, written);
+    const changed = _writeLocalDevState(next, current);
+    // Хмара тепер містить цей текст беклогу — він база для наступного злиття
+    Storage.set(STORAGE_KEYS.DEV_BACKLOG_SYNC_BASE, written.backlog);
+    if (changed) {
+      bus.emit('station:refresh');
+      bus.emit('devmenu:refresh');
     }
-
-    const verifiedForWire =
-      _deriveVerifiedFromConfirmations(mergedConfirmations);
-
-    // Спочатку успішно записуємо об'єднаний стан у cloud.
-    await uploadDevState(
-      mergedNotes,
-      verifiedForWire,
-      mergedBacklog,
-      mergedConfirmations,
-      mergedStationNotes
-    );
-
-    // Тільки ПІСЛЯ успішного upload ця версія стає
-    // новою базою для наступного 3-way merge.
-    Storage.set(
-      DEV_BACKLOG_SYNC_BASE_KEY,
-      mergedBacklog
-    );
 
     await _syncPhotos();
 
@@ -235,30 +228,25 @@ async function _performFullSync() {
 
   } finally {
     _syncInFlight = false;
+    if (_syncAgain) _requestSync(false);
   }
 }
 
 /**
- * Синхронізація фото з підтримкою tombstone.
- * Tombstone-список зберігається у Storage під DEV_DELETED_PHOTOS_KEY —
- * { photoId: deletedAtTimestamp }. Фото, яке є в tombstone:
- *  – не завантажується з хмари (видалення перемагає);
- *  – якщо є в хмарі — видаляється звідти.
- * Після успішного видалення з хмари запис у tombstone прибирається,
- * щоб список не ріс безкінечно.
+ * Синхронізація фото. Видалені фото — { photoId: deletedAt } у Storage
+ * (DEV_DELETED_PHOTOS) і в документі в хмарі; список спільний для всіх
+ * пристроїв і зберігається рік. Фото з цього списку прибирається з хмари
+ * і з кожного пристрою, а не вивантажується назад.
  *
  * Читаємо з IndexedDB спочатку тільки ключі (без даних) — завантажуємо
  * dataUrl лише для тих фото, які реально треба вивантажити в хмару.
  */
-const DEV_DELETED_PHOTOS_KEY = 'metro_dev_deleted_photos';
-
 function _getPhotoTombstones() {
-  try { return JSON.parse(Storage.get(DEV_DELETED_PHOTOS_KEY) || '{}'); }
-  catch { return {}; }
+  return _readJson(STORAGE_KEYS.DEV_DELETED_PHOTOS);
 }
 
 function _savePhotoTombstones(map) {
-  Storage.set(DEV_DELETED_PHOTOS_KEY, JSON.stringify(map));
+  Storage.set(STORAGE_KEYS.DEV_DELETED_PHOTOS, JSON.stringify(map));
 }
 
 /** Позначає фото як навмисно видалене і запускає синк. */
@@ -276,15 +264,13 @@ async function _syncPhotos() {
   const localIds = new Set(await PhotoStorage.getAllPhotoIds());
   const cloudIds = new Set(await listDevPhotoIds());
 
-  // 1. Видалити з хмари фото, які є в tombstone
-  const toDeleteFromCloud = [...cloudIds].filter(id => !!tombstones[id]);
-  if (toDeleteFromCloud.length) {
-    await Promise.allSettled(toDeleteFromCloud.map(id => deleteDevPhoto(id)));
-    // Прибираємо успішно видалені з tombstone
-    const updatedTombstones = { ...tombstones };
-    toDeleteFromCloud.forEach(id => delete updatedTombstones[id]);
-    _savePhotoTombstones(updatedTombstones);
-  }
+  // 1. Видалені на будь-якому пристрої — прибрати з хмари і звідси
+  const deletedHere = [...localIds].filter(id => tombstones[id]);
+  await Promise.allSettled([
+    ...[...cloudIds].filter(id => tombstones[id]).map(id => deleteDevPhoto(id)),
+    ...deletedHere.map(id => PhotoStorage.removePhoto(id)),
+  ]);
+  if (deletedHere.length) bus.emit('station:refresh');
 
   // 2. Вивантажити локальні, яких нема в хмарі і які не видалені
   const toUpload = [...localIds].filter(id => !cloudIds.has(id) && !tombstones[id]);
@@ -310,8 +296,6 @@ async function _syncPhotos() {
 // Усі зміни (нотатки, стан, фото) проходять через один шлях — _requestSync.
 // immediate:true дає коротший debounce (100мс), щоб явне видалення або
 // скидання потрапило в хмару якнайшвидше, але все одно через _syncInFlight.
-// Це усуває race condition між трьома старими force-push функціями та
-// звичайним автосинком — тепер вони всі є одним й тим самим таймером.
 const AUTO_SYNC_DEBOUNCE_MS   = 1500;
 const URGENT_SYNC_DEBOUNCE_MS = 100;
 let _autoSyncTimer = null;
@@ -330,9 +314,24 @@ function _requestSync(immediate = false) {
   }, delay);
 }
 
-// Залишаємо _scheduleAutoSync як alias для зворотної сумісності з викликами
-// всередині _touchSyncTimestamp (беклог, DEV_SYNC_LOCAL_TS тощо).
 function _scheduleAutoSync() { _requestSync(false); }
+
+// Повернення з фону — підтягнути зміни з інших пристроїв, не частіше
+// ніж раз на хвилину.
+const RESUME_SYNC_INTERVAL_MS = 60 * 1000;
+let _lastResumeSync = 0;
+function _syncOnResume() {
+  if (!isDevMode() || Date.now() - _lastResumeSync < RESUME_SYNC_INTERVAL_MS) return;
+  _lastResumeSync = Date.now();
+  _requestSync(false);
+}
+if (Capacitor.isNativePlatform()) {
+  App.addListener('resume', _syncOnResume);
+} else {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') _syncOnResume();
+  });
+}
 
 
 // ── Перехід зі старих ключів на стабільні ─────────────
@@ -604,6 +603,7 @@ export function setDevBacklog(text) {
   clearTimeout(_backlogSaveTimer);
   _backlogSaveTimer = setTimeout(() => {
     Storage.set(STORAGE_KEYS.DEV_BACKLOG, text);
+    Storage.set(STORAGE_KEYS.DEV_BACKLOG_T, String(Date.now()));
     _touchSyncTimestamp();
   }, BACKLOG_SAVE_DEBOUNCE_MS);
 }
@@ -1613,7 +1613,9 @@ function setupDevDataClear(container) {
   Storage.remove(STORAGE_KEYS.DEV_BACKLOG);
   Storage.remove(STORAGE_KEYS.DEV_CONFIRMATIONS);
   Storage.remove(STORAGE_KEYS.DEV_STATION_NOTES);
-  Storage.remove(DEV_BACKLOG_SYNC_BASE_KEY);
+  Storage.remove(STORAGE_KEYS.DEV_BACKLOG_SYNC_BASE);
+  Storage.remove(STORAGE_KEYS.DEV_BACKLOG_T);
+  Storage.remove(STORAGE_KEYS.DEV_DELETED_PHOTOS);
 
   await PhotoStorage.clearAllPhotos().catch(err =>
     console.warn('[KyivMetroGO] Помилка очищення PhotoStorage:', err)
