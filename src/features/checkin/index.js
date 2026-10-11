@@ -137,7 +137,7 @@ function renderLineRings(lineStats) {
   const byExits = getPref('checkinByStation') === 'exits';
   const rings = LINE_ORDER.map(line => {
     const s        = lineStats[line];
-    const color    = LINE_COLOR[line] || 'var(--text-muted)';
+    const color    = lineTextColor(LINE_COLOR[line] || 'var(--text-muted)');
     const name     = LINE_NAMES[line];
     const pct      = byExits
       ? (s.totalExits    > 0 ? s.visitedExits    / s.totalExits    : 0)
@@ -158,7 +158,7 @@ function renderLineRings(lineStats) {
           stroke-dasharray="${fill} ${C}"
           transform="rotate(-90 32 32)"/>
       </svg>
-      <span class="ci-ring-label" style="color:${lineTextColor(color)}">${name}</span>
+      <span class="ci-ring-label" style="color:${color}">${name}</span>
       <span class="ci-ring-sub">${stLabel} ст.</span>
     </button>`;
   }).join('');
@@ -272,7 +272,7 @@ export function openCheckinSheet() {
             .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
           listHtml = unvisitedStations.map(s => {
-            const color = LINE_COLOR[s.line] || 'var(--text-muted)';
+            const color = lineTextColor(LINE_COLOR[s.line] || 'var(--text-muted)');
             return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
               <div class="checkin-card-top">
                 <span class="checkin-station-name-text">${s.name}</span>
@@ -303,7 +303,7 @@ export function openCheckinSheet() {
 
           listHtml = stationEntries.map(([slug, items]) => {
             const st              = state.stationsData?.[slug];
-            const color           = items[0].color || (st ? LINE_COLOR[st.line] : 'var(--text-muted)');
+            const color           = lineTextColor(items[0].color || (st ? LINE_COLOR[st.line] : 'var(--text-muted)'));
             const { total: totalExits, visited: visitedExitsCnt } = getStationExitStats(slug, entries);
             const lastTs          = Math.max(...items.map(e => e.ts));
 
