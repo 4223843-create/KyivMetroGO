@@ -14,9 +14,9 @@ const getThemeColors = () => {
   const rs      = getComputedStyle(document.documentElement);
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
   return {
-    red:   rs.getPropertyValue('--line-red').trim()   || '#c8523a',
-    blue:  rs.getPropertyValue('--line-blue').trim()  || '#5b9bd5',
-    green: rs.getPropertyValue('--line-green').trim() || '#5aaa6a',
+    red:   rs.getPropertyValue('--logo-red').trim()   || '#c8523a',
+    blue:  rs.getPropertyValue('--logo-blue').trim()  || '#5b9bd5',
+    green: rs.getPropertyValue('--logo-green').trim() || '#5aaa6a',
     base:  rs.getPropertyValue('--bg-card').trim()    || (isLight ? '#ffffff' : '#2c2c2e'),
   };
 };
@@ -30,46 +30,46 @@ const mixColors = (cHex, bHex, t) => {
 // ══ ЛОГОТИПИ ══
 const LOGOS = [
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" id="aboutLogoImg">
-    <g style="fill: var(--line-green); fill-opacity:1">
-      <path d="M49.904 120.033h10v10h-10z" style="fill: var(--line-green); stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
-      <path d="M59.82 120.033h10v10h-10z" style="fill: var(--line-green); stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
-      <path d="M69.736 120.033h10v10h-10z" style="fill: var(--line-green); stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
+    <g style="fill: var(--logo-green); fill-opacity:1">
+      <path d="M49.904 120.033h10v10h-10z" style="fill: var(--logo-green); stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
+      <path d="M59.82 120.033h10v10h-10z" style="fill: var(--logo-green); stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
+      <path d="M69.736 120.033h10v10h-10z" style="fill: var(--logo-green); stroke-width:.10117" transform="matrix(.3355 0 0 1 -3.751 -117.033)"/>
     </g>
-    <g style="fill: var(--line-blue); fill-opacity:1">
-      <path d="M62.836 114.963H82.78v8H62.836z" style="fill: var(--line-blue); stroke-width:.127791" transform="matrix(.50098 0 0 1.25 -28.48 -140.705)"/>
+    <g style="fill: var(--logo-blue); fill-opacity:1">
+      <path d="M62.836 114.963H82.78v8H62.836z" style="fill: var(--logo-blue); stroke-width:.127791" transform="matrix(.50098 0 0 1.25 -28.48 -140.705)"/>
     </g>
-    <g style="fill: var(--line-green); fill-opacity:1">
-      <path d="M144.141 82.952h14.995v2.314h-14.995z" style="fill: var(--line-green); stroke-width:.0595893" transform="matrix(.33374 0 0 2.16109 -40.118 -176.267)"/>
-      <path d="M144.141 82.952h14.995v2.314h-14.995z" style="fill: var(--line-green); stroke-width:.0595893" transform="matrix(.33374 0 0 6.48327 -35.122 -529.802)"/>
+    <g style="fill: var(--logo-green); fill-opacity:1">
+      <path d="M144.141 82.952h14.995v2.314h-14.995z" style="fill: var(--logo-green); stroke-width:.0595893" transform="matrix(.33374 0 0 2.16109 -40.118 -176.267)"/>
+      <path d="M144.141 82.952h14.995v2.314h-14.995z" style="fill: var(--logo-green); stroke-width:.0595893" transform="matrix(.33374 0 0 6.48327 -35.122 -529.802)"/>
     </g>
-    <path d="M96.983 35h5v5h-5z" style="fill: var(--line-blue); stroke-width:.0505852" transform="matrix(1.00085 0 0 1 -84.074 -32)"/>
-    <path d="M91.983 40h5v15h-5z" style="fill: var(--line-blue); stroke-width:.0876163" transform="matrix(1.00085 0 0 1 -84.074 -32)"/>
+    <path d="M96.983 35h5v5h-5z" style="fill: var(--logo-blue); stroke-width:.0505852" transform="matrix(1.00085 0 0 1 -84.074 -32)"/>
+    <path d="M91.983 40h5v15h-5z" style="fill: var(--logo-blue); stroke-width:.0876163" transform="matrix(1.00085 0 0 1 -84.074 -32)"/>
   </svg>`,
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.82 -0.82 6.93 6.93" id="aboutLogoImg">
-    <path d="M132.557 112.715h5.292v1.323h-5.292z" style="fill: var(--line-red);" transform="translate(-132.556 -110.067)"/>
-    <g><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill: var(--line-green);" transform="matrix(.08834 0 0 .57185 -16.834 -44.805)"/></g>
-    <g><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill: var(--line-green);" transform="matrix(.17669 0 0 .57185 -33.668 -47.453)"/></g>
-    <g><path d="M49.904 120.033h10v10h-10z" style="fill: var(--line-green);" transform="matrix(.52917 0 0 .13256 -26.408 -14.586)"/></g>
-    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--line-red);" transform="matrix(.08827 0 0 .57285 -2.24 -43.166)"/></g>
-    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--line-red);" transform="matrix(.08827 0 0 1.14398 -.92 -86.203)"/></g>
-    <g><path d="M120.43 105.01h5v5.001h-5z" style="fill: var(--line-red);" transform="matrix(.52913 0 0 .26507 -63.723 -23.866)"/></g>
-    <g><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill: var(--line-green);" transform="matrix(.08834 0 0 1.14573 -15.514 -95.075)"/></g>
+    <path d="M132.557 112.715h5.292v1.323h-5.292z" style="fill: var(--logo-red);" transform="translate(-132.556 -110.067)"/>
+    <g><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill: var(--logo-green);" transform="matrix(.08834 0 0 .57185 -16.834 -44.805)"/></g>
+    <g><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill: var(--logo-green);" transform="matrix(.17669 0 0 .57185 -33.668 -47.453)"/></g>
+    <g><path d="M49.904 120.033h10v10h-10z" style="fill: var(--logo-green);" transform="matrix(.52917 0 0 .13256 -26.408 -14.586)"/></g>
+    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--logo-red);" transform="matrix(.08827 0 0 .57285 -2.24 -43.166)"/></g>
+    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--logo-red);" transform="matrix(.08827 0 0 1.14398 -.92 -86.203)"/></g>
+    <g><path d="M120.43 105.01h5v5.001h-5z" style="fill: var(--logo-red);" transform="matrix(.52913 0 0 .26507 -63.723 -23.866)"/></g>
+    <g><path d="M190.554 82.982h14.974v2.314h-14.974z" style="fill: var(--logo-green);" transform="matrix(.08834 0 0 1.14573 -15.514 -95.075)"/></g>
   </svg>`,
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.82 -0.82 6.93 6.93" id="aboutLogoImg">
-    <path d="M0 2.646h5.292v1.323H0Z" style="fill: var(--line-red);"/>
-    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--line-red);" transform="matrix(.17645 0 0 .57179 -1.832 -40.44)"/></g>
-    <path d="M159.544 125.677h5.29V127h-5.29z" style="fill: var(--line-blue);" transform="translate(-159.544 -124.354)"/>
-    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--line-red);" transform="matrix(.08823 0 0 .57179 1.73 -43.087)"/></g>
-    <path d="M163.513 127h1.323v1.323h-1.323z" style="fill: var(--line-blue);" transform="translate(-159.544 -124.354)"/>
-    <path d="M162.189 124.354h2.646v1.323h-2.646z" style="fill: var(--line-blue);" transform="translate(-159.544 -124.354)"/>
-    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--line-red);" transform="matrix(.08823 0 0 1.14374 .413 -86.186)"/></g>
+    <path d="M0 2.646h5.292v1.323H0Z" style="fill: var(--logo-red);"/>
+    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--logo-red);" transform="matrix(.17645 0 0 .57179 -1.832 -40.44)"/></g>
+    <path d="M159.544 125.677h5.29V127h-5.29z" style="fill: var(--logo-blue);" transform="translate(-159.544 -124.354)"/>
+    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--logo-red);" transform="matrix(.08823 0 0 .57179 1.73 -43.087)"/></g>
+    <path d="M163.513 127h1.323v1.323h-1.323z" style="fill: var(--logo-blue);" transform="translate(-159.544 -124.354)"/>
+    <path d="M162.189 124.354h2.646v1.323h-2.646z" style="fill: var(--logo-blue);" transform="translate(-159.544 -124.354)"/>
+    <g><path d="M25.38 77.668h14.995v2.314H25.38Z" style="fill: var(--logo-red);" transform="matrix(.08823 0 0 1.14374 .413 -86.186)"/></g>
   </svg>`,
 ];
 
 const HANDLE_GRADIENTS = [
-  'linear-gradient(to right, var(--line-green) 50%, var(--line-blue) 50%)',
-  'linear-gradient(to right, var(--line-red) 50%, var(--line-green) 50%)',
-  'linear-gradient(to right, var(--line-blue) 50%, var(--line-red) 50%)',
+  'linear-gradient(to right, var(--logo-green) 50%, var(--logo-blue) 50%)',
+  'linear-gradient(to right, var(--logo-red) 50%, var(--logo-green) 50%)',
+  'linear-gradient(to right, var(--logo-blue) 50%, var(--logo-red) 50%)',
 ];
 
 // ══ САЛЮТ-АНІМАЦІЯ ══
@@ -106,7 +106,7 @@ function bindBottomLoader(aboutSheet) {
             <path class="st4" d="m 266.45,233.26 c -0.9,-2.1 -2.1,-3.9 -4.4,-2.4 -2.2,1.4 -3.4,4.2 -3.1,5.4 0.8,1.3 3.6,2.2 6,1.7 2.8,-0.6 2.4,-2.6 1.5,-4.7 z"/>
             <path class="st4" d="m 266.45,255.66 c 0.9,-2.1 1.3,-4.2 -1.4,-4.7 -2.5,-0.5 -5.4,0.6 -6,1.7 -0.3,1.5 1,4.1 3.1,5.4 2.2,1.4 3.5,-0.3 4.3,-2.4 z"/>
           </g>
-          <path class="eggCenter" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" style="fill: var(--line-red)"/>
+          <path class="eggCenter" d="m 155.49793,141.52659 c 0,3.8 -2.9,6.8 -6.4,6.8 -3.6,0 -6.4,-3 -6.4,-6.8 v 0 c 0,-3.8 2.9,-6.8 6.4,-6.8 3.5,0 6.4,3.1 6.4,6.8 z" style="fill: var(--logo-red)"/>
         </g></g>
       </svg>
       <div id="saluteTextRight" style="flex:1;text-align:left;font-size:14px;font-weight:500;color:var(--text-muted);font-variant:small-caps;letter-spacing:0.04em;transition:opacity 1s ease;"></div>`;
@@ -181,7 +181,7 @@ function bindBottomLoader(aboutSheet) {
   if (form && input) {
     const flashError = () => {
       const c = input.style.color;
-      input.style.color = 'var(--line-red)';
+      input.style.color = 'var(--logo-red)';
       setTimeout(() => { input.style.color = c; }, 1500);
     };
     let sending = false;
@@ -373,7 +373,7 @@ export function openAboutSheet() {
       // Швидка перевірка офлайн-стану ще до fetch
       if (!navigator.onLine) {
         bugResultMsg.textContent   = 'Немає зʼєднання з інтернетом. Спробуйте пізніше.';
-        bugResultMsg.style.color   = 'var(--line-red)';
+        bugResultMsg.style.color   = 'var(--logo-red)';
         return;
       }
 
@@ -399,7 +399,7 @@ export function openAboutSheet() {
           bugTextarea.hidden              = true;
           bugSubmitBtn.parentElement.hidden = true;
           bugResultMsg.textContent        = '✓ Дякуємо! Повідомлення надіслано.';
-          bugResultMsg.style.color        = 'var(--line-green)';
+          bugResultMsg.style.color        = 'var(--logo-green)';
           bugResultMsg.style.fontWeight   = '600';
           bugResultMsg.style.fontSize     = 'var(--fs-md)';
           bugResultMsg.style.marginTop    = '8px';
@@ -410,7 +410,7 @@ export function openAboutSheet() {
         clearTimeout(timeoutId);
         bugSubmitBtn.disabled    = false;
         bugSubmitBtn.textContent = 'Надіслати';
-        bugResultMsg.style.color = 'var(--line-red)';
+        bugResultMsg.style.color = 'var(--logo-red)';
         bugResultMsg.textContent = err.name === 'AbortError'
           ? 'Час очікування вичерпано. Перевірте зʼєднання.'
           : 'Не вдалося надіслати. Спробуйте пізніше.';
