@@ -45,6 +45,7 @@ import { getPositionDescriptorsForStation, devRowKey } from '../sheets/renderSta
 import { legacyKeyMap }     from '../data/positions.js';
 import { onDevAuthChange, loginDev, logoutDev, uploadDevState, downloadDevState, uploadDevPhoto, deleteDevPhoto, listDevPhotoIds, downloadDevPhoto } from '../services/devCloud.js';
 import { escapeHtml } from '../ui/html.js';
+import { lineTextColor } from '../ui/components.js';
 import { showToast }  from '../ui/toast.js';
 import { isDevMode } from './devFlags.js';
 import {
@@ -664,7 +665,9 @@ export function setStationNote(slug, text, debounce = true) {
 // поки її не закриють руками).
 let _lastStationNoteSlug = null;
 
-export function setupDevStationNoteButton(sheet, slug, lineColor) {
+export function setupDevStationNoteButton(sheet, slug, rawLineColor) {
+  // Той самий відтінок, що й серце та годинник поруч (у світлій темі темніший)
+  const lineColor = lineTextColor(rawLineColor);
   const btn = sheet.querySelector('#devStationNoteBtn');
   if (!btn) return;
   // Панель з index.html; якщо її колись видалили з DOM — створюємо заново,
@@ -774,7 +777,8 @@ document.addEventListener('click', _closeDevMoreMenus);
 
 export function attachDevModeUI(container, slug) {
   if (!isDevMode()) return;
-  const lineColor = LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)';
+  // Відтінок лінії з урахуванням теми — як у пілюль, серця й шпильок картки
+  const lineColor = lineTextColor(LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)');
 
   const defaultColor   = 'var(--border)';
   const defaultOpacity = '1';
