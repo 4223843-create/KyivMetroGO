@@ -12,6 +12,7 @@ import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { bus }                from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
+import { lineTextColor } from '../ui/components.js';
 import { richText } from '../ui/html.js';
 
 const SEARCH_ALIASES = {
@@ -166,7 +167,7 @@ function _findExitLabel(s, hitTok) {
 }
 
 function _renderItem(s, isExitOnly, exitHint) {
-  const color = LINE_COLOR[s.line];
+  const color = lineTextColor(LINE_COLOR[s.line]);
   const hintHtml = isExitOnly && exitHint
     ? `<span class="search-item-hint">${richText(exitHint)}</span>`
     : '';

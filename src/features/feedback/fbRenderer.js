@@ -240,7 +240,7 @@ export function stationListHtml(activeLine, activeSlug = '') {
     .filter(st => activeLine === '' || st.line === activeLine)
     .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
     .map(st => {
-      const color  = LINE_COLOR[st.line] ?? '#888';
+      const color  = lineTextColor(LINE_COLOR[st.line] ?? '#888');
       const active = st.slug === activeSlug ? ' fb-station-active' : '';
       return `<div class="search-item fb-station-item${active}" data-slug="${st.slug}">
         <div class="search-item-line" style="background-color:${color}"></div>

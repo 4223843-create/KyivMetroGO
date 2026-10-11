@@ -5280,6 +5280,11 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
   --line-red-text:   #ba4a34;
   --line-blue-text:  #2c70ad;
   --line-green-text: #3e794a;
+  /* У світлій темі лінії скрізь мають один відтінок: фільтри пошуку,
+     логотип, позначки й тексти з var(--line-*) — той самий, що й цифри */
+  --line-red:   var(--line-red-text);
+  --line-blue:  var(--line-blue-text);
+  --line-green: var(--line-green-text);
 }
 .about-card-note { opacity: 1; }
 [data-theme="light"] .about-card-note { opacity: 0.75; }

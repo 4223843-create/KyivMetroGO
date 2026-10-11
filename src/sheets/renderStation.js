@@ -463,9 +463,9 @@ export function renderDirections(s, color) {
         longHtml = `<div class="long-transfer-block">
           <div class="long-transfer-title">
             <span class="transfer-label">
-              <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
+              <span class="transfer-line" style="background:${lineTextColor(LINE_COLOR['blue'])}"></span>
               <span class="transfer-text">довгий&nbsp;перехід на&nbsp;Майдан&nbsp;Незалежності</span>
-              <span class="transfer-line" style="background:${LINE_COLOR['blue']}"></span>
+              <span class="transfer-line" style="background:${lineTextColor(LINE_COLOR['blue'])}"></span>
             </span>
           </div>
           ${rows}

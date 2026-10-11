@@ -24,6 +24,7 @@ import { getPref } from '../../core/prefs.js';
 import { bus }             from '../../core/eventBus.js';
 import { Icons }           from '../../ui/icons.js';
 import { LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES } from '../../core/constants.js';
+import { lineTextColor } from '../../ui/components.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
 import { showSheet, hideSheet } from '../../ui/sheetNav.js';
 import { slugByName }         from '../../data/stations.js';
@@ -164,13 +165,13 @@ export function renderFavList(favs) {
       const isCompact      = item.exits.length > 2;
       const containerClass = isCompact ? 'fav-exits-container fav-exits-compact' : 'fav-exits-container';
       const groupsHtml     = item.exits.map(f =>
-        `<div class="fav-exit-group"><div class="fav-pos-square" style="color:${item.color}">${escapeHtml(f.wagon)}</div><div class="fav-pos-square" style="color:${item.color}">${escapeHtml(f.doors)}</div></div>`
+        `<div class="fav-exit-group"><div class="fav-pos-square" style="color:${lineTextColor(item.color)}">${escapeHtml(f.wagon)}</div><div class="fav-pos-square" style="color:${lineTextColor(item.color)}">${escapeHtml(f.doors)}</div></div>`
       ).join('<div class="fav-exit-sep"></div>');
       squaresHtml = `<div class="${containerClass}">${groupsHtml}</div>`;
     }
 
     return `<div class="fav-item" data-slug="${item.slug}" data-row-id="${item.rowId}">
-      <button class="fav-open-btn" data-slug="${item.slug}" style="border-left-color:${item.color}">
+      <button class="fav-open-btn" data-slug="${item.slug}" style="border-left-color:${lineTextColor(item.color)}">
         <div class="fav-text-wrap">
           <span class="fav-station-name ${item.exits.length > 1 ? 'fav-small' : ''}">${displayName}</span>
           ${(formattedDir && item.exits.length > 0) ? `<span class="fav-dir-name ${item.exits.length > 1 ? 'fav-small-dir' : ''}">${richText(formattedDir)}</span>` : ''}

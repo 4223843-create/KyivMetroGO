@@ -768,9 +768,10 @@ const center = document.getElementById("loaderCenter");
 
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     const COLORS = {
-      red:   "#c8523a",
-      blue:  "#5b9bd5",
-      green: "#5aaa6a",
+      // У світлій темі — темніші відтінки ліній, як і в решті інтерфейсу (--line-*)
+      red:   isLight ? "#ba4a34" : "#c8523a",
+      blue:  isLight ? "#2c70ad" : "#5b9bd5",
+      green: isLight ? "#3e794a" : "#5aaa6a",
       base:  isLight ? "#c8c8cc" : "#1a1a1a"
     };
 
