@@ -2339,24 +2339,6 @@ svg [role="button"]:focus:not(:focus-visible) {
 .search-line-btn[data-line="blue"].is-active { background: var(--line-blue);  color: var(--bg); border-color: transparent; font-weight: var(--fw-medium); }
 .search-line-btn[data-line="green"].is-active{ background: var(--line-green); color: var(--bg); border-color: transparent; font-weight: var(--fw-medium); }
 
-.offline-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: calc(var(--z-ui-buttons) + 10);
-  background: var(--bg-card);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  text-align: center;
-  padding: 6px 16px calc(6px + env(safe-area-inset-top));
-  padding-top: calc(6px + env(safe-area-inset-top));
-}
-[data-theme="light"] .offline-banner {
-  background: var(--bg-sheet);
-  color: var(--text);
-}
-
 .sheet-station-title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-semi);
@@ -2912,10 +2894,11 @@ svg [role="button"]:focus:not(:focus-visible) {
   z-index: calc(var(--z-ui-buttons) + 10);
   background: var(--bg-card);
   color: var(--text-muted);
-  font-size: var(--fs-sm);
+  font-size: 11px;
+  line-height: 1.3;
   text-align: center;
-  padding: 6px 16px calc(6px + env(safe-area-inset-top));
-  padding-top: calc(6px + env(safe-area-inset-top));
+  /* Вузький рядок одразу під системним рядком стану */
+  padding: env(safe-area-inset-top) 16px 2px;
 }
 [data-theme="light"] .offline-banner {
   background: var(--bg-sheet);
@@ -3184,6 +3167,23 @@ svg [role="button"]:focus:not(:focus-visible) {
   justify-content: flex-end;
   gap: 8px;
   padding: 10px 16px;
+}
+
+.settings-go-edit {
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings-go-edit:active { opacity: .6; }
+.settings-go-edit-chevron {
+  font-size: 22px;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .settings-action-btn {
