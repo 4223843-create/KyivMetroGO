@@ -57,7 +57,7 @@ self.addEventListener('fetch', event => {
 async function stationsLocalFirst(event) {
   const request = event.request;
   const cache   = await caches.open(CACHE_NAME);
-  const cached  = await cache.match(request, { ignoreSearch: true });
+  const cached  = await cache.match(request, { ignoreSearch: true, ignoreVary: true });
   // Окрема копія для порівняння версій: тіло `cached` споживе сторінка.
   const cachedForCompare = cached?.clone();
 
@@ -110,8 +110,8 @@ async function stationsLocalFirst(event) {
 // знаходить сам (перевіряє sw.js), новий SW кешує її — і з'являється тост «Оновити».
 async function navigationResponse(request) {
   const cache  = await caches.open(CACHE_NAME);
-  const cached = (await cache.match(request, { ignoreSearch: true }))
-    || (await cache.match(new URL('./index.html', self.location).href));
+  const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true }))
+    || (await cache.match(new URL('./index.html', self.location).href, { ignoreVary: true }));
   if (cached) return cached;
   try {
     return await fetch(request);
@@ -122,7 +122,9 @@ async function navigationResponse(request) {
 
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE_NAME);
-  const cachedResponse = await cache.match(request);
+  // ignoreVary: сервер може віддати «Vary: Origin», а модульні скрипти
+  // запитуються з Origin — без цього збережений файл офлайн не знаходився б.
+  const cachedResponse = await cache.match(request, { ignoreVary: true });
 
   const networkPromise = fetch(request).then(response => {
     if (response.ok) cache.put(request, response.clone());

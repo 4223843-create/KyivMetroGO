@@ -120,6 +120,9 @@ export function openSettingsSheet() {
         if (localFbRow) localFbRow.classList.toggle('is-hidden', !isEditOn);
       });
     }
+    document.getElementById('settingsGoEdit')?.addEventListener('click', () => {
+      hideSheet(settingsSheet, { onClosed: () => bus.emit('sheet:open-feedback') });
+    });
 
 
 
