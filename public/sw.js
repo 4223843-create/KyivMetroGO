@@ -104,17 +104,20 @@ async function stationsLocalFirst(event) {
   }
 }
 
+// Відкриття сторінки — спершу збережений index.html, без жодного запиту в мережу.
+// Інакше в метро зі слабким сигналом запуск чекав би мережу (на iPhone — до хвилини
+// білого екрана), хоча все потрібне вже є на телефоні. Нову збірку браузер
+// знаходить сам (перевіряє sw.js), новий SW кешує її — і з'являється тост «Оновити».
 async function navigationResponse(request) {
+  const cache  = await caches.open(CACHE_NAME);
+  const cached = (await cache.match(request, { ignoreSearch: true }))
+    || (await cache.match(new URL('./index.html', self.location).href));
+  if (cached) return cached;
   try {
-    const response = await fetch(request);
-    if (response.ok) return response;
+    return await fetch(request);
   } catch {
-    // Немає мережі — нижче віддаємо збережений index.html
+    return new Response('Офлайн', { status: 503 });
   }
-  const cache = await caches.open(CACHE_NAME);
-  return (await cache.match(request, { ignoreSearch: true }))
-    || (await cache.match(new URL('./index.html', self.location).href))
-    || new Response('Офлайн', { status: 503 });
 }
 
 async function staleWhileRevalidate(request) {

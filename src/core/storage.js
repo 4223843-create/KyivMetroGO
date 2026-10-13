@@ -30,9 +30,7 @@ export const STORAGE_KEYS = {
   HIDE_NO_LIFT:        'metro_hide_no_lift',
   SHOW_MAP_ACCESSIBILITY:  'metro_show_map_accessibility', // старий тумблер, лише для переходу на MAP_ACCESSIBILITY
   MAP_ACCESSIBILITY:       'metro_map_accessibility',
-  SHOW_HOISTS:             'metro_show_hoists',
   SHOW_INTERVALS:          'metro_show_intervals',
-  MORNING_INTERVAL:        'metro_morning_interval',
   SHOW_STATION_HOURS:      'metro_show_station_hours',
   REDUCE_MOTION:           'metro_reduce_motion',
   SHOW_GROUND_TRANSPORT:   'metro_show_ground_transport',

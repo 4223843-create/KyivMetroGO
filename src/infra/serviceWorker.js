@@ -18,6 +18,9 @@ export function registerServiceWorker() {
     navigator.serviceWorker
       .register('./sw.js', { scope: './' })
       .catch(err => console.error('[PWA] service worker registration failed', err));
+    // Просимо не видаляти збережені файли, коли на телефоні мало місця
+    // (iPhone/Safari дозволяє це для застосунку на головному екрані).
+    navigator.storage?.persist?.().catch(() => {});
   });
 }
 

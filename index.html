@@ -603,19 +603,6 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-rule"></div>
 
           <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Ранковий інтервал до відкриття</span>
-              <span class="settings-sublabel" style="text-align: left;">Вночі показувати інтервал руху після відкриття</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsMorningIntervalToggle" aria-label="Ранковий інтервал до відкриття">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="settings-rule"></div>
-
-          <div class="settings-row">
             <span class="settings-label">Час відкриття та закриття</span>
             <div class="settings-seg" id="settingsStationHoursSeg">
               <button type="button" class="settings-seg-btn" data-hours-val="never">ніколи</button>
@@ -642,7 +629,7 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-row">
             <div class="settings-label-wrap">
               <span class="settings-label">Режим редагування</span>
-              <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон і двері</span>
+              <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон і двері. Після увімкнення в меню (кнопка посередині внизу) зʼявиться олівець «Запропонувати зміни»</span>
             </div>
             <label class="ios-toggle">
               <input type="checkbox" id="settingsEditModeToggle" aria-label="Режим редагування">
@@ -704,23 +691,12 @@ document.documentElement.setAttribute('data-theme', actual);
           <div class="settings-card-header">Доступність</div>
           <div class="settings-rule"></div>
           <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
-            <span class="settings-label">Відображати на карті</span>
-            <div class="settings-seg" id="settingsMapAccessibilitySeg" role="group" aria-label="Відображати на карті">
+            <span class="settings-label">Відображати на карті та в картках станцій</span>
+            <div class="settings-seg" id="settingsMapAccessibilitySeg" role="group" aria-label="Відображати на карті та в картках станцій">
               <button type="button" class="settings-seg-btn" data-map-acc-val="lifts">ліфти</button>
               <button type="button" class="settings-seg-btn" data-map-acc-val="hoists">ліфти та спецпідйомники</button>
               <button type="button" class="settings-seg-btn" data-map-acc-val="none">нічого</button>
             </div>
-          </div>
-          <div class="settings-rule"></div>
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Показувати підйомники на станціях</span>
-              <span class="settings-sublabel" style="text-align: left;">Позначає виходи знаком колісного крісла там, де доступний лише підйомник</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsShowHoistsToggle" aria-label="Показувати підйомники на станціях">
-              <span class="ios-toggle-slider"></span>
-            </label>
           </div>
           <div class="settings-rule"></div>
           <div class="settings-row">
