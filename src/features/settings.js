@@ -135,11 +135,6 @@ export function openSettingsSheet() {
     document.getElementById('settingsShowGroundTransportToggle')?.addEventListener('change', e => {
       setPref('showGroundTransport', e.target.checked);
     });
-    const morningToggle = document.getElementById('settingsMorningIntervalToggle');
-    morningToggle?.addEventListener('change', e => {
-      setPref('morningInterval', e.target.checked);
-      bus.emit('station:clock-settings');
-    });
     const hoursSeg = document.getElementById('settingsStationHoursSeg');
     hoursSeg?.querySelectorAll('.settings-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -159,25 +154,16 @@ export function openSettingsSheet() {
       });
     }
 
-    // ── Знак колісного крісла на карті ──
+    // ── Знак колісного крісла на карті та в картках станцій ──
     const mapAccSeg = document.getElementById('settingsMapAccessibilitySeg');
     mapAccSeg?.querySelectorAll('.settings-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         setPref('mapAccessibility', btn.dataset.mapAccVal);
         mapAccSeg.querySelectorAll('.settings-seg-btn').forEach(b => b.classList.toggle('is-active', b === btn));
         bus.emit('map:update-accessibility');
-      });
-    });
-
-    // ── Показувати підйомники на станціях ──
-    const showHoistsToggle = document.getElementById('settingsShowHoistsToggle');
-    if (showHoistsToggle) {
-      showHoistsToggle.checked = getPref('showHoists');
-      showHoistsToggle.addEventListener('change', e => {
-        setPref('showHoists', e.target.checked);
         bus.emit('station:refresh');
       });
-    }
+    });
 
     // ── Закрити ──
     document.getElementById('settingsClose').addEventListener('click', () => {
@@ -482,8 +468,6 @@ export function openSettingsSheet() {
 
     const si = document.getElementById('settingsShowIntervalsToggle');
     if (si) si.checked = getPref('showIntervals');
-    const mi = document.getElementById('settingsMorningIntervalToggle');
-    if (mi) mi.checked = getPref('morningInterval');
     const gt = document.getElementById('settingsShowGroundTransportToggle');
     if (gt) gt.checked = getPref('showGroundTransport');
     const hoursMode = getPref('stationHours');
@@ -508,9 +492,6 @@ export function openSettingsSheet() {
     const mapAcc = getPref('mapAccessibility');
     document.querySelectorAll('#settingsMapAccessibilitySeg .settings-seg-btn').forEach(b =>
       b.classList.toggle('is-active', b.dataset.mapAccVal === mapAcc));
-
-    const sh = document.getElementById('settingsShowHoistsToggle');
-    if (sh) sh.checked = getPref('showHoists');
   }
 
   syncToggles();

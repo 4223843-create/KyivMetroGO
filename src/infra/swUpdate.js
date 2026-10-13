@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', async () => {
     if (!hadController) return;
-    // Сторінка могла вже завантажитися з новою збіркою (навігація йде з мережі),
+    // Сторінка могла вже завантажитися з новою збіркою (перше відкриття, перезавантаження повз кеш),
     // а новий SW активувався слідом. Якщо наш головний скрипт є в кеші нового SW,
     // то ми й так на новій версії. Кеш нового SW — kyivmetro-<час збірки> з
     // найбільшим часом (старий у цей момент ще може існувати).

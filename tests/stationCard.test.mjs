@@ -51,13 +51,24 @@ test('Check-in без групування: кожна позиція окрем
 const { renderStationClock } = await import('../src/sheets/renderStation.js');
 state.lineIntervals = JSON.parse(readFileSync(new URL('../public/stations.json', import.meta.url))).line_intervals;
 
-test('Ранковий інтервал: уночі показує інтервал після відкриття', () => {
+test('Уночі завжди показує інтервал після відкриття', () => {
   const st = state.stationsData['B.Demiivska'];
-  const night = new Date(2026, 9, 5, 2, 30); // понеділок, 02:30
-  setPref('morningInterval', true);
-  assert.match(renderStationClock(st, night), /Інтервал руху після відкриття/);
-  setPref('morningInterval', false);
-  assert.doesNotMatch(renderStationClock(st, night), /після відкриття/);
-  setPref('morningInterval', true);
+  assert.match(renderStationClock(st, new Date(2026, 9, 5, 2, 30)), /Інтервал руху після відкриття/); // понеділок, 02:30
   assert.doesNotMatch(renderStationClock(st, new Date(2026, 9, 5, 12, 0)), /після відкриття/);
+});
+
+test('Напрямок інтервалу — за наступною станцією', () => {
+  const html = renderStationClock(state.stationsData['R.Khreshchatyk'], new Date(2026, 9, 5, 8, 0));
+  assert.match(html, /у бік Арсенальної/);
+  assert.match(html, /у бік Театральної/);
+  const term = renderStationClock(state.stationsData['R.Akademmistechko'], new Date(2026, 9, 5, 8, 0));
+  assert.match(term, /у бік Житомирської/);
+});
+
+test('Точні інтервали на всіх лініях', () => {
+  for (const slug of ['R.Nyvky', 'B.Lybidska', 'G.Pecherska']) {
+    const html = renderStationClock(state.stationsData[slug], new Date(2026, 9, 5, 12, 0));
+    assert.match(html, /хв/);
+    assert.doesNotMatch(html, /[¼½¾]|хвилин/);
+  }
 });

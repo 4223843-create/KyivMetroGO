@@ -112,28 +112,6 @@ export function renderStationConnections(s) {
 
 // ══ ГОДИНИ РОБОТИ ТА ІНТЕРВАЛИ ══
 
-const FRACTIONS = { 0: '', 15: '¼', 30: '½', 45: '¾' };
-
-/** 390 с → «6½». */
-function fmtMinutes(sec) {
-  return `${Math.floor(sec / 60)}${FRACTIONS[sec % 60] ?? ''}`;
-}
-
-/** [360, 390] с → «6–6½ хвилини». Чверті округлюємо до половинок назовні:
- *  нижню межу вниз, верхню вгору (195–225 с → «3–4»). */
-function fmtInterval([lo, hi]) {
-  const a = Math.floor(lo / 30) * 30;
-  const b = Math.ceil(hi / 30) * 30;
-  const n = Math.floor(b / 60) % 100;
-  const word = b % 60 ? 'хвилини'
-    : n % 10 === 1 && n !== 11 ? 'хвилина'
-    : n % 10 >= 2 && n % 10 <= 4 && (n < 12 || n > 14) ? 'хвилини' : 'хвилин';
-  return `${a === b ? fmtMinutes(a) : `${fmtMinutes(a)}–${fmtMinutes(b)}`}&nbsp;${word}`;
-}
-
-// Експеримент: на одній гілці показуємо точні значення без округлення
-const EXACT_INTERVAL_LINES = new Set(['red']);
-
 /** 375 с → «6&nbsp;хв&nbsp;15&nbsp;сек», 360 с → «6&nbsp;хв». */
 function fmtExact(sec) {
   const m = Math.floor(sec / 60), r = sec % 60;
@@ -141,8 +119,8 @@ function fmtExact(sec) {
   return r ? `${m}&nbsp;хв&nbsp;${r}&nbsp;сек` : `${m}&nbsp;хв`;
 }
 
-/** [270, 480] с → «4 хв 30 сек – 8 хв» (без округлення). */
-function fmtIntervalExact([lo, hi]) {
+/** [270, 480] с → «4 хв 30 сек – 8 хв» (точні значення, без округлення). */
+function fmtInterval([lo, hi]) {
   return lo === hi ? fmtExact(lo) : `${fmtExact(lo)} – ${fmtExact(hi)}`;
 }
 
@@ -179,12 +157,47 @@ function morningIntervals(s, now) {
     .filter(([, iv]) => iv);
 }
 
-/** Назви кінцевих у родовому відмінку: «у бік Теремків». */
-const TERMINAL_GEN = {
-  'Теремки': 'Теремків', 'Героїв Дніпра': 'Героїв Дніпра',
-  'Лісова': 'Лісової', 'Академмістечко': 'Академмістечка',
-  'Червоний хутір': 'Червоного Хутора', 'Сирець': 'Сирця',
+/** Назви станцій у родовому відмінку: «у бік Арсенальної». */
+const STATION_GEN = {
+  'R.Akademmistechko': 'Академмістечка', 'R.Zhytomyrska': 'Житомирської', 'R.Sviatoshyn': 'Святошина',
+  'R.Nyvky': 'Нивок', 'R.Beresteiska': 'Берестейської', 'R.Shuliavska': 'Шулявської',
+  'R.Politekhnychnyi_instytut': 'Політехнічного інституту', 'R.Vokzalna': 'Вокзальної',
+  'R.Universytet': 'Університету', 'R.Teatralna': 'Театральної', 'R.Khreshchatyk': 'Хрещатика',
+  'R.Arsenalna': 'Арсенальної', 'R.Dnipro': 'Дніпра', 'R.Hidropark': 'Гідропарку',
+  'R.Livoberezhna': 'Лівобережної', 'R.Darnytsia': 'Дарниці', 'R.Chernihivska': 'Чернігівської',
+  'R.Lisova': 'Лісової',
+  'B.Heroiv_Dnipra': 'Героїв Дніпра', 'B.Minska': 'Мінської', 'B.Obolon': 'Оболоні',
+  'B.Pochaina': 'Почайни', 'B.Tarasa_Shevchenko': 'Тараса Шевченка',
+  'B.Kontraktova_ploshcha': 'Контрактової площі', 'B.Poshtova_ploshcha': 'Поштової площі',
+  'B.Maidan_Nezalezhnosti': 'Майдану Незалежності', 'B.Ploshcha_Ukrainskikh_heroiv': 'Площі Українських Героїв',
+  'B.Olimpiiska': 'Олімпійської', 'B.Palats_Ukraina': 'Палацу „Україна“', 'B.Lybidska': 'Либідської',
+  'B.Demiivska': 'Деміївської', 'B.Holosiivska': 'Голосіївської', 'B.Vasylkivska': 'Васильківської',
+  'B.Vystavkovyi_tsentr': 'Виставкового центру', 'B.Ipodrom': 'Іподрому', 'B.Teremky': 'Теремків',
+  'G.Syrets': 'Сирця', 'G.Dorohozhychi': 'Дорогожичів', 'G.Lukianivska': 'Лукʼянівської',
+  'G.Zoloti_vorota': 'Золотих воріт', 'G.Palats_sportu': 'Палацу спорту', 'G.Klovska': 'Кловської',
+  'G.Pecherska': 'Печерської', 'G.Zvirynetska': 'Звіринецької', 'G.Vydubychi': 'Видубичів',
+  'G.Slavutych': 'Славутича', 'G.Osokorky': 'Осокорків', 'G.Pozniaky': 'Позняків',
+  'G.Kharkivska': 'Харківської', 'G.Vyrlytsia': 'Вирлиці', 'G.Boryspilska': 'Бориспільської',
+  'G.Chervonyi_khutir': 'Червоного Хутора',
 };
+
+const normName = n => String(n).replace(/&nbsp;/g, ' ').toLowerCase();
+
+/** Наступна станція від s у бік кінцевої terminal (за порядком станцій лінії в даних). */
+function nextStationToward(s, terminal) {
+  const line = Object.values(state.stationsData || {}).filter(x => x.line === s.line);
+  const i = line.findIndex(x => x.slug === s.slug);
+  const t = line.findIndex(x => normName(x.name) === normName(terminal));
+  if (i < 0 || t < 0 || i === t) return null;
+  return line[i + Math.sign(t - i)] || null;
+}
+
+/** «у бік Арсенальної» — напрямок за наступною станцією. */
+function directionLabel(s, terminal) {
+  const next = nextStationToward(s, terminal);
+  const name = next ? (STATION_GEN[next.slug] || next.name) : terminal;
+  return `у бік ${name.replace(/ /g, '&nbsp;')}`;
+}
 
 /**
  * Вміст панелі годинника (кнопка біля серця) станом на час телефону:
@@ -214,33 +227,29 @@ export function renderStationClock(s, now = new Date()) {
     }
   }
 
-  const fmt = EXACT_INTERVAL_LINES.has(s.line) ? fmtIntervalExact : fmtInterval;
   const trains = Object.entries(sch.trains || {});
   let ivs = !getPref('showIntervals') ? [] : trains
     .filter(([, t]) => nowMin >= toMin(t.first) && nowMin <= toMin(t.last))
     .map(([terminal]) => [terminal, currentInterval(s.line, terminal, now)])
     .filter(([, iv]) => iv);
 
-  // Уночі (жоден поїзд уже або ще не ходить) — за налаштуванням інтервал після відкриття
+  // Уночі (жоден поїзд уже або ще не ходить) — інтервал після відкриття
   let title = 'Інтервал руху';
   const isNight = trains.length && trains.every(([, t]) => nowMin < toMin(t.first) || nowMin > toMin(t.last));
-  if (!ivs.length && isNight && getPref('showIntervals') && getPref('morningInterval')) {
+  if (!ivs.length && isNight && getPref('showIntervals')) {
     ivs = morningIntervals(s, now);
     title = 'Інтервал руху після відкриття';
   }
 
-  // Різниця між напрямками до 60 с — один рядок без назв напрямків
-  // (у точному форматі об'єднуємо лише однакові інтервали)
+  // Однакові інтервали в обидва боки — один рядок без назв напрямків
   const [x, y] = ivs;
-  const tol = fmt === fmtIntervalExact ? 0 : 60;
-  if (ivs.length === 2 && Math.abs(x[1][0] - y[1][0]) <= tol && Math.abs(x[1][1] - y[1][1]) <= tol) {
-    const iv = [Math.min(x[1][0], y[1][0]), Math.max(x[1][1], y[1][1])];
-    lines.push(`<span class="clock-pill">${title}: <span class="clock-interval">${fmt(iv)}</span></span>`);
+  if (ivs.length === 2 && x[1][0] === y[1][0] && x[1][1] === y[1][1]) {
+    lines.push(`<span class="clock-pill">${title}: <span class="clock-interval">${fmtInterval(x[1])}</span></span>`);
   } else if (ivs.length) {
     // Два напрямки — одна пілюля-блок з заголовком і рядком на кожен бік
     lines.push(`<span class="clock-pill clock-pill-multi"><span>${title}</span>` +
-      ivs.map(([terminal, iv]) => `<span>у бік ${TERMINAL_GEN[terminal] || terminal}: ` +
-        `<span class="clock-interval">${fmt(iv)}</span></span>`).join('') + '</span>');
+      ivs.map(([terminal, iv]) => `<span>${directionLabel(s, terminal)}: ` +
+        `<span class="clock-interval">${fmtInterval(iv)}</span></span>`).join('') + '</span>');
   }
 
   if (!lines.length && getPref('showIntervals'))
@@ -305,21 +314,25 @@ function groupPositions(positions) {
   return grouped;
 }
 
+/** Спецпідйомники показуємо лише в режимі «ліфти та спецпідйомники». */
+const showHoists = () => getPref('mapAccessibility') === 'hoists';
+
 function renderIcons(p) {
   let iconsHtml = '';
+  const accMode = getPref('mapAccessibility');
 
   // Підйомник вимкнено в налаштуваннях — ховаємо і його ескалатор
-  const hoistHidden = p.isHoist && !getPref('showHoists');
+  const hoistHidden = p.isHoist && !showHoists();
 
   if (p.isEscalator && !hoistHidden) {
     iconsHtml += `<span class="pos-lift-mark pos-escalator-mark" role="img" aria-label="Ескалатор">${Icons.escalator}</span>`;
   }
 
   if (p.isHoist) {
-    if (getPref('showHoists')) {
+    if (showHoists()) {
       iconsHtml += `<span class="pos-lift-mark pos-hoist-mark" role="img" aria-label="Спецпідйомник">${Icons.hoist}</span>`;
     }
-  } else if (p.isLift) {
+  } else if (p.isLift && accMode !== 'none') {
     iconsHtml += `<span class="pos-lift-mark pos-elevator-mark" role="img" aria-label="Ліфт">${Icons.elevator}</span>`;
   }
 
@@ -419,7 +432,7 @@ export function renderDirections(s, color) {
   const hideNoLift = getPref('hideNoLift');
   const hasLift = s.directions?.some(dir =>
     dir.exits?.some(exit =>
-      exit.positions?.some(p => p.isLift || (p.isHoist && getPref('showHoists')))
+      exit.positions?.some(p => p.isLift || (p.isHoist && showHoists()))
     )
   );
   const filterLiftOnly = hideNoLift && hasLift;
@@ -430,7 +443,7 @@ export function renderDirections(s, color) {
 
     const mainHtml = mainDirs.map(dir => {
       const exitsHtml = dir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && showHoists()))) || [];
         if (!visiblePos.length) return '';
         return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, true, exit)}`;
       }).join('');
@@ -445,7 +458,7 @@ export function renderDirections(s, color) {
     let longHtml = '';
     if (longDir) {
       const rows = longDir.exits.map(exit => {
-        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
+        const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && showHoists()))) || [];
         if (!visiblePos.length) return '';
         const posRows = visiblePos.map(p =>
           `<div class="long-transfer-pos-row">${pill('вагон', p.wagon, color)}${pill('двері', p.doors, color)}</div>`
@@ -480,7 +493,7 @@ export function renderDirections(s, color) {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
-      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && getPref('showHoists')))) || [];
+      const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && showHoists()))) || [];
       if (!visiblePos.length) return '';
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
