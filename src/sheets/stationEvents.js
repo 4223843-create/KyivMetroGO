@@ -444,6 +444,15 @@ export function bindSheetGestures(sheetBody, getCtx) {
       return;
     }
 
+    // 1d. Значок транспорту або номер маршруту → «автобус», «тролейбус»…
+    const routesGroup = e.target.closest('.exit-routes-group');
+    if (routesGroup) {
+      e.stopPropagation();
+      const tapped = e.target.closest('.exit-route-chip, .exit-routes-icon') ?? routesGroup;
+      _showIconLabelToast(tapped, routesGroup.dataset.kindLabel);
+      return;
+    }
+
     // 2. Pencil (відредагована позиція → відкрити feedback)
     const pencil = e.target.closest('.pos-edited-mark');
     if (pencil) {
