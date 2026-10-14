@@ -5055,6 +5055,12 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
+/* Маршрут, що зупиняється лише з одного боку */
+.exit-route-chip--oneway { border: 1px dashed var(--text-muted); }
+.exit-stop-range {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
 
 /* Пересадки на кільцеву електричку / фунікулер — над напрямками */
 .station-connections {

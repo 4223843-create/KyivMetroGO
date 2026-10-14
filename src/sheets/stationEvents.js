@@ -449,7 +449,16 @@ export function bindSheetGestures(sheetBody, getCtx) {
     if (routesGroup) {
       e.stopPropagation();
       const tapped = e.target.closest('.exit-route-chip, .exit-routes-icon') ?? routesGroup;
-      _showIconLabelToast(tapped, routesGroup.dataset.kindLabel);
+      const oneWay = tapped.dataset.onewayLabel;
+      _showIconLabelToast(tapped, routesGroup.dataset.kindLabel + (oneWay ? `, ${oneWay}` : ''));
+      return;
+    }
+
+    // 1e. Діапазон відстані до зупинки → пояснення
+    const stopRange = e.target.closest('.exit-stop-range');
+    if (stopRange) {
+      e.stopPropagation();
+      _showIconLabelToast(stopRange, 'Залежно від напряму руху');
       return;
     }
 
