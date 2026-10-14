@@ -866,12 +866,17 @@ const center = document.getElementById("loaderCenter");
     if (typeof window.__isDevMode === 'function') return window.__isDevMode();
     try { return localStorage.getItem('CapacitorStorage.metro_dev_mode') === 'true'; } catch (_) { return false; }
   }
+  // Без мережі Firebase (режим розробника) кидає помилки зʼєднання — це не збій застосунку.
+  function isNetworkError(reason) {
+    var text = String(reason && (reason.message || reason.code) || reason);
+    return !navigator.onLine || /network-request-failed|Failed to fetch|NetworkError|Load failed|unavailable/i.test(text);
+  }
   window.addEventListener('error', function(e) {
-    if (crashAlertsEnabled()) alert('CRASH: ' + (e.message || e.error));
+    if (crashAlertsEnabled() && !isNetworkError(e.error || e.message)) alert('CRASH: ' + (e.message || e.error));
     document.getElementById('startupLoader').style.display = 'none';
   });
   window.addEventListener('unhandledrejection', function(e) {
-    if (crashAlertsEnabled()) alert('PROMISE CRASH: ' + e.reason);
+    if (crashAlertsEnabled() && !isNetworkError(e.reason)) alert('PROMISE CRASH: ' + e.reason);
     document.getElementById('startupLoader').style.display = 'none';
   });
 </script>
