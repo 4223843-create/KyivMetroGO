@@ -35,17 +35,17 @@ function formatLabel(exit) {
 // ══ ПЕРЕСАДКИ НА ІНШИЙ ТРАНСПОРТ (station.connections) ══
 
 const ROUTE_KINDS = [
-  ['bus',     '🚌', 'Автобус'],
-  ['trolley', '🚎', 'Тролейбус'],
-  ['tram',    '🚋', 'Трамвай'],
-  ['minibus', '🚐', 'Маршрутка'],
+  ['bus',     '🚌', 'автобус'],
+  ['trolley', '🚎', 'тролейбус'],
+  ['tram',    '🚋', 'трамвай'],
+  ['minibus', '🚐', 'маршрутка'],
 ];
 
 function routeGroups(routes) {
   return ROUTE_KINDS
     .filter(([key]) => routes[key]?.length)
     .map(([key, icon, title]) =>
-      `<span class="exit-routes-group" aria-label="${title}"><span class="exit-routes-icon">${icon}</span>` +
+      `<span class="exit-routes-group" data-kind-label="${title}" aria-label="${title}"><span class="exit-routes-icon">${icon}</span>` +
       routes[key].map(r => `<span class="exit-route-chip">${r}</span>`).join('') +
       `</span>`
     );
