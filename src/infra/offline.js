@@ -5,7 +5,7 @@ banner.id        = 'offlineBanner';
 banner.className = 'offline-banner';
 banner.setAttribute('role', 'status');
 banner.setAttribute('aria-live', 'polite');
-banner.textContent = 'Офлайн — показано збережені дані';
+banner.innerHTML = '<strong>Офлайн</strong><br>Вийшли на Львівській брамі?';
 banner.hidden = navigator.onLine;
 document.body.appendChild(banner);
 
