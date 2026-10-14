@@ -41,23 +41,41 @@ const ROUTE_KINDS = [
   ['minibus', '🚐', 'маршрутка'],
 ];
 
-function routeGroups(routes) {
+/**
+ * Значки й номери маршрутів. oneWay — {вид: {маршрут: відстань}}: маршрути,
+ * що зупиняються лише з одного боку (пунктирна рамка, підказка по тапу).
+ */
+function routeGroups(routes, oneWay = {}) {
   return ROUTE_KINDS
     .filter(([key]) => routes[key]?.length)
     .map(([key, icon, title]) =>
       `<span class="exit-routes-group" data-kind-label="${title}" aria-label="${title}"><span class="exit-routes-icon">${icon}</span>` +
-      routes[key].map(r => `<span class="exit-route-chip">${r}</span>`).join('') +
+      routes[key].map(r => {
+        if (!oneWay[key] || !(r in oneWay[key])) return `<span class="exit-route-chip">${r}</span>`;
+        const d = oneWay[key][r];
+        const where = Number.isFinite(d) ? ` (${roundMeters(d)} м)` : '';
+        return `<span class="exit-route-chip exit-route-chip--oneway" data-oneway-label="лише в один бік${where}">${r}</span>`;
+      }).join('') +
       `</span>`
     );
 }
 
 const roundMeters = m => Math.max(5, Math.round(m / 5) * 5);
 
+/** «, 15 м» або «, 15–110 м» (зупинки в обидва боки — діапазон, тап → підказка). */
+function _stopDistance(st) {
+  if (!Number.isFinite(st.distance_m)) return '';
+  const lo = roundMeters(st.distance_m);
+  const hi = Number.isFinite(st.distance_max) ? roundMeters(st.distance_max) : lo;
+  return hi > lo
+    ? `, <span class="exit-stop-range">${lo}–${hi}&nbsp;м</span>`
+    : `, ${lo}&nbsp;м`;
+}
+
 function _stopsHtml(stops) {
   return `<span class="pos-numbered-exit-stops">` + stops.map(st =>
-    `<span class="exit-stop"><span class="exit-stop-name">${richText(st.name)}` +
-    (Number.isFinite(st.distance_m) ? `, ${roundMeters(st.distance_m)}&nbsp;м` : '') +
-    `</span><span class="pos-numbered-exit-routes">${routeGroups(st.routes || {}).join('')}</span></span>`
+    `<span class="exit-stop"><span class="exit-stop-name">${richText(st.name)}${_stopDistance(st)}` +
+    `</span><span class="pos-numbered-exit-routes">${routeGroups(st.routes || {}, st.one_way).join('')}</span></span>`
   ).join('') + `</span>`;
 }
 
