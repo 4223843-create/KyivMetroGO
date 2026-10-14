@@ -500,92 +500,6 @@ document.documentElement.setAttribute('data-theme', actual);
     <div class="sheet-body">
       <div class="settings-content">
 
-        <div class="settings-card">
-          <div class="settings-card-header">Вигляд</div>
-          <div class="settings-rule"></div>
-          
-          <div class="settings-row">
-            <span class="settings-label">Тема</span>
-            <div class="settings-seg" id="settingsThemeSeg">
-              <button type="button" class="settings-seg-btn" data-theme-val="system">системна</button>
-              <button type="button" class="settings-seg-btn" data-theme-val="light">світла</button>
-              <button type="button" class="settings-seg-btn" data-theme-val="dark">темна</button>
-            </div>
-          </div>
-          
-          <div class="settings-rule"></div>
-          
-          <div class="settings-row">
-            <span class="settings-label">Під час запуску</span>
-            <div class="settings-seg" id="settingsStartSeg">
-              <button type="button" class="settings-seg-btn" data-start-val="false">карта</button>
-              <button type="button" class="settings-seg-btn" data-start-val="true">вибране</button>
-            </div>
-          </div>
-
-          <div class="settings-rule"></div>
-
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Вимкнути анімацію</span>
-              <span class="settings-sublabel" style="text-align: left;">Картки й підказки з'являються та зникають без руху</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsReduceMotionToggle" aria-label="Вимкнути анімацію">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div class="settings-card">
-          <div class="settings-card-header-row" style="flex-direction: column; align-items: stretch;">
-            <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; position: relative; min-height: 32px;">
-              <span class="settings-card-header" style="padding: 0; position: absolute; left: 50%; transform: translateX(-50%);">Check-in</span>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinToggle" aria-label="Check-in">
-                <span class="ios-toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-          <div id="settingsCheckinCollapsible">
-            <div class="settings-rule"></div>
-            <div class="settings-row" id="checkinExitsRow" style="flex-direction: column; align-items: stretch; gap: 6px;">
-              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                <span class="settings-label">Статистика</span>
-                <div class="settings-seg" id="settingsCheckinStatSeg">
-                  <button type="button" class="settings-seg-btn" data-stat-val="station">за станціями</button>
-                  <button type="button" class="settings-seg-btn" data-stat-val="exits">за виходами</button>
-                </div>
-              </div>
-              <span class="settings-sublabel">Впливає на відсоток охоплення та кола статистики</span>
-            </div>
-            <div class="settings-rule"></div>
-            <div class="settings-row" id="checkinByExitRow">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Check-in за попередньою станцією</span>
-                <span class="settings-sublabel" style="text-align: left;">Якщо вимкнено, відмітки ставитимуться на вихід, тобто по дві за раз</span>
-              </div>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinByExitToggle" aria-label="Check-in за попередньою станцією">
-                <span class="ios-toggle-slider"></span>
-              </label>
-            </div>
-            <div class="settings-rule"></div>
-            <div class="settings-row" id="checkinHatchRow">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Штриховка відвіданих станцій</span>
-                <span class="settings-sublabel" style="text-align: left;">Відмічена станція штрихується на карті</span>
-              </div>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsCheckinHatchToggle" aria-label="Штриховка відвіданих станцій">
-                <span class="ios-toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-
-
         <!-- ══ КАРТКА «ДАНІ» ══ -->
         <div class="settings-card">
           <div class="settings-card-header">Дані</div>
@@ -663,38 +577,40 @@ document.documentElement.setAttribute('data-theme', actual);
           </div>
         </div>
 
-        <!-- ══ КАРТКА «РЕЖИМ РЕДАГУВАННЯ» ══ -->
         <div class="settings-card">
-          <div class="settings-card-header-row" style="flex-direction: column; align-items: stretch;">
-            <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; position: relative; min-height: 32px;">
-              <span class="settings-card-header" style="padding: 0; position: absolute; left: 50%; transform: translateX(-50%);">Режим редагування</span>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsEditModeToggle" aria-label="Режим редагування">
-                <span class="ios-toggle-slider"></span>
-              </label>
+          <div class="settings-card-header">Вигляд</div>
+          <div class="settings-rule"></div>
+          
+          <div class="settings-row">
+            <span class="settings-label">Тема</span>
+            <div class="settings-seg" id="settingsThemeSeg">
+              <button type="button" class="settings-seg-btn" data-theme-val="system">системна</button>
+              <button type="button" class="settings-seg-btn" data-theme-val="light">світла</button>
+              <button type="button" class="settings-seg-btn" data-theme-val="dark">темна</button>
             </div>
           </div>
-          <!-- Розкривається, коли режим редагування увімкнено -->
-          <div id="settingsLocalFbRow" class="is-hidden">
-            <div class="settings-rule"></div>
-            <button type="button" class="settings-row settings-go-edit" id="settingsGoEdit">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Перейти</span>
-                <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон і двері</span>
-              </div>
-              <span class="settings-go-edit-chevron" aria-hidden="true">→</span>
-            </button>
-            <div class="settings-rule"></div>
-            <div class="settings-row">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Локальні зміни</span>
-                <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
-              </div>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsLocalFeedbackToggle" aria-label="Локальні зміни">
-                <span class="ios-toggle-slider"></span>
-              </label>
+          
+          <div class="settings-rule"></div>
+          
+          <div class="settings-row">
+            <span class="settings-label">Під час запуску</span>
+            <div class="settings-seg" id="settingsStartSeg">
+              <button type="button" class="settings-seg-btn" data-start-val="false">карта</button>
+              <button type="button" class="settings-seg-btn" data-start-val="true">вибране</button>
             </div>
+          </div>
+
+          <div class="settings-rule"></div>
+
+          <div class="settings-row">
+            <div class="settings-label-wrap">
+              <span class="settings-label">Вимкнути анімацію</span>
+              <span class="settings-sublabel" style="text-align: left;">Картки й підказки з'являються та зникають без руху</span>
+            </div>
+            <label class="ios-toggle">
+              <input type="checkbox" id="settingsReduceMotionToggle" aria-label="Вимкнути анімацію">
+              <span class="ios-toggle-slider"></span>
+            </label>
           </div>
         </div>
 
@@ -720,6 +636,86 @@ document.documentElement.setAttribute('data-theme', actual);
               <input type="checkbox" id="settingsHideNoLiftToggle" aria-label="Приховати виходи без ліфтів">
               <span class="ios-toggle-slider"></span>
             </label>
+          </div>
+        </div>
+
+        <!-- ══ КАРТКА «CHECK-IN» ══ -->
+        <div class="settings-card">
+          <div class="settings-card-header-row" style="flex-direction: column; align-items: stretch;">
+            <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; position: relative; min-height: 32px;">
+              <span class="settings-card-header" style="padding: 0; position: absolute; left: 50%; transform: translateX(-50%);">Check-in</span>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsCheckinToggle" aria-label="Check-in">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div id="settingsCheckinCollapsible">
+            <div class="settings-rule"></div>
+            <div class="settings-row" id="checkinExitsRow" style="flex-direction: column; align-items: stretch; gap: 6px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <span class="settings-label">Статистика</span>
+                <div class="settings-seg" id="settingsCheckinStatSeg">
+                  <button type="button" class="settings-seg-btn" data-stat-val="station">за станціями</button>
+                  <button type="button" class="settings-seg-btn" data-stat-val="exits">за виходами</button>
+                </div>
+              </div>
+              <span class="settings-sublabel">Впливає на відсоток охоплення та кола статистики</span>
+            </div>
+            <div class="settings-rule"></div>
+            <div class="settings-row" id="checkinByExitRow">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Check-in за попередньою станцією</span>
+                <span class="settings-sublabel" style="text-align: left;">Якщо вимкнено, відмітки ставитимуться на вихід, тобто по дві за раз</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsCheckinByExitToggle" aria-label="Check-in за попередньою станцією">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-rule"></div>
+            <div class="settings-row" id="checkinHatchRow">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Штриховка відвіданих станцій</span>
+                <span class="settings-sublabel" style="text-align: left;">Відмічена станція штрихується на карті</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsCheckinHatchToggle" aria-label="Штриховка відвіданих станцій">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ КАРТКА «РЕЖИМ РЕДАГУВАННЯ» ══ -->
+        <div class="settings-card">
+          <div class="settings-card-header-row" style="flex-direction: column; align-items: stretch;">
+            <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; position: relative; min-height: 32px;">
+              <span class="settings-card-header" style="padding: 0; position: absolute; left: 50%; transform: translateX(-50%);">Режим редагування</span>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsEditModeToggle" aria-label="Режим редагування">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <!-- Розкривається, коли режим редагування увімкнено -->
+          <div id="settingsLocalFbRow" class="is-hidden">
+            <p class="settings-edit-desc">Змінюйте підписи до виходів та зручні вагон і двері</p>
+            <button type="button" class="settings-row settings-go-edit" id="settingsGoEdit">
+              <span class="settings-label">Натисніть, щоб перейти</span>
+              <span class="settings-go-edit-chevron" aria-hidden="true">→</span>
+            </button>
+            <div class="settings-rule"></div>
+            <div class="settings-row">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Локальні зміни</span>
+                <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsLocalFeedbackToggle" aria-label="Локальні зміни">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
           </div>
         </div>
 

@@ -3203,6 +3203,13 @@ svg [role="button"]:focus:not(:focus-visible) {
   -webkit-tap-highlight-color: transparent;
 }
 .settings-go-edit:active { opacity: .6; }
+.settings-edit-desc {
+  margin: 0;
+  padding: 0 16px 2px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--text-muted);
+}
 .settings-go-edit-chevron {
   font-size: 18px;
   color: var(--text-muted);
