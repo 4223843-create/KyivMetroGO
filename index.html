@@ -628,42 +628,6 @@ document.documentElement.setAttribute('data-theme', actual);
           </div>
 
           <div class="settings-rule"></div>
-
-          <div class="settings-row">
-            <div class="settings-label-wrap">
-              <span class="settings-label">Режим редагування</span>
-              <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон і двері</span>
-            </div>
-            <label class="ios-toggle">
-              <input type="checkbox" id="settingsEditModeToggle" aria-label="Режим редагування">
-              <span class="ios-toggle-slider"></span>
-            </label>
-          </div>
-
-          <!-- Автоприховується разом із роздільником, якщо "Режим редагування" вимкнено -->
-          <div id="settingsLocalFbRow" class="is-hidden">
-            <div class="settings-rule"></div>
-            <button type="button" class="settings-row settings-go-edit" id="settingsGoEdit">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Перейти в режим редагування</span>
-                <span class="settings-sublabel" style="text-align: left;">Надалі шукайте його в меню (кнопка посередині внизу): олівець «Запропонувати зміни»</span>
-              </div>
-              <span class="settings-go-edit-chevron" aria-hidden="true">›</span>
-            </button>
-            <div class="settings-rule"></div>
-            <div class="settings-row">
-              <div class="settings-label-wrap">
-                <span class="settings-label">Локальні зміни</span>
-                <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
-              </div>
-              <label class="ios-toggle">
-                <input type="checkbox" id="settingsLocalFeedbackToggle" aria-label="Локальні зміни">
-                <span class="ios-toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          <div class="settings-rule"></div>
           <div class="settings-row">
             <div class="settings-label-wrap">
               <span class="settings-label">Приховати підказки</span>
@@ -693,6 +657,41 @@ document.documentElement.setAttribute('data-theme', actual);
               <button type="button" class="settings-action-btn" id="settingsExport">зберегти</button>
               <div class="settings-divider-v"></div>
               <button type="button" class="settings-action-btn" id="settingsImport">відновити</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ КАРТКА «РЕЖИМ РЕДАГУВАННЯ» ══ -->
+        <div class="settings-card">
+          <div class="settings-card-header-row" style="flex-direction: column; align-items: stretch;">
+            <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; position: relative; min-height: 32px;">
+              <span class="settings-card-header" style="padding: 0; position: absolute; left: 50%; transform: translateX(-50%);">Режим редагування</span>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsEditModeToggle" aria-label="Режим редагування">
+                <span class="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <!-- Розкривається, коли режим редагування увімкнено -->
+          <div id="settingsLocalFbRow" class="is-hidden">
+            <div class="settings-rule"></div>
+            <button type="button" class="settings-row settings-go-edit" id="settingsGoEdit">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Перейти</span>
+                <span class="settings-sublabel" style="text-align: left;">Змінюйте підписи до виходів та зручні вагон і двері. Надалі режим редагування — в меню (кнопка посередині внизу): олівець «Запропонувати зміни»</span>
+              </div>
+              <span class="settings-go-edit-chevron" aria-hidden="true">→</span>
+            </button>
+            <div class="settings-rule"></div>
+            <div class="settings-row">
+              <div class="settings-label-wrap">
+                <span class="settings-label">Локальні зміни</span>
+                <span class="settings-sublabel" style="text-align: left;">Розробник не бачитиме ваших правок</span>
+              </div>
+              <label class="ios-toggle">
+                <input type="checkbox" id="settingsLocalFeedbackToggle" aria-label="Локальні зміни">
+                <span class="ios-toggle-slider"></span>
+              </label>
             </div>
           </div>
         </div>

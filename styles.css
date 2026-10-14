@@ -3204,7 +3204,7 @@ svg [role="button"]:focus:not(:focus-visible) {
 }
 .settings-go-edit:active { opacity: .6; }
 .settings-go-edit-chevron {
-  font-size: 22px;
+  font-size: 18px;
   color: var(--text-muted);
   flex-shrink: 0;
 }
