@@ -2894,17 +2894,35 @@ svg [role="button"]:focus:not(:focus-visible) {
   left: 50%;
   transform: translateX(-50%);
   z-index: calc(var(--z-ui-buttons) + 10);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   background: var(--bg-card);
   color: var(--text);
+  border: none;
+  font: inherit;
   font-size: 11px;
   line-height: 1.3;
   white-space: nowrap;
   text-align: center;
   padding: 3px 12px;
   border-radius: 10px;
-  pointer-events: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.offline-banner strong { font-weight: var(--fw-semi); }
+.offline-banner[hidden] { display: none; }
+.offline-banner strong { font-weight: var(--fw-semi); margin-bottom: 2px; }
+.offline-banner-more { display: none; }
+.offline-banner.is-open {
+  white-space: normal;
+  width: min(300px, calc(100vw - 32px));
+  padding: 6px 12px 8px;
+}
+.offline-banner.is-open .offline-banner-more {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+}
 [data-theme="light"] .offline-banner {
   background: var(--bg-sheet);
   color: var(--text);
