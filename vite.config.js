@@ -86,6 +86,8 @@ export default defineConfig({
         // Firebase потрібен лише режиму розробника (services/devCloud.js) —
         // не змушуємо кожного користувача завантажувати його при встановленні SW.
         globIgnores:    ['**/firebaseSync.*.js'],
+        // addresses.json (~1–2 МБ) — для офлайн-пошуку адрес; ліміт Workbox за замовчуванням 2 МБ
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
       devOptions: { enabled: false },
     }),
