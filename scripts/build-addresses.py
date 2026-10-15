@@ -237,6 +237,7 @@ def add_osm_houses(streets, osm_addr):
     for code, s in streets.items():
         by_key[name_key(s['name'], s['type'])].append(code)
     added = unmatched = 0
+    examples = []
     for (street, house), (sx, sy, n) in osm_addr.items():
         codes = by_key.get(name_key(street))
         if not codes:
@@ -252,7 +253,10 @@ def add_osm_houses(streets, osm_addr):
             continue
         s['houses'][house] = (x, y)
         added += 1
+        examples.append(f"{s['type']} {s['name']}, {house}")
     print(f'OSM: додано {added} будинків, яких немає в реєстрі; вулиця не знайдена в ГІС: {unmatched}')
+    step = max(1, len(examples) // 15)
+    print('   приклади: ' + '; '.join(examples[::step][:15]))
 
 
 def display_name(s, osm_names):
