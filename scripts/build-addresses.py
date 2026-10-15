@@ -103,6 +103,23 @@ class Collector(osmium.SimpleHandler):
         self.node_xy = []
         self.edges_u, self.edges_v, self.edges_w = [], [], []
         self.osm_names = {}         # (тип, слова) → назва в OSM
+        self.osm_addr = {}          # (вулиця, будинок) → [sum_x, sum_y, n]
+
+    def _add_addr(self, tags, x, y):
+        street, house = tags.get('addr:street'), tags.get('addr:housenumber')
+        if not street or not house:
+            return
+        for h in house.replace(';', ',').split(','):
+            h = h.strip()
+            if h:
+                a = self.osm_addr.setdefault((street.strip(), h), [0.0, 0.0, 0])
+                a[0] += x
+                a[1] += y
+                a[2] += 1
+
+    def node(self, n):
+        if 'addr:housenumber' in n.tags:
+            self._add_addr(n.tags, *xy(n.location.lon, n.location.lat))
 
     def _nid(self, n):
         i = self.node_idx.get(n.ref)
@@ -114,6 +131,12 @@ class Collector(osmium.SimpleHandler):
 
     def way(self, w):
         tags = w.tags
+        if 'addr:housenumber' in tags:
+            pts = [xy(n.lon, n.lat) for n in w.nodes if n.location.valid()]
+            if len(pts) > 1 and pts[0] == pts[-1]:
+                pts = pts[:-1]
+            if pts:
+                self._add_addr(tags, sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts))
         if not walkable(tags):
             return
         name = tags.get('name')
@@ -203,6 +226,35 @@ def load_city(addr_path, streets_path):
     return streets
 
 
+def house_key(h):
+    """«5-А», «5 а», «5а» → «5а»; «20-22» лишається."""
+    return re.sub(r'-(?=\D)', '', re.sub(r'\s', '', h.lower()))
+
+
+def add_osm_houses(streets, osm_addr):
+    """Будинки з OSM, яких немає в міському реєстрі (вулиця має збігтися з міською)."""
+    by_key = defaultdict(list)
+    for code, s in streets.items():
+        by_key[name_key(s['name'], s['type'])].append(code)
+    added = unmatched = 0
+    for (street, house), (sx, sy, n) in osm_addr.items():
+        codes = by_key.get(name_key(street))
+        if not codes:
+            unmatched += 1
+            continue
+        x, y = sx / n, sy / n
+        # Однакова назва в кількох районах — беремо вулицю, найближчу до будинку
+        code = codes[0] if len(codes) == 1 else min(codes, key=lambda c: min(
+            (math.hypot(px - x, py - y) for px, py in list(streets[c]['houses'].values()) + streets[c]['line']),
+            default=math.inf))
+        s = streets[code]
+        if any(house_key(h) == house_key(house) for h in s['houses']):
+            continue
+        s['houses'][house] = (x, y)
+        added += 1
+    print(f'OSM: додано {added} будинків, яких немає в реєстрі; вулиця не знайдена в ГІС: {unmatched}')
+
+
 def display_name(s, osm_names):
     """Назва, як її пишуть люди: з OSM («проспект Миколи Бажана»), інакше з ГІС."""
     kind, words = name_key(s['name'], s['type'])
@@ -237,6 +289,7 @@ def main(pbf, stations_path, addr_path, streets_path, out_path):
     print(f'виходів: {len(exits)}, прив\'язка: медіана {np.median(ex_d):.0f} м, макс {ex_d.max():.0f} м')
 
     streets = load_city(addr_path, streets_path)
+    add_osm_houses(streets, h.osm_addr)
     n_houses = sum(len(s['houses']) for s in streets.values())
     print(f'ГІС: {len(streets)} вулиць, {n_houses} будинків')
 
