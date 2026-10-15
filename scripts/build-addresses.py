@@ -262,13 +262,19 @@ def add_osm_houses(streets, osm_addr):
     print('   приклади: ' + '; '.join(examples[::step][:15]))
 
 
+TYPE_FIRST = {'вулиця', 'провулок', 'площа', 'проспект', 'бульвар', 'узвіз', 'шосе',
+              'набережна', 'проїзд', 'тупик', 'алея', 'дорога', 'майдан'}
+
+
 def display_name(s, osm_names):
     """Назва, як її пишуть люди: з OSM («проспект Миколи Бажана»), інакше з ГІС."""
     kind, words = name_key(s['name'], s['type'])
-    osm = osm_names.get((kind, words))
-    if osm:
-        return osm
-    return f"{s['type']} {s['name']}".strip()
+    name = osm_names.get((kind, words)) or f"{s['type']} {s['name']}".strip()
+    # «Йорданська вулиця» → «вулиця Йорданська»: тип завжди спереду, як у більшості назв
+    parts = name.split()
+    if len(parts) > 1 and parts[-1] in TYPE_FIRST and parts[0] not in TYPE_FIRST:
+        name = ' '.join([parts[-1]] + parts[:-1])
+    return name
 
 
 def main(pbf, stations_path, addr_path, streets_path, out_path):
