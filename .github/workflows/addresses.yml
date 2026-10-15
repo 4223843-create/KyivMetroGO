@@ -1,0 +1,88 @@
+name: Addresses → nearest station
+
+# Перераховує public/addresses.json: для кожного будинку Києва з адресою —
+# 3 найближчі станції метро за пішохідним маршрутом (дані OSM, Geofabrik).
+# Запуск вручну (Actions → Addresses → Run workflow); результат комітиться
+# у гілку, з якої запущено.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "scripts/build-addresses.py"
+      - ".github/workflows/addresses.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: addresses-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+          python -m pip install -q osmium scipy numpy
+
+      - name: Download OSM (Ukraine) and cut out Kyiv
+        run: |
+          curl -fsSL -A 'KyivMetroGO/1.0 (+https://github.com/4223843-create/KyivMetroGO)' \
+            -o ukraine.osm.pbf https://download.geofabrik.de/europe/ukraine-latest.osm.pbf
+          ls -lh ukraine.osm.pbf
+          osmium extract -b 30.10,50.15,31.00,50.65 --strategy=smart ukraine.osm.pbf -o bbox.osm.pbf
+          osmium tags-filter bbox.osm.pbf r/boundary=administrative -o adm.osm.pbf
+          osmium export adm.osm.pbf -f geojsonseq -o adm.geojsonseq --geometry-types=polygon
+          python - <<'PY'
+          import json
+          for line in open('adm.geojsonseq', encoding='utf-8'):
+              f = json.loads(line.lstrip('\x1e'))
+              p = f.get('properties', {})
+              if p.get('name') == 'Київ' and p.get('admin_level') == '4':
+                  json.dump({'type': 'FeatureCollection', 'features': [f]}, open('kyiv.geojson', 'w'))
+                  print('межа Києва знайдена')
+                  break
+          else:
+              raise SystemExit('межу Києва не знайдено')
+          PY
+          osmium extract -p kyiv.geojson bbox.osm.pbf -o kyiv.osm.pbf
+          ls -lh kyiv.osm.pbf
+
+      - name: Build addresses.json
+        run: python scripts/build-addresses.py kyiv.osm.pbf public/stations.json public/addresses.json
+
+      - name: Size and samples
+        run: |
+          ls -lh public/addresses.json
+          gzip -9 -c public/addresses.json | wc -c | awk '{printf "gzip: %.0f KB\n", $1/1024}'
+          python - <<'PY'
+          import json
+          d = json.load(open('public/addresses.json', encoding='utf-8'))
+          ex = d['exits']
+          want = ['Хрещатик', 'Миколи Бажана', 'Січових Стрільців', 'Лаврська', 'Маршала Малиновського', 'Академіка Єфремова']
+          for name, houses in d['streets']:
+              if any(w in name for w in want):
+                  for h in houses.split('|')[:3]:
+                      p = h.split(' ')
+                      res = ', '.join(f"{ex[int(p[i])][0]} вих.{ex[int(p[i])][1]} {int(p[i+1])*10} м" for i in range(1, len(p), 2))
+                      print(f'{name}, {p[0]}: {res}')
+          PY
+
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/addresses.json
+          git diff --cached --quiet && { echo "без змін"; exit 0; }
+          git commit -m "Дані: адреси → найближчі станції пішки (OSM)"
+          git push

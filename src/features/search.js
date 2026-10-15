@@ -14,6 +14,7 @@ import { bus }                from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { lineTextColor } from '../ui/components.js';
 import { richText } from '../ui/html.js';
+import { addressResultsHtml } from './addressSearch.js';
 import { queryWordsForExits, matchExitSearch, exitHintText } from '../data/exitSearch.js';
 
 const SEARCH_ALIASES = {
@@ -142,7 +143,15 @@ for (const s of stations) {
     return a.s.name.localeCompare(b.s.name, 'uk');
   });
 
-  if (matched.length === 0) {
+  const addrHtml = addressResultsHtml(query, lineFilter, () => {
+    // Дані адрес довантажились — перемальовуємо, якщо запит ще той самий
+    const input = document.getElementById('searchInput');
+    if (input && input.value.trim().toLowerCase() === query && container.isConnected) {
+      renderSearchResults(query, container, lineFilter, _layoutRetry);
+    }
+  });
+
+  if (matched.length === 0 && !addrHtml) {
     const converted = _layoutRetry ? query : _fromEnLayout(query);
     if (converted !== query) {
       renderSearchResults(converted, container, lineFilter, true);
@@ -154,7 +163,7 @@ for (const s of stations) {
 
   container.innerHTML = matched.map(({ s, isExitOnly, exitHint }) =>
     _renderItem(s, isExitOnly, exitHint)
-  ).join('');
+  ).join('') + addrHtml;
 }
 
 function _renderItem(s, isExitOnly, exitHint) {
@@ -243,6 +252,14 @@ export function openSearchSheet() {
 
     // Клік по результату
     resultsContainer.addEventListener('click', e => {
+      // Вулиця без номера будинку — підставляємо її в поле, далі людина дописує номер
+      const street = e.target.closest('.search-addr-street');
+      if (street) {
+        input.value = street.dataset.fill;
+        input.focus();
+        input.dispatchEvent(new Event('input'));
+        return;
+      }
       const item = e.target.closest('.search-item');
       if (!item) return;
       document.getElementById('searchInput').blur();
