@@ -20,6 +20,7 @@ import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
 import { state }                 from '../core/state.js';
 import { traversePositions, legacyKeyMap } from './positions.js';
+import { buildExitSearchIndex } from './exitSearch.js';
 
 const NEW_PREFIX = 'new|';
 
@@ -270,6 +271,8 @@ export function applyLocalLayer() {
   for (const slug of Object.keys(_base)) view[slug] = structuredClone(_base[slug]);
   _applyLocalEdits(view);
   _applyExitLabels(view);
+  // Пошук бачить і локальні підписи та нові виходи
+  for (const slug of Object.keys(_base)) view[slug]._exitSearch = buildExitSearchIndex(view[slug]);
 }
 
 // ══ ПЕРЕХІД ЗІ СТАРИХ ФОРМАТІВ ════════════════════════════════

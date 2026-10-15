@@ -14,6 +14,7 @@ import { bus }                from '../core/eventBus.js';
 import { LINE_COLOR } from '../core/constants.js';
 import { lineTextColor } from '../ui/components.js';
 import { richText } from '../ui/html.js';
+import { queryWordsForExits, matchExitSearch, exitHintText } from '../data/exitSearch.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
@@ -96,6 +97,8 @@ export function renderSearchResults(query, container, lineFilter = new Set(), _l
   const rawQuery      = query.toLowerCase().trim().replace(/[''`]/g, '');
   const queryWords    = rawQuery.split(/\s+/).filter(w => w.length > 0);
 
+  // Від 2 символів: одна літера збігається з десятками вулиць
+  const exitWords     = rawQuery.length >= 2 ? queryWordsForExits(rawQuery) : [];
   const matched = [];
 
 for (const s of stations) {
@@ -115,12 +118,10 @@ for (const s of stations) {
       continue;
     }
 
-    // Пошук по виходах (якщо треба) залишаємо як є
-    if (s._exitIndex?.length) {
-      const hitTok = s._exitIndex.find(tok => tok.startsWith(rawQuery));
-      if (hitTok) {
-        matched.push({ s, isExitOnly: true, exitHint: _findExitLabel(s, hitTok) });
-      }
+    // Пошук по виходах: підписи («ТЦ Dream berry») і вулиці («просп. Бажана, 36»)
+    const exitHit = matchExitSearch(s._exitSearch, exitWords);
+    if (exitHit) {
+      matched.push({ s, isExitOnly: true, exitHint: exitHintText(exitHit) });
     }
   }
 
@@ -154,16 +155,6 @@ for (const s of stations) {
   container.innerHTML = matched.map(({ s, isExitOnly, exitHint }) =>
     _renderItem(s, isExitOnly, exitHint)
   ).join('');
-}
-
-function _findExitLabel(s, hitTok) {
-  for (const dir of (s.directions || [])) {
-    for (const ex of (dir.exits || [])) {
-      if (!ex.label) continue;
-      if (ex.label.toLowerCase().includes(hitTok)) return ex.label;
-    }
-  }
-  return null;
 }
 
 function _renderItem(s, isExitOnly, exitHint) {
