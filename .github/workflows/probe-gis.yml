@@ -9,20 +9,23 @@ jobs:
     steps:
       - run: |
           UA='KyivMetroGO/1.0 (+https://github.com/4223843-create/KyivMetroGO)'
-          B=https://gisserver.kyivcity.gov.ua/mayno/rest/services/KYIV_API
-          for svc in "Адреси/FeatureServer" "regaddress/FeatureServer" "Адреси_полі/MapServer"; do
-            echo "=================== $svc"
-            curl -s -m 30 -A "$UA" "$B/$svc?f=json" | head -c 2500; echo
-            for L in 0 1 2; do
-              echo "--- layer $L"
-              curl -s -m 30 -A "$UA" "$B/$svc/$L?f=json" | python3 -c '
-          import json,sys
-          d=json.load(sys.stdin)
-          if "error" in d: print(d); raise SystemExit
-          print(d.get("name"), d.get("geometryType"), "maxRecordCount", d.get("maxRecordCount"), "sr", (d.get("extent") or {}).get("spatialReference"))
-          for f in d.get("fields",[]): print("   ", f["name"], f["type"], f.get("alias"))
-          ' 2>&1 | head -60
-              curl -s -m 30 -A "$UA" "$B/$svc/$L/query?where=1%3D1&returnCountOnly=true&f=json"; echo
-              curl -s -m 30 -A "$UA" "$B/$svc/$L/query?where=1%3D1&outFields=*&resultRecordCount=3&outSR=4326&f=json" | head -c 2500; echo
-            done
-          done
+          B=https://gisserver.kyivcity.gov.ua/mayno/rest/services/KYIV_API/Адреси/FeatureServer
+          curl -s -m 120 -A "$UA" "$B/0/query?where=1%3D1&outFields=addrnumb1,addrcond,ukrnamef,codetype,type_vul,full_addr,full_addr_short,strcodeobj&returnGeometry=true&outSR=4326&f=json" -o a.json
+          curl -s -m 120 -A "$UA" "$B/1/query?where=1%3D1&outFields=strcodeobj,ukrnamef,codetype,type_name&returnGeometry=true&outSR=4326&f=json" -o s.json
+          ls -lh a.json s.json
+          python3 - <<'PY'
+          import json, collections, random
+          a = json.load(open('a.json')); s = json.load(open('s.json'))
+          fa = a['features']; fs = s['features']
+          print('addresses', len(fa), 'exceeded', a.get('exceededTransferLimit'), 'streets', len(fs), s.get('exceededTransferLimit'))
+          print('addrcond', collections.Counter(f['attributes']['addrcond'] for f in fa).most_common(10))
+          print('type_vul', collections.Counter(f['attributes']['type_vul'] for f in fa).most_common(15))
+          print('codetype streets', collections.Counter((f['attributes']['codetype'], f['attributes']['type_name']) for f in fs).most_common(15))
+          random.seed(1)
+          for f in random.sample(fa, 12): print(f['attributes'], f.get('geometry'))
+          for f in fa:
+              at = f['attributes']
+              if at['ukrnamef'] and ('Хрещатик' in at['ukrnamef'] or 'Бажана' in at['ukrnamef']) : print(at['ukrnamef'], at['type_vul'], at['addrnumb1'], at['full_addr_short'], at['addrcond'])
+          nogeo = sum(1 for f in fa if not f.get('geometry'))
+          print('no geometry', nogeo)
+          PY
