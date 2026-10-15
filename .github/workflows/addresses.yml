@@ -1,7 +1,8 @@
 name: Addresses → nearest station
 
 # Перераховує public/addresses.json: для кожного будинку Києва з адресою —
-# 3 найближчі станції метро за пішохідним маршрутом (дані OSM, Geofabrik).
+# 3 найближчі станції метро за пішохідним маршрутом. Адреси й вулиці — ГІС Києва,
+# пішохідна мережа — OSM (Geofabrik).
 # Запуск вручну (Actions → Addresses → Run workflow); результат комітиться
 # у гілку, з якої запущено.
 on:
@@ -58,8 +59,26 @@ jobs:
           osmium extract -p kyiv.geojson bbox.osm.pbf -o kyiv.osm.pbf
           ls -lh kyiv.osm.pbf
 
+      - name: Download city addresses and streets (Kyiv GIS)
+        run: |
+          UA='KyivMetroGO/1.0 (+https://github.com/4223843-create/KyivMetroGO)'
+          B='https://gisserver.kyivcity.gov.ua/mayno/rest/services/KYIV_API/%D0%90%D0%B4%D1%80%D0%B5%D1%81%D0%B8/FeatureServer'
+          curl -fsS -m 300 -A "$UA" -o city-addresses.json \
+            "$B/0/query?where=1%3D1&outFields=addrnumb1,addrcond,ukrnamef,type_vul,codetype,strcodeobj,district1&returnGeometry=true&outSR=4326&f=json"
+          curl -fsS -m 300 -A "$UA" -o city-streets.json \
+            "$B/1/query?where=1%3D1&outFields=strcodeobj,ukrnamef,codetype,districts&returnGeometry=true&outSR=4326&f=json"
+          python - <<'PY'
+          import json
+          for name, minimum in (('city-addresses.json', 30000), ('city-streets.json', 2000)):
+              d = json.load(open(name, encoding='utf-8'))
+              n = len(d.get('features', []))
+              print(name, n, 'exceeded' if d.get('exceededTransferLimit') else '')
+              if n < minimum or d.get('exceededTransferLimit'):
+                  raise SystemExit(f'{name}: неповні дані ({n})')
+          PY
+
       - name: Build addresses.json
-        run: python scripts/build-addresses.py kyiv.osm.pbf public/stations.json public/addresses.json
+        run: python scripts/build-addresses.py kyiv.osm.pbf public/stations.json city-addresses.json city-streets.json public/addresses.json
 
       - name: Size and samples
         run: |
@@ -69,13 +88,15 @@ jobs:
           import json
           d = json.load(open('public/addresses.json', encoding='utf-8'))
           ex = d['exits']
-          want = ['Хрещатик', 'Миколи Бажана', 'Січових Стрільців', 'Лаврська', 'Маршала Малиновського', 'Академіка Єфремова']
-          for name, houses in d['streets']:
+          want = ['Хрещатик', 'Миколи Бажана', 'Січових Стрільців', 'Лаврська', 'Саксаганського', 'Академіка Єфремова']
+          for name, district, houses, parts in d['streets']:
               if any(w in name for w in want):
-                  for h in houses.split('|')[:3]:
+                  print(f'{name} ({district}): ' + ' · '.join(
+                      f"{ex[int(p.split()[0])][0]} {int(p.split()[1])*10} м {' '.join(p.split()[2:])}" for p in parts.split('|') if p))
+                  for h in houses.split('|')[:2] if houses else []:
                       p = h.split(' ')
                       res = ', '.join(f"{ex[int(p[i])][0]} вих.{ex[int(p[i])][1]} {int(p[i+1])*10} м" for i in range(1, len(p), 2))
-                      print(f'{name}, {p[0]}: {res}')
+                      print(f'   {p[0]}: {res}')
           PY
 
       - name: Commit result

@@ -5385,3 +5385,11 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
 .search-item-text { text-align: left; }
 /* Назва станції не переноситься — скорочується підказка поруч */
 .search-item-text > span:first-child { flex-shrink: 0; white-space: nowrap; }
+.search-addr-district,
+.search-addr-note {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal);
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.search-addr-note { padding: 0 16px 4px; text-align: left; }
