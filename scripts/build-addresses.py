@@ -239,6 +239,9 @@ def add_osm_houses(streets, osm_addr):
     added = unmatched = 0
     examples = []
     for (street, house), (sx, sy, n) in osm_addr.items():
+        # «6 п.2», «17 під'їзд 3» — під'їзди, не окремі будинки
+        if re.search(r'п\.|під', house.lower()):
+            continue
         codes = by_key.get(name_key(street))
         if not codes:
             unmatched += 1
