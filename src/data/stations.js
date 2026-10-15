@@ -6,6 +6,7 @@ import { state, startupSlug } from '../core/state.js';
 import { bus }                from '../core/eventBus.js';
 import { traversePositions } from './positions.js';
 import { validateStationsData, isValidStationsData, stationsVersion } from './validateStations.js';
+import { buildExitSearchIndex } from './exitSearch.js';
 
 // ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
 // SW обробляє stations.json для веб/PWA (спершу локальна копія, мережа у фоні + postMessage).
@@ -194,20 +195,8 @@ export function hydrateStations(data) {
       ...aliases.flatMap(alias => alias.split(/[\s\u00a0\u202f-]+/)),
     ];
 
-    // ── Індекс підписів виходів (для пошуку за назвою вулиці) ──
-    const exitTokens = new Set();
-    (station.directions || []).forEach(dir => {
-      (dir.exits || []).forEach(ex => {
-        if (!ex.label) return;
-        ex.label
-          .toLowerCase()
-          .replace(/[„"«»"'.,!?]/g, '')
-          .split(/[\s\u00a0\u202f\u2009]+/)
-          .filter(w => w.length > 1)
-          .forEach(w => exitTokens.add(w));
-      });
-    });
-    station._exitIndex = [...exitTokens];
+    // ── Індекс виходів: підписи й вулиці (для пошуку, див. data/exitSearch.js) ──
+    station._exitSearch = buildExitSearchIndex(station);
 
     state.stationsData[station.slug] = station;
   });
