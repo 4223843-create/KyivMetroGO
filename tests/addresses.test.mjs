@@ -18,7 +18,9 @@ test('addresses.json посилається лише на наявні стан�
 test('будинки: номер і 1–3 пари «вихід, відстань»; частини вулиці — вихід, відстань, діапазон', () => {
   let houses = 0;
   const exitOk = (street, e) => assert.ok(addresses.exits[+e], `${street}: вихід ${e}`);
-  for (const [street, , rawHouses, rawParts] of addresses.streets) {
+  for (const [street, , rawHouses, rawParts, alias] of addresses.streets) {
+    assert.ok(!/\(|^(\S+) \1 /.test(street), `назва без дужок і повторів: ${street}`);
+    assert.ok(alias === undefined || typeof alias === 'string', `${street}: alias`);
     assert.ok(rawHouses || rawParts, `${street}: порожня вулиця`);
     for (const entry of rawHouses ? rawHouses.split('|') : []) {
       const p = entry.split(' ');

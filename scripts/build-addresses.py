@@ -277,6 +277,39 @@ def display_name(s, osm_names):
     return name
 
 
+PLACEHOLDER = re.compile(r'Про[еє]ктн\S*[\s-]*\d+', re.I)
+ABBR = {'вул': 'вулиця', 'пров': 'провулок', 'пр': 'провулок'}
+
+
+def _expand(name):
+    words = name.split()
+    if words and words[0].rstrip('.') in ABBR:
+        words[0] = ABBR[words[0].rstrip('.')]
+    return ' '.join(words)
+
+
+def clean_name(name):
+    """
+    Назви дачних вулиць у реєстрі ГІС: «вулиця Проектна 13141 (вулиця Дмитрівська)»
+    або навпаки «вулиця Берізоньки (Озерна 14)». Показуємо справжню назву,
+    другу лишаємо для пошуку. → (назва, інша назва або '')
+    """
+    words = name.split()
+    while len(words) > 1 and words[0] == words[1]:      # «вулиця вулиця …»
+        words.pop(0)
+    name = ' '.join(words)
+    m = re.match(r'^(\S+)\s+(.*?)\s*\((.+)\)$', name)
+    if not m:
+        return name, ''
+    kind, outer, inner = m.groups()
+    if not PLACEHOLDER.search(outer):
+        return f'{kind} {outer}', inner
+    inner = _expand(inner.split(',')[0].strip())
+    if inner.split()[0] not in TYPE_FIRST:
+        inner = f'{kind} {inner}'
+    return inner, outer
+
+
 def main(pbf, stations_path, addr_path, streets_path, out_path):
     t0 = time.time()
     h = Collector()
@@ -394,8 +427,12 @@ def main(pbf, stations_path, addr_path, streets_path, out_path):
                         best[j] = (d, e)
             for j, (d, e) in sorted(best.items(), key=lambda t: t[1][0])[:MAX_PARTS]:
                 parts.append(f'{e} {d}')
+        name, alias = clean_name(names[code])
+        if not houses and PLACEHOLDER.search(name):
+            continue        # «Проєктна 12929» без будинків: ніхто так не шукає
         if houses or parts:
-            out_streets.append([names[code], s['district'], '|'.join(houses), '|'.join(parts)])
+            row = [name, s['district'], '|'.join(houses), '|'.join(parts)]
+            out_streets.append(row + [alias] if alias else row)
 
     out_streets.sort(key=lambda r: (r[0], r[1]))
     out = {

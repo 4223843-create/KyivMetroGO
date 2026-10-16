@@ -34,10 +34,11 @@ function _load(onLoaded) {
       if (json?.schema !== 2 || !json.streets) return;
       const seen = new Set();
       const dupNames = new Set();
-      const streets = json.streets.map(([name, district, rawHouses, rawParts]) => {
+      // alias — інша назва з реєстру («Проєктна 13141» для «вулиця Дмитрівська»)
+      const streets = json.streets.map(([name, district, rawHouses, rawParts, alias = '']) => {
         if (seen.has(name)) dupNames.add(name);
         seen.add(name);
-        return { name, district, rawHouses, rawParts, tokens: searchTokens(name) };
+        return { name, district, rawHouses, rawParts, tokens: searchTokens(`${name} ${alias}`) };
       });
       _data = { exits: json.exits, streets, dupNames };
       onLoaded?.();
