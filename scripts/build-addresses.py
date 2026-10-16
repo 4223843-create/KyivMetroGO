@@ -231,11 +231,53 @@ def house_key(h):
     return re.sub(r'-(?=\D)', '', re.sub(r'\s', '', h.lower()))
 
 
+RENAME_MAX_M = 40          # будинок OSM із тим самим номером не далі за це — той самий будинок
+RENAME_MIN_SHARE = 0.6     # частка збігів, що мають іншу назву вулиці в OSM
+
+
+def detect_renames(streets, osm_addr):
+    """
+    Реєстр ГІС відстає з перейменуваннями (проспект Перемоги → Берестейський).
+    Якщо більшість будинків вулиці в OSM стоять на тому ж місці з тим самим
+    номером, але під іншою назвою вулиці — це нова назва: s['new_name'].
+    """
+    by_house = defaultdict(list)
+    for (street, house), (sx, sy, n) in osm_addr.items():
+        by_house[house_key(house)].append((street, sx / n, sy / n))
+    renamed = []
+    for s in streets.values():
+        own = name_key(s['name'], s['type'])
+        votes, names, total = defaultdict(int), {}, 0
+        for house, (x, y) in s['houses'].items():
+            near = {name_key(st): st for st, ox, oy in by_house.get(house_key(house), ())
+                    if math.hypot(ox - x, oy - y) <= RENAME_MAX_M}
+            if not near:
+                continue
+            total += 1
+            if own in near:
+                votes[own] += 1
+                continue
+            for k, st in near.items():
+                votes[k] += 1
+                names[k] = st
+        if total < 2 or not names:
+            continue
+        top = max(names, key=lambda k: votes[k])
+        if votes[top] >= RENAME_MIN_SHARE * total and votes[top] > votes.get(own, 0):
+            s['new_name'] = names[top]
+            renamed.append(f"{s['type']} {s['name']} → {names[top]} ({votes[top]}/{total})")
+    print(f'перейменовано за OSM: {len(renamed)}')
+    for line in renamed:
+        print('   ' + line)
+
+
 def add_osm_houses(streets, osm_addr):
     """Будинки з OSM, яких немає в міському реєстрі (вулиця має збігтися з міською)."""
     by_key = defaultdict(list)
     for code, s in streets.items():
         by_key[name_key(s['name'], s['type'])].append(code)
+        if s.get('new_name'):
+            by_key[name_key(s['new_name'])].append(code)
     added = unmatched = 0
     examples = []
     for (street, house), (sx, sy, n) in osm_addr.items():
@@ -269,7 +311,7 @@ TYPE_FIRST = {'вулиця', 'провулок', 'площа', 'проспек�
 def display_name(s, osm_names):
     """Назва, як її пишуть люди: з OSM («проспект Миколи Бажана»), інакше з ГІС."""
     kind, words = name_key(s['name'], s['type'])
-    name = osm_names.get((kind, words)) or f"{s['type']} {s['name']}".strip()
+    name = s.get('new_name') or osm_names.get((kind, words)) or f"{s['type']} {s['name']}".strip()
     # «Йорданська вулиця» → «вулиця Йорданська»: тип завжди спереду, як у більшості назв
     parts = name.split()
     if len(parts) > 1 and parts[-1] in TYPE_FIRST and parts[0] not in TYPE_FIRST:
@@ -335,6 +377,7 @@ def main(pbf, stations_path, addr_path, streets_path, out_path):
     print(f'виходів: {len(exits)}, прив\'язка: медіана {np.median(ex_d):.0f} м, макс {ex_d.max():.0f} м')
 
     streets = load_city(addr_path, streets_path)
+    detect_renames(streets, h.osm_addr)
     add_osm_houses(streets, h.osm_addr)
     n_houses = sum(len(s['houses']) for s in streets.values())
     print(f'ГІС: {len(streets)} вулиць, {n_houses} будинків')
@@ -428,6 +471,8 @@ def main(pbf, stations_path, addr_path, streets_path, out_path):
             for j, (d, e) in sorted(best.items(), key=lambda t: t[1][0])[:MAX_PARTS]:
                 parts.append(f'{e} {d}')
         name, alias = clean_name(names[code])
+        if s.get('new_name'):       # стара назва з реєстру — щоб її теж знаходило
+            alias = ' '.join(filter(None, [alias, f"{s['type']} {s['name']}".strip()]))
         if not houses and PLACEHOLDER.search(name):
             continue        # «Проєктна 12929» без будинків: ніхто так не шукає
         if houses or parts:
