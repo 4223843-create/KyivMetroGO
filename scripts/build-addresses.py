@@ -231,6 +231,7 @@ def house_key(h):
     return re.sub(r'-(?=\D)', '', re.sub(r'\s', '', h.lower()))
 
 
+OSM_HOUSE_MAX_M = 1000     # будинок з OSM далі за це від вулиці ГІС з тією ж назвою — інша вулиця
 RENAME_MAX_M = 40          # будинок OSM із тим самим номером не далі за це — той самий будинок
 RENAME_MIN_SHARE = 0.75    # частка збігів, що мають іншу назву вулиці в OSM (0.6 дає хибні: Лаврська)
 
@@ -278,6 +279,10 @@ def add_osm_houses(streets, osm_addr):
         by_key[name_key(s['name'], s['type'])].append(code)
         if s.get('new_name'):
             by_key[name_key(s['new_name'])].append(code)
+        # «вулиця Проектна 13141 (вулиця Дмитрівська)» → в OSM «вулиця Дмитрівська»
+        clean = clean_name(f"{s['type']} {s['name']}")[0]
+        if name_key(clean) != name_key(s['name'], s['type']):
+            by_key[name_key(clean)].append(code)
     added = unmatched = 0
     examples = []
     for (street, house), (sx, sy, n) in osm_addr.items():
@@ -290,9 +295,15 @@ def add_osm_houses(streets, osm_addr):
             continue
         x, y = sx / n, sy / n
         # Однакова назва в кількох районах — беремо вулицю, найближчу до будинку
-        code = codes[0] if len(codes) == 1 else min(codes, key=lambda c: min(
-            (math.hypot(px - x, py - y) for px, py in list(streets[c]['houses'].values()) + streets[c]['line']),
-            default=math.inf))
+        def dist(c):
+            return min((math.hypot(px - x, py - y)
+                        for px, py in list(streets[c]['houses'].values()) + streets[c]['line']),
+                       default=math.inf)
+        code = min(codes, key=dist)
+        # Вулиця з такою назвою, але в іншому кінці міста — не ця
+        if dist(code) > OSM_HOUSE_MAX_M:
+            unmatched += 1
+            continue
         s = streets[code]
         if any(house_key(h) == house_key(house) for h in s['houses']):
             continue
