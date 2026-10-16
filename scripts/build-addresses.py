@@ -232,7 +232,7 @@ def house_key(h):
 
 
 RENAME_MAX_M = 40          # будинок OSM із тим самим номером не далі за це — той самий будинок
-RENAME_MIN_SHARE = 0.6     # частка збігів, що мають іншу назву вулиці в OSM
+RENAME_MIN_SHARE = 0.75    # частка збігів, що мають іншу назву вулиці в OSM (0.6 дає хибні: Лаврська)
 
 
 def detect_renames(streets, osm_addr):
