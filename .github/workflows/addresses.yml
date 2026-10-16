@@ -89,7 +89,7 @@ jobs:
           d = json.load(open('public/addresses.json', encoding='utf-8'))
           ex = d['exits']
           want = ['Хрещатик', 'Миколи Бажана', 'Січових Стрільців', 'Лаврська', 'Саксаганського', 'Академіка Єфремова']
-          for name, district, houses, parts in d['streets']:
+          for name, district, houses, parts, *_ in d['streets']:
               if any(w in name for w in want):
                   print(f'{name} ({district}): ' + ' · '.join(
                       f"{ex[int(p.split()[0])][0]} {int(p.split()[1])*10} м {' '.join(p.split()[2:])}" for p in parts.split('|') if p))
