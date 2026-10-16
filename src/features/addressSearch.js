@@ -34,10 +34,11 @@ function _load(onLoaded) {
       if (json?.schema !== 2 || !json.streets) return;
       const seen = new Set();
       const dupNames = new Set();
-      const streets = json.streets.map(([name, district, rawHouses, rawParts]) => {
+      // alias — інша назва з реєстру («Проєктна 13141» для «вулиця Дмитрівська»)
+      const streets = json.streets.map(([name, district, rawHouses, rawParts, alias = '']) => {
         if (seen.has(name)) dupNames.add(name);
         seen.add(name);
-        return { name, district, rawHouses, rawParts, tokens: searchTokens(name) };
+        return { name, district, rawHouses, rawParts, tokens: searchTokens(`${name} ${alias}`) };
       });
       _data = { exits: json.exits, streets, dupNames };
       onLoaded?.();
@@ -148,11 +149,12 @@ function _houseResults(street, houseQuery, lineFilter) {
   }
   const key   = _normHouse(houseQuery);
   const exact = houses.filter(h => h.key === key);
-  if (exact.length) return exact.map(h => _houseBlock(street, h, lineFilter));
+  const found = list => Object.assign(list.map(h => _houseBlock(street, h, lineFilter)), { exact: true });
+  if (exact.length) return found(exact);
 
   // «5» → 5-А, 5-Б…; «24/» → 24/1…
   const variants = houses.filter(h => h.key.startsWith(key) && h.lead === _lead(key));
-  if (variants.length) return variants.map(h => _houseBlock(street, h, lineFilter));
+  if (variants.length) return found(variants);
 
   const lead = _lead(key);
   const near = lead ? _nearestHouse(houses, lead) : null;
@@ -190,11 +192,14 @@ export function addressResultsHtml(query, lineFilter, onLoaded) {
 
   let blocks = [];
   if (houseQuery) {
+    // Спершу вулиці, де будинок є («перемоги 37» → Берестейський, 37),
+    // потім ті, де показуємо сусідній будинок
+    const found = [], approx = [];
     for (const st of streets) {
-      blocks.push(..._houseResults(st, houseQuery, lineFilter).filter(Boolean));
-      if (blocks.length >= MAX_BLOCKS) break;
+      const res = _houseResults(st, houseQuery, lineFilter);
+      (res.exact ? found : approx).push(...res.filter(Boolean));
     }
-    blocks = blocks.slice(0, MAX_BLOCKS);
+    blocks = [...found, ...approx].slice(0, MAX_BLOCKS);
   } else if (streets.length <= MAX_BLOCKS) {
     blocks = streets.map(st => _streetBlock(st, lineFilter)).filter(Boolean);
   }
