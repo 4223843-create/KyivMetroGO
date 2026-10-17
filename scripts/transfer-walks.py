@@ -24,6 +24,7 @@ _spec.loader.exec_module(ba)
 xy = ba.xy
 
 SEARCH_M = 700
+ENTRANCE_M = 60         # вхід чи сходи — не далі за це від платформи
 
 
 def is_target(tags):
@@ -45,6 +46,7 @@ class Collector(ba.Collector):
     def __init__(self):
         super().__init__()
         self.targets = []           # (опис, [(x, y)], [osm id вузлів])
+        self.entrances = []         # (опис, (x, y), osm id вузла) — входи, турнікети, кінці сходів
 
     def _target(self, kind, obj, pts, refs):
         t = obj.tags
@@ -56,9 +58,18 @@ class Collector(ba.Collector):
         super().node(n)
         if is_target(n.tags):
             self._target('n', n, [xy(n.location.lon, n.location.lat)], [n.id])
+        t = n.tags
+        if 'entrance' in t or t.get('railway') == 'train_station_entrance' \
+                or t.get('barrier') in ('turnstile', 'full-height_turnstile') or 'door' in t:
+            desc = ' '.join(f'{k}={t[k]}' for k in ('entrance', 'railway', 'barrier', 'door', 'name', 'ref', 'level') if k in t)
+            self.entrances.append((f'n{n.id} {desc}', xy(n.location.lon, n.location.lat), n.id))
 
     def way(self, w):
         super().way(w)
+        if w.tags.get('highway') == 'steps':
+            nodes = [n for n in w.nodes if n.location.valid()]
+            for n in (nodes[0], nodes[-1]) if nodes else ():
+                self.entrances.append((f'сходи w{w.id} (кінець n{n.ref})', xy(n.lon, n.lat), n.ref))
         if is_target(w.tags):
             nodes = [n for n in w.nodes if n.location.valid()]
             if nodes:
@@ -136,6 +147,32 @@ def main(pbf, stations_path):
                                      'properties': {'station': st['name'], 'exit': names[ei],
                                                     'walk_m': round(float(walk)), 'target': desc},
                                      'geometry': {'type': 'LineString', 'coordinates': path[::-1]}})
+
+            # Входи / турнікети / кінці сходів біля платформ і станцій електрички чи фунікулера
+            def min_dist(a, b):
+                return np.min(np.hypot(a[:, None, 0] - b[None, :, 0], a[:, None, 1] - b[None, :, 1]))
+            plat = [np.array(pts) for _, pts, _ in h.targets if min_dist(np.array(pts), ex_pts) <= SEARCH_M]
+            if plat:
+                allp = np.vstack(plat)
+                found = []
+                for desc, p, ref in h.entrances:
+                    near = np.min(np.hypot(allp[:, 0] - p[0], allp[:, 1] - p[1]))
+                    if near > ENTRANCE_M:
+                        continue
+                    node = h.node_idx.get(ref)
+                    if node is not None and big[node]:
+                        walk, ei, snap = dist[:, node].min(), int(dist[:, node].argmin()), 0.0
+                    else:
+                        d_t, i_t = tree.query(p)
+                        v = main_ids[i_t]
+                        walk, ei, snap = dist[:, v].min() + d_t, int(dist[:, v].argmin()), d_t
+                    found.append((walk, names[ei], near, snap, desc, lonlat(p)))
+                print(f'   входи біля платформ (≤{ENTRANCE_M} м від платформи): {len(found)}')
+                for walk, ex, near, snap, desc, ll in sorted(found)[:12]:
+                    extra = '' if snap == 0 else f' · поза мережею {snap:.0f} м'
+                    print(f'     пішки {walk:6.0f} м · вихід {ex:>3} · до платформи {near:4.0f} м{extra} · '
+                          f'{ll[1]:.5f},{ll[0]:.5f} · {desc}')
+
     print('\nGEOJSON ' + json.dumps({'type': 'FeatureCollection', 'features': features}, ensure_ascii=False))
 
 
