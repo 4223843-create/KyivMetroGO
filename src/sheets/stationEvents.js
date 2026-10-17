@@ -135,6 +135,8 @@ function _showIconLabelToast(el, text) {
     transform: translateX(-50%);
     bottom: auto;
     z-index: 10000;
+    width: max-content;
+    max-width: calc(100vw - 32px);
   `;
   toast.textContent = text;
   document.body.appendChild(toast);
@@ -451,6 +453,14 @@ export function bindSheetGestures(sheetBody, getCtx) {
       const tapped = e.target.closest('.exit-route-chip, .exit-routes-icon') ?? routesGroup;
       const oneWay = tapped.dataset.onewayLabel;
       _showIconLabelToast(tapped, routesGroup.dataset.kindLabel + (oneWay ? `, ${oneWay}` : ''));
+      return;
+    }
+
+    // 1d'. Пересадка з підказкою (вокзал «Дарниця» → «Від Чернігівської трохи ближче»)
+    const noteRow = e.target.closest('.station-connection-row[data-note]');
+    if (noteRow) {
+      e.stopPropagation();
+      _showIconLabelToast(noteRow, noteRow.dataset.note);
       return;
     }
 
