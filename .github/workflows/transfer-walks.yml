@@ -8,6 +8,7 @@ on:
     branches: ["claude/**"]
     paths:
       - "scripts/transfer-walks.py"
+      - "scripts/hubs-near-metro.py"
       - ".github/workflows/transfer-walks.yml"
 
 jobs:
@@ -34,3 +35,6 @@ jobs:
 
       - name: Walking distances
         run: python scripts/transfer-walks.py kyiv.osm.pbf public/stations.json
+
+      - name: Railway stations and bus stations near metro
+        run: python scripts/hubs-near-metro.py kyiv.osm.pbf public/stations.json
