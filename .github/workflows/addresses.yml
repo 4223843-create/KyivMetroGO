@@ -78,10 +78,7 @@ jobs:
           PY
 
       - name: Build addresses.json
-        run: python scripts/build-addresses.py kyiv.osm.pbf public/stations.json city-addresses.json city-streets.json public/addresses.json same-names.txt
-
-      - name: Same-name streets in garden areas
-        run: cat same-names.txt
+        run: python scripts/build-addresses.py kyiv.osm.pbf public/stations.json city-addresses.json city-streets.json public/addresses.json
 
       - name: Size and samples
         run: |
