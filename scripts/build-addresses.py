@@ -156,6 +156,59 @@ class Collector(osmium.SimpleHandler):
             prev = i
 
 
+# Садові / дачні масиви в OSM: landuse=allotments або назва «СТ …», «садове товариство», «дачн…»
+GARDEN_NAME = re.compile(r'(^|\s)(с\s?т|сдт|сто|дт|кст)\b|садів|садов|дачн', re.I)
+
+
+class GardenAreas(osmium.SimpleHandler):
+    """Полігони садових товариств: [(назва, shapely-полігон)]."""
+    def __init__(self):
+        super().__init__()
+        self.polys = []
+
+    def area(self, a):
+        tags = a.tags
+        name = tags.get('name', '')
+        if tags.get('landuse') != 'allotments' and not (
+                tags.get('landuse') in ('residential', 'farmyard', 'orchard') and GARDEN_NAME.search(name)):
+            return
+        from shapely.geometry import Polygon
+        for outer in a.outer_rings():
+            try:
+                ring = [xy(n.lon, n.lat) for n in outer]
+                holes = [[xy(n.lon, n.lat) for n in inner] for inner in a.inner_rings(outer)]
+                poly = Polygon(ring, holes)
+                if poly.is_valid and poly.area > 0:
+                    self.polys.append((name, poly))
+            except Exception:       # битий полігон в OSM — пропускаємо
+                pass
+
+
+def garden_report(pbf, path, groups):
+    """Для вулиць з однаковою назвою — яка частка точок лежить у садових товариствах."""
+    from shapely.geometry import Point
+    from shapely.strtree import STRtree
+    g = GardenAreas()
+    g.apply_file(pbf, locations=True, idx='flex_mem')
+    tree = STRtree([p for _, p in g.polys])
+    lines = [f'садових полігонів в OSM: {len(g.polys)}']
+    for name in sorted(groups):
+        lines.append(name)
+        for district, n_houses, pts in groups[name]:
+            inside, gardens = 0, defaultdict(int)
+            for x, y in pts:
+                pt = Point(x, y)
+                hit = [i for i in tree.query(pt) if g.polys[i][1].covers(pt)]
+                if hit:
+                    inside += 1
+                    gardens[g.polys[hit[0]][0] or '(без назви)'] += 1
+            share = inside / len(pts) if pts else 0
+            top = max(gardens, key=gardens.get) if gardens else ''
+            lines.append(f'   {district or "?"}: будинків {n_houses}, у садових {share:.0%}' + (f' ({top})' if top else ''))
+    open(path, 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
+    print(f'звіт про однакові назви: {path}')
+
+
 def load_exits(stations_path):
     data = json.load(open(stations_path, encoding='utf-8'))
     exits = []                  # (slug, num, x, y)
@@ -363,7 +416,7 @@ def clean_name(name):
     return inner, outer
 
 
-def main(pbf, stations_path, addr_path, streets_path, out_path):
+def main(pbf, stations_path, addr_path, streets_path, out_path, report_path=None):
     t0 = time.time()
     h = Collector()
     h.apply_file(pbf, locations=True, idx='flex_mem')
@@ -491,6 +544,14 @@ def main(pbf, stations_path, addr_path, streets_path, out_path):
             out_streets.append(row + [alias] if alias else row)
 
     out_streets.sort(key=lambda r: (r[0], r[1]))
+
+    if report_path:
+        by_name = defaultdict(list)
+        for code in rows:
+            s = streets[code]
+            by_name[clean_name(names[code])[0]].append(
+                (s['district'], len(s['houses']), list(s['houses'].values()) + s['line'][::3]))
+        garden_report(pbf, report_path, {n: v for n, v in by_name.items() if len(v) > 1})
     out = {
         'schema': 2,
         'version': int(time.strftime('%Y%m%d')),
@@ -505,6 +566,6 @@ def main(pbf, stations_path, addr_path, streets_path, out_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 6:
+    if len(sys.argv) not in (6, 7):
         sys.exit(__doc__)
     main(*sys.argv[1:])
