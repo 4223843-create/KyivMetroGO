@@ -118,14 +118,15 @@ const HUB_ICON = { railway: '🚉', bus: '🚌' };
 /** Плашки однієї пересадки: назва, «виходи 5 і 6» (лише коли виходів кілька),
  *  відстань (округлена до 5 м). note — підказка на тап по рядку. */
 function connectionPills(label, conn) {
-  const pills = [label];
+  const pills = [['name', label]];
   const exits = conn?.exits ?? [];
   if (exits.length > 1) {
-    pills.push(`виходи&nbsp;${exits.slice(0, -1).join(', ')} і&nbsp;${exits.at(-1)}`);
+    pills.push(['exits', `виходи&nbsp;${exits.slice(0, -1).join(', ')} і&nbsp;${exits.at(-1)}`]);
   }
-  if (Number.isFinite(conn?.distance_m)) pills.push(fmtWalk(conn.distance_m));
+  if (Number.isFinite(conn?.distance_m)) pills.push(['dist', fmtWalk(conn.distance_m)]);
   const note = conn?.note ? ` data-note="${conn.note.replace(/"/g, '&quot;')}"` : '';
-  return `<div class="station-connection-row"${note}>${pills.map(t => `<span class="station-connection">${t}</span>`).join('')}</div>`;
+  const html = pills.map(([col, t]) => `<span class="station-connection station-connection-${col}">${t}</span>`).join('');
+  return `<div class="station-connection-row"${note}>${html}</div>`;
 }
 
 /** Плашки пересадок для шапки станції: кільцева електричка, фунікулер, вокзали, автостанції. */
