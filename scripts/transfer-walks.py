@@ -44,25 +44,29 @@ def is_target(tags):
 class Collector(ba.Collector):
     def __init__(self):
         super().__init__()
-        self.targets = []           # (опис, [(x, y)])
+        self.targets = []           # (опис, [(x, y)], [osm id вузлів])
 
-    def _target(self, kind, obj, pts):
+    def _target(self, kind, obj, pts, refs):
         t = obj.tags
-        desc = ' '.join(f'{k}={t[k]}' for k in ('name', 'railway', 'public_transport', 'station',
+        desc = ' '.join(f'{k}={t[k]}' for k in ('name', 'railway', 'public_transport', 'highway', 'station',
                                                   'train', 'funicular', 'layer', 'level') if k in t)
-        self.targets.append((f'{kind}{obj.id} {desc}', pts))
+        self.targets.append((f'{kind}{obj.id} {desc}', pts, refs))
 
     def node(self, n):
         super().node(n)
         if is_target(n.tags):
-            self._target('n', n, [xy(n.location.lon, n.location.lat)])
+            self._target('n', n, [xy(n.location.lon, n.location.lat)], [n.id])
 
     def way(self, w):
         super().way(w)
         if is_target(w.tags):
-            pts = [xy(n.lon, n.lat) for n in w.nodes if n.location.valid()]
-            if pts:
-                self._target('w', w, pts)
+            nodes = [n for n in w.nodes if n.location.valid()]
+            if nodes:
+                self._target('w', w, [xy(n.lon, n.lat) for n in nodes], [n.ref for n in nodes])
+
+
+def lonlat(p):
+    return [round(p[0] / ba.M_PER_DEG_LON + 30.5, 6), round(p[1] / ba.M_PER_DEG_LAT + ba.LAT0, 6)]
 
 
 def main(pbf, stations_path):
@@ -72,10 +76,12 @@ def main(pbf, stations_path):
     node_xy = np.array(h.node_xy)
     base = coo_matrix((h.edges_w, (h.edges_u, h.edges_v)), shape=(n_nodes, n_nodes)).tocsr()
     _, labels = connected_components(base, directed=False)
-    main_ids = np.flatnonzero(labels == np.bincount(labels).argmax())
+    big = labels == np.bincount(labels).argmax()
+    main_ids = np.flatnonzero(big)
     tree = cKDTree(node_xy[main_ids])
     print(f'граф: {n_nodes} вузлів, головна мережа {len(main_ids)}; цілей у OSM: {len(h.targets)}')
 
+    features = []
     data = json.load(open(stations_path, encoding='utf-8-sig'))
     for st in data['stations']:
         conns = {k: v for k, v in (st.get('connections') or {}).items() if k in ('city_train', 'funicular')}
@@ -91,25 +97,46 @@ def main(pbf, stations_path):
             if not use:
                 print('   немає координат виходів')
                 continue
+            names = list(use)
             ex_pts = np.array(list(use.values()))
             d_ex, i_ex = tree.query(ex_pts)
             src = main_ids[i_ex]
-            dist = dijkstra(base, directed=False, indices=src)          # (виходи, вузли)
+            print('   прив\'язка виходів до мережі: ' + ', '.join(f'{n} — {d:.0f} м' for n, d in zip(names, d_ex)))
+            dist, pred = dijkstra(base, directed=False, indices=src, return_predecessors=True)
             dist = dist + d_ex[:, None]
 
             rows = []
-            for desc, pts in h.targets:
+            for desc, pts, refs in h.targets:
                 p = np.array(pts)
                 straight = np.min(np.hypot(p[:, None, 0] - ex_pts[None, :, 0], p[:, None, 1] - ex_pts[None, :, 1]))
                 if straight > SEARCH_M:
                     continue
-                d_t, i_t = tree.query(p)
-                walk = dist[:, main_ids[i_t]] + d_t[None, :]             # (виходи, точки цілі)
-                k = np.unravel_index(np.argmin(walk), walk.shape)
-                rows.append((walk[k], straight, list(use)[k[0]], d_t[k[1]], desc))
-            for walk, straight, ex, snap, desc in sorted(rows)[:8]:
-                print(f'   пішки {walk:6.0f} м · пряма {straight:5.0f} м · вихід {ex:>3} · '
-                      f'прив\'язка цілі {snap:4.0f} м · {desc}')
+                # Справжній вхід на платформу: її вузол, спільний із пішохідною мережею
+                acc = [h.node_idx[r] for r in refs if r in h.node_idx and big[h.node_idx[r]]]
+                if acc:
+                    walk = dist[:, acc]
+                    k = np.unravel_index(np.argmin(walk), walk.shape)
+                    rows.append((walk[k], straight, k[0], acc[k[1]], 0.0, desc))
+                else:
+                    d_t, i_t = tree.query(p)
+                    walk = dist[:, main_ids[i_t]] + d_t[None, :]
+                    k = np.unravel_index(np.argmin(walk), walk.shape)
+                    rows.append((walk[k], straight, k[0], main_ids[i_t[k[1]]], d_t[k[1]], desc))
+            rows.sort(key=lambda r: (r[4] > 0, r[0]))       # спершу з'єднані з мережею
+            for n, (walk, straight, ei, node, snap, desc) in enumerate(rows[:8]):
+                how = "з'єднана з тротуаром" if snap == 0 else f'НЕ з\'єднана, прив\'язка {snap:.0f} м'
+                print(f'   пішки {walk:6.0f} м · пряма {straight:5.0f} м · вихід {names[ei]:>3} · {how} · {desc}')
+                if n == 0:
+                    path, v = [], node
+                    while v >= 0:
+                        path.append(lonlat(node_xy[v]))
+                        v = pred[ei, v]
+                    path.append(lonlat(ex_pts[ei]))
+                    features.append({'type': 'Feature',
+                                     'properties': {'station': st['name'], 'exit': names[ei],
+                                                    'walk_m': round(float(walk)), 'target': desc},
+                                     'geometry': {'type': 'LineString', 'coordinates': path[::-1]}})
+    print('\nGEOJSON ' + json.dumps({'type': 'FeatureCollection', 'features': features}, ensure_ascii=False))
 
 
 if __name__ == '__main__':
