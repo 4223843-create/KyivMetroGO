@@ -156,6 +156,65 @@ class Collector(osmium.SimpleHandler):
             prev = i
 
 
+# Садові / дачні масиви в OSM: landuse=allotments або назва «СТ …», «садове товариство», «дачн…»
+GARDEN_MIN_SHARE = 0.5     # частка точок вулиці всередині садового товариства
+GARDEN_NAME = re.compile(r'(^|\s)(с\s?т|сдт|сто|дт|кст)\b|садів|садов|дачн', re.I)
+
+
+class GardenAreas(osmium.SimpleHandler):
+    """Полігони садових товариств: [(назва, shapely-полігон)]."""
+    def __init__(self):
+        super().__init__()
+        self.polys = []
+
+    def area(self, a):
+        tags = a.tags
+        name = tags.get('name', '')
+        if tags.get('landuse') != 'allotments' and not (
+                tags.get('landuse') in ('residential', 'farmyard', 'orchard') and GARDEN_NAME.search(name)):
+            return
+        from shapely.geometry import Polygon
+        for outer in a.outer_rings():
+            try:
+                ring = [xy(n.lon, n.lat) for n in outer]
+                holes = [[xy(n.lon, n.lat) for n in inner] for inner in a.inner_rings(outer)]
+                poly = Polygon(ring, holes)
+                if poly.is_valid and poly.area > 0:
+                    self.polys.append((name, poly))
+            except Exception:       # битий полігон в OSM — пропускаємо
+                pass
+
+
+def garden_names(pbf, streets):
+    """Код вулиці → назва садового товариства, якщо більша частина вулиці в ньому."""
+    from shapely.geometry import Point
+    from shapely.strtree import STRtree
+    g = GardenAreas()
+    g.apply_file(pbf, locations=True, idx='flex_mem')
+    tree = STRtree([p for _, p in g.polys])
+    out = {}
+    for code, s in streets.items():
+        pts = list(s['houses'].values()) + s['line'][::3]
+        hits = defaultdict(int)
+        for x, y in pts:
+            pt = Point(x, y)
+            for i in tree.query(pt):
+                if g.polys[i][1].covers(pt):
+                    hits[g.polys[i][0]] += 1
+                    break
+        if pts and sum(hits.values()) >= GARDEN_MIN_SHARE * len(pts):
+            out[code] = garden_label(max(hits, key=hits.get))
+    print(f'садових полігонів в OSM: {len(g.polys)}; вулиць у садових товариствах: {len(out)}')
+    return out
+
+
+def garden_label(name):
+    """«Садове товариство "Весна"» → «СТ «Весна»»; без назви → «садове товариство»."""
+    name = re.sub(r'(?i)^садове товариство\s*', 'СТ ', name.strip()).strip()
+    name = re.sub(r'"([^"]+)"', r'«\1»', name)
+    return name or 'садове товариство'
+
+
 def load_exits(stations_path):
     data = json.load(open(stations_path, encoding='utf-8'))
     exits = []                  # (slug, num, x, y)
@@ -245,6 +304,8 @@ def detect_renames(streets, osm_addr):
     by_house = defaultdict(list)
     for (street, house), (sx, sy, n) in osm_addr.items():
         by_house[house_key(house)].append((street, sx / n, sy / n))
+    existing = {(s['district'], name_key(s['name'], s['type'])) for s in streets.values()}
+    candidates = defaultdict(list)
     renamed = []
     for s in streets.values():
         own = name_key(s['name'], s['type'])
@@ -264,9 +325,16 @@ def detect_renames(streets, osm_addr):
         if total < 2 or not names:
             continue
         top = max(names, key=lambda k: votes[k])
+        # Вулиця з новою назвою вже є в цьому районі — це кутові будинки сусідньої вулиці
+        if (s['district'], top) in existing:
+            continue
         if votes[top] >= RENAME_MIN_SHARE * total and votes[top] > votes.get(own, 0):
-            s['new_name'] = names[top]
-            renamed.append(f"{s['type']} {s['name']} → {names[top]} ({votes[top]}/{total})")
+            candidates[(s['district'], top)].append((votes[top], s, names[top], total))
+    # Кілька вулиць району «перейменовано» в одну — певна лише та, де найбільше збігів
+    for group in candidates.values():
+        n, s, new_name, total = max(group, key=lambda t: t[0])
+        s['new_name'] = new_name
+        renamed.append(f"{s['type']} {s['name']} → {new_name} ({n}/{total})")
     print(f'перейменовано за OSM: {len(renamed)}')
     for line in renamed:
         print('   ' + line)
@@ -443,6 +511,7 @@ def main(pbf, stations_path, addr_path, streets_path, out_path):
             rows[code].append((house, i))
 
     names = {code: display_name(s, h.osm_names) for code, s in streets.items()}
+    gardens = garden_names(pbf, streets)
     osm_hits = sum(1 for c, s in streets.items() if names[c] != f"{s['type']} {s['name']}".strip())
     print(f'назви з OSM: {osm_hits} з {len(streets)}')
 
@@ -487,10 +556,13 @@ def main(pbf, stations_path, addr_path, streets_path, out_path):
         if not houses and PLACEHOLDER.search(name):
             continue        # «Проєктна 12929» без будинків: ніхто так не шукає
         if houses or parts:
-            row = [name, s['district'], '|'.join(houses), '|'.join(parts)]
+            # Однакові назви розрізняємо підписом: садове товариство або район
+            area = f"{gardens[code]} · {s['district']}" if code in gardens and s['district'] else gardens.get(code, s['district'])
+            row = [name, area, '|'.join(houses), '|'.join(parts)]
             out_streets.append(row + [alias] if alias else row)
 
     out_streets.sort(key=lambda r: (r[0], r[1]))
+
     out = {
         'schema': 2,
         'version': int(time.strftime('%Y%m%d')),

@@ -34,7 +34,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
-          python -m pip install -q osmium scipy numpy
+          python -m pip install -q osmium scipy numpy shapely
 
       - name: Download OSM (Ukraine) and cut out Kyiv
         run: |
