@@ -62,7 +62,9 @@ class Collector(ba.Collector):
         if kind:
             self._hub(kind, n, [xy(n.location.lon, n.location.lat)], [n.id])
         if 'entrance' in n.tags or n.tags.get('railway') == 'train_station_entrance':
-            self.entrances.append((xy(n.location.lon, n.location.lat), n.id))
+            t = n.tags
+            self.entrances.append((xy(n.location.lon, n.location.lat), n.id,
+                                   ' '.join(f'{k}={t[k]}' for k in ('entrance', 'railway', 'name', 'ref') if k in t)))
 
     def way(self, w):
         super().way(w)
@@ -169,6 +171,27 @@ def far_report(h, base, tree, main_ids, big, access_nodes, data):
         print(f'\n=== далекий: {desc} · {lat:.5f},{lon:.5f} · через {acc[0][2]}')
         for name, (w, num) in best.items():
             print(f'   {name}, вихід {num} — пішки {w:.0f} м')
+
+    # Входи вокзалу «Дарниця»: пішки від кожної з трьох найближчих станцій метро
+    centre = np.array(xy(30.6489, 50.4311))
+    wanted = ('Дарниця', 'Харківська', 'Чернігівська')
+    print('\n=== входи біля вокзалу «Дарниця» (≤400 м)')
+    for p, ref, desc in h.entrances:
+        if np.hypot(*(np.array(p) - centre)) > 400:
+            continue
+        v = h.node_idx.get(ref)
+        snap = 0.0
+        if v is None or not big[v]:
+            d_t, i_t = tree.query(p)
+            v, snap = main_ids[i_t], d_t
+        dist = dijkstra(base, directed=False, indices=v) + snap
+        res = []
+        for name in wanted:
+            ks = [k for k, e in enumerate(exits) if e[0] == name]
+            k = min(ks, key=lambda k: dist[ex_node[k]] + d_ex[k])
+            res.append(f'{name} вих.{exits[k][1]} {dist[ex_node[k]] + d_ex[k]:.0f} м')
+        lon, lat = np.array(p) / [ba.M_PER_DEG_LON, ba.M_PER_DEG_LAT] + [30.5, ba.LAT0]
+        print(f'   n{ref} {desc} · {lat:.5f},{lon:.5f} · ' + ' · '.join(res))
 
 
 if __name__ == '__main__':
