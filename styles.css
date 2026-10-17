@@ -5072,10 +5072,16 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 /* Пересадки на кільцеву електричку / фунікулер — над напрямками */
 .station-connections {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0 16px 12px;
+}
+.station-connection-row {
+  display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  margin: 0 16px 12px;
 }
 .station-connection {
   font-size: var(--fs-sm);
