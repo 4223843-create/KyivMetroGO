@@ -305,6 +305,7 @@ def detect_renames(streets, osm_addr):
     for (street, house), (sx, sy, n) in osm_addr.items():
         by_house[house_key(house)].append((street, sx / n, sy / n))
     existing = {(s['district'], name_key(s['name'], s['type'])) for s in streets.values()}
+    candidates = defaultdict(list)
     renamed = []
     for s in streets.values():
         own = name_key(s['name'], s['type'])
@@ -328,8 +329,12 @@ def detect_renames(streets, osm_addr):
         if (s['district'], top) in existing:
             continue
         if votes[top] >= RENAME_MIN_SHARE * total and votes[top] > votes.get(own, 0):
-            s['new_name'] = names[top]
-            renamed.append(f"{s['type']} {s['name']} → {names[top]} ({votes[top]}/{total})")
+            candidates[(s['district'], top)].append((votes[top], s, names[top], total))
+    # Кілька вулиць району «перейменовано» в одну — певна лише та, де найбільше збігів
+    for group in candidates.values():
+        n, s, new_name, total = max(group, key=lambda t: t[0])
+        s['new_name'] = new_name
+        renamed.append(f"{s['type']} {s['name']} → {new_name} ({n}/{total})")
     print(f'перейменовано за OSM: {len(renamed)}')
     for line in renamed:
         print('   ' + line)
