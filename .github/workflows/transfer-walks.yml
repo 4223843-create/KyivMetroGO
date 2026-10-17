@@ -1,0 +1,36 @@
+name: Transfer walks
+
+# Пішохідна відстань від виходів метро до кільцевої електрички й фунікулера
+# по мережі OSM. Лише друкує таблицю для перевірки, нічого не комітить.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "scripts/transfer-walks.py"
+      - ".github/workflows/transfer-walks.yml"
+
+jobs:
+  walks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+          python -m pip install -q osmium scipy numpy
+
+      - name: Download OSM and cut out Kyiv
+        run: |
+          curl -fsSL -A 'KyivMetroGO/1.0 (+https://github.com/4223843-create/KyivMetroGO)' \
+            -o ukraine.osm.pbf https://download.geofabrik.de/europe/ukraine-latest.osm.pbf
+          osmium extract -b 30.20,50.30,30.85,50.60 --strategy=smart ukraine.osm.pbf -o kyiv.osm.pbf
+
+      - name: Walking distances
+        run: python scripts/transfer-walks.py kyiv.osm.pbf public/stations.json
