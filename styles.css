@@ -5070,20 +5070,21 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 /* Пересадки на кільцеву електричку / фунікулер — над напрямками */
+/* Стовпчики: назва · виходи · відстань — щоб у кількох пересадок
+   (Чернігівська) назви й відстані стояли одна під одною */
 .station-connections {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  justify-content: center;
+  row-gap: 6px;
   margin: 0 16px 12px;
 }
-.station-connection-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-}
+.station-connection-row { display: contents; }
+.station-connection-name  { grid-column: 1; }
+.station-connection-exits { grid-column: 2; margin-left: 6px; }
+.station-connection-dist  { grid-column: 3; margin-left: 6px; }
 .station-connection {
+  text-align: center;
   font-size: var(--fs-sm);
   color: var(--text-muted);
   padding: 4px 10px;

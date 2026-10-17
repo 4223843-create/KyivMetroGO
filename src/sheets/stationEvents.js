@@ -460,7 +460,7 @@ export function bindSheetGestures(sheetBody, getCtx) {
     const noteRow = e.target.closest('.station-connection-row[data-note]');
     if (noteRow) {
       e.stopPropagation();
-      _showIconLabelToast(noteRow, noteRow.dataset.note);
+      _showIconLabelToast(noteRow.firstElementChild, noteRow.dataset.note);
       return;
     }
 
