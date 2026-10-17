@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261017",
+  "version": "20261018",
   "line_intervals": {
     "green": [
       {
@@ -2024,7 +2024,7 @@
             "5",
             "6"
           ],
-          "distance_m": 5
+          "distance_m": 90
         },
         "ground": {
           "1": {
@@ -2694,7 +2694,7 @@
           "exits": [
             "1"
           ],
-          "distance_m": 346
+          "distance_m": 400
         },
         "ground": {
           "3": {
@@ -3260,7 +3260,7 @@
           "exits": [
             "1"
           ],
-          "distance_m": 86
+          "distance_m": 225
         },
         "ground": {
           "1": {
@@ -4455,7 +4455,7 @@
           "exits": [
             "2"
           ],
-          "distance_m": 335
+          "distance_m": 410
         },
         "ground": {
           "1": {
@@ -6606,7 +6606,7 @@
           "exits": [
             "1"
           ],
-          "distance_m": 29
+          "distance_m": 55
         },
         "ground": {
           "1": {
@@ -7460,7 +7460,7 @@
           "exits": [
             "1"
           ],
-          "distance_m": 25
+          "distance_m": 50
         },
         "ground": {
           "1": {
@@ -10276,7 +10276,7 @@
           "exits": [
             "1"
           ],
-          "distance_m": 67
+          "distance_m": 165
         },
         "ground": {
           "1": {
@@ -11938,7 +11938,7 @@
           "exits": [
             "1"
           ],
-          "distance_m": 36
+          "distance_m": 50
         },
         "ground": {
           "1": {
