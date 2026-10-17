@@ -107,6 +107,14 @@ export function renderUnlinkedStops(s) {
     : '';
 }
 
+/** 213 → «215&nbsp;м», 4130 → «4,1&nbsp;км». */
+function fmtWalk(m) {
+  if (m >= 1000) return `${(Math.round(m / 100) / 10).toString().replace('.', ',')}&nbsp;км`;
+  return `${Math.max(5, Math.round(m / 5) * 5)}&nbsp;м`;
+}
+
+const HUB_ICON = { railway: '🚉', bus: '🚌' };
+
 /** Плашки однієї пересадки: назва, «виходи 5 і 6» (лише коли виходів кілька),
  *  відстань (округлена до 5 м). */
 function connectionPills(label, conn) {
@@ -115,19 +123,18 @@ function connectionPills(label, conn) {
   if (exits.length > 1) {
     pills.push(`виходи&nbsp;${exits.slice(0, -1).join(', ')} і&nbsp;${exits.at(-1)}`);
   }
-  if (Number.isFinite(conn?.distance_m)) {
-    pills.push(`${Math.max(5, Math.round(conn.distance_m / 5) * 5)}&nbsp;м`);
-  }
+  if (Number.isFinite(conn?.distance_m)) pills.push(fmtWalk(conn.distance_m));
   return `<div class="station-connection-row">${pills.map(t => `<span class="station-connection">${t}</span>`).join('')}</div>`;
 }
 
-/** Плашки пересадок на кільцеву електричку / фунікулер для шапки станції. */
+/** Плашки пересадок для шапки станції: кільцева електричка, фунікулер, вокзали, автостанції. */
 export function renderStationConnections(s) {
   const c = s.connections;
   if (!c) return '';
   const items = [];
   if (c.city_train) items.push(connectionPills('🚆 Кільцева електричка', c.city_train));
   if (c.funicular)  items.push(connectionPills('🚡 Фунікулер', c.funicular));
+  for (const hub of c.hubs ?? []) items.push(connectionPills(`${HUB_ICON[hub.kind] ?? ''} ${hub.name}`, hub));
   return items.length ? `<div class="station-connections">${items.join('')}</div>` : '';
 }
 
