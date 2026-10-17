@@ -507,7 +507,15 @@ export function renderDirections(s, color) {
     return mainHtml + longHtml;
   }
 
-  return s.directions.map((dir, dirIdx) => {
+  // Кінцева — окремий блок «кінцева» одразу під назвою станції, як «вихід праворуч»
+  const isTerminal = s.directions.some(d => d.from.trim().toLowerCase() === 'кінцева');
+  const terminalBlock = isTerminal
+    ? `<div class="direction-block direction-exit-right" style="margin-bottom:10px;">
+        <div class="direction-label" style="margin:0;">кінцева</div>
+      </div>`
+    : '';
+
+  return terminalBlock + s.directions.map((dir, dirIdx) => {
     const fromLower = dir.from.trim().toLowerCase();
 
     const exitsHtml = dir.exits?.map(exit => {
@@ -525,7 +533,12 @@ export function renderDirections(s, color) {
     </div>`;
     }
 
-    if (fromLower === 'вихід праворуч' || fromLower === 'кінцева') {
+    // Кінцева без from_slug — заголовок уже вгорі, тут лише позиції
+    if (fromLower === 'кінцева') {
+      return exitsHtml ? `<div class="direction-block">${exitsHtml}</div>` : '';
+    }
+
+    if (fromLower === 'вихід праворуч') {
       // Відступ знизу, якщо під заголовком є позиції — свої чи наступного напрямку
       const hasBelow = dir.exits?.length || dirIdx < s.directions.length - 1;
       const headerBlock = `<div class="direction-block direction-exit-right" style="${hasBelow ? 'margin-bottom:10px;' : ''}">
