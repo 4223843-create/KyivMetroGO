@@ -25,8 +25,16 @@ SEARCH_M = 800
 ENTRANCE_M = 25          # вхід (entrance=*) не далі за це від контуру — вхід цього об'єкта
 
 
+# Далекі вокзали, для яких шукаємо найближчу станцію метро без обмеження радіуса
+FAR_NAMES = ('дарниц',)
+
+
 def hub_kind(tags):
     name = (tags.get('name') or '').lower()
+    if any(f in name for f in FAR_NAMES) and (tags.get('railway') in ('station', 'halt')
+                                             or tags.get('building') == 'train_station'
+                                             or tags.get('public_transport') == 'station'):
+        return 'вокзал'
     if tags.get('amenity') == 'bus_station':
         return 'автостанція'
     if 'вокзал' in name and (tags.get('building') or tags.get('railway') or tags.get('public_transport')):
@@ -130,6 +138,37 @@ def main(pbf, stations_path):
             how = acc[0][2]
             top = ', '.join(f'вихід {ex} — {w:.0f} м' for w, ex in best[:3])
             print(f'   {kind} · пряма {straight:4.0f} м · через {how} · {top} · {desc}')
+    far_report(h, base, tree, main_ids, big, access_nodes, data)
+
+
+def far_report(h, base, tree, main_ids, big, access_nodes, data):
+    """Найближчі виходи метро до далеких вокзалів (FAR_NAMES)."""
+    exits = []
+    for st in data['stations']:
+        for item in (st.get('exits_catalog') or {}).values():
+            for e in item.get('exit_numbers') or []:
+                if e.get('coordinates'):
+                    exits.append((st['name'], str(e['num']), xy(*e['coordinates'])))
+    ex_pts = np.array([e[2] for e in exits])
+    d_ex, i_ex = tree.query(ex_pts)
+    ex_node = main_ids[i_ex]
+    for kind, desc, pts, refs in h.hubs:
+        if not any(f in desc.lower() for f in FAR_NAMES):
+            continue
+        acc = access_nodes(pts, refs)
+        dist = dijkstra(base, directed=False, indices=[v for v, _, _ in acc], min_only=True)
+        walk = dist[ex_node] + d_ex + acc[0][1]
+        best = {}
+        for k in np.argsort(walk):
+            name, num, _ = exits[k]
+            if name not in best and np.isfinite(walk[k]):
+                best[name] = (walk[k], num)
+            if len(best) >= 4:
+                break
+        lon, lat = (np.mean(np.array(pts), axis=0) / [ba.M_PER_DEG_LON, ba.M_PER_DEG_LAT]) + [30.5, ba.LAT0]
+        print(f'\n=== далекий: {desc} · {lat:.5f},{lon:.5f} · через {acc[0][2]}')
+        for name, (w, num) in best.items():
+            print(f'   {name}, вихід {num} — пішки {w:.0f} м')
 
 
 if __name__ == '__main__':
