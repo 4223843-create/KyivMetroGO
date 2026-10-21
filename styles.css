@@ -5415,19 +5415,13 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
   position: absolute;
   inset: 0;
   pointer-events: auto;
+  background: var(--overlay);
 }
 .tour-spot {
   position: absolute;
-  border-radius: 12px;
-  box-shadow: 0 0 0 200vmax var(--overlay);
-  transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
+  pointer-events: none;
 }
-.tour-spot.is-empty {
-  left: 50% !important;
-  top: 50% !important;
-  width: 0 !important;
-  height: 0 !important;
-}
+.tour-spot.is-empty { display: none; }
 .tour-bubble {
   position: absolute;
   left: 16px;
@@ -5479,7 +5473,6 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
 .tour-back { margin-left: auto; }
 .tour-back, .tour-next { min-width: 88px; padding: 0 14px 2px; }
 .tour-next { margin-left: -4px; } /* «Назад» і «Далі» ближче одна до одної */
-html.reduce-motion .tour-spot,
 html.reduce-motion .tour-bubble { transition: none; }
 .tour-layer [hidden] { display: none !important; }
 
@@ -5608,3 +5601,4 @@ html.reduce-motion .tour-bubble { transition: none; }
 .onboarding-hint-actions .hint-icon-wrap { top: 13px; }
 .onboarding-hint-actions .exit-replace-btns { flex-basis: 100%; }
 .onboarding-hint-actions .exit-replace-btn { height: 34px; font-size: var(--fs-sm); }
+.about-tour-btn { display: block; margin: 4px auto 12px; }

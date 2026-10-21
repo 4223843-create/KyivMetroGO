@@ -292,6 +292,10 @@ export function openAboutSheet() {
     aboutSheet.appendChild(template.content.cloneNode(true));
     document.body.appendChild(aboutSheet);
     setupDevModeTapCounter(aboutSheet);
+    // Тур з початку: шторка закривається, тур відкриває все сам
+    aboutSheet.querySelector('#aboutTourBtn')?.addEventListener('click', () => {
+      hideSheet(aboutSheet, { onClosed: () => import('../features/tour.js').then(m => m.startTour()) });
+    });
   }
 
   // ── Скидаємо стан підказок при кожному відкритті ──
