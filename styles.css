@@ -5459,7 +5459,7 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 10px;
+  margin: 10px 0 0 -24px; /* на всю ширину підказки, без відступу під значок */
 }
 .tour-skip {
   background: none;
@@ -5470,9 +5470,9 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
   opacity: 0.8;
   white-space: nowrap;
 }
-.tour-back { margin-left: auto; }
 .tour-back, .tour-next { min-width: 88px; padding: 0 14px 2px; }
-.tour-next { margin-left: -4px; } /* «Назад» і «Далі» ближче одна до одної */
+.tour-actions .is-invisible { visibility: hidden; }
+.tour-layer.is-after .tour-bubble { opacity: 0; visibility: hidden; }
 html.reduce-motion .tour-bubble { transition: none; }
 .tour-layer [hidden] { display: none !important; }
 
