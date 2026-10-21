@@ -5474,8 +5474,11 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
   color: var(--text-muted);
   font-size: var(--fs-sm);
   opacity: 0.8;
+  white-space: nowrap;
 }
-.tour-next { margin-left: auto; }
+.tour-back { margin-left: auto; }
+.tour-back, .tour-next { min-width: 88px; padding: 0 14px 2px; }
+.tour-next { margin-left: -4px; } /* «Назад» і «Далі» ближче одна до одної */
 html.reduce-motion .tour-spot,
 html.reduce-motion .tour-bubble { transition: none; }
 .tour-layer [hidden] { display: none !important; }
