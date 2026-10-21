@@ -23,12 +23,12 @@ import { isCheckinMode }         from '../domain/checkin.js';
 import { showToast }             from '../ui/toast.js';
 import { openFavSheet }          from './favorites/index.js';
 import { openSearchSheet }       from './search.js';
-import { openSettingsSheet }     from './settings.js';
 import { openAboutSheet }        from '../sheets/aboutSheet.js';
 
 const PAD          = 6;    // поле навколо підсвіченого елемента, px
 const NEXT_DELAY   = 900;  // пауза після дії, щоб людина побачила результат, мс
 const START_DELAY  = 700;  // після заставки
+const AFTER_DELAY  = 3000; // скільки підсвічене розгорнуте після дії, мс
 
 // Станції, які пропонуємо натиснути на карті (перша видима).
 const MAP_STATIONS = ['B.Kontraktova_ploshcha', 'R.Teatralna', 'G.Zoloti_vorota', 'B.Poshtova_ploshcha', 'B.Olimpiiska'];
@@ -76,23 +76,18 @@ function _numberedTarget() {
   }) || targets[0] || null;
 }
 
-/** Перший рядок картки: попередня станція, назва виходу, вагон і двері. */
-function _firstRowParts() {
-  const pills = _card('.fav-tap-target');
-  if (!pills) return null;
-  const row = pills.closest('.position-row');
-  let exit = row?.previousElementSibling;
-  while (exit && !exit.classList.contains('exit-label') && !exit.classList.contains('direction-label')) exit = exit.previousElementSibling;
-  const dir = pills.closest('.direction-block')?.querySelector('.direction-label');
-  return [dir, exit?.classList.contains('exit-label') ? exit : null].filter(Boolean).map(_textRect).concat(pills);
+/** Перші вагон і двері в кожному напрямку руху. */
+function _firstPillsPerDirection() {
+  if (!isOpen('stationSheet')) return null;
+  return [...$('sheetBody').querySelectorAll('.direction-block, .long-transfer-block')]
+    .map(b => b.querySelector('.fav-tap-target')).filter(Boolean);
 }
 
-/** Рамка навколо самого тексту, а не всього рядка на ширину картки. */
-function _textRect(el) {
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  return range.getBoundingClientRect();
-}
+// Розгорнуте після дії — підсвічується кілька секунд, щоб людина його роздивилась
+const AFTER_TARGETS = {
+  exitNumbers: () => _card('.pos-numbered-exits.panel-open'),
+  clock:       () => _card('#stationClockPanel.panel-open'),
+};
 
 const CARD_TARGETS = {
   exitFav:     () => _card('.fav-tap-target'),
@@ -107,12 +102,14 @@ const CARD_TARGETS = {
 // wait      — 'tap' (натиск на ціль), 'hint' (useHint з тим самим id),
 //             'station' (відкрилась картка), 'next' (кнопка «Далі»)
 // lost()    — людина вийшла з потрібного стану (закрила картку чи меню):
-//             повертаємось на back кроків назад
+//             повертаємось на крок lostTo
+// restore() — відкриває шторку чи меню кроку, коли на нього прийшли кнопкою
+// after()   — що підсвітити кілька секунд після дії (розгорнута панель)
 
 function _mapStep() {
   const slug = _pickMapStation();
   return {
-    id: 'map', wait: 'station',
+    id: 'map', wait: 'station', slug,
     text: 'Натисніть на&nbsp;станцію, на&nbsp;якій плануєте виходити',
     target: () => _unionRect(_zoneEls(slug)),
     enter: () => { if (getOpenSheet() || dropMenuOpen()) closeAllSheets(true); },
@@ -128,12 +125,13 @@ function _cardSteps(station) {
   return [
     { ...card, id: 'nearest', wait: 'next',
       text: 'Ці вагон і&nbsp;двері найближчі до&nbsp;виходу з&nbsp;метро',
-      target: _firstRowParts },
+      target: _firstPillsPerDirection },
     ...tourHints(station)
       .filter(h => h.id !== 'checkin' && !_doneHints.has(h.id))
       .map(h => ({ ...card, id: h.id, wait: 'hint', hint: h.id,
         text: () => h.text(_lineColor()),
-        target: CARD_TARGETS[h.id] })),
+        target: CARD_TARGETS[h.id],
+        after: AFTER_TARGETS[h.id] })),
   ];
 }
 
@@ -142,12 +140,15 @@ const _sheetRect   = id => isOpen(id) ? $(id) : null;
 // «Назад» на крок, якому потрібна відкрита шторка чи меню
 const _openMenu    = () => { _closeSheets(); if (!dropMenuOpen()) $('menuBtn')?.click(); };
 
+// «Вибране» в текстах — капітеллю, як у решті застосунку
+const _sc = word => `<span style="font-variant:small-caps;letter-spacing:0.04em">${word}</span>`;
+
 const REST_STEPS = [
   { id: 'favBtn', wait: 'tap', enter: _closeSheets,
-    text: 'Для&nbsp;швидкого доступу додавайте станції та&nbsp;окремі виходи до&nbsp;Вибраного. Натисніть, щоб&nbsp;відкрити його',
+    text: `Для&nbsp;швидкого доступу додавайте станції та&nbsp;окремі виходи до&nbsp;${_sc('Вибраного')}. Натисніть, щоб&nbsp;відкрити його`,
     target: () => $('favListBtn') },
   { id: 'favInfo', wait: 'next', lost: () => !isOpen('favSheet'), restore: openFavSheet,
-    text: 'Станцію додають серцем у&nbsp;картці, а&nbsp;вихід&nbsp;— подвійним дотиком до&nbsp;вагона й&nbsp;дверей. У&nbsp;налаштуваннях можна зробити так, щоб&nbsp;Вибране відкривалося одразу при&nbsp;запуску',
+    text: `Станцію додають серцем у&nbsp;картці, а&nbsp;вихід&nbsp;— подвійним дотиком до&nbsp;вагона й&nbsp;дверей. У&nbsp;налаштуваннях можна зробити так, щоб&nbsp;${_sc('Вибране')} відкривалося при&nbsp;запуску`,
     target: () => _sheetRect('favSheet') },
 
   { id: 'searchBtn', wait: 'tap', enter: _closeSheets,
@@ -158,18 +159,8 @@ const REST_STEPS = [
     text: 'Вкажіть адресу, щоб&nbsp;дізнатися, яка станція найближча. Тут також можна шукати станції за&nbsp;назвою',
     target: () => _sheetRect('searchSheet') },
 
-  { id: 'menuSettings', wait: 'tap', enter: _closeSheets,
-    text: 'Натисніть, щоб&nbsp;відкрити меню',
-    target: () => $('menuBtn') },
-  { id: 'settingsItem', wait: 'tap', lost: () => !dropMenuOpen(), lostTo: 'menuSettings', restore: _openMenu,
-    text: 'Натисніть «Налаштування»',
-    target: () => dropMenuOpen() ? $('settingsItem') : null },
-  { id: 'settingsInfo', wait: 'next', lost: () => !isOpen('settingsSheet'), restore: openSettingsSheet,
-    text: 'Тут оновлення даних, тема, доступність, Check&#8209;in і&nbsp;режим редагування',
-    target: () => _sheetRect('settingsSheet') },
-
   { id: 'menuAbout', wait: 'tap', enter: _closeSheets,
-    text: 'Ще раз відкрийте меню',
+    text: 'Натисніть, щоб&nbsp;відкрити меню',
     target: () => $('menuBtn') },
   { id: 'aboutItem', wait: 'tap', lost: () => !dropMenuOpen(), lostTo: 'menuAbout', restore: _openMenu,
     text: 'Натисніть «Про застосунок»',
@@ -212,7 +203,7 @@ export function maybeStartTour() {
   setTimeout(startTour, START_DELAY);
 }
 
-/** @param {string} [fromId] — почати з кроку (режим розробника): 'favBtn', 'searchBtn', 'menuSettings', 'menuAbout' */
+/** @param {string} [fromId] — почати з кроку (режим розробника): 'favBtn', 'searchBtn', 'menuAbout' */
 export function startTour(fromId) {
   if (_steps) return;
   _doneHints = new Set();
@@ -225,7 +216,8 @@ export function startTour(fromId) {
     bus.on('station:open', _onStationOpen),
     bus.on('hint:used', ({ id }) => {
       _doneHints.add(id);
-      if (_cur()?.hint === id) _advanceLater();
+      const step = _cur();
+      if (step?.hint === id) _advanceLater(step.after ? AFTER_DELAY : NEXT_DELAY);
     }),
   ];
   document.addEventListener('click', _onDocClick, true);
@@ -267,6 +259,17 @@ function _onDocClick(e) {
   if (step?.wait !== 'tap' || _waiting) return;
   const t = step.target();
   if (t instanceof Element && t.contains(e.target)) _advanceLater(350);
+}
+
+/** «Далі»: наступний крок без дії — тур сам відкриває те, що треба. */
+function _next() {
+  const step = _cur();
+  if (_waiting) return;
+  if (step.last) { endTour('done'); closeAllSheets(true); return; }
+  if (step.wait === 'station') { bus.emit('station:open', { slug: step.slug }); return; }
+  clearTimeout(_timer);
+  _go(_idx + 1);
+  _cur()?.restore?.();
 }
 
 function _advanceLater(delay = NEXT_DELAY) {
@@ -313,11 +316,10 @@ function _enter() {
   const color  = lineTextColor(LINE_COLOR[state.stationsData?.[state.currentStationSlug]?.line] || '');
   bubble.querySelector('.tour-text').innerHTML = text;
   bubble.querySelector('.tour-icon').style.color = step.hint ? color : '';
-  const next = bubble.querySelector('.tour-next');
-  next.hidden = step.wait !== 'next';
-  next.textContent = step.last ? 'Готово' : 'Далі';
-  bubble.querySelector('.tour-skip').hidden = !!step.last;
-  bubble.querySelector('.tour-back').hidden = _idx === 0;
+  bubble.querySelector('.tour-next').textContent = step.last ? 'Готово' : 'Далі';
+  // Невидимі, але займають місце — кнопки не стрибають між кроками
+  bubble.querySelector('.tour-skip').classList.toggle('is-invisible', !!step.last);
+  bubble.querySelector('.tour-back').classList.toggle('is-invisible', _idx === 0);
   bubble.classList.remove('is-shown');
   _placed = false;
 }
@@ -334,9 +336,9 @@ function _buildLayer() {
       `<span class="tour-icon">${Icons.info}</span>` +
       '<div class="tour-text"></div>' +
       '<div class="tour-actions">' +
+        '<button type="button" class="tour-back confirm-main-btn confirm-btn-neutral">Назад</button>' +
         '<button type="button" class="tour-skip">Пропустити тур</button>' +
-        '<button type="button" class="tour-back confirm-main-btn confirm-btn-neutral" hidden>Назад</button>' +
-        '<button type="button" class="tour-next confirm-main-btn confirm-btn-save" hidden>Далі</button>' +
+        '<button type="button" class="tour-next confirm-main-btn confirm-btn-save">Далі</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(_layer);
@@ -351,11 +353,7 @@ function _buildLayer() {
     showToast('Тур можна пройти знову в\u00a0меню «Про застосунок»');
   });
   _layer.querySelector('.tour-back').addEventListener('click', _back);
-  _layer.querySelector('.tour-next').addEventListener('click', () => {
-    const step = _cur();
-    if (step.last) { endTour('done'); closeAllSheets(true); return; }
-    _go(_idx + 1);
-  });
+  _layer.querySelector('.tour-next').addEventListener('click', _next);
 }
 
 let _placed = false;
@@ -376,8 +374,11 @@ function _loop() {
   }
 
   if (step.center) { _renderCenter(); return; }
-  // Ціль — елемент, прямокутник або кілька елементів (кожен підсвічується окремо)
-  const t = step.target();
+  // Ціль — елемент, прямокутник або кілька елементів (кожен підсвічується окремо).
+  // Після дії з after() — розгорнуте, без підказки поверх нього.
+  const after = _waiting && step.after?.();
+  _layer.classList.toggle('is-after', !!after);
+  const t = after || step.target();
   const rects = (Array.isArray(t) ? t : [t])
     .map(x => x instanceof Element ? x.getBoundingClientRect() : x)
     .filter(r => r && (r.width || r.height));
