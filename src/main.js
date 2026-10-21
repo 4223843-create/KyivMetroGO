@@ -11,7 +11,7 @@ import { updateFavDock, openFavSheet }    from './features/favorites/index.js';
 import { updateCheckinDock }              from './features/checkin/index.js';
 import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
-import { updateDevMenuButtonVisibility }  from './features/devHooks.js';
+import { updateDevMenuButtonVisibility, runEmulationStartup } from './features/devHooks.js';
 import { maybeStartTour }                 from './features/tour.js';
 
 // Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
@@ -66,6 +66,7 @@ async function bootstrap() {
     await configureEdgeToEdge();
     
     await reloadStationsData();
+    await runEmulationStartup();
 
     updateCheckinDock();
     updateFavDock();

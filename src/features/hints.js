@@ -68,6 +68,7 @@ function _isDone(hint) {
 }
 
 function _markDone(id) {
+  if (_forced === id) _forced = null;
   const done = _doneSet();
   if (done.has(id)) return;
   done.add(id);
@@ -82,8 +83,27 @@ let _shown = null; // { id, slug }
 let _paused = false;
 export function setHintsPaused(on) { _paused = on; }
 
+// Режим розробника: показати цю підказку, навіть якщо її вже використали
+let _forced = null;
+export function forceHint(id) { _forced = id; _shown = null; }
+
+/** Чи має підказка сенс для станції (для емуляції — знайти потрібну станцію). */
+export function hintApplies(id, station) {
+  return !!HINTS.find(h => h.id === id)?.applies(station);
+}
+
+/** Емуляція: усі підказки використані або всі знову невикористані. */
+export function setAllHintsDone(done) {
+  if (done) Storage.set(STORAGE_KEYS.HINTS_DONE, JSON.stringify(HINTS.map(h => h.id)));
+  else Storage.remove(STORAGE_KEYS.HINTS_DONE);
+  _shown = null;
+}
+
 function _pick(station) {
-  if (!station || _paused || getPref('hideInfoBlocks')) return null;
+  if (!station || _paused) return null;
+  const forced = _forced && HINTS.find(h => h.id === _forced);
+  if (forced?.applies(station)) return forced;
+  if (getPref('hideInfoBlocks')) return null;
   if (_shown?.slug === station.slug) {
     const same = HINTS.find(h => h.id === _shown.id);
     if (same && same.applies(station) && !_isDone(same)) return same;

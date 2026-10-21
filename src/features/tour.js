@@ -154,9 +154,9 @@ let _offs      = [];
 
 export const isTourActive = () => !!_steps;
 
-/** Перший запуск: ще нічого не збережено на пристрої. */
+/** Перший запуск: ще нічого не збережено на пристрої (ключі режиму розробника не рахуємо). */
 function _isFirstLaunch() {
-  return !Object.values(STORAGE_KEYS).some(k => Storage.get(k) != null);
+  return !Object.values(STORAGE_KEYS).some(k => !k.startsWith('metro_dev_') && Storage.get(k) != null);
 }
 
 /** Викликається з main.js після запуску. Існуючим користувачам тур не показуємо. */
@@ -166,10 +166,12 @@ export function maybeStartTour() {
   setTimeout(startTour, START_DELAY);
 }
 
-export function startTour() {
+/** @param {string} [fromId] — почати з кроку (режим розробника): 'favBtn', 'searchBtn', 'menuSettings', 'menuAbout' */
+export function startTour(fromId) {
   if (_steps) return;
   _doneHints = new Set();
-  _steps = [_mapStep(), ...REST_STEPS];
+  const from = REST_STEPS.findIndex(s => s.id === fromId);
+  _steps = from >= 0 ? REST_STEPS.slice(from) : [_mapStep(), ...REST_STEPS];
   _idx = 0;
   setHintsPaused(true);
   _buildLayer();
