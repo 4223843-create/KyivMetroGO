@@ -12,6 +12,7 @@ import { updateCheckinDock }              from './features/checkin/index.js';
 import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
 import { updateDevMenuButtonVisibility }  from './features/devHooks.js';
+import { maybeStartTour }                 from './features/tour.js';
 
 // Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
 import './map/mapGestures.js';
@@ -78,6 +79,7 @@ async function bootstrap() {
     else if (getPref('startOnFav')) openFavSheet();
 
     if (action) window.history.replaceState({}, document.title, window.location.pathname);
+    else maybeStartTour();
 
   } catch (err) {
     console.error('[startup] bootstrap failed', err);

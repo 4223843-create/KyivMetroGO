@@ -646,6 +646,11 @@ export function openDevMenuSheet() {
       hideSheet(sheet);
     });
 
+    // Ознайомчий тур — як при першому запуску
+    sheet.querySelector('#devTourBtn')?.addEventListener('click', () => {
+      hideSheet(sheet, { onClosed: () => import('../features/tour.js').then(m => m.startTour()) });
+    });
+
     // Перемальовуємо нотатки/верифікацію, якщо синхронізація щось підтягнула
     bus.on('devmenu:refresh', () => { if (sheet.classList.contains('sheet-open')) _renderAll(sheet); });
     bus.on('station:refresh', () => { if (sheet.classList.contains('sheet-open')) _renderAll(sheet); });

@@ -78,8 +78,12 @@ function _markDone(id) {
 // а не перескочити на наступну без анімації.
 let _shown = null; // { id, slug }
 
+// Під час ознайомчого туру ті самі підказки показує тур, а не картка.
+let _paused = false;
+export function setHintsPaused(on) { _paused = on; }
+
 function _pick(station) {
-  if (!station || getPref('hideInfoBlocks')) return null;
+  if (!station || _paused || getPref('hideInfoBlocks')) return null;
   if (_shown?.slug === station.slug) {
     const same = HINTS.find(h => h.id === _shown.id);
     if (same && same.applies(station) && !_isDone(same)) return same;
@@ -121,10 +125,20 @@ function _showNext(station) {
  */
 export function useHint(id, station = state.stationsData?.[state.currentStationSlug]) {
   _markDone(id);
+  bus.emit('hint:used', { id });
   const el = document.getElementById('stationHint');
   if (!el || el.dataset.hint !== id) return;
   _shown = null;
   dismissHintWithDoors(el, () => _showNext(station));
+}
+
+/**
+ * Підказки, що мають сенс для станції, — для ознайомчого туру.
+ * Тур показує їх незалежно від того, чи їх уже використали.
+ * @returns {{ id: string, text: (color: string) => string }[]}
+ */
+export function tourHints(station) {
+  return station ? HINTS.filter(h => h.applies(station)).map(({ id, text }) => ({ id, text })) : [];
 }
 
 // ── Змахнути підказку вбік = використати її ──
