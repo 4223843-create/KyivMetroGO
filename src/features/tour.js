@@ -313,9 +313,7 @@ function _enter() {
   step.enter?.();
   const bubble = _layer.querySelector('.tour-bubble');
   const text   = typeof step.text === 'function' ? step.text() : step.text;
-  const color  = lineTextColor(LINE_COLOR[state.stationsData?.[state.currentStationSlug]?.line] || '');
   bubble.querySelector('.tour-text').innerHTML = text;
-  bubble.querySelector('.tour-icon').style.color = step.hint ? color : '';
   bubble.querySelector('.tour-next').textContent = step.last ? 'Готово' : 'Далі';
   // Невидимі, але займають місце — кнопки не стрибають між кроками
   bubble.querySelector('.tour-skip').classList.toggle('is-invisible', !!step.last);
@@ -333,7 +331,6 @@ function _buildLayer() {
     '<div class="tour-blocker"></div>' +
     '<div class="tour-spot"></div>' +
     '<div class="tour-bubble" role="dialog" aria-live="polite" aria-label="Ознайомчий тур">' +
-      `<span class="tour-icon">${Icons.info}</span>` +
       '<div class="tour-text"></div>' +
       '<div class="tour-actions">' +
         '<button type="button" class="tour-back confirm-main-btn confirm-btn-neutral">Назад</button>' +
