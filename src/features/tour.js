@@ -5,8 +5,9 @@
 // пошук → налаштування → «Про застосунок». Тур можна пропустити, а з меню
 // розробника — запустити знову.
 //
-// Затемнення — тінь навколо «вікна» (.tour-spot). Дотики поза вікном ловить
-// .tour-blocker з дірою (clip-path), тож натиснути можна лише підсвічене.
+// Затемнення — .tour-blocker з дірками (clip-path) на місці підсвічених
+// елементів; він же ловить дотики поза ними, тож натиснути можна лише підсвічене.
+// .tour-spot — прозорі рамки над дірками (позначають ціль, нічого не малюють).
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
@@ -19,6 +20,7 @@ import { closeAllSheets }        from '../sheets/sheetsManager.js';
 import { findPosition }          from '../data/positions.js';
 import { tourHints, setHintsPaused } from './hints.js';
 import { isCheckinMode }         from '../domain/checkin.js';
+import { showToast }             from '../ui/toast.js';
 import { openFavSheet }          from './favorites/index.js';
 import { openSearchSheet }       from './search.js';
 import { openSettingsSheet }     from './settings.js';
@@ -74,6 +76,24 @@ function _numberedTarget() {
   }) || targets[0] || null;
 }
 
+/** Перший рядок картки: попередня станція, назва виходу, вагон і двері. */
+function _firstRowParts() {
+  const pills = _card('.fav-tap-target');
+  if (!pills) return null;
+  const row = pills.closest('.position-row');
+  let exit = row?.previousElementSibling;
+  while (exit && !exit.classList.contains('exit-label') && !exit.classList.contains('direction-label')) exit = exit.previousElementSibling;
+  const dir = pills.closest('.direction-block')?.querySelector('.direction-label');
+  return [dir, exit?.classList.contains('exit-label') ? exit : null].filter(Boolean).map(_textRect).concat(pills);
+}
+
+/** Рамка навколо самого тексту, а не всього рядка на ширину картки. */
+function _textRect(el) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return range.getBoundingClientRect();
+}
+
 const CARD_TARGETS = {
   exitFav:     () => _card('.fav-tap-target'),
   exitNumbers: _numberedTarget,
@@ -107,8 +127,8 @@ function _cardSteps(station) {
   // Спершу — що показує картка, далі підказки, які чекають на дію
   return [
     { ...card, id: 'nearest', wait: 'next',
-      text: 'Ці вагон і&nbsp;двері&nbsp;— найближчі до&nbsp;виходу з&nbsp;метро',
-      target: CARD_TARGETS.exitFav },
+      text: 'Ці вагон і&nbsp;двері найближчі до&nbsp;виходу з&nbsp;метро',
+      target: _firstRowParts },
     ...tourHints(station)
       .filter(h => h.id !== 'checkin' && !_doneHints.has(h.id))
       .map(h => ({ ...card, id: h.id, wait: 'hint', hint: h.id,
@@ -326,7 +346,10 @@ function _buildLayer() {
   ['click', 'pointerdown', 'touchstart', 'mousedown'].forEach(type =>
     blocker.addEventListener(type, e => { e.stopPropagation(); if (type === 'click') e.preventDefault(); }));
 
-  _layer.querySelector('.tour-skip').addEventListener('click', () => endTour('skipped'));
+  _layer.querySelector('.tour-skip').addEventListener('click', () => {
+    endTour('skipped');
+    showToast('Тур можна пройти знову в\u00a0меню «Про застосунок»');
+  });
   _layer.querySelector('.tour-back').addEventListener('click', _back);
   _layer.querySelector('.tour-next').addEventListener('click', () => {
     const step = _cur();
@@ -353,15 +376,31 @@ function _loop() {
   }
 
   if (step.center) { _renderCenter(); return; }
+  // Ціль — елемент, прямокутник або кілька елементів (кожен підсвічується окремо)
   const t = step.target();
-  const r = t instanceof Element ? t.getBoundingClientRect() : t;
-  _render(r && (r.width || r.height) ? r : null);
+  const rects = (Array.isArray(t) ? t : [t])
+    .map(x => x instanceof Element ? x.getBoundingClientRect() : x)
+    .filter(r => r && (r.width || r.height));
+  _render(rects.length ? rects : null);
+}
+
+/** Потрібна кількість вікон підсвічування (зайві прибираються). */
+function _spots(n) {
+  let spots = [..._layer.querySelectorAll('.tour-spot')];
+  while (spots.length < n) {
+    const s = document.createElement('div');
+    s.className = 'tour-spot';
+    spots.at(-1).after(s);
+    spots.push(s);
+  }
+  spots.slice(n).forEach(s => s.remove());
+  return spots.slice(0, n);
 }
 
 /** Крок без цілі: усе затемнене, підказка посередині. */
 function _renderCenter() {
   if (_placed) return;
-  _layer.querySelector('.tour-spot').classList.add('is-empty');
+  _spots(1)[0].classList.add('is-empty');
   _layer.querySelector('.tour-blocker').style.clipPath = '';
   const bubble = _layer.querySelector('.tour-bubble');
   bubble.style.top = `${Math.max(16, (window.innerHeight - bubble.offsetHeight) / 2)}px`;
@@ -370,13 +409,21 @@ function _renderCenter() {
   _lastKey = '';
 }
 
-function _render(r) {
-  const spot    = _layer.querySelector('.tour-spot');
+const RADIUS = 12;
+function _roundRect(x1, y1, x2, y2) {
+  const r = Math.min(RADIUS, (x2 - x1) / 2, (y2 - y1) / 2);
+  return `M${x1 + r} ${y1}H${x2 - r}A${r} ${r} 0 0 1 ${x2} ${y1 + r}V${y2 - r}A${r} ${r} 0 0 1 ${x2 - r} ${y2}` +
+         `H${x1 + r}A${r} ${r} 0 0 1 ${x1} ${y2 - r}V${y1 + r}A${r} ${r} 0 0 1 ${x1 + r} ${y1}Z`;
+}
+
+function _render(rects) {
+  const spots   = _spots(rects?.length || 1);
+  const spot    = spots[0];
   const blocker = _layer.querySelector('.tour-blocker');
   const bubble  = _layer.querySelector('.tour-bubble');
   const vw = window.innerWidth, vh = window.innerHeight;
 
-  if (!r) {
+  if (!rects) {
     // Ціль ще не з'явилась (шторка відкривається) — просто затемнюємо все
     spot.classList.add('is-empty');
     blocker.style.clipPath = '';
@@ -385,16 +432,23 @@ function _render(r) {
     return;
   }
 
-  const x1 = Math.max(0, r.left - PAD),  y1 = Math.max(0, r.top - PAD);
-  const x2 = Math.min(vw, r.right + PAD), y2 = Math.min(vh, r.bottom + PAD);
-  const key = [x1, y1, x2, y2].map(Math.round).join(',');
+  const boxes = rects.map(r => [
+    Math.max(0, r.left - PAD), Math.max(0, r.top - PAD),
+    Math.min(vw, r.right + PAD), Math.min(vh, r.bottom + PAD),
+  ]);
+  const key = boxes.flat().map(Math.round).join(',');
   if (key === _lastKey && _placed) return;
   _lastKey = key;
 
-  spot.classList.remove('is-empty');
-  Object.assign(spot.style, { left: `${x1}px`, top: `${y1}px`, width: `${x2 - x1}px`, height: `${y2 - y1}px` });
-  blocker.style.clipPath =
-    `polygon(evenodd, 0 0, ${vw}px 0, ${vw}px ${vh}px, 0 ${vh}px, 0 0, ${x1}px ${y1}px, ${x2}px ${y1}px, ${x2}px ${y2}px, ${x1}px ${y2}px, ${x1}px ${y1}px)`;
+  // Кожен елемент — окрема дірка з заокругленими кутами
+  let holes = '';
+  boxes.forEach(([x1, y1, x2, y2], i) => {
+    spots[i].classList.remove('is-empty');
+    Object.assign(spots[i].style, { left: `${x1}px`, top: `${y1}px`, width: `${x2 - x1}px`, height: `${y2 - y1}px` });
+    holes += _roundRect(x1, y1, x2, y2);
+  });
+  blocker.style.clipPath = `path(evenodd, "M0 0H${vw}V${vh}H0Z${holes}")`;
+  const y1 = Math.min(...boxes.map(b => b[1])), y2 = Math.max(...boxes.map(b => b[3]));
 
   // Підказка — під ціллю, якщо там є місце, інакше над нею, інакше поверх угорі
   const bh = bubble.offsetHeight, gap = 14;
