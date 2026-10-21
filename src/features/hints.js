@@ -63,6 +63,10 @@ function _doneSet() {
   }
 }
 
+/** Підказки поза карткою станції (напр. у Вибраному) — той самий облік використаних. */
+export const isHintDone   = id => _doneSet().has(id);
+export const markHintDone = id => _markDone(id);
+
 function _isDone(hint) {
   return _doneSet().has(hint.id) || !!hint.used?.();
 }
@@ -168,7 +172,7 @@ const SWIPE_SPEED    = 0.5;  // px/мс — швидкий змах спраць
 let _drag = null;
 
 function _onPointerDown(e) {
-  const el = e.target.closest('#stationHint');
+  const el = e.target.closest('.onboarding-hint[data-hint]');
   if (!el || (e.pointerType === 'mouse' && e.button !== 0)) return;
   _drag = { el, id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: e.timeStamp, dx: 0, active: false };
 }
@@ -200,6 +204,11 @@ function _onPointerUp(e) {
   const far   = Math.abs(dx) > el.offsetWidth * SWIPE_DISTANCE;
   if (e.type === 'pointerup' && (far || speed > SWIPE_SPEED)) _flyAway(el, Math.sign(dx));
   else { el.style.transform = ''; el.style.opacity = ''; }
+}
+
+/** Підказка відлітає вбік і більше не показується (як після змаху). */
+export function flyAwayHint(el, dir = 1) {
+  if (el) _flyAway(el, dir);
 }
 
 function _flyAway(el, dir) {

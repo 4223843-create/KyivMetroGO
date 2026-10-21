@@ -169,6 +169,10 @@ async function _favStreak() {
   Storage.set(K.FAV_ONLY_STREAK, '4');  // наступне відкриття — п'яте
   Storage.remove(K.START_ON_FAV);
   Storage.remove(K.HIDE_INFO_BLOCKS);
+  try { // підказку могли вже змахнути — показуємо знову
+    const done = JSON.parse(Storage.get(K.HINTS_DONE) || '[]').filter(id => id !== 'favOnly');
+    Storage.set(K.HINTS_DONE, JSON.stringify(done));
+  } catch { Storage.remove(K.HINTS_DONE); }
   _renderBanner();
   const { openFavSheet } = await import('./favorites/index.js');
   openFavSheet();
