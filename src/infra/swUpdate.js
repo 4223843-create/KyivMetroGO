@@ -1,6 +1,6 @@
 // ══ TOAST «НОВА ВЕРСІЯ ДОСТУПНА» ══
 
-function showUpdateToast() {
+export function showUpdateToast() {
   if (document.getElementById('swUpdateToast')) return;
 
   const toast = document.createElement('div');

@@ -4,6 +4,7 @@ import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { setupDevModeTapCounter } from '../features/devHooks.js';
 import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { showToast }             from '../ui/toast.js';
+import { addBetaSignup, addDonation, supportNotices } from '../domain/support.js';
 
 // Форма Formspree, куди приходять записи на ранній доступ до Android.
 const BETA_FORM_URL = 'https://formspree.io/f/mgopobnd';
@@ -204,9 +205,10 @@ function bindBottomLoader(aboutSheet) {
           signal:  controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        input.value       = '';
-        input.placeholder = 'збережено';
-        input.disabled    = true;
+        // Можна подати ще одну адресу — поле лишається доступним
+        input.value = '';
+        addBetaSignup(`${val}@gmail.com`);
+        renderSupportNotices(aboutSheet);
         startSalute('Дякуємо!', 'Напишемо');
       } catch {
         showToast('Не вдалося надіслати. Спробуйте пізніше.');
@@ -217,7 +219,64 @@ function bindBottomLoader(aboutSheet) {
       }
     };
   }
-  if (monoBtn) monoBtn.addEventListener('click', () => startSalute('Дякуємо', 'за підтримку!'));
+  if (monoBtn) monoBtn.addEventListener('click', () => {
+    startSalute('Дякуємо', 'за підтримку!');
+    _donatePending = true;
+  });
+  _bindDonateAsk(aboutSheet);
+}
+
+// ══ СУМА ДОНАТУ ══
+// Monobank не повідомляє застосунку про оплату. Коли людина повертається з банки,
+// пропонуємо (необовʼязково) вказати суму — тоді в картці зʼявиться сповіщення.
+let _donatePending = false;
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !_donatePending) return;
+  const sheet = document.getElementById('aboutSheet');
+  if (sheet?.classList.contains('sheet-open')) showDonateAsk();
+});
+
+/** Показує поле суми під карткою підтримки (і для емуляції в режимі розробника). */
+export function showDonateAsk() {
+  _donatePending = false;
+  const ask = document.getElementById('donateAsk');
+  if (!ask) return;
+  // Салют закриває картку — прибираємо, щоб поле було видно
+  const salute = document.getElementById('supportLoaderWrap');
+  if (salute) { salute.style.opacity = '0'; salute.style.display = 'none'; }
+  ask.hidden = false;
+  setTimeout(() => ask.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function _bindDonateAsk(aboutSheet) {
+  const ask   = aboutSheet.querySelector('#donateAsk');
+  const input = aboutSheet.querySelector('#donateAmount');
+  if (!ask || !input) return;
+  const close = () => { ask.hidden = true; input.value = ''; input.blur(); };
+  aboutSheet.querySelector('#donateAskCancel')?.addEventListener('click', close);
+  input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, '').slice(0, 6); });
+  ask.addEventListener('submit', e => {
+    e.preventDefault();
+    const amount = parseInt(input.value, 10);
+    if (!(amount > 0)) {
+      input.style.color = 'var(--logo-red)';
+      setTimeout(() => { input.style.color = ''; }, 1500);
+      return;
+    }
+    addDonation(amount);
+    close();
+    renderSupportNotices(aboutSheet);
+  });
+}
+
+/** Сповіщення під карткою підтримки: подана пошта, сума донатів. */
+function renderSupportNotices(aboutSheet) {
+  const el = aboutSheet.querySelector('#supportNotices');
+  if (!el) return;
+  const lines = supportNotices();
+  el.innerHTML = lines.map(l => `<p>${l}</p>`).join('');
+  el.hidden = !lines.length;
 }
 
 // ══ ВІДКРИТТЯ ABOUT-ШТОРКИ ══
@@ -284,7 +343,8 @@ export function openAboutSheet() {
     if (handleEl) handleEl.style.background = HANDLE_GRADIENTS[idx];
 
     const currentLogo = aboutSheet.querySelector('#aboutLogoImg');
-    if (!currentLogo) return;
+    if (!currentLogo || currentLogo.dataset.bound) return;
+    currentLogo.dataset.bound = '1';
     let taps = 0, tapTimer = null, lastTap = 0;
     currentLogo.addEventListener('click', () => {
       const now = Date.now(); if (now - lastTap < 50) return; lastTap = now; taps++;
@@ -299,7 +359,14 @@ export function openAboutSheet() {
   }
 
   updateLogo();
-  bindBottomLoader(aboutSheet);
+  // Обробники вішаємо один раз: шторка створюється одна, а відкривається багато разів
+  if (!aboutSheet.dataset.bound) {
+    aboutSheet.dataset.bound = '1';
+    bindBottomLoader(aboutSheet);
+    _bindBugForm(aboutSheet);
+  }
+  renderSupportNotices(aboutSheet);
+  if (_donatePending) showDonateAsk();
 
   // ── Кнопки «i» (Android / iOS підказки) ──
   const setActive = (btn, v) => btn?.classList.toggle('info-btn-active', v);
@@ -330,6 +397,12 @@ export function openAboutSheet() {
     });
   }
 
+  // ── Відкриваємо шторку ──
+  showSheet(aboutSheet, 'sheet-fullscreen', 'sheet-scrollable');
+}
+
+// ══ ФОРМА «ЗВʼЯЗАТИСЬ З РОЗРОБНИКОМ» ══
+function _bindBugForm(aboutSheet) {
   // ── Форма «Повідомити про помилку» ──
   const bugToggleBtn = aboutSheet.querySelector('#bugToggleBtn');
   const bugFormWrap  = aboutSheet.querySelector('#bugFormWrap');
@@ -417,7 +490,4 @@ export function openAboutSheet() {
       }
     });
   }
-
-  // ── Відкриваємо шторку ──
-  showSheet(aboutSheet, 'sheet-fullscreen', 'sheet-scrollable');
 }

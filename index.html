@@ -224,8 +224,81 @@ document.documentElement.setAttribute('data-theme', actual);
         <div id="devMenuAuth" class="dev-auth-block"></div>
       </div>
 
-      <div class="dev-menu-section">
-        <button type="button" id="devTourBtn" class="dev-menu-row">Запустити ознайомчий тур</button>
+      <div class="dev-menu-section dev-menu-collapsible" data-section="emulation">
+        <button type="button" class="dev-menu-section-title dev-menu-section-toggle">
+          <span>Емуляція</span>
+          <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="dev-menu-section-body" id="devEmulation">
+          <div class="dev-emu-group-title">Стани користувача</div>
+          <p class="dev-emu-hint">Підставляють інші дані замість ваших; «Повернути» відновить ваші</p>
+          <div class="dev-emu-grid">
+            <button type="button" class="dev-emu-btn" data-emu="profile:first">Перший запуск</button>
+            <button type="button" class="dev-emu-btn" data-emu="profile:empty">Без даних</button>
+            <button type="button" class="dev-emu-btn" data-emu="profile:active">Активний користувач</button>
+            <button type="button" class="dev-emu-btn" data-emu="profile:expert">Досвідчений</button>
+            <button type="button" class="dev-emu-btn" data-emu="profile:startFav">Запуск з&nbsp;Вибраного</button>
+            <button type="button" class="dev-emu-btn" data-emu="profile:defaults">Налаштування за&nbsp;замовч.</button>
+            <button type="button" class="dev-emu-btn" data-emu="profile:signup">Gmail уже подано</button>
+            <button type="button" class="dev-emu-btn" data-emu="profile:donated">Кілька донатів</button>
+            <button type="button" class="dev-emu-btn" data-emu="favStreak">Вибране 5-й раз</button>
+            <button type="button" class="dev-emu-btn" data-emu="slowData">Повільні дані (8&nbsp;с)</button>
+          </div>
+          <div class="dev-emu-group-title">Форми й донат</div>
+          <p class="dev-emu-hint">Відповідь підставна, на Formspree нічого не йде</p>
+          <div class="dev-emu-grid">
+            <button type="button" class="dev-emu-btn" data-emu="beta:ok">Gmail: надіслано</button>
+            <button type="button" class="dev-emu-btn" data-emu="beta:error">Gmail: помилка</button>
+            <button type="button" class="dev-emu-btn" data-emu="donate">Донат</button>
+            <button type="button" class="dev-emu-btn" data-emu="thanks">Сторінка подяки</button>
+            <button type="button" class="dev-emu-btn" data-emu="bug:ok">Звʼязок: надіслано</button>
+            <button type="button" class="dev-emu-btn" data-emu="bug:error">Звʼязок: помилка</button>
+            <button type="button" class="dev-emu-btn" data-emu="bug:timeout">Звʼязок: таймаут</button>
+            <button type="button" class="dev-emu-btn" data-emu="edit:success">Правка: надіслано</button>
+            <button type="button" class="dev-emu-btn" data-emu="edit:network-error">Правка: без мережі</button>
+            <button type="button" class="dev-emu-btn" data-emu="edit:local-only">Правка: лише локально</button>
+          </div>
+          <div class="dev-emu-group-title">Мережа й оновлення</div>
+          <div class="dev-emu-grid">
+            <button type="button" class="dev-emu-btn" data-emu="offline">Без інтернету</button>
+            <button type="button" class="dev-emu-btn" data-emu="toast:version">Нова версія</button>
+            <button type="button" class="dev-emu-btn" data-emu="toast:data">Оновлено дані</button>
+            <button type="button" class="dev-emu-btn" data-emu="badData">Пошкоджені дані</button>
+            <button type="button" class="dev-emu-btn" data-emu="writeFail">Помилка запису</button>
+          </div>
+          <div class="dev-emu-group-title">Годинник</div>
+          <p class="dev-emu-hint">Час для годинника станції, інтервалів і годин роботи</p>
+          <div class="dev-emu-grid">
+            <button type="button" class="dev-emu-btn" data-emu="clock:04:50:3">04:50 будній</button>
+            <button type="button" class="dev-emu-btn" data-emu="clock:22:30:3">22:30 будній</button>
+            <button type="button" class="dev-emu-btn" data-emu="clock:00:30:3">00:30 після закриття</button>
+            <button type="button" class="dev-emu-btn" data-emu="clock:14:00:6">Субота 14:00</button>
+          </div>
+          <div class="dev-emu-clock-custom">
+            <input type="datetime-local" id="devEmuClockInput" class="dev-emu-input" aria-label="Свій час">
+            <button type="button" class="dev-emu-btn" data-emu="clock:custom">Свій час</button>
+            <button type="button" class="dev-emu-btn" data-emu="clock:off">Справжній час</button>
+          </div>
+          <div class="dev-emu-group-title">Підказки на картці</div>
+          <p class="dev-emu-hint">Показати підказку на картці станції, навіть якщо її вже використали</p>
+          <div class="dev-emu-grid">
+            <button type="button" class="dev-emu-btn" data-emu="hint:exitFav">Зберегти вихід</button>
+            <button type="button" class="dev-emu-btn" data-emu="hint:exitNumbers">Номери виходів</button>
+            <button type="button" class="dev-emu-btn" data-emu="hint:clock">Годинник</button>
+            <button type="button" class="dev-emu-btn" data-emu="hint:neighbour">Сусідня станція</button>
+            <button type="button" class="dev-emu-btn" data-emu="hint:checkin">Check-in</button>
+            <button type="button" class="dev-emu-btn" data-emu="hint:reset">Скинути всі</button>
+          </div>
+          <div class="dev-emu-group-title">Ознайомчий тур</div>
+          <div class="dev-emu-grid">
+            <button type="button" class="dev-emu-btn" data-emu="tour:map">З початку</button>
+            <button type="button" class="dev-emu-btn" data-emu="tour:favBtn">З Вибраного</button>
+            <button type="button" class="dev-emu-btn" data-emu="tour:searchBtn">З пошуку</button>
+            <button type="button" class="dev-emu-btn" data-emu="tour:menuSettings">З налаштувань</button>
+            <button type="button" class="dev-emu-btn" data-emu="tour:menuAbout">З «Про застосунок»</button>
+            <button type="button" class="dev-emu-btn" data-emu="tour:done">Позначити пройденим</button>
+          </div>
+        </div>
       </div>
 
       <div class="dev-menu-section dev-menu-collapsible" data-section="stationNotes">
@@ -450,6 +523,21 @@ document.documentElement.setAttribute('data-theme', actual);
 <p class="settings-hint" id="hintIOS" hidden style="width: 100%; margin-top: 8px; margin-bottom: 0; font-size: 11px; text-align: right; line-height: 1.4; color: var(--text-muted);">
   Для релізу в App&nbsp;Store потрібна<br>ліцензія Apple&nbsp;Developer<br>(<strong>$99&nbsp;на&nbsp;рік</strong>)
   </p>
+
+  <!-- Після monobank: людина може вказати суму, щоб застосунок її запамʼятав -->
+  <form id="donateAsk" class="about-donate-ask" hidden>
+    <p class="about-donate-ask-text">Задонатили? Вкажіть суму, і&nbsp;ми&nbsp;її&nbsp;запамʼятаємо</p>
+    <div class="about-input-group about-donate-amount">
+      <input type="text" id="donateAmount" class="about-beta-input" inputmode="numeric" placeholder="сума" aria-label="Сума донату, гривень" autocomplete="off">
+      <span class="about-gmail-domain">₴</span>
+    </div>
+    <div class="bug-actions">
+      <button type="submit" class="confirm-main-btn confirm-btn-save">Зберегти</button>
+      <button type="button" id="donateAskCancel" class="confirm-main-btn confirm-btn-neutral">Не&nbsp;зараз</button>
+    </div>
+  </form>
+
+  <div id="supportNotices" class="about-support-notices" aria-live="polite" hidden></div>
 
 </div>
 

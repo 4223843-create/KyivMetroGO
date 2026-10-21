@@ -4,6 +4,7 @@ import { pill, lineTextColor } from '../ui/components.js';
 import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
+import { appNow }              from '../core/clock.js';
 import { richText } from '../ui/html.js';
 
 function formatDirLabel(raw) {
@@ -239,7 +240,7 @@ export function hasStationClock(s) {
   return !!s?.schedule && renderStationClock(s) !== '';
 }
 
-export function renderStationClock(s, now = new Date()) {
+export function renderStationClock(s, now = appNow()) {
   const sch = s.schedule;
   if (!sch) return '';
   const nowMin = toMin(`${now.getHours()}:${now.getMinutes()}`);

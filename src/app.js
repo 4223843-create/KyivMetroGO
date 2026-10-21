@@ -89,10 +89,11 @@ if (menuBtn && dropMenu) {
 // ── Помилка запису на пристрій ─────────────────────────────────
 // Storage пише у фоні; якщо запис не вдався, користувач має про це знати.
 let _writeFailShown = false;
+export const showWriteFailToast = () => showToast('Не вдалося зберегти зміни на пристрої');
 bus.on('storage:write-failed', () => {
   if (_writeFailShown) return;     // одне повідомлення на сесію, а не на кожен ключ
   _writeFailShown = true;
-  showToast('Не вдалося зберегти зміни на пристрої');
+  showWriteFailToast();
 });
 
 // ── Кнопка «Назад» ────────────────────────────────────────────

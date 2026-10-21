@@ -415,6 +415,11 @@ export function checkStationsUpdate() {
  * @returns {Promise<Record<string, object>>} state.stationsData після гідратації
  */
 export async function reloadStationsData(forceFresh = false) {
+  // Емуляція з меню розробника (одноразово, до наступного перезапуску)
+  const emuSlow = !forceFresh && _takeEmuFlag('slowData');
+  const emuBad  = !forceFresh && _takeEmuFlag('badData');
+  if (emuSlow) await new Promise(r => setTimeout(r, 8000));
+
   const data = Capacitor.isNativePlatform()
     ? await _fetchStationsNative(forceFresh)
     : await _fetchStationsWeb(forceFresh);
@@ -422,6 +427,7 @@ export async function reloadStationsData(forceFresh = false) {
 
   let hydrated;
   try {
+    if (emuBad) throw new Error('емуляція: пошкоджені дані');
     hydrated = _hydrateChecked(data);
   } catch (err) {
     // Локальна копія зіпсована чи несумісна — не лишаємо застосунок «цеглиною»
@@ -430,6 +436,7 @@ export async function reloadStationsData(forceFresh = false) {
     const fallback = await _loadFallbackStations();
     if (!fallback) throw err;
     hydrated = _hydrateChecked(fallback);
+    state.stationsFallbackUsed = true;
   }
 
   if (!forceFresh) {
@@ -440,6 +447,18 @@ export async function reloadStationsData(forceFresh = false) {
   bus.emit('fav:render-on-load');
 
   return hydrated;
+}
+
+/** Прапорець емуляції в sessionStorage: читаємо й одразу знімаємо. */
+function _takeEmuFlag(name) {
+  try {
+    const key = `metro_emu_${name}`;
+    const on = sessionStorage.getItem(key) === '1';
+    if (on) sessionStorage.removeItem(key);
+    return on;
+  } catch {
+    return false;
+  }
 }
 
 function _hydrateChecked(data) {

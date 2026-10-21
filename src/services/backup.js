@@ -51,6 +51,7 @@ export const USER_DATA_KEYS = [
 function _readAllAppData() {
   const result = {};
   for (const key of Object.values(STORAGE_KEYS)) {
+    if (key.startsWith('metro_dev_emu_')) continue; // службові ключі емуляції — не дані людини
     const value = Storage.get(key);
     if (value !== null) result[key] = value;
   }

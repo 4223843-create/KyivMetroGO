@@ -646,9 +646,12 @@ export function openDevMenuSheet() {
       hideSheet(sheet);
     });
 
-    // Ознайомчий тур — як при першому запуску
-    sheet.querySelector('#devTourBtn')?.addEventListener('click', () => {
-      hideSheet(sheet, { onClosed: () => import('../features/tour.js').then(m => m.startTour()) });
+    // Емуляція станів: дія виконується після закриття меню, щоб її було видно
+    sheet.querySelector('#devEmulation')?.addEventListener('click', e => {
+      const btn = e.target.closest('[data-emu]');
+      if (!btn) return;
+      const custom = sheet.querySelector('#devEmuClockInput')?.value;
+      hideSheet(sheet, { onClosed: () => import('../features/devEmulation.js').then(m => m.runEmulation(btn.dataset.emu, { custom })) });
     });
 
     // Перемальовуємо нотатки/верифікацію, якщо синхронізація щось підтягнула

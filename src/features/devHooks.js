@@ -5,6 +5,7 @@
 // поки режим вимкнено, вони нічого не завантажують.
 
 import { isDevMode, toggleDevMode } from './devFlags.js';
+import { STORAGE_KEYS, Storage }     from '../core/storage.js';
 
 let _mod     = null;
 let _promise = null;
@@ -85,4 +86,22 @@ export function setupDevModeTapCounter(aboutSheet) {
       taps = 0;
     }, 400);
   });
+}
+
+/**
+ * Емуляція стану з меню розробника: після перезапуску дозаповнює підставні дані
+ * й показує смужку «Повернути». Без активної емуляції нічого не завантажує.
+ */
+export async function runEmulationStartup() {
+  let note = null;
+  try { note = sessionStorage.getItem('metro_emu_note'); } catch { /* немає sessionStorage */ }
+  const active = note || Storage.get(STORAGE_KEYS.DEV_EMU_PROFILE)
+    || Storage.get(STORAGE_KEYS.DEV_EMU_SNAPSHOT) || Storage.get(STORAGE_KEYS.DEV_EMU_CLOCK);
+  if (!active) return;
+  try {
+    const m = await import('./devEmulation.js');
+    m.onStartup();
+  } catch (err) {
+    console.warn('[devHooks] devEmulation.js не завантажився:', err);
+  }
 }
