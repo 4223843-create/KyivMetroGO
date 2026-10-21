@@ -55,6 +55,7 @@ export const bus = {
 // 'feedback:dirty-changed'   { isDirty }
 // 'feedback:submit-silent'   void              — зберегти правки без показу результату
 // 'feedback:submit-ui'       { status: 'sending'|'local-only'|'success'|'network-error', background }
+// 'hint:used'                { id }            — людина скористалася функцією з підказки
 // 'fav:updated'              void
 // 'fav:externally-updated'   { key }
 // 'fav:render-on-load'       void

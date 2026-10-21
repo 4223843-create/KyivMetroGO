@@ -25,6 +25,7 @@ export const STORAGE_KEYS = {
   LOCAL_ONLY_FEEDBACK: 'metro_local_only_feedback',
   HINTS_DONE:          'metro_hints_done',
   HIDE_INFO_BLOCKS:    'metro_hide_info_blocks',
+  TOUR_DONE:           'metro_tour_done',
   FAV_ONLY_STREAK:     'metro_fav_only_streak',
   EDIT_MODE:           'metro_edit_mode',
   HIDE_NO_LIFT:        'metro_hide_no_lift',
