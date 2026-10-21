@@ -5595,3 +5595,13 @@ html.reduce-motion .tour-bubble { transition: none; }
 .about-support-notices strong { font-weight: var(--fw-medium); color: var(--text); }
 .about-donate-ask[hidden],
 .about-support-notices[hidden] { display: none; }
+
+/* Підказка з кнопками (Вибране: «Під час запуску: вибране») */
+.onboarding-hint-actions {
+  flex-wrap: wrap;
+  max-height: 240px;
+  margin: 0 0 12px;
+}
+.onboarding-hint-actions .hint-icon-wrap { top: 13px; }
+.onboarding-hint-actions .exit-replace-btns { flex-basis: 100%; }
+.onboarding-hint-actions .exit-replace-btn { height: 34px; font-size: var(--fs-sm); }

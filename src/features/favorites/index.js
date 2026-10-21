@@ -20,7 +20,7 @@
 import Sortable            from 'sortablejs';
 import { state }           from '../../core/state.js';
 import { STORAGE_KEYS, Storage } from '../../core/storage.js';
-import { getPref } from '../../core/prefs.js';
+import { getPref, setPref } from '../../core/prefs.js';
 import { bus }             from '../../core/eventBus.js';
 import { Icons }           from '../../ui/icons.js';
 import { LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES } from '../../core/constants.js';
@@ -28,6 +28,9 @@ import { lineTextColor } from '../../ui/components.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
 import { showSheet, hideSheet } from '../../ui/sheetNav.js';
 import { slugByName }         from '../../data/stations.js';
+import { isHintDone, markHintDone, flyAwayHint, initHintGestures } from '../hints.js';
+import { dismissHintWithDoors } from '../../ui/animations.js';
+import { showToast }          from '../../ui/toast.js';
 
 import {
   getFavs,
@@ -230,7 +233,7 @@ export function openFavSheet() {
   if (!hideInfo && !startOnFav && hasAnyFavs) {
     const streak = parseInt(Storage.get(STORAGE_KEYS.FAV_ONLY_STREAK) || '0', 10) + 1;
     Storage.set(STORAGE_KEYS.FAV_ONLY_STREAK, String(streak));
-    if (streak >= 5 && !document.getElementById('favOnlyHint')) {
+    if (streak >= 5 && !isHintDone(FAV_ONLY_HINT) && !document.getElementById('favOnlyHint')) {
       _insertFavOnlyHint();
     }
   }
@@ -252,12 +255,38 @@ export function updateFavDock() {
 
 // ══ ПІДКАЗКА «ВИБРАНЕ ПРИ ЗАПУСКУ» ═══════════════════════════
 
+// Як підказки в картці станції: змах убік або «Скасувати» — більше не показуємо,
+// «Обрати» — вмикає «Під час запуску: вибране».
+const FAV_ONLY_HINT = 'favOnly';
+const SC = text => `<span style="font-variant: small-caps; letter-spacing: 0.04em;">${text}</span>`;
+
 function _insertFavOnlyHint() {
   if (document.getElementById('favOnlyHint')) return;
-  const hint     = document.createElement('p');
+  const hint     = document.createElement('div');
   hint.id        = 'favOnlyHint';
-  hint.className = 'fav-empty-text-lg';
-  hint.innerHTML = `Внесли до <span style="font-variant: small-caps; letter-spacing: 0.04em;">Вибраного</span> все, чого&nbsp;потребуєте для&nbsp;швидкої навігації в&nbsp;метро? <br>Оберіть у&nbsp;налаштуваннях «Під&nbsp;час запуску:&nbsp;<span style="font-variant: small-caps; letter-spacing: 0.04em;">вибране</span>»`;
+  hint.className = 'onboarding-hint onboarding-hint-actions';
+  hint.dataset.hint = FAV_ONLY_HINT;
+  hint.setAttribute('role', 'note');
+  hint.innerHTML =
+    `<span class="hint-icon-wrap">${Icons.info}</span>` +
+    `<span class="hint-text">Внесли до ${SC('Вибраного')} все, чого&nbsp;потребуєте для&nbsp;швидкої навігації в&nbsp;метро? ` +
+    `Оберіть «Під&nbsp;час запуску:&nbsp;${SC('вибране')}»</span>` +
+    `<div class="exit-replace-btns">` +
+      `<button type="button" class="exit-replace-btn confirm-btn-save" data-act="pick">Обрати</button>` +
+      `<button type="button" class="exit-replace-btn confirm-btn-discard" data-act="cancel">Скасувати</button>` +
+    `</div>`;
+  hint.addEventListener('click', e => {
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if (!act) return;
+    markHintDone(FAV_ONLY_HINT);
+    if (act === 'pick') {
+      setPref('startOnFav', true);
+      dismissHintWithDoors(hint);
+      showToast('Під час запуску: Вибране');
+    } else {
+      flyAwayHint(hint);
+    }
+  });
   favBody.insertBefore(hint, favBody.firstChild);
 }
 
@@ -291,3 +320,4 @@ bus.on('fav:dismiss-hint', _dismissFavOnlyHint);
 
 favClose.addEventListener('click', closeFavSheet);
 setTimeout(() => initKinematicSwipe(favSheet, favBody, closeFavSheet), 0);
+initHintGestures(favBody);
