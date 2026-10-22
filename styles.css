@@ -5095,7 +5095,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 
 /* Панель годинника (кнопка біля серця): години роботи та інтервал зараз */
-.sheet-clock-btn[hidden] { display: none; }
+.sheet-clock-btn[hidden], .sheet-checkin-btn[hidden] { display: none; }
 .station-clock-panel {
   overflow: hidden;
   max-height: 0;

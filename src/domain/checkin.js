@@ -47,6 +47,11 @@ export function isCheckinMode() {
   return getPref('checkinMode');
 }
 
+/** Статистика «за станціями»: відмічають станцію цілком — один пін угорі картки. */
+export function isStationCheckinMode() {
+  return getPref('checkinByStation') !== 'exits';
+}
+
 // ══ ІДЕНТИФІКАТОР ════════════════════════════════════════════
 // Запис чекіну: ключ «slug|id позиції», значення { slug, pos, dir, wagon, doors, color, ts }.
 // Ідентичність — лише id позиції зі stations.json; dir/wagon/doors — знімок на
@@ -98,6 +103,16 @@ export function isCheckedIn(slug, pos) {
   return !!pos && !!getCheckins()[checkinId(slug, pos)];
 }
 
+/** Станція відвідана: є відмітка станції або хоча б одного її виходу. */
+export function isStationCheckedIn(slug) {
+  return Object.values(getCheckins()).some(e => e?.slug === slug);
+}
+
+/** Скільки виходів станції відмічено окремо (у режимі «за виходами»). */
+export function stationExitCheckinCount(slug) {
+  return Object.values(getCheckins()).filter(e => e?.slug === slug && e.pos).length;
+}
+
 // ══ МУТАЦІЯ СТАНУ ════════════════════════════════════════════
 
 /**
@@ -142,6 +157,27 @@ export function toggleCheckin(slug, pos, lineColor) {
   return willCheckIn;
 }
 
+/**
+ * Відмітка станції цілком (статистика «за станціями»): запис «slug|station»
+ * без позиції. Знімає всі відмітки станції, зокрема й окремих виходів.
+ * @returns {boolean} true — станцію відмічено
+ */
+export function toggleStationCheckin(slug, lineColor) {
+  const all = getCheckins();
+  const willCheckIn = !isStationCheckedIn(slug);
+  if (willCheckIn) {
+    all[`${slug}|station`] = { slug, station: true, color: lineColor, ts: Date.now() };
+  } else {
+    for (const [key, e] of Object.entries(all)) if (e?.slug === slug) delete all[key];
+  }
+
+  Storage.set(STORAGE_KEYS.CHECKINS, JSON.stringify(all));
+  _checkinsCache = all;
+
+  bus.emit('checkin:updated');
+  return willCheckIn;
+}
+
 // ══ ПЕРЕХІД ЗІ СТАРОГО ФОРМАТУ ═══════════════════════════════
 // Раніше ключем був «slug|напрямок|вагон|двері». Після завантаження даних
 // зіставляємо такі записи з позиціями; незіставлені лишаються як є (станція
@@ -149,7 +185,7 @@ export function toggleCheckin(slug, pos, lineColor) {
 
 bus.on('data:stations-hydrated', ({ stationsData }) => {
   const all = getCheckins();
-  const legacy = Object.entries(all).filter(([, e]) => e && !e.pos);
+  const legacy = Object.entries(all).filter(([, e]) => e && !e.pos && !e.station);
   if (!legacy.length) return;
   let changed = false;
   for (const [key, entry] of legacy) {

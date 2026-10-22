@@ -12,7 +12,7 @@ import { Icons }                 from '../ui/icons.js';
 import { lineTextColor }         from '../ui/components.js';
 import { dismissHintWithDoors }  from '../ui/animations.js';
 import { getExitFavs }           from '../domain/favorites.js';
-import { getCheckins, isCheckinMode } from '../domain/checkin.js';
+import { getCheckins, isCheckinMode, isStationCheckinMode } from '../domain/checkin.js';
 import { hasStationClock }       from '../sheets/renderStation.js';
 
 const CLOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></svg>`;
@@ -49,7 +49,9 @@ const HINTS = [
     id:      'checkin',
     applies: () => isCheckinMode(),
     used:    () => Object.keys(getCheckins()).length > 0,
-    text:    c => `Натисніть ${inlineIcon(PIN_ICON, c)}, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`,
+    text:    c => isStationCheckinMode()
+      ? `Натисніть ${inlineIcon(PIN_ICON, c)} угорі, щоб&nbsp;позначити станцію як&nbsp;відвідану`
+      : `Натисніть ${inlineIcon(PIN_ICON, c)}, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`,
   },
 ];
 
