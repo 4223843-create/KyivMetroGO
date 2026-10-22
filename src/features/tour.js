@@ -94,6 +94,13 @@ const AFTER_TARGETS = {
   clock:       () => _card('#stationClockPanel.panel-open'),
 };
 
+/** Перші вагон і двері — разом із підписом пересадки над ними, якщо він є. */
+function _nearestTarget() {
+  const pills = _card('.fav-tap-target');
+  const label = pills?.closest('.position-row')?.previousElementSibling;
+  return label?.querySelector('.transfer-label') ? _unionRect([label, pills]) : pills;
+}
+
 const CARD_TARGETS = {
   exitFav:     () => _card('.fav-tap-target'),
   exitNumbers: _numberedTarget,
@@ -108,6 +115,7 @@ const CARD_TARGETS = {
 // wait      — 'tap' (натиск на ціль), 'hint' (useHint з тим самим id),
 //             'station' (відкрилась картка), 'fav' (станцію додали у Вибране),
 //             'next' (кнопка «Далі»)
+// menu()    — ціль у меню: поки меню закрите, підсвічуємо кнопку меню
 // skip()    — що зробити замість людини, коли вона натискає «Далі»
 //             (типово — натиснути ціль; дотик показуємо кружечком)
 // lost()    — людина вийшла з потрібного стану (закрила картку чи меню):
@@ -156,8 +164,8 @@ function _cardSteps(station) {
   // Спершу — що показує картка, далі підказки, які чекають на дію
   return [
     { ...card, id: 'nearest', wait: 'next',
-      text: 'Ці вагон і&nbsp;двері найближчі до&nbsp;виходу з&nbsp;метро',
-      target: () => _card('.fav-tap-target') },
+      text: 'Ці вагон і&nbsp;двері найближчі до&nbsp;виходу з&nbsp;метро або&nbsp;пересадки',
+      target: _nearestTarget },
     ...tourHints(station)
       .filter(h => !_doneHints.has(h.id))
       .flatMap(h => {
@@ -175,6 +183,10 @@ function _cardSteps(station) {
           const t = CARD_TARGETS.checkin();
           if (t && !t.classList.contains('is-checked')) t.click();
         } }];
+        // Відкриту раніше панель годинника дотик закрив би — закриваємо заздалегідь
+        if (h.id === 'clock') return [{ ...step, enter: () => {
+          if ($('stationClockPanel')?.classList.contains('panel-open')) $('sheetClockBtn')?.click();
+        } }];
         if (h.id !== 'neighbour') return [step];
         // На сусідній станції — додати її серцем: у Вибраному будуть і вихід, і станція
         return [
@@ -190,24 +202,24 @@ function _cardSteps(station) {
 
 const _closeSheets = () => { if (getOpenSheet() || dropMenuOpen()) closeAllSheets(true); };
 const _sheetRect   = id => isOpen(id) ? $(id) : null;
-// «Назад» на крок, якому потрібна відкрита шторка чи меню
-const _openMenu    = () => { _closeSheets(); if (!dropMenuOpen()) $('menuBtn')?.click(); };
 
 // «Вибране» в текстах — капітеллю, як у решті застосунку
 const _sc = word => `<span style="font-variant:small-caps;letter-spacing:0.04em">${word}</span>`;
 
+/** Крок із ціллю в меню: спершу — кнопка меню, після її натиску — сам пункт. */
+function _inMenu(id) {
+  return { menu: true, target: () => dropMenuOpen() ? $(id) : $('menuBtn') };
+}
+
 const REST_STEPS = [
   // Check-in: відмітку поставили в картці — далі статистика й карта
-  // Кнопка — у меню, тож меню відкриваємо самі
-  { id: 'checkinBtn', wait: 'tap', enter: _openMenu, when: isCheckinMode,
-    lost: () => !dropMenuOpen(), lostTo: 'checkinBtn', restore: _openMenu,
-    text: () => `Натисніть ${_pinIcon()}, щоб&nbsp;відкрити статистику відвіданих станцій`,
-    target: () => dropMenuOpen() ? $('checkinBtn') : null },
+  { id: 'checkinBtn', wait: 'tap', enter: _closeSheets, when: isCheckinMode, ..._inMenu('checkinBtn'),
+    text: () => `Розгорніть меню і&nbsp;натисніть ${_pinIcon()}, щоб&nbsp;відкрити статистику відвіданих станцій` },
   { id: 'checkinInfo', wait: 'next', lost: () => !isOpen('checkinSheet'), restore: openCheckinSheet, when: isCheckinMode,
     text: 'Тут видно, скільки станцій і&nbsp;виходів ви вже відвідали&nbsp;— загалом і&nbsp;на&nbsp;кожній лінії',
     target: () => _sheetRect('checkinSheet') },
   { id: 'checkinMap', wait: 'next', enter: _closeSheets, when: isCheckinMode,
-    text: 'Відвідані станції штрихуються на&nbsp;карті: світлою штриховкою&nbsp;— якщо відмічено частину виходів, темнішою&nbsp;— якщо всі',
+    text: 'Відвідані станції штрихуються на&nbsp;карті. Якщо відвідані всі виходи на&nbsp;станції, штриховка змінить напрямок і&nbsp;стане темнішою',
     target: _visitedZones },
 
   { id: 'favBtn', wait: 'tap', enter: _closeSheets,
@@ -225,15 +237,16 @@ const REST_STEPS = [
     text: 'Вкажіть адресу, щоб&nbsp;дізнатися, яка станція найближча. Тут також можна шукати станції за&nbsp;назвою',
     target: _searchTarget },
 
-  { id: 'menuAbout', wait: 'tap', enter: _closeSheets,
-    text: 'Натисніть, щоб&nbsp;відкрити меню',
-    target: () => $('menuBtn') },
-  { id: 'aboutItem', wait: 'tap', lost: () => !dropMenuOpen(), lostTo: 'menuAbout', restore: _openMenu,
-    text: 'Тут ви знайдете інформацію про&nbsp;базові функції та&nbsp;зможете підтримати розробку застосунку',
-    target: () => dropMenuOpen() ? $('aboutItem') : null },
+  { id: 'menuAbout', wait: 'tap', enter: _closeSheets, ..._inMenu('aboutItem'),
+    text: `В&nbsp;меню ${_sc('Про застосунок')} ви знайдете інформацію про&nbsp;базові функції та&nbsp;зможете підтримати розробку застосунку` },
   // Вікно говорить саме за себе — лише кнопки
-  { id: 'aboutInfo', wait: 'next', last: true, lost: () => !isOpen('aboutSheet'), restore: openAboutSheet,
+  { id: 'aboutInfo', wait: 'next', lost: () => !isOpen('aboutSheet'), restore: openAboutSheet,
     text: '', target: () => _sheetRect('aboutSheet'), bubbleAt: 'bottom' },
+
+  // Останнє: налаштування відкриваються на кілька секунд, потім тур закриває все
+  { id: 'settings', wait: 'tap', enter: _closeSheets, ..._inMenu('settingsItem'),
+    text: 'Налаштуйте зовнішній вигляд та&nbsp;додатковий функціонал тут',
+    after: () => _sheetRect('settingsSheet') },
 ];
 
 const _pinIcon = () => `<span class="hint-inline-icon">${Icons.dockPinFilled.replace('width="26" height="26"', 'aria-hidden="true"')}</span>`;
@@ -323,8 +336,9 @@ function _onStationOpen() {
 function _onDocClick(e) {
   const step = _cur();
   if (step?.wait !== 'tap' || _waiting) return;
+  if (step.menu && !dropMenuOpen()) return; // це лише відкрило меню
   const t = step.target();
-  if (t instanceof Element && t.contains(e.target)) _advanceLater(350);
+  if (t instanceof Element && t.contains(e.target)) _advanceLater(step.after ? AFTER_DELAY : 350);
 }
 
 /** «Далі»: на кроці з дією — показує дотик і робить її замість людини,
@@ -341,6 +355,12 @@ function _next() {
   setTimeout(() => {
     _tapping = false;
     if (_cur() !== step) return;
+    if (step.menu && !dropMenuOpen()) {
+      // Спершу відкриваємо меню, потім так само «натискаємо» пункт
+      target.click();
+      setTimeout(_next, 350);
+      return;
+    }
     if (step.skip) step.skip(); else target.click();
     // Дія могла нічого не змінити (вже у Вибраному) — тоді йдемо далі самі.
     // Одинарний дотик до вагона спрацьовує із затримкою (чекає на другий).
@@ -380,7 +400,7 @@ function _go(i) {
   _layer?.classList.remove('is-waiting');
   // Кроки картки, які вже виконали (напр. після повернення на карту), пропускаємо
   while (_steps?.[i]?.hint && _doneHints.has(_steps[i].hint)) i++;
-  if (!_steps || i >= _steps.length) { endTour('done'); return; }
+  if (!_steps || i >= _steps.length) { endTour('done'); closeAllSheets(true); return; }
   _idx = i;
   _enter();
 }
