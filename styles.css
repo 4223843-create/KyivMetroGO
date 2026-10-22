@@ -5610,3 +5610,37 @@ html.reduce-motion .tour-bubble { transition: none; }
 .onboarding-hint-actions .exit-replace-btns { flex-basis: 100%; }
 .onboarding-hint-actions .exit-replace-btn { height: 34px; font-size: var(--fs-sm); }
 .about-tour-btn { display: block; margin: 4px auto 12px; }
+
+/* ══ ДОДАВАННЯ СТАНЦІЇ З ПОРОЖНЬОГО ВИБРАНОГО ══ */
+.fav-add-search {
+  margin: -16px 0 32px;
+  text-align: left;
+}
+.fav-empty-state.fav-adding {
+  padding-top: 8px;
+}
+.fav-empty-state.fav-adding .fav-add-search { margin: 0; }
+.fav-empty-state.fav-adding .fav-empty-explain { display: none; }
+.fav-add-results { margin-top: 4px; }
+.fav-add-station {
+  padding: 4px 16px 24px;
+}
+.fav-add-head {
+  padding: 8px 0 12px;
+  border-bottom: none;
+  cursor: default;
+  color: var(--text);
+}
+.fav-add-head:active { background: none; }
+.fav-add-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+.fav-add-btns { margin-bottom: 20px; }
+.fav-add-btns .exit-replace-btn {
+  height: 38px;
+  font-size: var(--fs-sm);
+}
+.fav-add-dirs .fav-tap-target { cursor: pointer; }

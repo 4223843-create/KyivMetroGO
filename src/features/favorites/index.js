@@ -31,6 +31,8 @@ import { slugByName }         from '../../data/stations.js';
 import { isHintDone, markHintDone, flyAwayHint, initHintGestures } from '../hints.js';
 import { dismissHintWithDoors } from '../../ui/animations.js';
 import { showToast }          from '../../ui/toast.js';
+import { matchStations, stationItemHtml, fromEnLayout } from '../search.js';
+import { renderDirections, applyFavPillStyles } from '../../sheets/renderStation.js';
 
 import {
   getFavs,
@@ -69,6 +71,12 @@ export function getEmptyFavHtml() {
 
   return `
     <div class="fav-empty-state">
+      <div class="fav-add-search">
+        <input type="text" class="search-input fav-add-input" placeholder="Додати станцію"
+               aria-label="Назва станції, яку додати до Вибраного" autocomplete="off">
+        <div class="search-results fav-add-results" aria-live="polite"></div>
+      </div>
+      <div class="fav-empty-explain">
       <p class="fav-empty-text-lg">
         Натисніть
         <svg viewBox="0 0 17 17" fill="${color}" class="fav-empty-heart" role="img" aria-label="серце">
@@ -88,7 +96,138 @@ export function getEmptyFavHtml() {
           <path fill="#ABABAB" d="M286.54 152.3c17.08-17.08 19.39-22.61 19.39-28 0-9.17-6.79-14-15.68-14-10.29 0-16.52 6.51-16.52 16.1h9.45c0-4.62 2.38-7.98 7.14-7.98 3.22 0 6.16 1.54 6.16 6.44 0 2.87-.98 6.23-22.54 27.79V160h31.99v-7.7z"/>
         </svg>
         </p>
+      </div>
     </div>`;
+}
+
+// ══ ДОДАВАННЯ СТАНЦІЇ З ПОРОЖНЬОГО ВИБРАНОГО ═════════════════
+// Поле «Додати станцію» підказує станції так само, як пошук. Обрана станція
+// показує свої напрямки з вагонами й дверима, як у картці: тап по пілюлях
+// додає вихід (одна позиція на напрямок, як і в картці), а кнопка —
+// всю станцію без виходу.
+
+let _addQuery = '';
+
+function _renderAddResults(input) {
+  const results = favBody.querySelector('.fav-add-results');
+  if (!results) return;
+  const q = input.value.trim().toLowerCase();
+  _addQuery = input.value;
+  favBody.querySelector('.fav-empty-state')?.classList.toggle('fav-adding', !!q || document.activeElement === input);
+  if (!q || !state.stationsData) { results.innerHTML = ''; return; }
+  let matched = matchStations(q);
+  if (!matched.length) matched = matchStations(fromEnLayout(q));
+  results.innerHTML = matched.length
+    ? matched.map(({ s, isExitOnly, exitHint }) => stationItemHtml(s, isExitOnly, exitHint)).join('')
+    : '<p class="fav-empty-text">Нічого не знайдено</p>';
+}
+
+function _showAddStation(slug) {
+  const s = state.stationsData?.[slug];
+  if (!s) return;
+  const color = LINE_COLOR[s.line];
+  favBody.innerHTML = `
+    <div class="fav-add-station" data-slug="${slug}">
+      <div class="search-item fav-add-head">
+        <div class="search-item-line" style="background-color:${lineTextColor(color)}"></div>
+        <div class="search-item-text"><span>${s.name}</span></div>
+      </div>
+      <p class="fav-add-hint">Натисніть на вагон і двері біля потрібного виходу або&nbsp;додайте всю станцію</p>
+      <div class="exit-replace-btns fav-add-btns">
+        <button type="button" class="exit-replace-btn confirm-btn-discard" data-act="back">Назад</button>
+        <button type="button" class="exit-replace-btn confirm-btn-save" data-act="station">Додати всю станцію</button>
+      </div>
+      <div class="fav-add-dirs">${renderDirections(s, color)}</div>
+    </div>`;
+  favBody.scrollTop = 0;
+}
+
+function _backToAddSearch() {
+  favBody.innerHTML = getEmptyFavHtml();
+  const input = favBody.querySelector('.fav-add-input');
+  input.value = _addQuery;
+  _renderAddResults(input);
+}
+
+function _pickAddExit(target, slug) {
+  const pos = target.dataset.pos;
+  if (!pos) return;
+  const color = LINE_COLOR[state.stationsData?.[slug]?.line];
+  const paint = (el, on) => el && applyFavPillStyles(el, color, on);
+  let result = toggleExitFav(slug, pos);
+  if (result.status === 'replace') {
+    // Тут людина саме обирає вихід — інший з того самого напрямку просто замінюємо
+    paint(favBody.querySelector(`.fav-tap-target[data-pos="${CSS.escape(result.existing.pos)}"]`), false);
+    replaceExitFav(slug, result.existing, pos);
+    result = { status: 'added' };
+  }
+  if (result.status === 'unknown') return;
+  paint(target, result.status === 'added');
+  const done = favBody.querySelector('[data-act="station"]');
+  if (done) done.textContent = getExitFavs().some(f => f.slug === slug) ? 'Готово' : 'Додати всю станцію';
+}
+
+function _onAddClick(e) {
+  const picker = favBody.querySelector('.fav-add-station');
+  if (picker) {
+    const slug   = picker.dataset.slug;
+    const act    = e.target.closest('[data-act]')?.dataset.act;
+    const target = e.target.closest('.fav-tap-target');
+    if (act === 'back') _backToAddSearch();
+    else if (act === 'station') {
+      if (!isFav(slug)) toggleFav(slug);
+      _addQuery = '';
+      renderFavList(getFavs());
+    } else if (target) _pickAddExit(target, slug);
+    return true;
+  }
+  const item = e.target.closest('.fav-add-results .search-item');
+  if (item?.dataset.slug) {
+    favBody.querySelector('.fav-add-input')?.blur();
+    _showAddStation(item.dataset.slug);
+    return true;
+  }
+  return false;
+}
+
+favBody.addEventListener('input', e => {
+  if (e.target.classList.contains('fav-add-input')) _renderAddResults(e.target);
+});
+favBody.addEventListener('focusin', e => {
+  if (e.target.classList.contains('fav-add-input')) {
+    favBody.querySelector('.fav-empty-state')?.classList.add('fav-adding');
+    _fitAboveKeyboard();
+  }
+});
+favBody.addEventListener('focusout', e => {
+  if (!e.target.classList.contains('fav-add-input')) return;
+  _releaseKeyboardFit();
+  if (!e.target.value.trim()) favBody.querySelector('.fav-empty-state')?.classList.remove('fav-adding');
+});
+
+// Клавіатура: шторка піднімається над нею, як у пошуку
+let _vpCleanup = null;
+function _fitAboveKeyboard() {
+  const vp = window.visualViewport;
+  if (!vp || _vpCleanup) return;
+  const onResize = () => {
+    const keyboardH = window.innerHeight - (vp.offsetTop ?? 0) - vp.height;
+    favSheet.style.maxHeight = `${vp.height * 0.92}px`;
+    favSheet.style.bottom    = `${Math.max(0, keyboardH)}px`;
+  };
+  onResize();
+  vp.addEventListener('resize', onResize);
+  vp.addEventListener('scroll', onResize);
+  _vpCleanup = () => {
+    vp.removeEventListener('resize', onResize);
+    vp.removeEventListener('scroll', onResize);
+    favSheet.style.maxHeight = '';
+    favSheet.style.bottom    = '';
+  };
+}
+function _releaseKeyboardFit() {
+  _vpCleanup?.();
+  _vpCleanup = null;
 }
 
 // ══ РЕНДЕР СПИСКУ ОБРАНОГО ════════════════════════════════════
@@ -213,6 +352,7 @@ export function renderFavList(favs) {
 }
 
 favBody.addEventListener('click', e => {
+  if (_onAddClick(e)) return;
   const btn = e.target.closest('.fav-open-btn');
   if (btn?.dataset.slug) bus.emit('station:open', { slug: btn.dataset.slug });
 });
@@ -221,6 +361,7 @@ favBody.addEventListener('click', e => {
 
 export function openFavSheet() {
   const favs = getFavs();
+  _addQuery = '';
   if (!state.stationsData) favBody.innerHTML = `<p class="fav-empty-text">Дані ще завантажуються…</p>`;
   else if (!favs.length)   favBody.innerHTML = getEmptyFavHtml();
   else                     renderFavList(favs);

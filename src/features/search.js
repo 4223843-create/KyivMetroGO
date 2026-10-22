@@ -35,7 +35,7 @@ const EN_TO_UK_LAYOUT = {
   n: 'т', m: 'ь', ',': 'б', '.': 'ю', '`': "'",
 };
 
-function _fromEnLayout(query) {
+export function fromEnLayout(query) {
   return [...query].map(ch => EN_TO_UK_LAYOUT[ch] ?? ch).join('');
 }
 
@@ -81,7 +81,7 @@ export function renderSearchResults(query, container, lineFilter = new Set(), _l
     if (_emptyQueryDataRef !== state.stationsData || !_emptyQueryHtml) {
       // Сортуємо і рендеримо лише один раз між перезавантаженнями
       const sorted = [...stations].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-      _emptyQueryHtml    = sorted.map(s => _renderItem(s, false, null)).join('');
+      _emptyQueryHtml    = sorted.map(s => stationItemHtml(s, false, null)).join('');
       _emptyQueryDataRef = state.stationsData;
     }
     container.innerHTML = _emptyQueryHtml;
@@ -91,10 +91,45 @@ export function renderSearchResults(query, container, lineFilter = new Set(), _l
   // ── Порожній запит з фільтром лінії ───────────────────────
   if (!query) {
     stations.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-    container.innerHTML = stations.map(s => _renderItem(s, false, null)).join('');
+    container.innerHTML = stations.map(s => stationItemHtml(s, false, null)).join('');
     return;
   }
 
+  const matched = matchStations(query, stations);
+
+  const addrHtml = addressResultsHtml(query, lineFilter, () => {
+    // Дані адрес довантажились — перемальовуємо, якщо запит ще той самий
+    const input = document.getElementById('searchInput');
+    if (input && input.value.trim().toLowerCase() === query && container.isConnected) {
+      renderSearchResults(query, container, lineFilter, _layoutRetry);
+    }
+  });
+
+  if (matched.length === 0 && !addrHtml) {
+    const converted = _layoutRetry ? query : fromEnLayout(query);
+    if (converted !== query) {
+      renderSearchResults(converted, container, lineFilter, true);
+      return;
+    }
+    container.innerHTML = '<p class="fav-empty-text">Нічого не знайдено</p>';
+    return;
+  }
+
+  container.innerHTML = matched.map(({ s, isExitOnly, exitHint }) =>
+    stationItemHtml(s, isExitOnly, exitHint)
+  ).join('') + addrHtml;
+}
+
+/**
+ * Станції, що відповідають запиту: за назвою, псевдонімом, а нижче — за
+ * підписами й вулицями виходів. Те саме, що показує пошук (і підказки
+ * в порожньому Вибраному).
+ *
+ * @param {string}   query    — нормалізований рядок запиту (непорожній)
+ * @param {object[]} stations — серед яких шукати (типово всі)
+ * @returns {Array<{s: object, isExitOnly: boolean, exitHint: string|null}>}
+ */
+export function matchStations(query, stations = Object.values(state.stationsData ?? {})) {
   const rawQuery      = query.toLowerCase().trim().replace(/[''`]/g, '');
   const queryWords    = rawQuery.split(/\s+/).filter(w => w.length > 0);
 
@@ -102,7 +137,7 @@ export function renderSearchResults(query, container, lineFilter = new Set(), _l
   const exitWords     = rawQuery.length >= 2 ? queryWordsForExits(rawQuery) : [];
   const matched = [];
 
-for (const s of stations) {
+  for (const s of stations) {
     const isAlias = SEARCH_ALIASES_ENTRIES.some(([alias, slug]) =>
       slug === s.slug && (alias.startsWith(rawQuery)
         // кожне слово запиту — початок якогось слова псевдоніма («ар» не знаходить «народів»)
@@ -143,30 +178,11 @@ for (const s of stations) {
     return a.s.name.localeCompare(b.s.name, 'uk');
   });
 
-  const addrHtml = addressResultsHtml(query, lineFilter, () => {
-    // Дані адрес довантажились — перемальовуємо, якщо запит ще той самий
-    const input = document.getElementById('searchInput');
-    if (input && input.value.trim().toLowerCase() === query && container.isConnected) {
-      renderSearchResults(query, container, lineFilter, _layoutRetry);
-    }
-  });
-
-  if (matched.length === 0 && !addrHtml) {
-    const converted = _layoutRetry ? query : _fromEnLayout(query);
-    if (converted !== query) {
-      renderSearchResults(converted, container, lineFilter, true);
-      return;
-    }
-    container.innerHTML = '<p class="fav-empty-text">Нічого не знайдено</p>';
-    return;
-  }
-
-  container.innerHTML = matched.map(({ s, isExitOnly, exitHint }) =>
-    _renderItem(s, isExitOnly, exitHint)
-  ).join('') + addrHtml;
+  return matched;
 }
 
-function _renderItem(s, isExitOnly, exitHint) {
+/** HTML рядка результату — станція з кольором лінії, як у пошуку. */
+export function stationItemHtml(s, isExitOnly = false, exitHint = null) {
   const color = lineTextColor(LINE_COLOR[s.line]);
   const hintHtml = isExitOnly && exitHint
     ? `<span class="search-item-hint">${richText(exitHint)}</span>`
