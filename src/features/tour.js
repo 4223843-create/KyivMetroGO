@@ -31,8 +31,10 @@ const NEXT_DELAY   = 900;  // пауза після дії, щоб людина 
 const START_DELAY  = 700;  // після заставки
 const AFTER_DELAY  = 3000; // скільки підсвічене розгорнуте після дії, мс
 
+const TAP_SHOW     = 520;  // скільки триває показ дотику перед дією, мс
+
 // Станції, які пропонуємо натиснути на карті (перша видима).
-const MAP_STATIONS = ['B.Kontraktova_ploshcha', 'R.Teatralna', 'G.Zoloti_vorota', 'B.Poshtova_ploshcha', 'B.Olimpiiska'];
+const MAP_STATIONS = ['B.Ploshcha_Ukrainskikh_heroiv', 'B.Kontraktova_ploshcha', 'R.Teatralna', 'G.Zoloti_vorota', 'B.Olimpiiska'];
 
 const $ = id => document.getElementById(id);
 const isOpen = id => !!$(id)?.classList.contains('sheet-open');
@@ -84,13 +86,6 @@ function _numberedTarget() {
   }) || targets[0] || null;
 }
 
-/** Перші вагон і двері в кожному напрямку руху. */
-function _firstPillsPerDirection() {
-  if (!isOpen('stationSheet')) return null;
-  return [...$('sheetBody').querySelectorAll('.direction-block, .long-transfer-block')]
-    .map(b => b.querySelector('.fav-tap-target')).filter(Boolean);
-}
-
 // Розгорнуте після дії — підсвічується кілька секунд, щоб людина його роздивилась
 const AFTER_TARGETS = {
   exitNumbers: () => _card('.pos-numbered-exits.panel-open'),
@@ -112,6 +107,7 @@ const CARD_TARGETS = {
 //             'station' (відкрилась картка), 'fav' (станцію додали у Вибране),
 //             'next' (кнопка «Далі»)
 // skip()    — що зробити замість людини, коли вона натискає «Далі»
+//             (типово — натиснути ціль; дотик показуємо кружечком)
 // lost()    — людина вийшла з потрібного стану (закрила картку чи меню):
 //             повертаємось на крок lostTo
 // restore() — відкриває шторку чи меню кроку, коли на нього прийшли кнопкою
@@ -136,7 +132,7 @@ function _cardSteps(station) {
   return [
     { ...card, id: 'nearest', wait: 'next',
       text: 'Ці вагон і&nbsp;двері найближчі до&nbsp;виходу з&nbsp;метро',
-      target: _firstPillsPerDirection },
+      target: () => _card('.fav-tap-target') },
     ...tourHints(station)
       .filter(h => h.id !== 'checkin' && !_doneHints.has(h.id))
       .flatMap(h => {
@@ -152,7 +148,7 @@ function _cardSteps(station) {
         if (h.id !== 'neighbour') return [step];
         // На сусідній станції — додати її серцем: у Вибраному будуть і вихід, і станція
         return [
-          { ...step, skip: () => CARD_TARGETS.neighbour()?.click() },
+          step,
           { ...card, id: 'stationFav', wait: 'fav',
             text: `Натисніть серце, щоб&nbsp;додати станцію до&nbsp;${_sc('Вибраного')}`,
             target: CARD_TARGETS.stationFav, restore: _reopenCard,
@@ -213,6 +209,7 @@ let _layer     = null;
 let _raf       = 0;
 let _timer     = 0;
 let _waiting   = false;   // дія виконана, чекаємо паузу перед наступним кроком
+let _tapping   = false;   // «Далі» показує дотик, за мить виконає дію
 let _doneHints = new Set();
 let _offs      = [];
 
@@ -258,6 +255,7 @@ export function startTour(fromId) {
 export function endTour(result = 'done') {
   if (!_steps) return;
   _steps = null;
+  _tapping = false;
   clearTimeout(_timer);
   cancelAnimationFrame(_raf);
   _offs.forEach(off => off());
@@ -292,19 +290,44 @@ function _onDocClick(e) {
   if (t instanceof Element && t.contains(e.target)) _advanceLater(350);
 }
 
-/** «Далі»: наступний крок без дії — тур сам відкриває те, що треба. */
+/** «Далі»: на кроці з дією — показує дотик і робить її замість людини,
+ *  далі все як після справжнього натиску. Інакше — просто наступний крок. */
 function _next() {
   const step = _cur();
-  if (_waiting) return;
+  if (_waiting || _tapping) return;
   if (step.last) { endTour('done'); closeAllSheets(true); return; }
-  if (step.wait === 'station') { bus.emit('station:open', { slug: step.slug }); return; }
-  if (step.skip) {
-    step.skip();
-    if (_waiting) return; // дія спрацювала — тур перейде сам
-  }
+  const target = step.wait !== 'next' && step.target();
+  if (!(target instanceof Element)) { _skipTo(step); return; }
+
+  _tapping = true;
+  _showTaps(target, step.hint === 'exitFav' ? 2 : 1);
+  setTimeout(() => {
+    _tapping = false;
+    if (_cur() !== step) return;
+    if (step.skip) step.skip(); else target.click();
+    // Дія могла нічого не змінити (вже у Вибраному) — тоді йдемо далі самі.
+    // Одинарний дотик до вагона спрацьовує із затримкою (чекає на другий).
+    setTimeout(() => { if (_cur() === step && !_waiting) _skipTo(step); }, 600);
+  }, TAP_SHOW);
+}
+
+function _skipTo(step) {
+  if (_cur() !== step) return;
   clearTimeout(_timer);
   _go(_idx + 1);
   _cur()?.restore?.();
+}
+
+/** Кружечок дотику посередині елемента (двічі — подвійний дотик). */
+function _showTaps(el, count) {
+  const r = el.getBoundingClientRect();
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'tour-tap';
+    Object.assign(dot.style, { left: `${r.left + r.width / 2}px`, top: `${r.top + r.height / 2}px`, animationDelay: `${i * 200}ms` });
+    _layer.appendChild(dot);
+    setTimeout(() => dot.remove(), 420 + i * 200 + 100);
+  }
 }
 
 function _advanceLater(delay = NEXT_DELAY) {
@@ -327,7 +350,7 @@ function _go(i) {
 
 /** «Назад»: попередній крок, з тією шторкою чи меню, що були на ньому. */
 function _back() {
-  if (_waiting || _idx === 0) return;
+  if (_waiting || _tapping || _idx === 0) return;
   const prev = _steps[_idx - 1];
   if (prev.id === 'map') {
     // Картку перебудуємо, коли станцію відкриють знову
@@ -353,6 +376,8 @@ function _enter() {
   // Невидимі, але займають місце — кнопки не стрибають між кроками
   bubble.querySelector('.tour-skip').classList.toggle('is-invisible', !!step.last);
   bubble.querySelector('.tour-back').classList.toggle('is-invisible', _idx === 0);
+  // На карті — лише натиснути станцію (або пропустити тур)
+  bubble.querySelector('.tour-next').classList.toggle('is-invisible', step.wait === 'station');
   bubble.classList.remove('is-shown');
   _placed = false;
 }

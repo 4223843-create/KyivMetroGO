@@ -5466,6 +5466,19 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
 .tour-back, .tour-next { min-width: 88px; padding: 0 14px 2px; }
 .tour-actions .is-invisible { visibility: hidden; }
 .tour-layer.is-after .tour-bubble { opacity: 0; visibility: hidden; }
+/* «Далі» на кроці з дією — показуємо дотик, який тур робить замість людини */
+.tour-tap {
+  position: fixed; width: 44px; height: 44px; margin: -22px 0 0 -22px;
+  border-radius: 50%; pointer-events: none; opacity: 0;
+  background: rgba(255,255,255,0.45); border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.25);
+  animation: tour-tap 420ms ease-out both;
+}
+@keyframes tour-tap {
+  0%   { opacity: 0;   transform: scale(0.5); }
+  30%  { opacity: 1;   transform: scale(0.8); }
+  100% { opacity: 0;   transform: scale(1.4); }
+}
 html.reduce-motion .tour-bubble { transition: none; }
 .tour-layer [hidden] { display: none !important; }
 
