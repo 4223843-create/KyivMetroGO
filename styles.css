@@ -5465,6 +5465,8 @@ html.reduce-motion .global-confirm-card { animation: none !important; }
 }
 .tour-back, .tour-next { min-width: 88px; padding: 0 14px 2px; }
 .tour-actions .is-invisible { visibility: hidden; }
+.tour-text:empty { display: none; }
+.tour-text:empty + .tour-actions { margin-top: 0; }
 .tour-layer.is-after .tour-bubble { opacity: 0; visibility: hidden; }
 /* «Далі» на кроці з дією — показуємо дотик, який тур робить замість людини */
 .tour-tap {

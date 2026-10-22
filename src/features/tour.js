@@ -1,8 +1,8 @@
 // ══ ОЗНАЙОМЧИЙ ТУР ══
 // Запускається при першому запуску. Підсвічує елемент і просить на нього
 // натиснути; до наступного кроку тур переходить лише після цієї дії.
-// Порядок: станція на карті → підказки з картки станції (hints.js) → Вибране →
-// пошук → налаштування → «Про застосунок». Тур можна пропустити, а з меню
+// Порядок: станція на карті → підказки з картки станції (hints.js, серед них
+// Check-in) → статистика й штриховка Check-in → Вибране → пошук → «Про застосунок». Тур можна пропустити, а з меню
 // розробника — запустити знову.
 //
 // Затемнення — .tour-blocker з дірками (clip-path) на місці підсвічених
@@ -19,12 +19,13 @@ import { getOpenSheet }          from '../ui/sheetNav.js';
 import { closeAllSheets }        from '../sheets/sheetsManager.js';
 import { findPosition }          from '../data/positions.js';
 import { tourHints, setHintsPaused } from './hints.js';
-import { isCheckinMode }         from '../domain/checkin.js';
+import { isCheckinMode, getCheckins } from '../domain/checkin.js';
 import { showToast }             from '../ui/toast.js';
 import { openFavSheet }          from './favorites/index.js';
 import { openSearchSheet }       from './search.js';
 import { openAboutSheet }        from '../sheets/aboutSheet.js';
 import { isFav, isExitFav }      from '../domain/favorites.js';
+import { openCheckinSheet }      from './checkin/index.js';
 
 const PAD          = 6;    // поле навколо підсвіченого елемента, px
 const NEXT_DELAY   = 900;  // пауза після дії, щоб людина побачила результат, мс
@@ -32,6 +33,7 @@ const START_DELAY  = 700;  // після заставки
 const AFTER_DELAY  = 3000; // скільки підсвічене розгорнуте після дії, мс
 
 const TAP_SHOW     = 520;  // скільки триває показ дотику перед дією, мс
+const SEARCH_DEMO  = 'Володимирська, 57'; // Будинок Центральної Ради УНР
 
 // Станції, які пропонуємо натиснути на карті (перша видима).
 const MAP_STATIONS = ['B.Ploshcha_Ukrainskikh_heroiv', 'B.Kontraktova_ploshcha', 'R.Teatralna', 'G.Zoloti_vorota', 'B.Olimpiiska'];
@@ -123,9 +125,32 @@ function _mapStep() {
   };
 }
 
+/** Відвідані станції на карті (Check-in) — кожна окремою рамкою. */
+function _visitedZones() {
+  const slugs = [...new Set(Object.values(getCheckins()).map(e => e.slug))];
+  return slugs.map(slug => _unionRect(_zoneEls(slug))).filter(Boolean);
+}
+
+/** Поле пошуку й перші результати. */
+function _searchTarget() {
+  if (!isOpen('searchSheet')) return null;
+  const rows = [...($('searchResults')?.children || [])].slice(0, 3);
+  return _unionRect([$('searchSheet').querySelector('.search-input-wrap'), ...rows].filter(Boolean));
+}
+
+/** Вводить у пошук адресу-приклад, як людина (без клавіатури поверх підказки). */
+function _searchDemo() {
+  setTimeout(() => {
+    const input = $('searchInput');
+    if (!input || !isOpen('searchSheet')) return;
+    input.value = SEARCH_DEMO;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.blur();
+  }, 400);
+}
+
 const _lineColor = () => lineTextColor(LINE_COLOR[state.stationsData?.[state.currentStationSlug]?.line] || '');
 
-// Check-in — необов'язковий, про нього окремий крок наприкінці туру
 function _cardSteps(station) {
   const card = { card: true, lost: () => !isOpen('stationSheet'), lostTo: 'map', restore: _reopenTourCard };
   // Спершу — що показує картка, далі підказки, які чекають на дію
@@ -134,7 +159,7 @@ function _cardSteps(station) {
       text: 'Ці вагон і&nbsp;двері найближчі до&nbsp;виходу з&nbsp;метро',
       target: () => _card('.fav-tap-target') },
     ...tourHints(station)
-      .filter(h => h.id !== 'checkin' && !_doneHints.has(h.id))
+      .filter(h => !_doneHints.has(h.id))
       .flatMap(h => {
         const step = { ...card, id: h.id, wait: 'hint', hint: h.id,
           text: () => h.text(_lineColor()),
@@ -144,6 +169,11 @@ function _cardSteps(station) {
         if (h.id === 'exitFav') return [{ ...step, skip: () => {
           const t = CARD_TARGETS.exitFav();
           if (t && !isExitFav(state.currentStationSlug, t.dataset.pos)) { t.click(); t.click(); }
+        } }];
+        // Повторний дотик зняв би відмітку
+        if (h.id === 'checkin') return [{ ...step, skip: () => {
+          const t = CARD_TARGETS.checkin();
+          if (t && !t.classList.contains('is-checked')) t.click();
         } }];
         if (h.id !== 'neighbour') return [step];
         // На сусідній станції — додати її серцем: у Вибраному будуть і вихід, і станція
@@ -167,37 +197,43 @@ const _openMenu    = () => { _closeSheets(); if (!dropMenuOpen()) $('menuBtn')?.
 const _sc = word => `<span style="font-variant:small-caps;letter-spacing:0.04em">${word}</span>`;
 
 const REST_STEPS = [
+  // Check-in: відмітку поставили в картці — далі статистика й карта
+  // Кнопка — у меню, тож меню відкриваємо самі
+  { id: 'checkinBtn', wait: 'tap', enter: _openMenu, when: isCheckinMode,
+    lost: () => !dropMenuOpen(), lostTo: 'checkinBtn', restore: _openMenu,
+    text: () => `Натисніть ${_pinIcon()}, щоб&nbsp;відкрити статистику відвіданих станцій`,
+    target: () => dropMenuOpen() ? $('checkinBtn') : null },
+  { id: 'checkinInfo', wait: 'next', lost: () => !isOpen('checkinSheet'), restore: openCheckinSheet, when: isCheckinMode,
+    text: 'Тут видно, скільки станцій і&nbsp;виходів ви вже відвідали&nbsp;— загалом і&nbsp;на&nbsp;кожній лінії',
+    target: () => _sheetRect('checkinSheet') },
+  { id: 'checkinMap', wait: 'next', enter: _closeSheets, when: isCheckinMode,
+    text: 'Відвідані станції штрихуються на&nbsp;карті: світлою штриховкою&nbsp;— якщо відмічено частину виходів, темнішою&nbsp;— якщо всі',
+    target: _visitedZones },
+
   { id: 'favBtn', wait: 'tap', enter: _closeSheets,
     text: `Для&nbsp;швидкого доступу додавайте станції та&nbsp;окремі виходи до&nbsp;${_sc('Вибраного')}. Натисніть, щоб&nbsp;відкрити його`,
     target: () => $('favListBtn') },
   { id: 'favInfo', wait: 'next', lost: () => !isOpen('favSheet'), restore: openFavSheet,
-    text: `Станцію додають серцем у&nbsp;картці, а&nbsp;вихід&nbsp;— подвійним дотиком до&nbsp;вагона й&nbsp;дверей. У&nbsp;налаштуваннях можна зробити так, щоб&nbsp;${_sc('Вибране')} відкривалося при&nbsp;запуску`,
+    text: `У&nbsp;налаштуваннях можна зробити так, щоб&nbsp;${_sc('Вибране')} відкривалося при&nbsp;запуску застосунку`,
     target: () => _sheetRect('favSheet') },
 
   { id: 'searchBtn', wait: 'tap', enter: _closeSheets,
     text: 'Натисніть, щоб&nbsp;відкрити пошук',
     target: () => $('searchBtnTop') },
   { id: 'searchInfo', wait: 'next', lost: () => !isOpen('searchSheet'), restore: openSearchSheet,
-    enter: () => setTimeout(() => $('searchInput')?.blur(), 400), // без клавіатури поверх підказки
+    enter: _searchDemo,
     text: 'Вкажіть адресу, щоб&nbsp;дізнатися, яка станція найближча. Тут також можна шукати станції за&nbsp;назвою',
-    target: () => _sheetRect('searchSheet') },
+    target: _searchTarget },
 
   { id: 'menuAbout', wait: 'tap', enter: _closeSheets,
     text: 'Натисніть, щоб&nbsp;відкрити меню',
     target: () => $('menuBtn') },
   { id: 'aboutItem', wait: 'tap', lost: () => !dropMenuOpen(), lostTo: 'menuAbout', restore: _openMenu,
-    text: 'Натисніть «Про застосунок»',
+    text: 'Тут ви знайдете інформацію про&nbsp;базові функції та&nbsp;зможете підтримати розробку застосунку',
     target: () => dropMenuOpen() ? $('aboutItem') : null },
-  { id: 'aboutInfo', wait: 'next', lost: () => !isOpen('aboutSheet'), restore: openAboutSheet,
-    text: 'Тут коротко про&nbsp;можливості застосунку, ранній доступ до&nbsp;Android-версії та&nbsp;звʼязок з&nbsp;розробником',
-    target: () => _sheetRect('aboutSheet') },
-
-  // Необов'язкове — без підсвічування, посередині екрана
-  { id: 'checkin', wait: 'next', last: true, center: true, enter: _closeSheets,
-    text: () => isCheckinMode()
-      ? `Відмічайте виходи, якими скористались: натисніть ${_pinIcon()} у&nbsp;картці станції. Check&#8209;in можна вимкнути в&nbsp;налаштуваннях. Гарних поїздок!`
-      : `Увімкніть Check&#8209;in у&nbsp;налаштуваннях і&nbsp;відмічайте виходи, якими скористались. Гарних поїздок!`,
-    target: () => null },
+  // Вікно говорить саме за себе — лише кнопки
+  { id: 'aboutInfo', wait: 'next', last: true, lost: () => !isOpen('aboutSheet'), restore: openAboutSheet,
+    text: '', target: () => _sheetRect('aboutSheet'), bubbleAt: 'bottom' },
 ];
 
 const _pinIcon = () => `<span class="hint-inline-icon">${Icons.dockPinFilled.replace('width="26" height="26"', 'aria-hidden="true"')}</span>`;
@@ -231,8 +267,9 @@ export function maybeStartTour() {
 export function startTour(fromId) {
   if (_steps) return;
   _doneHints = new Set();
-  const from = REST_STEPS.findIndex(s => s.id === fromId);
-  _steps = from >= 0 ? REST_STEPS.slice(from) : [_mapStep(), ...REST_STEPS];
+  const rest = REST_STEPS.filter(s => !s.when || s.when());
+  const from = rest.findIndex(s => s.id === fromId);
+  _steps = from >= 0 ? rest.slice(from) : [_mapStep(), ...rest];
   _idx = 0;
   setHintsPaused(true);
   _buildLayer();
@@ -514,7 +551,8 @@ function _render(rects) {
   const bh = bubble.offsetHeight, gap = 14;
   const safeTop = 16 + (parseFloat(getComputedStyle(_layer).paddingTop) || 0); // env(safe-area-inset-top)
   let top;
-  if (y2 + gap + bh <= vh - 16)       top = y2 + gap;
+  if (_cur()?.bubbleAt === 'bottom')  top = vh - 16 - bh; // шторка на весь екран — підказка внизу
+  else if (y2 + gap + bh <= vh - 16)  top = y2 + gap;
   else if (y1 - gap - bh >= safeTop)  top = y1 - gap - bh;
   else                                top = safeTop;
   bubble.style.top = `${top}px`;
