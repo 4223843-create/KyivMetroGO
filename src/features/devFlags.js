@@ -4,16 +4,25 @@
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 
-/** Повертає true якщо режим розробника активний. */
+const _devFlag = () => Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
+
+/** Активна емуляція стану (devEmulation.js): підставні дані чи час. */
+export function isEmulating() {
+  return !!(Storage.get(STORAGE_KEYS.DEV_EMU_PROFILE) || Storage.get(STORAGE_KEYS.DEV_EMU_SNAPSHOT)
+    || Storage.get(STORAGE_KEYS.DEV_EMU_CLOCK));
+}
+
+/** Повертає true якщо режим розробника активний. Під час емуляції — ні:
+ *  застосунок виглядає як у звичайної людини, без кнопок розробника. */
 export function isDevMode() {
-  return Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
+  return _devFlag() && !isEmulating();
 }
 // Для раннього обробника помилок в index.html (вікна «CRASH» лише розробнику)
 window.__isDevMode = isDevMode;
 
 /** Перемикає режим розробника. Повертає новий стан. */
 export function toggleDevMode() {
-  const next = !isDevMode();
+  const next = !_devFlag();
   Storage.set(STORAGE_KEYS.DEV_MODE, String(next));
   return next;
 }
