@@ -5544,7 +5544,7 @@ html.reduce-motion .tour-bubble { transition: none; }
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: calc(100vw - 120px);
+  max-width: calc(100vw - 32px);
   padding: 4px 4px 4px 10px;
   border-radius: 10px;
   background: var(--logo-red);
@@ -5565,6 +5565,8 @@ html.reduce-motion .tour-bubble { transition: none; }
   font-size: 11px;
   font-weight: var(--fw-medium);
   cursor: pointer;
+  width: 100px; /* кнопки поруч — однакові */
+  text-align: center;
 }
 
 /* ══ КАРТКА ПІДТРИМКИ: СУМА ДОНАТУ Й СПОВІЩЕННЯ ══ */

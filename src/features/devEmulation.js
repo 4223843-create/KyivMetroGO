@@ -4,7 +4,9 @@
 //
 // Стани користувача підставляють інші дані замість справжніх. Перед першою
 // такою зміною зберігаємо знімок усіх даних людини (ключі не metro_dev_*);
-// «Повернути» на смужці вгорі відновлює знімок і перезапускає застосунок.
+// «Повернути» на смужці вгорі відновлює знімок і перезапускає застосунок,
+// «Перезапустити» — входить у той самий стан наново (напр. тур з початку).
+// Поки емуляція активна, режим розробника вимкнено (devFlags.isDevMode).
 // Нотатки розробника (metro_dev_*) емуляція не чіпає, тож їх синхронізація
 // працює як завжди.
 //
@@ -23,6 +25,7 @@ import { getFavs, toggleFav, toggleExitFav } from '../domain/favorites.js';
 import { toggleCheckin }         from '../domain/checkin.js';
 import { addBetaSignup, addDonation } from '../domain/support.js';
 import { forceHint, hintApplies, setAllHintsDone } from './hints.js';
+import { isDevMode }             from './devFlags.js';
 
 const K = STORAGE_KEYS;
 
@@ -113,6 +116,16 @@ async function _restore() {
   [K.DEV_EMU_SNAPSHOT, K.DEV_EMU_PROFILE, K.DEV_EMU_CLOCK].forEach(k => Storage.remove(k));
   await Storage.flush();
   location.reload();
+}
+
+/** Той самий стан наново: дані зі знімка, потім профіль ще раз. */
+async function _restart() {
+  const p = _profile();
+  if (!p) { location.reload(); return; }
+  let snap = null;
+  try { snap = JSON.parse(Storage.get(K.DEV_EMU_SNAPSHOT) || 'null'); } catch { /* без знімка — профіль поверх поточних даних */ }
+  if (snap) USER_KEYS.forEach(k => (snap[k] != null ? Storage.set(k, snap[k]) : Storage.remove(k)));
+  await _applyProfile(p.id);
 }
 
 function _profile() {
@@ -371,14 +384,19 @@ function _renderBanner() {
 
   let el = document.getElementById('emuBanner');
   clearInterval(_bannerTimer);
+  // Під час емуляції — без кнопок розробника, лише ця смужка
+  document.getElementById('devMenuBtn')?.classList.toggle('is-hidden', !!parts.length || !isDevMode());
   if (!parts.length) { el?.remove(); return; }
   if (!el) {
     el = document.createElement('div');
     el.id = 'emuBanner';
     el.className = 'emu-banner';
     el.setAttribute('role', 'status');
-    el.innerHTML = '<span class="emu-banner-text"></span><button type="button" class="emu-banner-btn">Повернути</button>';
-    el.querySelector('button').addEventListener('click', _restore);
+    el.innerHTML = '<span class="emu-banner-text"></span>' +
+      '<button type="button" class="emu-banner-btn" data-act="restart">Перезапустити</button>' +
+      '<button type="button" class="emu-banner-btn" data-act="restore">Повернути</button>';
+    el.querySelector('[data-act="restart"]').addEventListener('click', _restart);
+    el.querySelector('[data-act="restore"]').addEventListener('click', _restore);
     document.body.appendChild(el);
   }
   el.querySelector('.emu-banner-text').textContent = parts.join(' · ');
