@@ -92,6 +92,7 @@ function _numberedTarget() {
 const AFTER_TARGETS = {
   exitNumbers: () => _card('.pos-numbered-exits.panel-open'),
   clock:       () => _card('#stationClockPanel.panel-open'),
+  neighbour:   () => isOpen('stationSheet') ? $('stationTitleMain') : null,
 };
 
 /** Перші вагон і двері — разом із підписом пересадки над ними, якщо він є. */
@@ -105,7 +106,8 @@ const CARD_TARGETS = {
   exitFav:     () => _card('.fav-tap-target'),
   exitNumbers: _numberedTarget,
   clock:       () => isOpen('stationSheet') ? $('sheetClockBtn') : null,
-  neighbour:   () => _card('.nav-link'),
+  // Назва цієї станції й підпис сусідньої, на яку перейдемо
+  neighbour:   () => isOpen('stationSheet') ? [$('stationTitleMain'), _card('.nav-link')].filter(Boolean) : null,
   stationFav:  () => isOpen('stationSheet') ? $('stationSheet').querySelector('.fav-btn-bar') : null,
   // «За станціями» — пін угорі картки, «за виходами» — пін першого виходу
   checkin:     () => isStationCheckinMode()
@@ -119,6 +121,7 @@ const CARD_TARGETS = {
 //             'station' (відкрилась картка), 'fav' (станцію додали у Вибране),
 //             'next' (кнопка «Далі»)
 // menu()    — ціль у меню: поки меню закрите, підсвічуємо кнопку меню
+// tapTarget() — що натискає «Далі», коли підсвічено кілька елементів
 // skip()    — що зробити замість людини, коли вона натискає «Далі»
 //             (типово — натиснути ціль; дотик показуємо кружечком)
 // lost()    — людина вийшла з потрібного стану (закрила картку чи меню):
@@ -193,7 +196,7 @@ function _cardSteps(station) {
         if (h.id !== 'neighbour') return [step];
         // На сусідній станції — додати її серцем: у Вибраному будуть і вихід, і станція
         return [
-          step,
+          { ...step, tapTarget: () => _card('.nav-link') },
           { ...card, id: 'stationFav', wait: 'fav',
             text: `Натисніть серце, щоб&nbsp;додати станцію до&nbsp;${_sc('Вибраного')}`,
             target: CARD_TARGETS.stationFav, restore: _reopenCard,
@@ -205,6 +208,13 @@ function _cardSteps(station) {
 
 const _closeSheets = () => { if (getOpenSheet() || dropMenuOpen()) closeAllSheets(true); };
 const _sheetRect   = id => isOpen(id) ? $(id) : null;
+const _closeMenu   = () => { const m = $('dropMenu'); if (m) { m.classList.remove('show'); m.hidden = true; } };
+
+/** Меню вже розгорнуте, коли показуємо підказку про його пункт. */
+function _openMenu() {
+  if (getOpenSheet()) closeAllSheets(true);
+  if (!dropMenuOpen()) $('menuBtn')?.click();
+}
 
 // «Вибране» в текстах — капітеллю, як у решті застосунку
 const _sc = word => `<span style="font-variant:small-caps;letter-spacing:0.04em">${word}</span>`;
@@ -219,9 +229,7 @@ const REST_STEPS = [
   { id: 'checkinBtn', wait: 'tap', enter: _closeSheets, when: isCheckinMode, ..._inMenu('checkinBtn'),
     text: () => `Розгорніть меню і&nbsp;натисніть ${_pinIcon()}, щоб&nbsp;відкрити статистику відвіданих станцій` },
   { id: 'checkinInfo', wait: 'next', lost: () => !isOpen('checkinSheet'), restore: openCheckinSheet, when: isCheckinMode,
-    text: () => isStationCheckinMode()
-      ? 'Тут видно, скільки станцій ви вже відвідали&nbsp;— загалом і&nbsp;на&nbsp;кожній лінії'
-      : 'Тут видно, скільки станцій і&nbsp;виходів ви вже відвідали&nbsp;— загалом і&nbsp;на&nbsp;кожній лінії',
+    text: `На&nbsp;сторінці ${_sc('Check-in')} відображається, який відсоток станцій ви відвідали`,
     target: () => _sheetRect('checkinSheet') },
   { id: 'checkinMap', wait: 'next', enter: _closeSheets, when: isCheckinMode,
     text: () => isStationCheckinMode()
@@ -230,14 +238,14 @@ const REST_STEPS = [
     target: _visitedZones },
 
   { id: 'favBtn', wait: 'tap', enter: _closeSheets,
-    text: `Для&nbsp;швидкого доступу додавайте станції та&nbsp;окремі виходи до&nbsp;${_sc('Вибраного')}. Натисніть, щоб&nbsp;відкрити його`,
+    text: `У&nbsp;${_sc('Вибраному')} можна зберігати як&nbsp;станції, так&nbsp;і&nbsp;окремі виходи зі&nbsp;станцій`,
     target: () => $('favListBtn') },
   { id: 'favInfo', wait: 'next', lost: () => !isOpen('favSheet'), restore: openFavSheet,
-    text: `У&nbsp;налаштуваннях можна зробити так, щоб&nbsp;${_sc('Вибране')} відкривалося при&nbsp;запуску застосунку`,
+    text: `${_sc('Вибране')} може відображатись при&nbsp;запуску застосунку, якщо задане відповідне налаштування`,
     target: () => _sheetRect('favSheet') },
 
   { id: 'searchBtn', wait: 'tap', enter: _closeSheets,
-    text: 'Натисніть, щоб&nbsp;відкрити пошук',
+    text: 'Пошук по&nbsp;станціям та&nbsp;адресам',
     target: () => $('searchBtnTop') },
   { id: 'searchInfo', wait: 'next', lost: () => !isOpen('searchSheet'), restore: openSearchSheet,
     enter: _searchDemo,
@@ -247,11 +255,12 @@ const REST_STEPS = [
   { id: 'menuAbout', wait: 'tap', enter: _closeSheets, ..._inMenu('aboutItem'),
     text: `В&nbsp;меню ${_sc('Про застосунок')} ви знайдете інформацію про&nbsp;базові функції та&nbsp;зможете підтримати розробку застосунку` },
   // Вікно говорить саме за себе — лише кнопки
-  { id: 'aboutInfo', wait: 'next', lost: () => !isOpen('aboutSheet'), restore: openAboutSheet,
+  { id: 'aboutInfo', wait: 'next', lost: () => !isOpen('aboutSheet'), restore: openAboutSheet, enter: _closeMenu,
     text: '', target: () => _sheetRect('aboutSheet'), bubbleAt: 'bottom' },
 
-  // Останнє: налаштування відкриваються на кілька секунд, потім тур закриває все
-  { id: 'settings', wait: 'tap', enter: _closeSheets, ..._inMenu('settingsItem'),
+  // Останнє: меню вже розгорнуте, налаштування відкриваються на кілька секунд,
+  // потім тур закриває все
+  { id: 'settings', wait: 'tap', enter: _openMenu, target: () => dropMenuOpen() ? $('settingsItem') : null,
     text: 'Налаштуйте зовнішній вигляд та&nbsp;додатковий функціонал тут',
     after: () => _sheetRect('settingsSheet') },
 ];
@@ -354,7 +363,7 @@ function _next() {
   const step = _cur();
   if (_waiting || _tapping) return;
   if (step.last) { endTour('done'); closeAllSheets(true); return; }
-  const target = step.wait !== 'next' && step.target();
+  const target = step.wait !== 'next' && (step.tapTarget || step.target)();
   if (!(target instanceof Element)) { _skipTo(step); return; }
 
   _tapping = true;
