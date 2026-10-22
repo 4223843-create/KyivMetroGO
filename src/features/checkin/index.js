@@ -29,6 +29,10 @@ import {
   invalidateCheckinsCache,
   isCheckedIn,
   toggleCheckin,
+  isStationCheckinMode,
+  isStationCheckedIn,
+  stationExitCheckinCount,
+  toggleStationCheckin,
   formatCheckinTime,
   stationWord,
   exitWord,
@@ -94,7 +98,8 @@ export function updateCheckinDock() {
  * Викликається через bus.on('checkin:attach-buttons').
  */
 function attachCheckinButtons(sheetEl, slug, lineColor) {
-  if (!isCheckinMode()) return;
+  _syncStationCheckinBtn(slug, lineColor);
+  if (!isCheckinMode() || isStationCheckinMode()) return;
   const body = sheetEl.id === 'sheetBody'
     ? sheetEl
     : sheetEl.querySelector('#sheetBody') || document.getElementById('sheetBody');
@@ -130,6 +135,44 @@ function attachCheckinButtons(sheetEl, slug, lineColor) {
     });
   });
 }
+
+// ══ ПІН СТАНЦІЇ (статистика «за станціями») ══════════════════
+// Одна кнопка вгорі картки, праворуч від годинника: відмічає станцію цілком.
+
+const stationCheckinBtn = document.getElementById('sheetCheckinBtn');
+
+function _syncStationCheckinBtn(slug, lineColor) {
+  if (!stationCheckinBtn) return;
+  stationCheckinBtn.hidden = !isCheckinMode() || !isStationCheckinMode();
+  if (stationCheckinBtn.hidden) return;
+  const checked = isStationCheckedIn(slug);
+  const color   = checked ? lineTextColor(lineColor) : '';
+  stationCheckinBtn.dataset.slug  = slug;
+  stationCheckinBtn.dataset.color = lineColor;
+  stationCheckinBtn.classList.toggle('is-checked', checked);
+  stationCheckinBtn.setAttribute('aria-pressed', String(checked));
+  stationCheckinBtn.innerHTML   = checkinPinSvg(checked, color || null);
+  stationCheckinBtn.style.color = color;
+}
+
+stationCheckinBtn?.addEventListener('click', e => {
+  e.stopPropagation();
+  const { slug, color } = stationCheckinBtn.dataset;
+  if (!slug) return;
+  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+
+  // Зняти відмітку станції — разом із виходами, відміченими раніше в режимі «за виходами»
+  const exits = isStationCheckedIn(slug) ? stationExitCheckinCount(slug) : 0;
+  if (!exits) { toggleStationCheckin(slug, color); return; }
+  bus.emit('ui:confirm', {
+    message:  `Зняти відмітку зі станції? Відмічені виходи (${exits}) теж буде знято`,
+    onYes:    () => toggleStationCheckin(slug, color),
+    labelYes: 'Зняти',
+    labelNo:  'Скасувати',
+    styleYes: 'confirm-btn-discard',
+    styleNo:  'confirm-btn-save',
+  });
+});
 
 // ══ РЕНДЕР КІЛЕЦЬ ГІЛОК ══════════════════════════════════════
 
@@ -201,7 +244,9 @@ export function openCheckinSheet() {
       listHtml = `
         <div class="fav-empty-state" style="margin-top: 40px;">
           <p class="fav-empty-text-lg">
-            Натисніть ${pinInline}, щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий
+            ${isStationCheckinMode()
+              ? `Натисніть ${pinInline} угорі картки,<br>щоб&nbsp;позначити станцію як&nbsp;відвідану`
+              : `Натисніть ${pinInline}, щоб&nbsp;позначити<br>вихід зі&nbsp;станції як&nbsp;відвіданий`}
           </p>
         </div>`;
 
@@ -235,8 +280,8 @@ export function openCheckinSheet() {
       bodyHtml = `
         <div class="ci-stats-bar">
           <div class="ci-stat"><span class="ci-stat-num">${uniqueStations}</span><span class="ci-stat-lbl">${stationWord(uniqueStations)}</span></div>
-          <div class="ci-stat-sep"></div>
-          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${exitWord(uniqueExitsVisited)}</span></div>
+          ${byExits ? `<div class="ci-stat-sep"></div>
+          <div class="ci-stat"><span class="ci-stat-num">${uniqueExitsVisited}</span><span class="ci-stat-lbl">${exitWord(uniqueExitsVisited)}</span></div>` : ''}
           <div class="ci-stat-sep"></div>
           <div class="ci-stat"><span class="ci-stat-num">${coverageText}</span><span class="ci-stat-lbl">охоплення</span></div>
         </div>
@@ -268,7 +313,8 @@ export function openCheckinSheet() {
                 total,
               };
             })
-            .filter(s => s.unvisitedCount > 0 && selectedLines.has(s.line))
+            // «За станціями» невідвідана — станція без жодної відмітки
+            .filter(s => (byExits ? s.unvisitedCount > 0 : !isStationCheckedIn(s.slug)) && selectedLines.has(s.line))
             .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
           listHtml = unvisitedStations.map(s => {
@@ -276,10 +322,10 @@ export function openCheckinSheet() {
             return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
               <div class="checkin-card-top">
                 <span class="checkin-station-name-text">${s.name}</span>
-                <span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>
+                ${byExits ? `<span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>` : ''}
               </div>
             </button>`;
-          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">Усі виходи відвідані 🎉</p>`;
+          }).join('') || `<p class="fav-empty-text-lg" style="text-align:center;padding:32px 16px;">${byExits ? 'Усі виходи відвідані' : 'Усі станції відвідані'} 🎉</p>`;
 
         } else {
           const byStation    = {};
@@ -312,9 +358,9 @@ export function openCheckinSheet() {
                 <span class="checkin-station-name-text">${st?.name || slug}</span>
                 <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
               </div>
-              <div class="checkin-card-bottom" style="margin-top:4px;">
+              ${byExits ? `<div class="checkin-card-bottom" style="margin-top:4px;">
                 <span class="checkin-count-badge" style="${badgeStyle}">${visitedExitsCnt} / ${totalExits}</span>
-              </div>
+              </div>` : ''}
             </button>`;
           }).join('');
         }

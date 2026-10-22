@@ -77,6 +77,14 @@ function showHoursSoonToast(btnEl) {
 // ══ ВІДКРИТТЯ ШТОРКИ НАЛАШТУВАНЬ ══════════════════════════════
 
 /** Відкриває шторку налаштувань. При першому виклику — ліниво створює DOM з template. */
+// «Check-in за попередньою станцією» має сенс лише для статистики за виходами
+function _syncCheckinByExitRow() {
+  const hide = getPref('checkinByStation') !== 'exits';
+  for (const id of ['checkinByExitRule', 'checkinByExitRow']) {
+    document.getElementById(id)?.classList.toggle('is-hidden', hide);
+  }
+}
+
 export function openSettingsSheet() {
   let settingsSheet  = document.getElementById('settingsSheet');
 
@@ -190,8 +198,9 @@ export function openSettingsSheet() {
         if (currentSlug) {
           const color = LINE_COLOR[state.stationsData?.[currentSlug]?.line] || 'var(--text-muted)';
           const sheet = document.getElementById('stationSheet');
-          sheet.querySelector('.row-checkin-btn')?.remove();
-          if (isMainOn) bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug: currentSlug, color });
+          sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
+          // Без Check-in обробник лише сховає пін угорі картки
+          bus.emit('checkin:attach-buttons', { sheetEl: sheet, slug: currentSlug, color });
         }
 
         bus.emit('map:sync-checkins');
@@ -219,6 +228,10 @@ export function openSettingsSheet() {
           statSeg.querySelectorAll('.settings-seg-btn').forEach(b =>
             b.classList.toggle('is-active', b === btn)
           );
+          _syncCheckinByExitRow();
+          // Пін угорі картки ↔ піни біля виходів, штриховка карти
+          bus.emit('station:refresh');
+          bus.emit('map:sync-checkins');
         });
       });
     }
@@ -447,6 +460,7 @@ export function openSettingsSheet() {
     document.querySelectorAll('#settingsCheckinStatSeg .settings-seg-btn').forEach(btn =>
       btn.classList.toggle('is-active', btn.dataset.statVal === savedStat)
     );
+    _syncCheckinByExitRow();
 
     const eX = document.getElementById('settingsCheckinByExitToggle');
     if (eX) eX.checked = !getPref('checkinByExit');

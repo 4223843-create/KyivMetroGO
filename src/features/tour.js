@@ -19,7 +19,7 @@ import { getOpenSheet }          from '../ui/sheetNav.js';
 import { closeAllSheets }        from '../sheets/sheetsManager.js';
 import { findPosition }          from '../data/positions.js';
 import { tourHints, setHintsPaused } from './hints.js';
-import { isCheckinMode, getCheckins } from '../domain/checkin.js';
+import { isCheckinMode, isStationCheckinMode, getCheckins } from '../domain/checkin.js';
 import { showToast }             from '../ui/toast.js';
 import { openFavSheet }          from './favorites/index.js';
 import { openSearchSheet }       from './search.js';
@@ -107,7 +107,10 @@ const CARD_TARGETS = {
   clock:       () => isOpen('stationSheet') ? $('sheetClockBtn') : null,
   neighbour:   () => _card('.nav-link'),
   stationFav:  () => isOpen('stationSheet') ? $('stationSheet').querySelector('.fav-btn-bar') : null,
-  checkin:     () => _card('.row-checkin-btn'),
+  // «За станціями» — пін угорі картки, «за виходами» — пін першого виходу
+  checkin:     () => isStationCheckinMode()
+    ? (isOpen('stationSheet') && !$('sheetCheckinBtn')?.hidden ? $('sheetCheckinBtn') : null)
+    : _card('.row-checkin-btn'),
 };
 
 // ── Кроки ──
@@ -216,10 +219,14 @@ const REST_STEPS = [
   { id: 'checkinBtn', wait: 'tap', enter: _closeSheets, when: isCheckinMode, ..._inMenu('checkinBtn'),
     text: () => `Розгорніть меню і&nbsp;натисніть ${_pinIcon()}, щоб&nbsp;відкрити статистику відвіданих станцій` },
   { id: 'checkinInfo', wait: 'next', lost: () => !isOpen('checkinSheet'), restore: openCheckinSheet, when: isCheckinMode,
-    text: 'Тут видно, скільки станцій і&nbsp;виходів ви вже відвідали&nbsp;— загалом і&nbsp;на&nbsp;кожній лінії',
+    text: () => isStationCheckinMode()
+      ? 'Тут видно, скільки станцій ви вже відвідали&nbsp;— загалом і&nbsp;на&nbsp;кожній лінії'
+      : 'Тут видно, скільки станцій і&nbsp;виходів ви вже відвідали&nbsp;— загалом і&nbsp;на&nbsp;кожній лінії',
     target: () => _sheetRect('checkinSheet') },
   { id: 'checkinMap', wait: 'next', enter: _closeSheets, when: isCheckinMode,
-    text: 'Відвідані станції штрихуються на&nbsp;карті. Якщо відвідані всі виходи на&nbsp;станції, штриховка змінить напрямок і&nbsp;стане темнішою',
+    text: () => isStationCheckinMode()
+      ? 'Відвідані станції штрихуються на&nbsp;карті'
+      : 'Відвідані станції штрихуються на&nbsp;карті. Якщо відвідані всі виходи на&nbsp;станції, штриховка змінить напрямок і&nbsp;стане темнішою',
     target: _visitedZones },
 
   { id: 'favBtn', wait: 'tap', enter: _closeSheets,

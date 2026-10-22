@@ -3,7 +3,7 @@
 // накладання та зняття heatmap-штрихування для відвіданих виходів (check-in).
 
 import { state }                  from '../core/state.js';
-import { getCheckins, isCheckinMode, getStationExitStats } from '../domain/checkin.js';
+import { getCheckins, isCheckinMode, isStationCheckinMode, getStationExitStats } from '../domain/checkin.js';
 import { bus }                    from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { getSlugByLower }         from '../data/stations.js';
@@ -266,6 +266,9 @@ export function syncMapWithCheckins() {
       .filter(Boolean)
   );
 
+  // «За станціями» відмічена станція відвідана повністю — виходи не рахуються
+  const byStation = isStationCheckinMode();
+
   removeVisitedHatchOverlays();
 
   inner.querySelectorAll('.station-checked-in, .is-visited, .is-visited-partial, .is-visited-full')
@@ -281,7 +284,7 @@ export function syncMapWithCheckins() {
     // з урахуванням дзеркальних виходів)
     const { total, visited } = getStationExitStats(slug, entries);
 
-    el.classList.add(visited >= Math.max(total, 1)
+    el.classList.add(byStation || visited >= Math.max(total, 1)
       ? 'is-visited-full'
       : 'is-visited-partial');
   });
