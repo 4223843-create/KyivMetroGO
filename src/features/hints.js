@@ -50,7 +50,7 @@ const HINTS = [
     applies: () => isCheckinMode(),
     used:    () => Object.keys(getCheckins()).length > 0,
     text:    c => isStationCheckinMode()
-      ? `Натисніть ${inlineIcon(PIN_ICON, c)} угорі, щоб&nbsp;позначити станцію як&nbsp;відвідану`
+      ? `Натисніть ${inlineIcon(PIN_ICON, c)}, щоб&nbsp;позначити станцію як&nbsp;відвідану`
       : `Натисніть ${inlineIcon(PIN_ICON, c)}, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`,
   },
 ];
