@@ -4,8 +4,9 @@
 //
 // Стани користувача підставляють інші дані замість справжніх. Перед першою
 // такою зміною зберігаємо знімок усіх даних людини (ключі не metro_dev_*);
-// «Повернути» на смужці вгорі відновлює знімок і перезапускає застосунок,
-// «Перезапустити» — входить у той самий стан наново (напр. тур з початку).
+// Кнопки-іконки на смужці вгорі: «Перезапустити» — той самий стан наново
+// (напр. тур з початку), «Повернути» — відновити знімок і перезапуститись,
+// «Інша емуляція» — список емуляцій у меню розробника.
 // Поки емуляція активна, режим розробника вимкнено (devFlags.isDevMode).
 // Нотатки розробника (metro_dev_*) емуляція не чіпає, тож їх синхронізація
 // працює як завжди.
@@ -117,14 +118,17 @@ async function _restore() {
   location.reload();
 }
 
-/** Той самий стан наново: дані зі знімка, потім профіль ще раз. */
+/** Той самий стан наново (напр. тур з початку). */
 async function _restart() {
   const p = _profile();
-  if (!p) { location.reload(); return; }
-  let snap = null;
-  try { snap = JSON.parse(Storage.get(K.DEV_EMU_SNAPSHOT) || 'null'); } catch { /* без знімка — профіль поверх поточних даних */ }
-  if (snap) USER_KEYS.forEach(k => (snap[k] != null ? Storage.set(k, snap[k]) : Storage.remove(k)));
-  await _applyProfile(p.id);
+  if (p) await _applyProfile(p.id);
+  else location.reload();
+}
+
+/** Список емуляцій, щоб обрати іншу: меню розробника на розділі «Емуляція». */
+async function _openList() {
+  const { openDevMenuSheet } = await import('../sheets/devMenuSheet.js');
+  openDevMenuSheet({ section: 'emulation' });
 }
 
 function _profile() {
@@ -137,6 +141,10 @@ async function _applyProfile(id) {
   const p = PROFILES[id];
   if (!p) return;
   _ensureSnapshot();
+  // Кожен стан будуємо з ваших даних, а не поверх попередньої емуляції
+  let snap = null;
+  try { snap = JSON.parse(Storage.get(K.DEV_EMU_SNAPSHOT) || 'null'); } catch { /* без знімка — поверх поточних даних */ }
+  if (snap) USER_KEYS.forEach(k => (snap[k] != null ? Storage.set(k, snap[k]) : Storage.remove(k)));
   if (p.keep !== 'all') USER_KEYS.filter(k => !p.keep.includes(k)).forEach(k => Storage.remove(k));
   Object.entries(p.set || {}).forEach(([k, v]) => Storage.set(k, v));
   if (p.hintsDone) setAllHintsDone(true);
@@ -370,6 +378,10 @@ async function _tour(from) {
 
 let _bannerTimer = 0;
 
+const _bannerBtn = (act, label, paths) =>
+  `<button type="button" class="emu-banner-btn" data-act="${act}" aria-label="${label}" title="${label}">` +
+  `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg></button>`;
+
 function _renderBanner() {
   const parts = [];
   const p = _profile();
@@ -389,10 +401,12 @@ function _renderBanner() {
     el.className = 'emu-banner';
     el.setAttribute('role', 'status');
     el.innerHTML = '<span class="emu-banner-text"></span>' +
-      '<button type="button" class="emu-banner-btn" data-act="restart">Перезапустити</button>' +
-      '<button type="button" class="emu-banner-btn" data-act="restore">Повернути</button>';
+      _bannerBtn('restart', 'Перезапустити', '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>') +
+      _bannerBtn('restore', 'Повернути ваші дані', '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>') +
+      _bannerBtn('list', 'Інша емуляція', '<path d="M4 6h16M4 12h16M4 18h16"/>');
     el.querySelector('[data-act="restart"]').addEventListener('click', _restart);
     el.querySelector('[data-act="restore"]').addEventListener('click', _restore);
+    el.querySelector('[data-act="list"]').addEventListener('click', _openList);
     document.body.appendChild(el);
   }
   el.querySelector('.emu-banner-text').textContent = parts.join(' · ');
