@@ -5556,17 +5556,17 @@ html.reduce-motion .tour-bubble { transition: none; }
 .emu-banner-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .emu-banner-btn {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; /* кнопки поруч — однакові */
+  height: 26px;
+  padding: 0;
   border: none;
   border-radius: 7px;
-  padding: 4px 8px;
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: var(--fw-medium);
   cursor: pointer;
-  width: 100px; /* кнопки поруч — однакові */
-  text-align: center;
 }
 
 /* ══ КАРТКА ПІДТРИМКИ: СУМА ДОНАТУ Й СПОВІЩЕННЯ ══ */

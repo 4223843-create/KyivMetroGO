@@ -631,7 +631,8 @@ function _renderAll(sheet) {
   _setupCollapsibles(sheet);
 }
 
-export function openDevMenuSheet() {
+/** @param {{section?: string}} [opts] — розгорнути й показати цей розділ */
+export function openDevMenuSheet({ section } = {}) {
 
   let sheet = document.getElementById('devMenuSheet');
   if (!sheet) {
@@ -662,4 +663,10 @@ export function openDevMenuSheet() {
   _renderAll(sheet);
 
   showSheet(sheet, 'sheet-fullscreen', 'sheet-scrollable');
+
+  const target = section && sheet.querySelector(`.dev-menu-collapsible[data-section="${section}"]`);
+  if (target) {
+    target.classList.remove('is-collapsed');
+    requestAnimationFrame(() => target.scrollIntoView({ block: 'start' }));
+  }
 }
