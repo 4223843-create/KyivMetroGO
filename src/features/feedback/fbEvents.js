@@ -461,7 +461,7 @@ function _handleReset(afterRender) {
       applyLocalLayer();
       bus.emit('station:refresh');
       document.getElementById('fbResetWrap').innerHTML =
-        '<p class="fb-note fb-success">✓ Локальні зміни скинуто.</p>';
+        '<p class="fb-note fb-success">✓ Локальні зміни скинуто</p>';
       renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
     },
     onNo:     () => {},

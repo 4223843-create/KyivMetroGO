@@ -33,14 +33,6 @@ const K = STORAGE_KEYS;
 // Дані людини — усе, крім ключів режиму розробника
 const USER_KEYS = Object.values(K).filter(k => !k.startsWith('metro_dev_'));
 
-// Налаштування (для «Налаштування за замовчуванням»)
-const PREF_KEYS = [
-  K.THEME, K.EDIT_MODE, K.START_ON_FAV, K.HIDE_INFO_BLOCKS, K.LOCAL_ONLY_FEEDBACK,
-  K.HIDE_NO_LIFT, K.SHOW_MAP_ACCESSIBILITY, K.MAP_ACCESSIBILITY, K.SHOW_INTERVALS,
-  K.SHOW_STATION_HOURS, K.REDUCE_MOTION, K.SHOW_GROUND_TRANSPORT, K.CHECKIN_MODE,
-  K.CHECKIN_BY_STATION, K.CHECKIN_BY_EXIT, K.CHECKIN_HATCH,
-];
-
 const DAY = 86400000;
 
 // keep — які ключі лишити як є ('all' — усі); set — що записати; seed — що
@@ -48,10 +40,7 @@ const DAY = 86400000;
 const PROFILES = {
   first:    { label: 'Перший запуск',                keep: [] },
   empty:    { label: 'Без даних',                    keep: [K.THEME], set: { [K.TOUR_DONE]: 'done' } },
-  active:   { label: 'Активний користувач',          keep: [K.THEME], set: { [K.TOUR_DONE]: 'done' }, seed: 'demo' },
-  expert:   { label: 'Досвідчений',                  keep: [K.THEME], set: { [K.TOUR_DONE]: 'done' }, seed: 'demo', hintsDone: true },
   startFav: { label: 'Запуск з Вибраного',           keep: [K.THEME], set: { [K.TOUR_DONE]: 'done', [K.START_ON_FAV]: 'true' }, seed: 'demo' },
-  defaults: { label: 'Налаштування за замовчуванням', keep: USER_KEYS.filter(k => !PREF_KEYS.includes(k)) },
   signup:   { label: 'Gmail уже подано',             keep: 'all', seed: 'signup' },
 };
 
@@ -147,7 +136,6 @@ async function _applyProfile(id) {
   if (snap) USER_KEYS.forEach(k => (snap[k] != null ? Storage.set(k, snap[k]) : Storage.remove(k)));
   if (p.keep !== 'all') USER_KEYS.filter(k => !p.keep.includes(k)).forEach(k => Storage.remove(k));
   Object.entries(p.set || {}).forEach(([k, v]) => Storage.set(k, v));
-  if (p.hintsDone) setAllHintsDone(true);
   Storage.set(K.DEV_EMU_PROFILE, JSON.stringify({ id, seeded: !p.seed }));
   try { sessionStorage.setItem('metro_emu_note', `Емуляція: ${p.label}`); } catch { /* без повідомлення */ }
   await Storage.flush();
@@ -183,7 +171,7 @@ function _seed(kind) {
 }
 
 async function _favStreak() {
-  if (!getFavs().length) { showToast('Спершу оберіть «Активний користувач» або додайте станцію у Вибране'); return; }
+  if (!getFavs().length) { showToast('Спершу оберіть «Запуск з Вибраного» або додайте станцію у Вибране'); return; }
   _ensureSnapshot();
   Storage.set(K.FAV_ONLY_STREAK, '4');  // наступне відкриття — п'яте
   Storage.remove(K.START_ON_FAV);

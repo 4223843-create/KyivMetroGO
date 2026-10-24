@@ -406,7 +406,7 @@ export function openSettingsSheet() {
         await BackupService.exportData({ devLog: isDevMode() ? getDevLog() : null });
       } catch {
         bus.emit('ui:confirm', {
-          message:  'Не вдалося створити файл резервної копії.',
+          message:  'Не вдалося створити файл резервної копії',
           onYes:    () => {},
           labelYes: 'Зрозуміло',
           styleYes: 'confirm-btn-save',
@@ -422,7 +422,7 @@ export function openSettingsSheet() {
 
       if (result.status === 'invalid' || result.status === 'error') {
         bus.emit('ui:confirm', {
-          message:  result.reason ?? 'Не вдалося прочитати файл.',
+          message:  result.reason ?? 'Не вдалося прочитати файл',
           onYes:    () => {},
           labelYes: 'Зрозуміло',
           styleYes: 'confirm-btn-save',
@@ -431,7 +431,7 @@ export function openSettingsSheet() {
       }
 
       bus.emit('ui:confirm', {
-        message:  'Відновити дані з цього файлу? Поточні налаштування, Вибране та Check-in будуть замінені.',
+        message:  'Відновити дані з цього файлу? Поточні налаштування, Вибране та Check-in будуть замінені',
         onYes:    () => BackupService.restoreAndReload(result.data),
         onNo:     () => {},
         labelYes: 'Відновити',

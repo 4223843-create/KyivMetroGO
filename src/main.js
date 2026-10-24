@@ -96,7 +96,7 @@ async function bootstrap() {
       '<span style="font-size:2rem">⚠️</span>' +
       '<strong style="font-size:1.1rem">Не вдалося запустити застосунок</strong>' +
       '<p style="font-size:.9rem;opacity:.7;max-width:320px">' +
-      'Перевірте зʼєднання з інтернетом і спробуйте ще раз.</p>' +
+      'Перевірте зʼєднання з інтернетом і спробуйте ще раз</p>' +
       '<button onclick="location.reload()" ' +
       'style="margin-top:8px;padding:12px 28px;border-radius:8px;border:none;' +
       'background:#c8523a;color:#fff;font-size:1rem;cursor:pointer">Спробувати ще раз</button>';

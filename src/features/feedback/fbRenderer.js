@@ -116,7 +116,7 @@ function positionItemHtml(item, st, lineColor) {
           <p><span style="color:var(--line-red)">✕</span> позначає&nbsp;вихід як&nbsp;тимчасово&nbsp;недоступний</p>
         </div>
         <div class="hint-2-doors">
-          <p><span style="color:var(--line-blue)">✕</span> скасовує додавання других дверей.</p>
+          <p><span style="color:var(--line-blue)">✕</span> скасовує додавання других дверей</p>
         </div>
       </div>
     </div>`;
@@ -214,7 +214,7 @@ export function renderFeedbackPositions(slug, { onAfterRender } = {}) {
     posEl.innerHTML = `
       <div style="color:var(--line-red);padding:16px;text-align:center;
                   font-size:14px;background:var(--bg-card);border-radius:12px;">
-        Не вдалося показати станцію. Спробуйте ще раз.
+        Не вдалося показати станцію. Спробуйте ще раз
       </div>`;
     console.error('[fbRenderer] Render error:', err);
   }
