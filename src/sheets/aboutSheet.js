@@ -4,7 +4,7 @@ import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { setupDevModeTapCounter } from '../features/devHooks.js';
 import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { showToast }             from '../ui/toast.js';
-import { addBetaSignup, addDonation, supportNotices } from '../domain/support.js';
+import { addBetaSignup, supportNotices } from '../domain/support.js';
 
 // Форма Formspree, куди приходять записи на ранній доступ до Android.
 const BETA_FORM_URL = 'https://formspree.io/f/mgopobnd';
@@ -219,16 +219,19 @@ function bindBottomLoader(aboutSheet) {
       }
     };
   }
-  if (monoBtn) monoBtn.addEventListener('click', () => {
-    startSalute('Дякуємо', 'за підтримку!');
-    _donatePending = true;
+  // Салют — лише коли людина, повернувшись з банки, скаже, що задонатила
+  if (monoBtn) monoBtn.addEventListener('click', () => { _donatePending = true; });
+  aboutSheet.querySelector('#donateAsk')?.addEventListener('click', e => {
+    const answer = e.target.closest('[data-donated]')?.dataset.donated;
+    if (!answer) return;
+    e.currentTarget.hidden = true;
+    if (answer === 'yes') startSalute('Дякуємо', 'за підтримку!');
   });
-  _bindDonateAsk(aboutSheet);
 }
 
-// ══ СУМА ДОНАТУ ══
+// ══ ПІСЛЯ MONOBANK ══
 // Monobank не повідомляє застосунку про оплату. Коли людина повертається з банки,
-// пропонуємо (необовʼязково) вказати суму — тоді в картці зʼявиться сповіщення.
+// питаємо «Задонатили?»: «Так» — салют, «Ні» — нічого. Нічого не запамʼятовуємо.
 let _donatePending = false;
 
 document.addEventListener('visibilitychange', () => {
@@ -237,40 +240,16 @@ document.addEventListener('visibilitychange', () => {
   if (sheet?.classList.contains('sheet-open')) showDonateAsk();
 });
 
-/** Показує поле суми під карткою підтримки (і для емуляції в режимі розробника). */
+/** Показує питання «Задонатили?» під карткою підтримки (і для емуляції в режимі розробника). */
 export function showDonateAsk() {
   _donatePending = false;
   const ask = document.getElementById('donateAsk');
   if (!ask) return;
-  // Салют закриває картку — прибираємо, щоб поле було видно
-  const salute = document.getElementById('supportLoaderWrap');
-  if (salute) { salute.style.opacity = '0'; salute.style.display = 'none'; }
   ask.hidden = false;
   setTimeout(() => ask.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 }
 
-function _bindDonateAsk(aboutSheet) {
-  const ask   = aboutSheet.querySelector('#donateAsk');
-  const input = aboutSheet.querySelector('#donateAmount');
-  if (!ask || !input) return;
-  const close = () => { ask.hidden = true; input.value = ''; input.blur(); };
-  aboutSheet.querySelector('#donateAskCancel')?.addEventListener('click', close);
-  input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, '').slice(0, 6); });
-  ask.addEventListener('submit', e => {
-    e.preventDefault();
-    const amount = parseInt(input.value, 10);
-    if (!(amount > 0)) {
-      input.style.color = 'var(--logo-red)';
-      setTimeout(() => { input.style.color = ''; }, 1500);
-      return;
-    }
-    addDonation(amount);
-    close();
-    renderSupportNotices(aboutSheet);
-  });
-}
-
-/** Сповіщення під карткою підтримки: подана пошта, сума донатів. */
+/** Сповіщення під карткою підтримки: подана пошта. */
 function renderSupportNotices(aboutSheet) {
   const el = aboutSheet.querySelector('#supportNotices');
   if (!el) return;
