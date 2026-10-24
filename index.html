@@ -240,7 +240,6 @@ document.documentElement.setAttribute('data-theme', actual);
             <button type="button" class="dev-emu-btn" data-emu="profile:startFav">Запуск з&nbsp;Вибраного</button>
             <button type="button" class="dev-emu-btn" data-emu="profile:defaults">Налаштування за&nbsp;замовч.</button>
             <button type="button" class="dev-emu-btn" data-emu="profile:signup">Gmail уже подано</button>
-            <button type="button" class="dev-emu-btn" data-emu="profile:donated">Кілька донатів</button>
             <button type="button" class="dev-emu-btn" data-emu="favStreak">Вибране 5-й раз</button>
             <button type="button" class="dev-emu-btn" data-emu="slowData">Повільні дані (8&nbsp;с)</button>
           </div>
@@ -525,18 +524,14 @@ document.documentElement.setAttribute('data-theme', actual);
   Для релізу в App&nbsp;Store потрібна<br>ліцензія Apple&nbsp;Developer<br>(<strong>$99&nbsp;на&nbsp;рік</strong>)
   </p>
 
-  <!-- Після monobank: людина може вказати суму, щоб застосунок її запамʼятав -->
-  <form id="donateAsk" class="about-donate-ask" hidden>
-    <p class="about-donate-ask-text">Задонатили? Вкажіть суму, і&nbsp;ми&nbsp;її&nbsp;запамʼятаємо</p>
-    <div class="about-input-group about-donate-amount">
-      <input type="text" id="donateAmount" class="about-beta-input" inputmode="numeric" placeholder="сума" aria-label="Сума донату, гривень" autocomplete="off">
-      <span class="about-gmail-domain">₴</span>
+  <!-- Після monobank: «Так» — салют, «Ні» — просто ховаємо питання -->
+  <div id="donateAsk" class="about-donate-ask" hidden>
+    <p class="about-donate-ask-text">Задонатили?</p>
+    <div class="exit-replace-btns">
+      <button type="button" class="exit-replace-btn confirm-btn-save" data-donated="yes">Так</button>
+      <button type="button" class="exit-replace-btn confirm-btn-discard" data-donated="no">Ні</button>
     </div>
-    <div class="bug-actions">
-      <button type="submit" class="confirm-main-btn confirm-btn-save">Зберегти</button>
-      <button type="button" id="donateAskCancel" class="confirm-main-btn confirm-btn-neutral">Не&nbsp;зараз</button>
-    </div>
-  </form>
+  </div>
 
   <div id="supportNotices" class="about-support-notices" aria-live="polite" hidden></div>
 

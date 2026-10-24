@@ -5579,12 +5579,11 @@ html.reduce-motion .tour-bubble { transition: none; }
 }
 .about-support-card .about-donate-ask-text {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--text-muted);
   text-align: center;
 }
-.about-donate-amount { max-width: 140px; margin: 0 auto; }
 
 .about-support-notices {
   width: 100%;
@@ -5646,3 +5645,5 @@ html.reduce-motion .tour-bubble { transition: none; }
   font-size: var(--fs-sm);
 }
 .fav-add-dirs .fav-tap-target { cursor: pointer; }
+
+.about-donate-ask .exit-replace-btn { height: 34px; font-size: var(--fs-sm); }

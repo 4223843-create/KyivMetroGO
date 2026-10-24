@@ -52,7 +52,6 @@ export const STORAGE_KEYS = {
   LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
   CHECKIN_HATCH:  'metro_checkin_hatch',
   BETA_SIGNUPS:   'metro_beta_signups',   // [{ email, t }] — заявки на ранній доступ
-  DONATIONS:      'metro_donations',      // [{ amount, t }] — донати, суму вказує людина
   // Емуляція станів у режимі розробника (features/devEmulation.js)
   DEV_EMU_SNAPSHOT: 'metro_dev_emu_snapshot',
   DEV_EMU_PROFILE:  'metro_dev_emu_profile',

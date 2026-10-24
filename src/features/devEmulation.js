@@ -23,7 +23,7 @@ import { traversePositions, positionId } from '../data/positions.js';
 import { saveExitLabel }         from '../data/localEdits.js';
 import { getFavs, toggleFav, toggleExitFav } from '../domain/favorites.js';
 import { toggleCheckin }         from '../domain/checkin.js';
-import { addBetaSignup, addDonation } from '../domain/support.js';
+import { addBetaSignup } from '../domain/support.js';
 import { forceHint, hintApplies, setAllHintsDone } from './hints.js';
 import { isDevMode }             from './devFlags.js';
 
@@ -52,7 +52,6 @@ const PROFILES = {
   startFav: { label: 'Запуск з Вибраного',           keep: [K.THEME], set: { [K.TOUR_DONE]: 'done', [K.START_ON_FAV]: 'true' }, seed: 'demo' },
   defaults: { label: 'Налаштування за замовчуванням', keep: USER_KEYS.filter(k => !PREF_KEYS.includes(k)) },
   signup:   { label: 'Gmail уже подано',             keep: 'all', seed: 'signup' },
-  donated:  { label: 'Кілька донатів',               keep: 'all', seed: 'donated' },
 };
 
 const DEMO_FAVS   = ['R.Teatralna', 'B.Kontraktova_ploshcha', 'G.Zoloti_vorota', 'B.Olimpiiska'];
@@ -150,7 +149,6 @@ async function _applyProfile(id) {
 function _seed(kind) {
   const now = Date.now();
   if (kind === 'signup')  addBetaSignup(DEMO_EMAIL, now - 3 * DAY);
-  if (kind === 'donated') { addDonation(200, now - 12 * DAY); addDonation(300, now - 2 * DAY); }
   if (kind !== 'demo') return;
 
   const data = state.stationsData || {};
@@ -249,8 +247,6 @@ async function _donate() {
   const sheet = await _openAbout();
   const mono  = sheet?.querySelector('.about-donate-btn-mono');
   if (!mono) return;
-  _ensureSnapshot(); // вказана сума запамʼятається
-  _renderBanner();
   mono.scrollIntoView({ behavior: 'smooth', block: 'center' });
   mono.addEventListener('click', e => e.preventDefault(), { once: true, capture: true }); // без переходу в банку
   mono.click();
