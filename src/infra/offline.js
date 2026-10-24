@@ -10,7 +10,7 @@ banner.setAttribute('aria-expanded', 'false');
 banner.innerHTML = '<strong>Офлайн</strong><span>Вийшли на Львівській брамі?</span>' +
   '<span class="offline-banner-more">Без інтернету працює все: карта, картки станцій, вибране, ' +
   'check-in та інтервали руху. Мережа потрібна лише, щоб отримати нові дані про станції ' +
-  'й оновлення застосунку та надіслати ваші правки чи повідомлення.</span>';
+  'й оновлення застосунку та надіслати ваші правки чи повідомлення</span>';
 banner.hidden = navigator.onLine;
 document.body.appendChild(banner);
 

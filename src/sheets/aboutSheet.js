@@ -211,7 +211,7 @@ function bindBottomLoader(aboutSheet) {
         renderSupportNotices(aboutSheet);
         startSalute('Дякуємо!', 'Напишемо');
       } catch {
-        showToast('Не вдалося надіслати. Спробуйте пізніше.');
+        showToast('Не вдалося надіслати. Спробуйте пізніше');
         flashError();
       } finally {
         clearTimeout(timeoutId);
@@ -428,7 +428,7 @@ function _bindBugForm(aboutSheet) {
 
       // Швидка перевірка офлайн-стану ще до fetch
       if (!navigator.onLine) {
-        bugResultMsg.textContent   = 'Немає зʼєднання з інтернетом. Спробуйте пізніше.';
+        bugResultMsg.textContent   = 'Немає зʼєднання з інтернетом. Спробуйте пізніше';
         bugResultMsg.style.color   = 'var(--logo-red)';
         return;
       }
@@ -454,7 +454,7 @@ function _bindBugForm(aboutSheet) {
         if (res.ok) {
           bugTextarea.hidden              = true;
           bugSubmitBtn.parentElement.hidden = true;
-          bugResultMsg.textContent        = '✓ Дякуємо! Повідомлення надіслано.';
+          bugResultMsg.textContent        = '✓ Дякуємо! Повідомлення надіслано';
           bugResultMsg.style.color        = 'var(--logo-green)';
           bugResultMsg.style.fontWeight   = '600';
           bugResultMsg.style.fontSize     = 'var(--fs-md)';
@@ -468,8 +468,8 @@ function _bindBugForm(aboutSheet) {
         bugSubmitBtn.textContent = 'Надіслати';
         bugResultMsg.style.color = 'var(--logo-red)';
         bugResultMsg.textContent = err.name === 'AbortError'
-          ? 'Час очікування вичерпано. Перевірте зʼєднання.'
-          : 'Не вдалося надіслати. Спробуйте пізніше.';
+          ? 'Час очікування вичерпано. Перевірте зʼєднання'
+          : 'Не вдалося надіслати. Спробуйте пізніше';
       }
     });
   }

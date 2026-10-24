@@ -74,7 +74,7 @@ function _backupFilename() {
  */
 function _validate(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return { valid: false, reason: 'Файл не є обʼєктом JSON.' };
+    return { valid: false, reason: 'Файл не є обʼєктом JSON' };
   }
   // Будь-який ключ застосунку — зокрема бекап лише з налаштуваннями
   const knownKeys   = new Set(Object.values(STORAGE_KEYS));
@@ -82,7 +82,7 @@ function _validate(data) {
     || BACKUP_TOKEN in data
     || 'metro_favs' in data; // legacy ключ до міграції STORAGE_KEYS
   if (!hasKnownKey) {
-    return { valid: false, reason: 'Файл не містить даних KyivMetroGO.' };
+    return { valid: false, reason: 'Файл не містить даних KyivMetroGO' };
   }
   return { valid: true };
 }
@@ -99,7 +99,7 @@ function _parseAndValidate(text) {
     if (!validation.valid) return { status: 'invalid', reason: validation.reason };
     return { status: 'success', data: parsed };
   } catch {
-    return { status: 'invalid', reason: 'Файл містить некоректний JSON.' };
+    return { status: 'invalid', reason: 'Файл містить некоректний JSON' };
   }
 }
 
@@ -297,7 +297,7 @@ async function _pickNative() {
     const bytes = Uint8Array.from(atob(file.data), ch => ch.charCodeAt(0));
     text = new TextDecoder('utf-8').decode(bytes);
   } catch {
-    return { status: 'invalid', reason: 'Не вдалося прочитати вміст файлу.' };
+    return { status: 'invalid', reason: 'Не вдалося прочитати вміст файлу' };
   }
 
   return _parseAndValidate(text);
