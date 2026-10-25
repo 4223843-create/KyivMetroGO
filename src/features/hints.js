@@ -95,7 +95,7 @@ export function forceHint(id) { _forced = id; _shown = null; }
 
 /** Чи має підказка сенс для станції (для емуляції — знайти потрібну станцію). */
 export function hintApplies(id, station) {
-  return !!HINTS.find(h => h.id === id)?.applies(station);
+  return !!station && !!HINTS.find(h => h.id === id)?.applies(station);
 }
 
 /** Емуляція: усі підказки використані або всі знову невикористані. */
