@@ -5131,7 +5131,8 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   border-radius: 14px;
   padding: 6px 12px;
 }
-.clock-interval { font-weight: 600; white-space: nowrap; }
+.clock-interval { white-space: nowrap; }
+.clock-time { white-space: nowrap; }
 
 /* Розпластана стрілка-смуга внизу панелі — тап згортає */
 .pos-numbered-exits-collapse {
@@ -5537,7 +5538,8 @@ html.reduce-motion .tour-bubble { transition: none; }
 
 .emu-banner {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + 6px);
+  /* Як .offline-banner: нижче смуги, яку iPhone розмиває біля верхнього краю */
+  top: calc(env(safe-area-inset-top) + 40px);
   left: 50%;
   transform: translateX(-50%);
   z-index: calc(var(--z-tour) + 1);
@@ -5553,6 +5555,8 @@ html.reduce-motion .tour-bubble { transition: none; }
   line-height: 1.3;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
+/* Плашка «Офлайн» стоїть там само — тоді смужка емуляції під нею */
+body:has(.offline-banner:not([hidden])) .emu-banner { top: calc(env(safe-area-inset-top) + 86px); }
 .emu-banner-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .emu-banner-btn {
   flex-shrink: 0;
