@@ -251,10 +251,10 @@ export function renderStationClock(s, now = appNow()) {
   const hoursMode = getPref('stationHours');
   if (hoursMode !== 'never') {
     if (nowMin < open || nowMin >= close) {
-      lines.push(`<span class="clock-pill">Станція закрита, відкриється о <span class="clock-interval">${sch.open}</span></span>`);
+      lines.push(`<span class="clock-pill">Станція закрита, відкриється о <span class="clock-time">${sch.open}</span></span>`);
     } else if (hoursMode === 'always' || close - nowMin <= 120 || nowMin - open < 120) {
       // 'soon': перші дві години після відкриття та останні дві до закриття
-      lines.push(`<span class="clock-pill">Вхід <span class="clock-interval">${sch.open}–${sch.close}</span></span>`);
+      lines.push(`<span class="clock-pill">Вхід <span class="clock-time">${sch.open}–${sch.close}</span></span>`);
     }
   }
 
