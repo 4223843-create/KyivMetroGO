@@ -5132,7 +5132,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   padding: 6px 12px;
 }
 .clock-interval { white-space: nowrap; }
-.clock-time { font-weight: 600; white-space: nowrap; }
+.clock-time { white-space: nowrap; }
 
 /* Розпластана стрілка-смуга внизу панелі — тап згортає */
 .pos-numbered-exits-collapse {
