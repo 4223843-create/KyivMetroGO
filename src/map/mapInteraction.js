@@ -68,6 +68,80 @@ function _getStationZoneEls() {
 /** Скидає кеш зон станцій (викликати після повторного renderMapZones). */
 export function invalidateStationZoneCache() { _stationZoneEls = null; }
 
+// ── ЦЕНТРУВАННЯ НА СТАНЦІЇ ────────────────────────────────────
+// Після вибору станції в пошуку зсуваємо карту так, щоб станція
+// опинилась посередині видимої частини — над відкритою карткою.
+const MIN_VISIBLE_PX = 120;
+
+export function centerMapOnStation(slug) {
+  const vp = document.getElementById('mapViewport');
+  if (!vp || !slug) return;
+  const zones = _getStationZoneEls().filter(el =>
+    getSlugByLower(el.id.replace(/\d+$/, '').toLowerCase()) === slug);
+  if (!zones.length) return;
+
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  for (const el of zones) {
+    const r = el.getBoundingClientRect();
+    if (!r.width && !r.height) continue;
+    left = Math.min(left, r.left);   top    = Math.min(top, r.top);
+    right = Math.max(right, r.right); bottom = Math.max(bottom, r.bottom);
+  }
+  if (!isFinite(left)) return;
+
+  const vpRect = vp.getBoundingClientRect();
+  // Картка виїжджає знизу: беремо її кінцеву висоту, а не поточну позицію в анімації
+  const sheet = document.getElementById('stationSheet');
+  const sheetTop = sheet?.classList.contains('sheet-open')
+    ? window.innerHeight - sheet.offsetHeight
+    : Infinity;
+  let visTop = vpRect.top, visBottom = Math.min(vpRect.bottom, sheetTop);
+  if (visBottom - visTop < MIN_VISIBLE_PX) visBottom = vpRect.bottom;
+
+  const dx = (left + right) / 2 - (vpRect.left + vpRect.right) / 2;
+  const dy = (top + bottom) / 2 - (visTop + visBottom) / 2;
+  const targetTop = vp.scrollTop + dy;
+
+  // Станції внизу схеми (Теремки, Осокорки) інакше лишились би під карткою:
+  // поки картка відкрита, додаємо карті місця знизу
+  _setBottomSpace(vp, 0);
+  const extra = Math.ceil(targetTop - (vp.scrollHeight - vp.clientHeight));
+  if (extra > 0) _setBottomSpace(vp, extra);
+
+  vp.scrollTo({
+    left: vp.scrollLeft + dx,
+    top:  targetTop,
+    behavior: _reducedMotion() ? 'auto' : 'smooth',
+  });
+}
+
+let _bottomSpace = 0;
+function _setBottomSpace(vp, px) {
+  _bottomSpace = px;
+  vp.style.paddingBottom = px ? `calc(8dvh + ${px}px)` : '';
+}
+
+function _reducedMotion() {
+  return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Картку закрили — плавно повертаємо карту в межі й прибираємо додане місце
+const _stationSheetEl = document.getElementById('stationSheet');
+if (_stationSheetEl) {
+  new MutationObserver(() => {
+    if (!_bottomSpace || _stationSheetEl.classList.contains('sheet-open')) return;
+    const vp = document.getElementById('mapViewport');
+    const maxTop = vp.scrollHeight - vp.clientHeight - _bottomSpace;
+    if (vp.scrollTop <= maxTop) { _setBottomSpace(vp, 0); return; }
+    vp.scrollTo({ top: maxTop, behavior: _reducedMotion() ? 'auto' : 'smooth' });
+    setTimeout(() => {
+      if (!_stationSheetEl.classList.contains('sheet-open')) _setBottomSpace(vp, 0);
+    }, 400);
+  }).observe(_stationSheetEl, { attributes: true, attributeFilter: ['class'] });
+}
+
+bus.on('map:center-station', ({ slug }) => centerMapOnStation(slug));
+
 let _clipIdCounter = 0;
 
 let _hatchRafId = null;
