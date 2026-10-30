@@ -280,7 +280,11 @@ export function openSearchSheet() {
       if (!item) return;
       document.getElementById('searchInput').blur();
       document.getElementById('searchClose').click();
-      setTimeout(() => bus.emit('station:open', { slug: item.dataset.slug }), 200);
+      const slug = item.dataset.slug;
+      setTimeout(() => {
+        bus.emit('station:open', { slug });
+        bus.emit('map:center-station', { slug });
+      }, 200);
     });
 
     // Кінематичний свайп

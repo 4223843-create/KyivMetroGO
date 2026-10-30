@@ -64,6 +64,7 @@ export const bus = {
 // 'checkin:attach-buttons'   { sheetEl, slug, color }
 // 'map:sync-checkins'        void
 // 'map:update-accessibility' void
+// 'map:center-station'       { slug }          — зсунути карту, щоб станція була над карткою
 // 'devmenu:refresh'          void
 // 'storage:changed'          { key }           — ключ змінено в іншій вкладці (веб)
 // 'storage:write-failed'     { key }
