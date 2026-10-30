@@ -72,6 +72,7 @@ export function invalidateStationZoneCache() { _stationZoneEls = null; }
 // Після вибору станції в пошуку зсуваємо карту так, щоб станція
 // опинилась посередині видимої частини — над відкритою карткою.
 const MIN_VISIBLE_PX = 120;
+const ABOVE_SHEET_GAP_PX = 24;
 
 export function centerMapOnStation(slug) {
   const vp = document.getElementById('mapViewport');
@@ -100,13 +101,18 @@ export function centerMapOnStation(slug) {
 
   const dx = (left + right) / 2 - (vpRect.left + vpRect.right) / 2;
   const dy = (top + bottom) / 2 - (visTop + visBottom) / 2;
-  const targetTop = vp.scrollTop + dy;
+  let targetTop = vp.scrollTop + dy;
 
-  // Станції внизу схеми (Теремки, Осокорки) інакше лишились би під карткою:
-  // поки картка відкрита, додаємо карті місця знизу
+  // Станції внизу схеми (Теремки, Осокорки) інакше лишились би під карткою.
+  // Посередині їх не ставимо (тоді знизу порожньо, а після закриття картки
+  // карта стрибає) — лише піднімаємо так, щоб станція стояла над карткою
   _setBottomSpace(vp, 0);
-  const extra = Math.ceil(targetTop - (vp.scrollHeight - vp.clientHeight));
-  if (extra > 0) _setBottomSpace(vp, extra);
+  const maxTop = vp.scrollHeight - vp.clientHeight;
+  if (targetTop > maxTop) {
+    targetTop = Math.max(maxTop, vp.scrollTop + bottom - (visBottom - ABOVE_SHEET_GAP_PX));
+    const extra = Math.ceil(targetTop - maxTop);
+    if (extra > 0) _setBottomSpace(vp, extra);
+  }
 
   vp.scrollTo({
     left: vp.scrollLeft + dx,
@@ -125,20 +131,14 @@ function _reducedMotion() {
   return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-// Картку закрили — плавно повертаємо карту в межі й прибираємо додане місце
-const _stationSheetEl = document.getElementById('stationSheet');
-if (_stationSheetEl) {
-  new MutationObserver(() => {
-    if (!_bottomSpace || _stationSheetEl.classList.contains('sheet-open')) return;
-    const vp = document.getElementById('mapViewport');
-    const maxTop = vp.scrollHeight - vp.clientHeight - _bottomSpace;
-    if (vp.scrollTop <= maxTop) { _setBottomSpace(vp, 0); return; }
-    vp.scrollTo({ top: maxTop, behavior: _reducedMotion() ? 'auto' : 'smooth' });
-    setTimeout(() => {
-      if (!_stationSheetEl.classList.contains('sheet-open')) _setBottomSpace(vp, 0);
-    }, 400);
-  }).observe(_stationSheetEl, { attributes: true, attributeFilter: ['class'] });
-}
+// Додане місце не прибираємо при закритті картки (карта стрибнула б униз):
+// воно зникає саме, щойно людина прогорне карту вгору в звичайні межі
+const _mapVp = document.getElementById('mapViewport');
+_mapVp?.addEventListener('scroll', () => {
+  if (!_bottomSpace) return;
+  if (document.getElementById('stationSheet')?.classList.contains('sheet-open')) return;
+  if (_mapVp.scrollTop <= _mapVp.scrollHeight - _mapVp.clientHeight - _bottomSpace) _setBottomSpace(_mapVp, 0);
+}, { passive: true });
 
 bus.on('map:center-station', ({ slug }) => centerMapOnStation(slug));
 
