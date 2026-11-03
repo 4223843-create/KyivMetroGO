@@ -42,6 +42,8 @@ body#map-page .map-viewport {
   --text:       #f0f0f0;
   --text-muted: #ababab;
   --icon-color: #ababab;
+  /* Неактивні значки режиму розробника — той самий сірий, що й «−»/«+» степера */
+  --dev-icon:   var(--text-muted);
   --line-red:   #c8523a;
   --line-blue:  #5b9bd5;
   --line-green: #5aaa6a;
@@ -97,6 +99,7 @@ body#map-page .map-viewport {
   
   --text-muted: #2c2c2e;
   --icon-color: #2c2c2e;
+  --dev-icon:   #636366;
   
   --border:     rgba(0,0,0,0.14);
   --overlay:    rgba(0,0,0,0.35);
@@ -1072,7 +1075,7 @@ color: var(--text-muted);
 }
 .fb-step:active { opacity: 0.6; background: transparent; }
 /* Світла тема: «−»/«+» сірі, щоб відрізнялися від цифри (темна тема без змін) */
-[data-theme="light"] .fb-step { color: #636366; }
+[data-theme="light"] .fb-step { color: var(--dev-icon); }
 .fb-step-val {
   font-size: var(--fs-xl);
   font-weight: var(--fw-semi);
@@ -3667,7 +3670,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 /* Плоский текстовий індикатор (+N / −N / ±N) — без кружечка-підложки,
    просто збільшена кольорова цифра/знак */
 .dev-confirm-text {
-  font-size: 15px;
+  font-size: 22px; /* у 1,5 раза більше за початкові 15px */
   font-weight: var(--fw-medium);
   color: currentColor;
   line-height: 1;
