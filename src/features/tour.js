@@ -23,7 +23,6 @@ import { isCheckinMode, isStationCheckinMode, getCheckins } from '../domain/chec
 import { showToast }             from '../ui/toast.js';
 import { openFavSheet }          from './favorites/index.js';
 import { openSearchSheet }       from './search.js';
-import { openAboutSheet }        from '../sheets/aboutSheet.js';
 import { isFav, isExitFav }      from '../domain/favorites.js';
 import { openCheckinSheet }      from './checkin/index.js';
 
@@ -208,7 +207,6 @@ function _cardSteps(station) {
 
 const _closeSheets = () => { if (getOpenSheet() || dropMenuOpen()) closeAllSheets(true); };
 const _sheetRect   = id => isOpen(id) ? $(id) : null;
-const _closeMenu   = () => { const m = $('dropMenu'); if (m) { m.classList.remove('show'); m.hidden = true; } };
 
 /** Меню вже розгорнуте, коли показуємо підказку про його пункт. */
 function _openMenu() {
@@ -229,7 +227,7 @@ const REST_STEPS = [
   { id: 'checkinBtn', wait: 'tap', enter: _closeSheets, when: isCheckinMode, ..._inMenu('checkinBtn'),
     text: () => `Розгорніть меню і&nbsp;натисніть ${_pinIcon()}, щоб&nbsp;відкрити статистику відвіданих станцій` },
   { id: 'checkinInfo', wait: 'next', lost: () => !isOpen('checkinSheet'), restore: openCheckinSheet, when: isCheckinMode,
-    text: `На&nbsp;сторінці ${_sc('Check-in')} відображається, який відсоток станцій ви відвідали`,
+    text: `На&nbsp;сторінці ${_sc('Check-in')} відображається відсоток відвіданих вами станцій`,
     target: () => _sheetRect('checkinSheet') },
   { id: 'checkinMap', wait: 'next', enter: _closeSheets, when: isCheckinMode,
     text: () => isStationCheckinMode()
@@ -245,18 +243,17 @@ const REST_STEPS = [
     target: () => _sheetRect('favSheet') },
 
   { id: 'searchBtn', wait: 'tap', enter: _closeSheets,
-    text: 'Пошук по&nbsp;станціям та&nbsp;адресам',
+    text: 'Пошук за&nbsp;станціями та&nbsp;адресами',
     target: () => $('searchBtnTop') },
   { id: 'searchInfo', wait: 'next', lost: () => !isOpen('searchSheet'), restore: openSearchSheet,
     enter: _searchDemo,
     text: 'Вкажіть адресу, щоб&nbsp;дізнатися, яка станція найближча. Тут також можна шукати станції за&nbsp;назвою',
     target: _searchTarget },
 
+  // Вікно говорить саме за себе: відкривається на кілька секунд, далі — налаштування
   { id: 'menuAbout', wait: 'tap', enter: _closeSheets, ..._inMenu('aboutItem'),
-    text: `В&nbsp;меню ${_sc('Про застосунок')} ви знайдете інформацію про&nbsp;базові функції та&nbsp;зможете підтримати розробку застосунку` },
-  // Вікно говорить саме за себе — лише кнопки
-  { id: 'aboutInfo', wait: 'next', lost: () => !isOpen('aboutSheet'), restore: openAboutSheet, enter: _closeMenu,
-    text: '', target: () => _sheetRect('aboutSheet'), bubbleAt: 'bottom' },
+    text: `В&nbsp;меню ${_sc('Про застосунок')} ви знайдете інформацію про&nbsp;базові функції та&nbsp;зможете підтримати розробку застосунку`,
+    after: () => _sheetRect('aboutSheet') },
 
   // Останнє: меню вже розгорнуте, налаштування відкриваються на кілька секунд,
   // потім тур закриває все
@@ -587,8 +584,7 @@ function _render(rects) {
   const bh = bubble.offsetHeight, gap = 14;
   const safeTop = 16 + (parseFloat(getComputedStyle(_layer).paddingTop) || 0); // env(safe-area-inset-top)
   let top;
-  if (_cur()?.bubbleAt === 'bottom')  top = vh - 16 - bh; // шторка на весь екран — підказка внизу
-  else if (y2 + gap + bh <= vh - 16)  top = y2 + gap;
+  if (y2 + gap + bh <= vh - 16)  top = y2 + gap;
   else if (y1 - gap - bh >= safeTop)  top = y1 - gap - bh;
   else                                top = safeTop;
   bubble.style.top = `${top}px`;

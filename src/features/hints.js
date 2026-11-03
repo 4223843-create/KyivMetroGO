@@ -16,7 +16,8 @@ import { getCheckins, isCheckinMode, isStationCheckinMode } from '../domain/chec
 import { hasStationClock }       from '../sheets/renderStation.js';
 
 const CLOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></svg>`;
-const PIN_ICON   = Icons.dockPinFilled.replace('width="26" height="26"', 'aria-hidden="true"');
+// Ненатиснений пін — такий, як на картці: сірий угорі, ледь помітний біля виходу
+const PIN_ICON   = Icons.checkinPinOff.replace('<svg ', '<svg aria-hidden="true" ');
 const inlineIcon = (svg, color) => `<span class="hint-inline-icon" style="color:${color}">${svg}</span>`;
 
 const hasNumberedExits = s => !!s.directions?.some(d =>
@@ -49,9 +50,9 @@ const HINTS = [
     id:      'checkin',
     applies: () => isCheckinMode(),
     used:    () => Object.keys(getCheckins()).length > 0,
-    text:    c => isStationCheckinMode()
-      ? `Натисніть ${inlineIcon(PIN_ICON, c)}, щоб&nbsp;позначити станцію як&nbsp;відвідану`
-      : `Натисніть ${inlineIcon(PIN_ICON, c)}, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`,
+    text:    () => isStationCheckinMode()
+      ? `Натисніть ${inlineIcon(PIN_ICON, 'var(--text-muted)')}, щоб&nbsp;позначити станцію як&nbsp;відвідану`
+      : `Натисніть ${inlineIcon(PIN_ICON, 'var(--border)')}, щоб&nbsp;позначити вихід зі&nbsp;станції як&nbsp;відвіданий`,
   },
 ];
 
