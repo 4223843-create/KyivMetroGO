@@ -130,16 +130,28 @@ function _showIconLabelToast(el, text) {
   toast.className = 'dev-mode-toast dev-mode-toast-open icon-info-toast';
   toast.style.cssText = `
     position: fixed;
-    top: ${rect.top - 38}px;
-    left: ${rect.left + rect.width / 2}px;
-    transform: translateX(-50%);
+    top: 0;
+    left: 0;
+    transform: none;
     bottom: auto;
     z-index: 10000;
     width: max-content;
     max-width: calc(100vw - 32px);
+    visibility: hidden;
   `;
   toast.textContent = text;
   document.body.appendChild(toast);
+  // Центруємо над значком, але не виходимо за краї екрана (відступ 16px);
+  // довгий текст переноситься, тож висоту міряємо після вставки
+  const margin = 16;
+  const vw = document.documentElement.clientWidth || window.innerWidth;
+  const w = toast.offsetWidth;
+  const h = toast.offsetHeight;
+  const center = rect.left + rect.width / 2;
+  const left = Math.max(margin, Math.min(center - w / 2, vw - margin - w));
+  toast.style.left = `${left}px`;
+  toast.style.top = `${Math.max(margin, rect.top - h - 6)}px`;
+  toast.style.visibility = '';
   setTimeout(() => {
     toast.classList.remove('dev-mode-toast-open');
     setTimeout(() => toast.remove(), 300);
