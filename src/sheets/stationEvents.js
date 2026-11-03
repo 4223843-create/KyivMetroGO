@@ -16,6 +16,9 @@ import { applyFavPillStyles, renderExitRoutes, renderUnlinkedStops } from './ren
 import { heartSvg, lineTextColor } from '../ui/components.js';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { getPref }                from '../core/prefs.js';
+import { showCustomConfirm }      from '../ui/confirm.js';
+import { showToast }              from '../ui/toast.js';
+import { reopenVestibule, reportVestibuleOpen } from '../domain/vestibules.js';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -398,6 +401,25 @@ export function reopenNumberedExitsPanel(sheetBody, idx, slug, lineColor) {
  *   Getter повертає актуальний slug та колір на момент події.
  *   Це критично: не передаємо значення, бо вони змінюються між відкриттями.
  */
+/** Закритий вестибюль: «Відкрити і повідомити розробника» або «Скасувати». */
+function _confirmVestibuleReopen(slug, exitId) {
+  const station = state.stationsData?.[slug];
+  if (!station || !exitId) return;
+  const label = station.exits_catalog?.[exitId]?.label || '';
+  showCustomConfirm(
+    'Вестибюль знову працює?',
+    async () => {
+      reopenVestibule(slug, exitId);
+      bus.emit('station:refresh');
+      const sent = await reportVestibuleOpen(station.name, exitId, label);
+      showToast(sent ? 'Дякуємо! Розробник отримав повідомлення' : 'Не вдалося надіслати повідомлення, вестибюль відкрито лише у вас');
+    },
+    null, null,
+    'Відкрити і повідомити розробника', 'Скасувати',
+    'confirm-btn-save confirm-btn-wrap', 'confirm-btn-neutral confirm-btn-wrap',
+  );
+}
+
 export function bindSheetGestures(sheetBody, getCtx) {
 
   // ── touchstart: початок long-press ──────────────────────────
@@ -482,6 +504,14 @@ export function bindSheetGestures(sheetBody, getCtx) {
     if (noteRow) {
       e.stopPropagation();
       _showIconLabelToast(noteRow.firstElementChild, noteRow.dataset.note);
+      return;
+    }
+
+    // 1d½. «вже працює!» у закритому вестибюлі → підтвердження
+    const reopenBtn = e.target.closest('.vestibule-reopen-btn');
+    if (reopenBtn) {
+      e.stopPropagation();
+      _confirmVestibuleReopen(slug, reopenBtn.closest('.vestibule-closed')?.dataset.exitId);
       return;
     }
 

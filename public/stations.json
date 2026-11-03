@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261104",
+  "version": "20261105",
   "line_intervals": {
     "green": [
       {
@@ -4945,6 +4945,7 @@
       "exits_catalog": {
         "127": {
           "label": "автостанція „Дарниця“. артзавод „Платформа“",
+          "vestibule_closed": true,
           "exit_numbers": [
             {
               "num": "2",
