@@ -51,6 +51,7 @@ export const STORAGE_KEYS = {
   LOGO_STATE:     'metro_logo_state',
   LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
   CHECKIN_HATCH:  'metro_checkin_hatch',
+  VESTIBULES_REOPENED: 'metro_vestibules_reopened', // ["slug|exitId"] — закриті вестибюлі, які людина відкрила («вже працює!»)
   BETA_SIGNUPS:   'metro_beta_signups',   // [{ email, t }] — заявки на ранній доступ
   // Емуляція станів у режимі розробника (features/devEmulation.js)
   DEV_EMU_SNAPSHOT: 'metro_dev_emu_snapshot',

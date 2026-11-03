@@ -494,6 +494,48 @@ z-index: var(--z-fullscreen-sheet);
 }
 .transfer-text { color: var(--text-muted); font-size: var(--fs-sm); }
 
+/* ══ ЗАКРИТИЙ ВЕСТИБЮЛЬ ══ */
+.vestibule-closed {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+.exit-label + .position-row + .vestibule-closed,
+.position-row + .vestibule-closed {
+  border-top: 0.5px solid var(--border);
+  margin-top: 9px;
+  padding-top: 10px;
+}
+.vestibule-closed + .exit-label {
+  border-top: 0.5px solid var(--border);
+  margin-top: 9px;
+  padding-top: 6px;
+}
+.vestibule-closed-title {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.vestibule-reopen-btn {
+  margin-top: 2px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* Довгий текст кнопки в confirm («Відкрити і повідомити розробника») — у два рядки */
+.global-confirm-btns-main .confirm-btn-wrap {
+  white-space: normal;
+  line-height: 1.25;
+  height: auto;
+  min-height: 44px;
+  padding: 6px 10px;
+}
+
 /* ══ POSITION ROWS ══ */
 .position-row {
   display: flex;

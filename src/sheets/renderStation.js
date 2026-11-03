@@ -6,6 +6,7 @@ import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
 import { appNow }              from '../core/clock.js';
 import { richText } from '../ui/html.js';
+import { isVestibuleClosed }   from '../domain/vestibules.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -461,6 +462,14 @@ function renderExitLabel(exit) {
   </div>`;
 }
 
+// Закритий вестибюль (stations.json: vestibule_closed) — заглушка замість підпису й пілюль
+function renderClosedVestibule(exit) {
+  return `<div class="vestibule-closed" data-exit-id="${exit.id}">
+    <div class="vestibule-closed-title">Цей вестибюль не працює</div>
+    <button type="button" class="vestibule-reopen-btn">вже працює!</button>
+  </div>`;
+}
+
 // ══ РЕНДЕР НАПРЯМКІВ ══
 
 export function renderDirections(s, color) {
@@ -541,6 +550,7 @@ export function renderDirections(s, color) {
     const exitsHtml = dir.exits?.map(exit => {
       const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && showHoists()))) || [];
       if (!visiblePos.length) return '';
+      if (isVestibuleClosed(s.slug, exit)) return renderClosedVestibule(exit);
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
 

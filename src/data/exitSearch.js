@@ -71,6 +71,7 @@ export function buildExitSearchIndex(station) {
 
   (station.directions || []).forEach(dir => {
     (dir.exits || []).forEach(ex => {
+      if (ex.vestibule_closed) return; // закритий вестибюль не шукаємо
       if (ex.label) add(ex.label, null);
       (ex.exit_numbers || []).forEach(n => {
         String(n.text ?? '').split(/<br\s*\/?>/i).forEach(line => add(line, n.num));
