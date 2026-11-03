@@ -5097,6 +5097,39 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   border: 0.5px solid var(--border);
 }
 
+/* Кілька пересадок — згорнуто під «Пересадки ⌄» */
+.station-connections-wrap { margin: 0 16px 12px; }
+.station-connections-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 auto;
+  padding: 4px 12px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.station-connections-chevron {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 0.22s ease;
+}
+.station-connections-wrap.is-open .station-connections-chevron { transform: rotate(180deg); }
+.station-connections-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease;
+}
+.station-connections-panel > .station-connections { overflow: hidden; min-height: 0; margin: 0; }
+.station-connections-wrap.is-open .station-connections-panel { grid-template-rows: 1fr; opacity: 1; }
+.station-connections-wrap.is-open .station-connections-panel > .station-connections { padding-top: 6px; }
+
 /* Панель годинника (кнопка біля серця): години роботи та інтервал зараз */
 .sheet-clock-btn[hidden], .sheet-checkin-btn[hidden] { display: none; }
 .station-clock-panel {

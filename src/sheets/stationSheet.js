@@ -213,6 +213,7 @@ export function refreshCurrentStation() {
   // Відкрита панель годинника не має закриватися від перемальовування (напр. дотик до шпильки check-in)
   const clockWasOpen = !!document.getElementById('stationClockPanel')?.classList.contains('panel-open');
   const numberedExitsIdx = getOpenNumberedExitsIdx(sheetBody);
+  const connWasOpen = !!document.getElementById('stationConnectionsWrap')?.classList.contains('is-open');
 
   // Кеш вже інвалідовано в bus.on('station:refresh') вище
   stationTitleMain.textContent = s.name;
@@ -220,6 +221,11 @@ export function refreshCurrentStation() {
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
   _directionsHtmlCache.set(slug, sheetBody.innerHTML);
   sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationConnections(s) + renderHintSlot(s, color));
+  if (connWasOpen) {
+    const wrap = document.getElementById('stationConnectionsWrap');
+    wrap?.classList.add('is-open');
+    wrap?.querySelector('.station-connections-toggle')?.setAttribute('aria-expanded', 'true');
+  }
 
   if (clockBtn) clockBtn.hidden = !hasStationClock(s);
   if (clockWasOpen && !clockBtn?.hidden) {
