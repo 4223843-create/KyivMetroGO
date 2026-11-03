@@ -456,6 +456,15 @@ export function bindSheetGestures(sheetBody, getCtx) {
       return;
     }
 
+    // 1d''. «Пересадки ⌄» → розгорнути / згорнути список пересадок
+    const connToggle = e.target.closest('.station-connections-toggle');
+    if (connToggle) {
+      e.stopPropagation();
+      const open = connToggle.parentElement.classList.toggle('is-open');
+      connToggle.setAttribute('aria-expanded', String(open));
+      return;
+    }
+
     // 1d'. Пересадка з підказкою (вокзал «Дарниця» → «Від Чернігівської трохи ближче»)
     const noteRow = e.target.closest('.station-connection-row[data-note]');
     if (noteRow) {

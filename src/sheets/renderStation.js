@@ -130,7 +130,8 @@ function connectionPills(label, conn) {
   return `<div class="station-connection-row"${note}>${html}</div>`;
 }
 
-/** Плашки пересадок для шапки станції: кільцева електричка, фунікулер, вокзали, автостанції. */
+/** Плашки пересадок для шапки станції: кільцева електричка, фунікулер, вокзали, автостанції.
+ *  Коли пересадок більше однієї — згорнуто під сірим написом «Пересадки ⌄» (тап розгортає). */
 export function renderStationConnections(s) {
   const c = s.connections;
   if (!c) return '';
@@ -138,7 +139,13 @@ export function renderStationConnections(s) {
   if (c.city_train) items.push(connectionPills('🚆 Кільцева електричка', c.city_train));
   if (c.funicular)  items.push(connectionPills('🚡 Фунікулер', c.funicular));
   for (const hub of c.hubs ?? []) items.push(connectionPills(`${HUB_ICON[hub.kind] ?? ''} ${hub.name}`, hub));
-  return items.length ? `<div class="station-connections">${items.join('')}</div>` : '';
+  if (!items.length) return '';
+  const grid = `<div class="station-connections">${items.join('')}</div>`;
+  if (items.length === 1) return grid;
+  return `<div class="station-connections-wrap" id="stationConnectionsWrap">`
+    + `<button type="button" class="station-connections-toggle" aria-expanded="false">`
+    + `Пересадки<svg class="station-connections-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
+    + `<div class="station-connections-panel">${grid}</div></div>`;
 }
 
 // ══ ГОДИНИ РОБОТИ ТА ІНТЕРВАЛИ ══
