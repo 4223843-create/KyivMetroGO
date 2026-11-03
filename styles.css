@@ -1062,7 +1062,8 @@ color: var(--text-muted);
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: var(--fs-xl);
+  font-size: 36px; /* у 1,5 раза більші за цифру (--fs-xl) */
+  line-height: 1;
   width: 32px; height: 32px;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -1070,6 +1071,8 @@ color: var(--text-muted);
   -webkit-tap-highlight-color: transparent;
 }
 .fb-step:active { opacity: 0.6; background: transparent; }
+/* Світла тема: «−»/«+» сірі, щоб відрізнялися від цифри (темна тема без змін) */
+[data-theme="light"] .fb-step { color: #636366; }
 .fb-step-val {
   font-size: var(--fs-xl);
   font-weight: var(--fw-semi);
