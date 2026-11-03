@@ -466,7 +466,7 @@ function renderExitLabel(exit) {
 function renderClosedVestibule(exit) {
   return `<div class="vestibule-closed" data-exit-id="${exit.id}">
     <div class="vestibule-closed-title">Цей вестибюль не працює</div>
-    <button type="button" class="vestibule-reopen-btn">вже працює!</button>
+    <button type="button" class="vestibule-reopen-btn">повідомити про відновлення роботи</button>
   </div>`;
 }
 
