@@ -507,7 +507,7 @@ export function bindSheetGestures(sheetBody, getCtx) {
       return;
     }
 
-    // 1d½. «вже працює!» у закритому вестибюлі → підтвердження
+    // 1d½. «повідомити про відновлення роботи» у закритому вестибюлі → підтвердження
     const reopenBtn = e.target.closest('.vestibule-reopen-btn');
     if (reopenBtn) {
       e.stopPropagation();

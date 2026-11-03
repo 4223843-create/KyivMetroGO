@@ -3755,22 +3755,9 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   border: 1px solid var(--border);
   cursor: pointer;
   display: block;
-}
-
-.dev-photo-thumb-remove {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--line-red);
-  color: #fff;
-  border: none;
-  font-size: 11px;
-  line-height: 18px;
-  padding: 0;
-  cursor: pointer;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .dev-photo-add-tile {
@@ -3796,13 +3783,20 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   display: none;
   align-items: center;
   justify-content: center;
-  touch-action: pinch-zoom;
+  overflow: hidden;
+  touch-action: none; /* зум і переміщення — src/ui/photoZoom.js */
 }
 .dev-photo-overlay.open { display: flex; }
 .dev-photo-overlay img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  transform-origin: center center;
+  will-change: transform;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
 }
 
 /* ── DEV MODE: Випадаюча панель (Нотатки / Фото) ── */

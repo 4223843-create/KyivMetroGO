@@ -49,6 +49,9 @@ import { onDevAuthChange, loginDev, logoutDev, syncDevState, uploadDevPhoto, del
 import { escapeHtml } from '../ui/html.js';
 import { lineTextColor } from '../ui/components.js';
 import { showToast }  from '../ui/toast.js';
+import { showCustomConfirm } from '../ui/confirm.js';
+import { attachPhotoZoom }   from '../ui/photoZoom.js';
+import { TIMING }            from '../core/timing.js';
 import { isDevMode } from './devFlags.js';
 import { getAdjacentDoors, parseDoorValues, extractFinalValues } from './feedback/fbUtils.js';
 import {
@@ -1265,6 +1268,33 @@ async function listPhotosForPosition(slug, posIdx, legacyKeys = []) {
     .map(id => ({ id, dataUrl: all[id] }));
 }
 
+/**
+ * Тап і довгий тап на одному елементі (миша й дотик).
+ * Після довгого тапу звичайний тап не спрацьовує; рух пальця скасовує обидва.
+ */
+function bindLongPress(el, { onTap, onLongPress }) {
+  let timer = null, start = null, fired = false;
+  const cancel = () => { clearTimeout(timer); timer = null; };
+  el.addEventListener('pointerdown', e => {
+    fired = false;
+    start = { x: e.clientX, y: e.clientY };
+    cancel();
+    timer = setTimeout(() => { timer = null; fired = true; onLongPress(); }, TIMING.LONG_PRESS);
+  });
+  el.addEventListener('pointermove', e => {
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) { cancel(); start = null; }
+  });
+  el.addEventListener('pointerup', cancel);
+  el.addEventListener('pointercancel', () => { cancel(); start = null; });
+  el.addEventListener('pointerleave', cancel);
+  el.addEventListener('contextmenu', e => e.preventDefault()); // без системного меню зображення
+  el.addEventListener('click', e => {
+    e.stopPropagation();
+    if (fired || !start) { fired = false; return; }
+    onTap();
+  });
+}
+
 async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity) {
   const next = row.nextElementSibling;
 
@@ -1300,8 +1330,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
       <div class="dev-photo-grid">
         ${photos.map(p => `
           <div class="dev-photo-thumb-wrap" data-id="${p.id}">
-            <img src="${p.dataUrl}" class="dev-photo-thumb"/>
-            <button type="button" class="dev-photo-thumb-remove" data-id="${p.id}" aria-label="Видалити фото">✕</button>
+            <img src="${p.dataUrl}" class="dev-photo-thumb" draggable="false" alt="Фото, утримуйте, щоб видалити"/>
           </div>`).join('')}
         <label class="dev-photo-add-tile">
           +
@@ -1312,21 +1341,27 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
         <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button>
       </div>`;
 
+    // Тап — відкрити фото, довгий тап — запитати про видалення
     panel.querySelectorAll('.dev-photo-thumb').forEach(img => {
-      img.addEventListener('click', () => showDevPhotoFullscreen(img.src));
-    });
-
-    panel.querySelectorAll('.dev-photo-thumb-remove').forEach(btn => {
-      btn.addEventListener('click', async e => {
-        e.stopPropagation();
-        try {
-          // Через tombstone — інакше наступна синхронізація поверне фото з хмари
-          await removeDevPhoto(btn.dataset.id);
-          await paint();
-        } catch (err) {
-          console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
-          _showToast('Не вдалося видалити фото');
-        }
+      const photoId = img.closest('.dev-photo-thumb-wrap')?.dataset.id;
+      bindLongPress(img, {
+        onTap: () => showDevPhotoFullscreen(img.src),
+        onLongPress: () => showCustomConfirm(
+          'Видалити фото?',
+          async () => {
+            try {
+              // Через tombstone — інакше наступна синхронізація поверне фото з хмари
+              await removeDevPhoto(photoId);
+              await paint();
+            } catch (err) {
+              console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
+              _showToast('Не вдалося видалити фото');
+            }
+          },
+          () => {}, null,
+          'Видалити', 'Скасувати',
+          'confirm-btn-discard', 'confirm-btn-neutral',
+        ),
       });
     });
 
@@ -1366,16 +1401,18 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
 }
 
 // ── Повноекранний перегляд фото ───────────────────────
+let _photoZoom = null;
 function showDevPhotoFullscreen(src) {
   let overlay = document.getElementById('devPhotoOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'devPhotoOverlay';
     overlay.className = 'dev-photo-overlay';
-    overlay.innerHTML = `<img src="" />`;
+    overlay.innerHTML = `<img src="" alt="" draggable="false" />`;
     document.body.appendChild(overlay);
-    overlay.addEventListener('click', () => overlay.classList.remove('open'));
+    _photoZoom = attachPhotoZoom(overlay, overlay.querySelector('img'), () => overlay.classList.remove('open'));
   }
+  _photoZoom.reset();
   overlay.querySelector('img').src = src;
   requestAnimationFrame(() => overlay.classList.add('open'));
 }
