@@ -781,7 +781,7 @@ export function attachDevModeUI(container, slug) {
   // Відтінок лінії з урахуванням теми — як у пілюль, серця й шпильок картки
   const lineColor = lineTextColor(LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)');
 
-  const defaultColor   = 'var(--border)';
+  const defaultColor   = 'var(--dev-icon)';
   const defaultOpacity = '1';
 
   container.querySelectorAll('.position-row').forEach((row, rowIdx) => {
@@ -840,11 +840,11 @@ export function attachDevModeUI(container, slug) {
         badgeColor = lineColor;
       } else if (hasDispute && !hasConfirm) {
         text = data.disputeCount === 1 ? '−' : `−${data.disputeCount}`;
-        badgeColor = 'var(--bg-pill)'; // той самий темний тон, що й фон пігулки
+        badgeColor = 'var(--text)'; // контрастний, щоб «−» було добре видно на картці
       } else {
         // Є і підтвердження, і спростування — просто "±", без цифри
         text = '±';
-        badgeColor = 'var(--bg-pill)';
+        badgeColor = 'var(--text)';
       }
 
       confirmBtn.classList.remove('is-final');
