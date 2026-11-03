@@ -5650,3 +5650,14 @@ body:has(.offline-banner:not([hidden])) .emu-banner { top: calc(env(safe-area-in
 }
 .fav-add-dirs .fav-tap-target { cursor: pointer; }
 
+
+/* Рядки степерів виправлення «−1» (основні / другі / треті двері) */
+.dev-confirm-fix-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dev-confirm-fix-rows .fb-add-doors-row {
+  display: flex;
+  justify-content: center;
+}
