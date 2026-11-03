@@ -50,6 +50,7 @@ import { escapeHtml } from '../ui/html.js';
 import { lineTextColor } from '../ui/components.js';
 import { showToast }  from '../ui/toast.js';
 import { isDevMode } from './devFlags.js';
+import { getAdjacentDoors, parseDoorValues, extractFinalValues } from './feedback/fbUtils.js';
 import {
   emptyConfirmationData as _emptyConfirmationData,
   mergeKeyedMap as _mergeKeyedMap,
@@ -941,6 +942,103 @@ export function attachDevModeUI(container, slug) {
 // тут потрібен просто прямий вибір вагон+двері). Степер стартує з ПОТОЧНИХ
 // фактичних значень позиції (беремо з .fav-tap-target у самому рядку), а не
 // з довільної 1/1.
+// Рядки степерів для виправлення «−1»: основні двері, другі (+1, лише
+// сусідні) і треті (якщо позиція вже була діапазоном із трьох дверей).
+// Розмітка й правила ті самі, що у формі «Локальні зміни» (fbRenderer/fbEvents).
+function _fixStepperHtml(slot, role, value, label) {
+  const [min, max] = role === 'w' ? [1, 5] : [1, 4];
+  return `<div class="fb-input-wrap">
+    <span class="fb-input-label">${label}</span>
+    <div class="fb-stepper">
+      <button type="button" class="fb-step fb-step-down" data-slot="${slot}" data-role="${role}" data-min="${min}" data-max="${max}" aria-label="Зменшити ${label}">−</button>
+      <span class="fb-step-val" aria-live="polite">${value}</span>
+      <button type="button" class="fb-step fb-step-up" data-slot="${slot}" data-role="${role}" data-min="${min}" data-max="${max}" aria-label="Збільшити ${label}">+</button>
+    </div>
+  </div>`;
+}
+
+function _fixRowHtml(slot, w, d, lineColor) {
+  const cancel = slot === 'main' ? '' :
+    `<button type="button" class="fb-cancel-extra-btn dev-fix-cancel" data-slot="${slot}"
+       style="color:${lineTextColor(lineColor)}" aria-label="Прибрати ці двері">✕</button>`;
+  return `<div class="fb-pos-wrap">
+    <div class="fb-side-actions-left"></div>
+    <div class="fb-pos-inputs">
+      ${_fixStepperHtml(slot, 'w', w, 'вагон')}
+      ${_fixStepperHtml(slot, 'd', d, 'двері')}
+    </div>
+    <div class="fb-side-actions">${cancel}</div>
+  </div>`;
+}
+
+function _fixRowsHtml(fix, lineColor) {
+  return [
+    _fixRowHtml('main', fix.wMain, fix.dMain, lineColor),
+    fix.hasExtra ? _fixRowHtml('ex',  fix.wEx,  fix.dEx,  lineColor) : '',
+    fix.hasThird ? _fixRowHtml('ex2', fix.wEx2, fix.dEx2, lineColor) : '',
+    fix.hasExtra ? '' :
+      `<div class="fb-add-doors-row"><button type="button" class="fb-add-doors-link dev-fix-add">+1</button></div>`,
+  ].join('');
+}
+
+// Треті двері: сусідні з другими, у тому самому вагоні, що й основні
+// (щоб виходив суцільний діапазон «1-3»), і не збігаються з основними.
+function _thirdDoorOptions(fix) {
+  return getAdjacentDoors(fix.wEx, fix.dEx)
+    .filter(a => a.w === fix.wMain && fix.wEx === fix.wMain && a.d !== fix.dMain);
+}
+
+// Після зміни основних/других дверей підтягує залежні рядки, щоб вони
+// лишалися сусідніми (інакше вийшов би неможливий «діапазон»).
+function _revalidateFix(fix) {
+  if (!fix.hasExtra) return;
+  const adj = getAdjacentDoors(fix.wMain, fix.dMain);
+  if (!adj.some(a => a.w === fix.wEx && a.d === fix.dEx)) { fix.wEx = adj[0].w; fix.dEx = adj[0].d; }
+  if (!fix.hasThird) return;
+  const opts = _thirdDoorOptions(fix);
+  if (!opts.some(a => a.w === fix.wEx2 && a.d === fix.dEx2)) {
+    if (opts.length) { fix.wEx2 = opts[0].w; fix.dEx2 = opts[0].d; }
+    else { fix.hasThird = false; fix.wEx2 = '-'; fix.dEx2 = '-'; }
+  }
+}
+
+function _cycle(options, w, d, step) {
+  const i = options.findIndex(a => a.w === w && a.d === d);
+  return options[i === -1 ? 0 : (i + step + options.length) % options.length];
+}
+
+function _applyFixAction(fix, btn) {
+  if (btn.classList.contains('dev-fix-add')) {
+    const adj = getAdjacentDoors(fix.wMain, fix.dMain);
+    Object.assign(fix, { hasExtra: true, wEx: adj[0].w, dEx: adj[0].d });
+    return;
+  }
+  if (btn.classList.contains('dev-fix-cancel')) {
+    if (btn.dataset.slot === 'ex') {
+      // Як у «Локальних змінах»: ✕ других дверей прибирає й треті
+      Object.assign(fix, { hasExtra: false, hasThird: false, wEx: '-', dEx: '-', wEx2: '-', dEx2: '-' });
+    } else {
+      Object.assign(fix, { hasThird: false, wEx2: '-', dEx2: '-' });
+    }
+    return;
+  }
+  const step = btn.classList.contains('fb-step-up') ? 1 : -1;
+  const slot = btn.dataset.slot;
+  if (slot === 'main') {
+    const key = btn.dataset.role === 'w' ? 'wMain' : 'dMain';
+    const min = parseInt(btn.dataset.min), max = parseInt(btn.dataset.max);
+    fix[key] = Math.max(min, Math.min(max, fix[key] + step));
+  } else if (slot === 'ex') {
+    // Другі двері гортаються лише серед сусідніх з основними
+    const next = _cycle(getAdjacentDoors(fix.wMain, fix.dMain), fix.wEx, fix.dEx, step);
+    fix.wEx = next.w; fix.dEx = next.d;
+  } else {
+    const opts = _thirdDoorOptions(fix);
+    if (opts.length) { const next = _cycle(opts, fix.wEx2, fix.dEx2, step); fix.wEx2 = next.w; fix.dEx2 = next.d; }
+  }
+  _revalidateFix(fix);
+}
+
 function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
   const next = row.nextElementSibling;
 
@@ -958,12 +1056,10 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
   });
 
   // Поточні фактичні вагон/двері цієї позиції — дефолт для степера виправлення.
+  // Розбираємо так само, як форма «Локальні зміни» (діапазон «1-3», пара «2, 3»),
+  // щоб і виправлення можна було вказати діапазоном дверей.
   const currentTarget = row.querySelector('.fav-tap-target');
-  const currentWagon = parseInt(currentTarget?.dataset.wagon) || 1;
-  const currentDoors = parseInt(currentTarget?.dataset.doors) || 1;
-
-  const wId = `devConfirmW${slug}_${posIdx}`;
-  const dId = `devConfirmD${slug}_${posIdx}`;
+  const fix = parseDoorValues(currentTarget?.dataset.wagon || '1', currentTarget?.dataset.doors || '1');
 
   const renderCorrectionsList = (data) => {
     const entries = Object.entries(data.corrections);
@@ -997,22 +1093,7 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
         <button type="button" class="dev-confirm-minus confirm-btn-discard">−1</button>
       </div>
       <div class="dev-confirm-fix-wrap is-hidden">
-        <div class="fb-input-wrap">
-          <span class="fb-input-label">вагон</span>
-          <div class="fb-stepper">
-            <button type="button" class="fb-step fb-step-down" data-id="${wId}" data-min="1" data-max="5" aria-label="Зменшити вагон">−</button>
-            <span class="fb-step-val" id="${wId}">${currentWagon}</span>
-            <button type="button" class="fb-step fb-step-up" data-id="${wId}" data-min="1" data-max="5" aria-label="Збільшити вагон">+</button>
-          </div>
-        </div>
-        <div class="fb-input-wrap">
-          <span class="fb-input-label">двері</span>
-          <div class="fb-stepper">
-            <button type="button" class="fb-step fb-step-down" data-id="${dId}" data-min="1" data-max="4" aria-label="Зменшити двері">−</button>
-            <span class="fb-step-val" id="${dId}">${currentDoors}</span>
-            <button type="button" class="fb-step fb-step-up" data-id="${dId}" data-min="1" data-max="4" aria-label="Збільшити двері">+</button>
-          </div>
-        </div>
+        <div class="dev-confirm-fix-rows">${_fixRowsHtml(fix, lineColor)}</div>
         <button type="button" class="dev-confirm-save-fix confirm-btn-save">Зберегти виправлення</button>
       </div>
       <div class="dev-confirm-secondary-actions">
@@ -1020,16 +1101,13 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
         <button type="button" class="dev-confirm-reset">Скинути лічильник</button>
       </div>`;
 
-    panel.querySelectorAll('.fb-step').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        const id  = btn.dataset.id;
-        const min = parseInt(btn.dataset.min);
-        const max = parseInt(btn.dataset.max);
-        const el  = document.getElementById(id);
-        let val   = parseInt(el.textContent) + (btn.classList.contains('fb-step-up') ? 1 : -1);
-        el.textContent = Math.max(min, Math.min(max, val));
-      });
+    const fixRows = panel.querySelector('.dev-confirm-fix-rows');
+    fixRows.addEventListener('click', e => {
+      const btn = e.target.closest('.fb-step, .dev-fix-cancel, .dev-fix-add');
+      if (!btn) return;
+      e.stopPropagation();
+      _applyFixAction(fix, btn);
+      fixRows.innerHTML = _fixRowsHtml(fix, lineColor);
     });
 
     const closePanel = () => {
@@ -1058,9 +1136,8 @@ function toggleDevConfirmPanel(row, slug, posIdx, lineColor, onUpdate) {
 
     panel.querySelector('.dev-confirm-save-fix').addEventListener('click', e => {
       e.stopPropagation();
-      const wagon = document.getElementById(wId).textContent;
-      const doors = document.getElementById(dId).textContent;
-      addDisputeVote(slug, posIdx, wagon, doors);
+      const { finalW, finalD } = extractFinalValues(fix);
+      addDisputeVote(slug, posIdx, finalW, finalD);
       onUpdate();
       closePanel();
     });
