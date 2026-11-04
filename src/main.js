@@ -13,6 +13,7 @@ import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
 import { updateDevMenuButtonVisibility, runEmulationStartup } from './features/devHooks.js';
 import { maybeStartTour }                 from './features/tour.js';
+import { initVestibuleReports }           from './domain/vestibules.js';
 
 // Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
 import './map/mapGestures.js';
@@ -55,6 +56,7 @@ window.addEventListener('error', e => {
 async function bootstrap() {
   try {
     await Storage.init();
+    initVestibuleReports(); // дослати листи про відкриті вестибюлі з минулого запуску
 
     // 🛠️ ВСТАНОВЛЕНО СИСТЕМНУ ТЕМУ ЗА ЗАМОВЧУВАННЯМ
     // Передаємо false другим параметром, щоб не фіксувати світлу/темну тему в базі при першому старті

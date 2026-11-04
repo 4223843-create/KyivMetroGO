@@ -18,7 +18,7 @@ import { Haptics, NotificationType } from '@capacitor/haptics';
 import { getPref }                from '../core/prefs.js';
 import { showCustomConfirm }      from '../ui/confirm.js';
 import { showToast }              from '../ui/toast.js';
-import { reopenVestibule, reportVestibuleOpen } from '../domain/vestibules.js';
+import { reopenVestibule, cancelVestibuleReopen } from '../domain/vestibules.js';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -408,11 +408,10 @@ function _confirmVestibuleReopen(slug, exitId) {
   const label = station.exits_catalog?.[exitId]?.label || '';
   showCustomConfirm(
     'Вестибюль знову працює?',
-    async () => {
-      reopenVestibule(slug, exitId);
+    () => {
+      reopenVestibule(slug, exitId, { station: station.name, label });
       bus.emit('station:refresh');
-      const sent = await reportVestibuleOpen(station.name, exitId, label);
-      showToast(sent ? 'Дякуємо! Розробник отримав повідомлення' : 'Не вдалося надіслати повідомлення, вестибюль відкрито лише у вас');
+      showToast('Розробник отримає повідомлення за хвилину');
     },
     null, null,
     'Відкрити і повідомити розробника', 'Скасувати',
@@ -512,6 +511,16 @@ export function bindSheetGestures(sheetBody, getCtx) {
     if (reopenBtn) {
       e.stopPropagation();
       _confirmVestibuleReopen(slug, reopenBtn.closest('.vestibule-closed')?.dataset.exitId);
+      return;
+    }
+
+    // «скасувати» під відкритим вестибюлем → знову закритий, лист не піде
+    const undoBtn = e.target.closest('.vestibule-undo-btn');
+    if (undoBtn) {
+      e.stopPropagation();
+      const notSent = cancelVestibuleReopen(slug, undoBtn.dataset.exitId);
+      bus.emit('station:refresh');
+      showToast(notSent ? 'Скасовано, повідомлення не надіслано' : 'Скасовано');
       return;
     }
 

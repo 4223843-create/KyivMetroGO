@@ -520,12 +520,16 @@ z-index: var(--z-fullscreen-sheet);
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--border);
 }
-.vestibule-ghost-row .pos-pill > * { visibility: hidden; }
+.vestibule-ghost-row .pos-pill > * { opacity: 0.35; }
+.vestibule-ghost-row .pos-pill-num { color: var(--text-muted) !important; }
 .vestibule-closed-title {
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
-.vestibule-reopen-btn {
+.vestibule-undo { text-align: center; margin: -4px 0 2px; }
+.vestibule-undo + .position-row { border-top: none; }
+.vestibule-reopen-btn,
+.vestibule-undo-btn {
   margin-top: 2px;
   padding: 6px 10px;
   background: none;

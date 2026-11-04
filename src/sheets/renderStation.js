@@ -6,7 +6,7 @@ import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
 import { appNow }              from '../core/clock.js';
 import { richText } from '../ui/html.js';
-import { isVestibuleClosed }   from '../domain/vestibules.js';
+import { isVestibuleClosed, isVestibuleReopened } from '../domain/vestibules.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -556,7 +556,10 @@ export function renderDirections(s, color) {
       const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && showHoists()))) || [];
       if (!visiblePos.length) return '';
       if (isVestibuleClosed(s.slug, exit)) return renderClosedVestibule(exit, visiblePos, color);
-      return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
+      const undo = isVestibuleReopened(s.slug, exit)
+        ? `<div class="vestibule-undo"><button type="button" class="vestibule-undo-btn" data-exit-id="${exit.id}">скасувати відкриття</button></div>`
+        : '';
+      return `${renderExitLabel(exit)}${undo}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
 
     // Кінцева з from_slug — підписуємо попередню станцію, як на інших станціях
