@@ -463,9 +463,14 @@ function renderExitLabel(exit) {
 }
 
 // Закритий вестибюль (stations.json: vestibule_closed) — заглушка замість підпису й пілюль
-function renderClosedVestibule(exit) {
+function renderClosedVestibule(exit, positions, color) {
+  // Пілюлі лише контуром — видно, де був вихід, але ним не скористатися
+  const ghosts = groupPositions(positions).map(p =>
+    `<div class="vestibule-ghost-row" aria-hidden="true">${generatePills(p.wagon, p.doors, color)}</div>`
+  ).join('');
   return `<div class="vestibule-closed" data-exit-id="${exit.id}">
     <div class="vestibule-closed-title">Цей вестибюль не працює</div>
+    ${ghosts}
     <button type="button" class="vestibule-reopen-btn">повідомити про відновлення роботи</button>
   </div>`;
 }
@@ -550,7 +555,7 @@ export function renderDirections(s, color) {
     const exitsHtml = dir.exits?.map(exit => {
       const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && showHoists()))) || [];
       if (!visiblePos.length) return '';
-      if (isVestibuleClosed(s.slug, exit)) return renderClosedVestibule(exit);
+      if (isVestibuleClosed(s.slug, exit)) return renderClosedVestibule(exit, visiblePos, color);
       return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
 
