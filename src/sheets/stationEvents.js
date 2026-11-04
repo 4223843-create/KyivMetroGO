@@ -544,6 +544,15 @@ export function bindSheetGestures(sheetBody, getCtx) {
       return;
     }
 
+    // 1f. Тап по відкритій панелі номерів виходів (поза значками/маршрутами вище) → згорнути
+    const exitsPanel = e.target.closest('.dev-note-panel[data-type="numbered-exits"].panel-open');
+    if (exitsPanel) {
+      e.stopPropagation();
+      exitsPanel.classList.remove('panel-open');
+      setTimeout(() => exitsPanel.remove(), 280);
+      return;
+    }
+
     // 2. Pencil (відредагована позиція → відкрити feedback)
     const pencil = e.target.closest('.pos-edited-mark');
     if (pencil) {

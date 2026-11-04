@@ -852,7 +852,7 @@ export function attachDevModeUI(container, slug) {
 
       confirmBtn.classList.remove('is-final');
       confirmBtn.classList.add('is-text-badge');
-      confirmBtn.innerHTML = `<span class="dev-confirm-text">${text}</span>`;
+      confirmBtn.innerHTML = `<span class="dev-confirm-text${text.length > 1 ? ' has-count' : ''}">${text}</span>`;
       confirmBtn.style.color   = badgeColor;
       confirmBtn.style.opacity = '1';
     };
