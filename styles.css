@@ -3732,6 +3732,10 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   color: currentColor;
   line-height: 1;
 }
+/* +2 / −3: цифра візуально велика, тож увесь напис менший — на око як самотній «+» */
+.dev-confirm-text.has-count {
+  font-size: 16px;
+}
 
 /* 2. Нотатка: квадратна і масивна, робимо її найменшою */
 .dev-note-btn svg {
