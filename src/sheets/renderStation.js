@@ -6,7 +6,7 @@ import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
 import { appNow }              from '../core/clock.js';
 import { richText } from '../ui/html.js';
-import { isVestibuleClosed }   from '../domain/vestibules.js';
+import { isVestibuleClosed, isVestibuleReopened } from '../domain/vestibules.js';
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -463,9 +463,14 @@ function renderExitLabel(exit) {
 }
 
 // Закритий вестибюль (stations.json: vestibule_closed) — заглушка замість підпису й пілюль
-function renderClosedVestibule(exit) {
+function renderClosedVestibule(exit, positions, color) {
+  // Пілюлі лише контуром — видно, де був вихід, але ним не скористатися
+  const ghosts = groupPositions(positions).map(p =>
+    `<div class="vestibule-ghost-row" aria-hidden="true">${generatePills(p.wagon, p.doors, color)}</div>`
+  ).join('');
   return `<div class="vestibule-closed" data-exit-id="${exit.id}">
     <div class="vestibule-closed-title">Цей вестибюль не працює</div>
+    ${ghosts}
     <button type="button" class="vestibule-reopen-btn">повідомити про відновлення роботи</button>
   </div>`;
 }
@@ -550,8 +555,11 @@ export function renderDirections(s, color) {
     const exitsHtml = dir.exits?.map(exit => {
       const visiblePos = exit.positions?.filter(p => !p.closed && (!filterLiftOnly || p.isLift || (p.isHoist && showHoists()))) || [];
       if (!visiblePos.length) return '';
-      if (isVestibuleClosed(s.slug, exit)) return renderClosedVestibule(exit);
-      return `${renderExitLabel(exit)}${renderPositions(visiblePos, color, false, exit)}`;
+      if (isVestibuleClosed(s.slug, exit)) return renderClosedVestibule(exit, visiblePos, color);
+      const undo = isVestibuleReopened(s.slug, exit)
+        ? `<div class="vestibule-undo"><button type="button" class="vestibule-undo-btn" data-exit-id="${exit.id}">скасувати відкриття</button></div>`
+        : '';
+      return `${renderExitLabel(exit)}${undo}${renderPositions(visiblePos, color, false, exit)}`;
     }).join('') || '';
 
     // Кінцева з from_slug — підписуємо попередню станцію, як на інших станціях

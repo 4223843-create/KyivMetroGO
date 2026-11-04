@@ -510,11 +510,26 @@ z-index: var(--z-fullscreen-sheet);
   margin-top: 9px;
   padding-top: 6px;
 }
+.vestibule-ghost-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 0 0;
+}
+.vestibule-ghost-row .pos-pill {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.vestibule-ghost-row .pos-pill > * { opacity: 0.35; }
+.vestibule-ghost-row .pos-pill-num { color: var(--text-muted) !important; }
 .vestibule-closed-title {
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
-.vestibule-reopen-btn {
+.vestibule-undo { text-align: center; margin: -4px 0 2px; }
+.vestibule-undo + .position-row { border-top: none; }
+.vestibule-reopen-btn,
+.vestibule-undo-btn {
   margin-top: 2px;
   padding: 6px 10px;
   background: none;
