@@ -373,6 +373,9 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
   } else {
     requestAnimationFrame(() => panel.classList.add('panel-open'));
     useHint('exitNumbers', station);
+    // Панель відкривається над пілюлями й може зіпхнути їх за нижній край картки —
+    // тоді трохи докручуємо, щоб пілюлі лишились видимі
+    setTimeout(() => _revealBelow(row, sheetBodyEl), 320);
   }
 
   panel.querySelector('.pos-numbered-exits-collapse').addEventListener('click', e => {
@@ -380,6 +383,15 @@ function _openNumberedExitsPanel(favTarget, slug, lineColor, { instant = false }
     panel.classList.remove('panel-open');
     setTimeout(() => panel.remove(), 280);
   });
+}
+
+/** Докручує прокручуваний контейнер, щоб el повністю потрапив у видиму зону знизу. */
+function _revealBelow(el, scroller) {
+  if (!el?.isConnected || !scroller) return;
+  const view   = scroller.getBoundingClientRect();
+  const bottom = Math.min(view.bottom, window.innerHeight);
+  const delta  = el.getBoundingClientRect().bottom - bottom + 12;
+  if (delta > 0) scroller.scrollBy({ top: delta, behavior: 'smooth' });
 }
 
 /** Номер пігулки, під якою відкрита панель номерів виходів, або -1. */
