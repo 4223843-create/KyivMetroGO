@@ -14,6 +14,10 @@ import { registerServiceWorker }          from './infra/serviceWorker.js';
 import { updateDevMenuButtonVisibility, runEmulationStartup } from './features/devHooks.js';
 import { maybeStartTour }                 from './features/tour.js';
 import { initVestibuleReports }           from './domain/vestibules.js';
+import { takeCardToRestore }              from './infra/restoreCard.js';
+import { openStation }                    from './sheets/stationSheet.js';
+import { state, startupSlug }             from './core/state.js';
+import { bus }                            from './core/eventBus.js';
 
 // Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
 import './map/mapGestures.js';
@@ -77,12 +81,25 @@ async function bootstrap() {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
 
+    // Телефон вивантажив застосунок у фоні — повертаємо картку, яка була відкрита
+    const saved   = takeCardToRestore(); // забираємо завжди, щоб не спрацював пізніше
+    const restore = action || startupSlug ? null : saved;
+    const restoreSlug = restore && state.stationsData?.[restore.slug] ? restore.slug : null;
+
     if      (action === 'search') openSearchSheet();
     else if (action === 'fav')    openFavSheet();
+    else if (restoreSlug) {
+      openStation(restoreSlug);
+      bus.emit('map:center-station', { slug: restoreSlug });
+      requestAnimationFrame(() => {
+        const body = document.getElementById('sheetBody');
+        if (body) body.scrollTop = restore.scroll;
+      });
+    }
     else if (getPref('startOnFav')) openFavSheet();
 
     if (action) window.history.replaceState({}, document.title, window.location.pathname);
-    else maybeStartTour();
+    else if (!restoreSlug) maybeStartTour();
 
   } catch (err) {
     console.error('[startup] bootstrap failed', err);
