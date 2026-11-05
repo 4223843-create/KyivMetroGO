@@ -83,7 +83,7 @@ export async function clearAllPhotos() {
 
 /**
  * Повертає масив усіх id фото без завантаження самих даних.
- * Значно економніший за getAllPhotos() для порівняння списків при синхронізації.
+ * Значно економніший за getAllPhotos(): для синхронізації і для значків фото в картці.
  * @returns {Promise<string[]>}
  */
 export async function getAllPhotoIds() {
