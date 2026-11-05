@@ -30,6 +30,8 @@ const DEV_CHECK_SVG = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/sv
 
 const DEV_NOTE_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 12h14M5 16h6"/></svg>`;
 
+const DEV_CAMERA_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5" stroke="currentColor" stroke-width="2"/></svg>`;
+
 const DEV_PHOTO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" width="26" height="20"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="3,22.3 11,14.3 22.5,25.9 "/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-miterlimit="10" points="17.4,20.9 22,16.3 28.9,23.2 "/></svg>`;
 // Лічильник підтверджень — кругла стрілка (те саме "оновити/повторно перевірити")
 const DEV_MORE_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>`;
@@ -880,6 +882,15 @@ export function attachDevModeUI(container, slug) {
     photoBtn.style.color   = defaultColor;
     photoBtn.style.opacity = defaultOpacity;
 
+    // ── Кнопка «Камера»: знімок одразу йде у фото цього виходу ──
+    const cameraBtn = document.createElement('button');
+    cameraBtn.className = 'dev-camera-btn';
+    cameraBtn.type = 'button';
+    cameraBtn.setAttribute('aria-label', 'Зняти фото');
+    cameraBtn.innerHTML = DEV_CAMERA_SVG;
+    cameraBtn.style.color   = defaultColor;
+    cameraBtn.style.opacity = defaultOpacity;
+
     // ── «⋮» праворуч від піна: ховає нотатку і фото, щоб ліворуч лишалась
     //    тільки кнопка підтвердження і не перекривала значки доступності ──
     const moreBtn = document.createElement('button');
@@ -890,7 +901,7 @@ export function attachDevModeUI(container, slug) {
 
     const moreMenu = document.createElement('div');
     moreMenu.className = 'dev-more-menu';
-    moreMenu.append(noteBtn, photoBtn);
+    moreMenu.append(cameraBtn, noteBtn, photoBtn);
 
     // «⋮» підсвічується кольором лінії, якщо є нотатка або фото
     const syncMoreColor = () => {
@@ -934,6 +945,23 @@ export function attachDevModeUI(container, slug) {
       e.stopPropagation();
       _closeDevMoreMenus();
       toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
+    });
+
+    cameraBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      _closeDevMoreMenus();
+      openDevCamera(async files => {
+        for (const file of files) {
+          await PhotoStorage.savePhoto(_newPhotoId(slug, posIdx), await _photoToDataUrl(file));
+        }
+        _touchSyncTimestamp();
+        photoBtn.style.color   = lineColor;
+        photoBtn.style.opacity = '1';
+        // Панель фото цього виходу відкрита — одразу показати новий знімок
+        const panel = row.nextElementSibling;
+        if (panel?.classList.contains('dev-note-panel') && panel.dataset.type === 'photo') await panel._repaint?.();
+        _showToast(files.length > 1 ? `Збережено фото: ${files.length}` : 'Фото збережено');
+      });
     });
   });
 }
@@ -1351,7 +1379,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
     panel.querySelectorAll('.dev-photo-thumb').forEach(img => {
       const photoId = img.closest('.dev-photo-thumb-wrap')?.dataset.id;
       bindLongPress(img, {
-        onTap: () => showDevPhotoFullscreen(img.src),
+        onTap: () => showDevPhotoFullscreen(photos.map(p => p.dataUrl), photos.findIndex(p => p.id === photoId)),
         onLongPress: () => showCustomConfirm(
           'Видалити фото?',
           async () => {
@@ -1396,7 +1424,36 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
     });
   };
 
+  panel._repaint = paint; // для швидкої камери з меню «⋮»
   await paint();
+}
+
+/**
+ * Швидка камера: відкриває камеру телефона (на комп'ютері — вибір файлу)
+ * і віддає знімок без панелі фото та без кнопки «Зберегти» в застосунку.
+ * Системний крок iOS «Використати фото» вебсторінка пропустити не може.
+ * @param {(files: File[]) => Promise<void>} onFiles
+ */
+function openDevCamera(onFiles) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.setAttribute('capture', 'environment');
+  input.style.display = 'none';
+  input.addEventListener('change', async () => {
+    const files = Array.from(input.files || []);
+    input.remove();
+    if (!files.length) return;
+    try {
+      await onFiles(files);
+    } catch (err) {
+      console.warn('[KyivMetroGO] Не вдалося зберегти фото:', err);
+      _showToast('Не вдалося зберегти фото');
+    }
+  });
+  input.addEventListener('cancel', () => input.remove());
+  document.body.appendChild(input);
+  input.click();
 }
 
 // ── Стиснення фото перед збереженням ──────────────────
@@ -1436,19 +1493,46 @@ async function _photoToDataUrl(file) {
 }
 
 // ── Повноекранний перегляд фото ───────────────────────
+// Свайп ліворуч / праворуч гортає фото того самого виходу.
 let _photoZoom = null;
-function showDevPhotoFullscreen(src) {
+let _photoList = [];
+let _photoIndex = 0;
+
+function _showPhotoAt(overlay, index) {
+  _photoIndex = index;
+  overlay.querySelector('img').src = _photoList[index];
+  const counter = overlay.querySelector('.dev-photo-counter');
+  counter.textContent = `${index + 1} / ${_photoList.length}`;
+  counter.hidden = _photoList.length < 2;
+}
+
+/**
+ * @param {string[]} srcs — усі фото виходу
+ * @param {number} [index] — яке показати першим
+ */
+function showDevPhotoFullscreen(srcs, index = 0) {
   let overlay = document.getElementById('devPhotoOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'devPhotoOverlay';
     overlay.className = 'dev-photo-overlay';
-    overlay.innerHTML = `<img src="" alt="" draggable="false" />`;
+    overlay.innerHTML = `<img src="" alt="" draggable="false" /><div class="dev-photo-counter" hidden></div>`;
     document.body.appendChild(overlay);
-    _photoZoom = attachPhotoZoom(overlay, overlay.querySelector('img'), () => overlay.classList.remove('open'));
+    _photoZoom = attachPhotoZoom(
+      overlay,
+      overlay.querySelector('img'),
+      () => { overlay.classList.remove('open'); _photoList = []; },
+      dir => {
+        const next = _photoIndex + dir;
+        if (next < 0 || next >= _photoList.length) return false;
+        _showPhotoAt(overlay, next);
+        return true;
+      },
+    );
   }
   _photoZoom.reset();
-  overlay.querySelector('img').src = src;
+  _photoList = srcs;
+  _showPhotoAt(overlay, Math.max(0, index));
   requestAnimationFrame(() => overlay.classList.add('open'));
 }
 

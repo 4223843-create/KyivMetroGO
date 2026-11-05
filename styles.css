@@ -3696,6 +3696,7 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
 }
 .dev-more-menu.is-open { display: flex; }
 
+.dev-more-menu .dev-camera-btn,
 .dev-more-menu .dev-note-btn,
 .dev-more-menu .dev-photo-btn {
   position: static;
@@ -3754,6 +3755,24 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   width: 20px !important;
   height: 20px !important;
   transform: translateY(0) !important;
+}
+
+/* Камера: швидкий знімок у фото виходу */
+.dev-camera-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dev-camera-btn svg {
+  display: block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
 }
 
 /* ── Сітка мініатюр (кілька фото на позицію) ── */
@@ -3822,6 +3841,20 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   user-select: none;
   pointer-events: none;
 }
+/* «2 / 5» — яке фото виходу зараз відкрите */
+.dev-photo-counter {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 14px;
+  pointer-events: none;
+}
+.dev-photo-counter[hidden] { display: none; }
 
 /* ── DEV MODE: Випадаюча панель (Нотатки / Фото) ── */
 .dev-note-panel {

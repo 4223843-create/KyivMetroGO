@@ -3,6 +3,7 @@
 // Два пальці — масштаб, один палець при збільшенні — переміщення,
 // подвійний тап — збільшити / повернути, колесо миші — масштаб.
 // Одиночний тап без збільшення — закрити (onClose).
+// Без збільшення горизонтальний свайп гортає фото (onSwipe), якщо їх кілька.
 
 const MIN_SCALE    = 1;
 const MAX_SCALE    = 5;
@@ -10,6 +11,7 @@ const DOUBLE_SCALE = 2.5;
 const TAP_MOVE_PX  = 10;
 const TAP_MS       = 300;
 const DOUBLE_MS    = 280;
+const SWIPE_PX     = 50;   // скільки протягнути, щоб перейти до сусіднього фото
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -18,9 +20,11 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
  * @param {HTMLElement} overlay — повноекранний контейнер (img по центру)
  * @param {HTMLImageElement} img
  * @param {() => void} onClose — одиночний тап при масштабі 1
+ * @param {(dir: 1 | -1) => boolean} [onSwipe] — свайп при масштабі 1:
+ *   1 — наступне фото, −1 — попереднє; повертає false, якщо далі фото немає
  * @returns {{ reset: () => void }}
  */
-export function attachPhotoZoom(overlay, img, onClose) {
+export function attachPhotoZoom(overlay, img, onClose, onSwipe) {
   let scale = 1, tx = 0, ty = 0;
   const pointers = new Map();
   let gesture = null;      // { kind: 'pinch' | 'pan', ... }
@@ -113,12 +117,35 @@ export function attachPhotoZoom(overlay, img, onClose) {
       ty = gesture.ty + (e.clientY - gesture.y);
       clampTranslate();
       apply();
+    } else if (gesture.kind === 'pan' && onSwipe && pointers.size === 1) {
+      // Без збільшення фото їде за пальцем по горизонталі — гортання
+      gesture.swipe = true;
+      tx = e.clientX - gesture.x;
+      ty = 0;
+      apply();
     }
   });
 
+  // Завершити свайп: перейти до сусіднього фото або повернути на місце
+  const finishSwipe = (dx, dy) => {
+    const dir = dx < 0 ? 1 : -1;
+    if (Math.abs(dx) > SWIPE_PX && Math.abs(dx) > Math.abs(dy) && onSwipe(dir)) {
+      // нове фото заїжджає з того боку, куди тягнули
+      tx = dir * overlay.clientWidth * 0.35; ty = 0;
+      apply();
+      requestAnimationFrame(() => { tx = 0; apply(true); });
+    } else {
+      tx = 0; ty = 0;
+      apply(true);
+    }
+  };
+
   const endPointer = e => {
     if (!pointers.has(e.pointerId)) return;
+    const swipe = gesture?.kind === 'pan' && gesture.swipe && scale === 1 && pointers.size === 1
+      ? { dx: e.clientX - gesture.x, dy: e.clientY - gesture.y } : null;
     pointers.delete(e.pointerId);
+    if (swipe) { finishSwipe(swipe.dx, swipe.dy); gesture = null; tapStart = null; return; }
     if (scale < 1.05 && pointers.size === 0) { scale = 1; tx = 0; ty = 0; apply(true); }
     startGesture(); // палець, що лишився, продовжує переміщення без стрибка
 
