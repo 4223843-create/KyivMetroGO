@@ -29,6 +29,7 @@ body#map-page .map-viewport {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: none;
   padding-top: 8dvh; 
   padding-bottom: 8dvh;
 }
@@ -140,6 +141,10 @@ html, body {
   text-align: center;
   touch-action: pan-x pan-y;
   -webkit-user-select: none; user-select: none;
+  /* Без цього в браузері (Chrome, Safari) потягування вниз, коли карта чи
+     картка вже прокручені до верху, вмикає «потягніть, щоб оновити» —
+     сторінка перезавантажується і відкривається з нуля. */
+  overscroll-behavior: none;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
