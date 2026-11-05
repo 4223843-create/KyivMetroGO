@@ -912,8 +912,8 @@ export function attachDevModeUI(container, slug) {
       moreMenu.classList.toggle('is-open', willOpen);
     });
 
-    listPhotosForPosition(slug, posIdx, [rowIdx, row.dataset.devOldKey]).then(photos => {
-      if (photos.length) {
+    listPhotoIdsForPosition(slug, posIdx, [rowIdx, row.dataset.devOldKey]).then(ids => {
+      if (ids.length) {
         photoBtn.style.color   = lineColor;
         photoBtn.style.opacity = '1';
       }
@@ -1256,16 +1256,22 @@ function _newPhotoId(slug, posIdx) {
  *   (їхні id у хмарі не перейменовуємо)
  * @returns {Promise<Array<{id:string, dataUrl:string}>>} усі фото для конкретної позиції
  */
-async function listPhotosForPosition(slug, posIdx, legacyKeys = []) {
+async function listPhotoIdsForPosition(slug, posIdx, legacyKeys = []) {
   const prefixes = [_photoPrefix(slug, posIdx)];
   for (const key of legacyKeys) {
     if (key !== undefined && key !== '') prefixes.push(_photoPrefix(slug, key));
   }
-  const all = await PhotoStorage.getAllPhotos();
-  return Object.keys(all)
-    .filter(id => prefixes.some(prefix => id.startsWith(prefix)))
-    .sort()
-    .map(id => ({ id, dataUrl: all[id] }));
+  // Лише ключі: самі фото (base64 на мегабайти) не читаємо. Раніше тут
+  // вантажились УСІ фото для кожного рядка картки — на iPhone це переповнювало
+  // пам'ять сторінки, і Safari перезавантажував застосунок.
+  const ids = await PhotoStorage.getAllPhotoIds();
+  return ids.filter(id => prefixes.some(prefix => id.startsWith(prefix))).sort();
+}
+
+async function listPhotosForPosition(slug, posIdx, legacyKeys = []) {
+  const ids = await listPhotoIdsForPosition(slug, posIdx, legacyKeys);
+  const photos = await Promise.all(ids.map(async id => ({ id, dataUrl: await PhotoStorage.loadPhoto(id) })));
+  return photos.filter(p => p.dataUrl);
 }
 
 /**
@@ -1377,17 +1383,10 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
       const files = Array.from(e.target.files || []);
       if (!files.length) return;
       try {
-        await Promise.all(files.map(file => new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = async (ev) => {
-            try {
-              await PhotoStorage.savePhoto(_newPhotoId(slug, posIdx), ev.target.result);
-              resolve();
-            } catch (err) { reject(err); }
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        })));
+        // По одному: кожне фото з камери в пам'яті займає десятки мегабайт
+        for (const file of files) {
+          await PhotoStorage.savePhoto(_newPhotoId(slug, posIdx), await _photoToDataUrl(file));
+        }
         _touchSyncTimestamp();
         await paint();
       } catch (err) {
@@ -1398,6 +1397,42 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
   };
 
   await paint();
+}
+
+// ── Стиснення фото перед збереженням ──────────────────
+// Фото з камери iPhone — 12–48 Мп; у base64 і розкодоване в картинку воно
+// займає десятки мегабайт. Для перевірки виходу вистачає 2000 px по довшій
+// стороні (зум теж лишається чітким).
+const PHOTO_MAX_SIDE = 2000;
+
+function _readAsDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function _photoToDataUrl(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(img.naturalWidth  * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    canvas.width = canvas.height = 0; // одразу звільнити пам'ять полотна (iOS)
+    return dataUrl;
+  } catch {
+    return _readAsDataUrl(file); // не вдалося розкодувати — зберігаємо як є
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 // ── Повноекранний перегляд фото ───────────────────────
