@@ -8,6 +8,9 @@ export const LINE_COLOR = {
   green: '#5aaa6a',
 };
 
+// Тимчасово недоступна станція (stations.json: temporarily_closed) — сіра замість кольору гілки
+export const CLOSED_STATION_COLOR = '#8e8e93';
+
 export const FAV_DISPLAY_NAMES = {
   'B.Ploshcha_Ukrainskikh_heroiv': 'Пл. Українських Героїв',
 };

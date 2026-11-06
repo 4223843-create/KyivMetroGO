@@ -4,7 +4,6 @@
 
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { getPref, setPref } from '../core/prefs.js';
-import { LINE_COLOR }              from '../core/constants.js';
 import { applyTheme }              from '../ui/theme.js';
 import { setReduceMotion }         from '../ui/motion.js';
 import { initKinematicSwipe }      from '../ui/swipe.js';
@@ -20,6 +19,7 @@ import {
 import {
   isCheckinMode, getCheckins, updateCheckinDock, invalidateCheckinsCache,
 } from './checkin/index.js';
+import { stationColor } from '../domain/vestibules.js';
 
 // ══ ТОСТ «CHECK-IN ЩЕ НЕ АКТИВНИЙ» ══════════════════════════
 
@@ -196,7 +196,7 @@ export function openSettingsSheet() {
           : null;
 
         if (currentSlug) {
-          const color = LINE_COLOR[state.stationsData?.[currentSlug]?.line] || 'var(--text-muted)';
+          const color = stationColor(state.stationsData?.[currentSlug]);
           const sheet = document.getElementById('stationSheet');
           sheet.querySelectorAll('.row-checkin-btn').forEach(btn => btn.remove());
           // Без Check-in обробник лише сховає пін угорі картки

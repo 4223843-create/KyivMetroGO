@@ -11,11 +11,11 @@ import { state } from '../core/state.js';
 import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { bus }                from '../core/eventBus.js';
-import { LINE_COLOR } from '../core/constants.js';
 import { lineTextColor } from '../ui/components.js';
 import { richText } from '../ui/html.js';
 import { addressResultsHtml } from './addressSearch.js';
 import { queryWordsForExits, matchExitSearch, exitHintText } from '../data/exitSearch.js';
+import { stationColor } from '../domain/vestibules.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
@@ -183,7 +183,7 @@ export function matchStations(query, stations = Object.values(state.stationsData
 
 /** HTML рядка результату — станція з кольором лінії, як у пошуку. */
 export function stationItemHtml(s, isExitOnly = false, exitHint = null) {
-  const color = lineTextColor(LINE_COLOR[s.line]);
+  const color = lineTextColor(stationColor(s));
   const hintHtml = isExitOnly && exitHint
     ? `<span class="search-item-hint">${richText(exitHint)}</span>`
     : '';

@@ -18,7 +18,8 @@ import { Haptics, NotificationType } from '@capacitor/haptics';
 import { getPref }                from '../core/prefs.js';
 import { showCustomConfirm }      from '../ui/confirm.js';
 import { showToast }              from '../ui/toast.js';
-import { reopenVestibule, cancelVestibuleReopen } from '../domain/vestibules.js';
+import { reopenVestibule, cancelVestibuleReopen,
+         reopenStation, cancelStationReopen } from '../domain/vestibules.js';
 
 // ── Gesture state (auto-GC разом з DOM-елементами) ──────────
 /**
@@ -431,6 +432,24 @@ function _confirmVestibuleReopen(slug, exitId) {
   );
 }
 
+/** Недоступна станція: «Відкрити і повідомити розробника» або «Скасувати». */
+function _confirmStationReopen(slug) {
+  const station = state.stationsData?.[slug];
+  if (!station) return;
+  showCustomConfirm(
+    'Станція знову працює?',
+    () => {
+      reopenStation(station);
+      bus.emit('station:reopened-changed', { slug });
+      bus.emit('station:refresh');
+      showToast('Розробник отримає повідомлення за хвилину');
+    },
+    null, null,
+    'Відкрити і повідомити розробника', 'Скасувати',
+    'confirm-btn-save confirm-btn-wrap', 'confirm-btn-neutral confirm-btn-wrap',
+  );
+}
+
 export function bindSheetGestures(sheetBody, getCtx) {
 
   // ── touchstart: початок long-press ──────────────────────────
@@ -523,6 +542,23 @@ export function bindSheetGestures(sheetBody, getCtx) {
     if (reopenBtn) {
       e.stopPropagation();
       _confirmVestibuleReopen(slug, reopenBtn.closest('.vestibule-closed')?.dataset.exitId);
+      return;
+    }
+
+    // «Станція запрацювала? Повідомте розробника» → підтвердження
+    if (e.target.closest('.station-reopen-btn')) {
+      e.stopPropagation();
+      _confirmStationReopen(slug);
+      return;
+    }
+
+    // «скасувати відкриття станції» → знову сіра, лист не піде
+    if (e.target.closest('.station-undo-btn')) {
+      e.stopPropagation();
+      const notSent = cancelStationReopen(state.stationsData?.[slug]);
+      bus.emit('station:reopened-changed', { slug });
+      bus.emit('station:refresh');
+      showToast(notSent ? 'Скасовано, повідомлення не надіслано' : 'Скасовано');
       return;
     }
 

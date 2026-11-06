@@ -8,6 +8,7 @@ import { bus }                    from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage }  from '../core/storage.js';
 import { getSlugByLower }         from '../data/stations.js';
 import { getPref } from '../core/prefs.js';
+import { isStationClosed }        from '../domain/vestibules.js';
 
 const inner = document.getElementById('mapInner');
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -67,6 +68,50 @@ function _getStationZoneEls() {
 
 /** Скидає кеш зон станцій (викликати після повторного renderMapZones). */
 export function invalidateStationZoneCache() { _stationZoneEls = null; }
+
+// ── ТИМЧАСОВО НЕДОСТУПНІ СТАНЦІЇ ──────────────────────────────
+// Станція з "temporarily_closed": true сіра на карті. Фарбуємо фігури схеми,
+// що лежать усередині прозорих зон станції (плашка, «хвостик», напис), —
+// без правок самого SVG. Шматки гілки між станціями лишаються кольоровими.
+const CLOSED_CLASS = 'map-station-closed';
+const _closedShapesCache = new Map(); // slug → [елементи схеми]
+
+function _stationShapes(slug) {
+  if (_closedShapesCache.has(slug)) return _closedShapesCache.get(slug);
+  const zones = _getStationZoneEls()
+    .filter(el => getSlugByLower(el.id.replace(/\d+$/, '').toLowerCase()) === slug)
+    .map(el => el.getBoundingClientRect())
+    .filter(r => r.width > 0 && r.height > 0);
+  if (!zones.length) return [];
+
+  const union = zones.reduce((u, r) => ({
+    left: Math.min(u.left, r.left), top: Math.min(u.top, r.top),
+    right: Math.max(u.right, r.right), bottom: Math.max(u.bottom, r.bottom),
+  }), { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
+  const tol = 1;
+
+  const shapes = [...inner.querySelectorAll('svg path, svg rect, svg polygon, svg circle')].filter(el => {
+    if (/^[RGB]\./.test(el.id)) return false; // самі зони
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return false;
+    if (r.left < union.left - tol || r.right > union.right + tol ||
+        r.top < union.top - tol || r.bottom > union.bottom + tol) return false;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    return zones.some(z => cx >= z.left - tol && cx <= z.right + tol && cy >= z.top - tol && cy <= z.bottom + tol);
+  });
+  if (shapes.length) _closedShapesCache.set(slug, shapes);
+  return shapes;
+}
+
+/** Сірить на карті станції, що тимчасово не працюють (і знімає з відкритих). */
+export function updateClosedStationsOnMap() {
+  if (!inner || !state.stationsData || !state.isMapReady) return;
+  inner.querySelectorAll(`.${CLOSED_CLASS}`).forEach(el => el.classList.remove(CLOSED_CLASS));
+  Object.values(state.stationsData).forEach(s => {
+    if (!isStationClosed(s)) return;
+    _stationShapes(s.slug).forEach(el => el.classList.add(CLOSED_CLASS));
+  });
+}
 
 // ── ЦЕНТРУВАННЯ НА СТАНЦІЇ ────────────────────────────────────
 // Після вибору станції в пошуку зсуваємо карту так, щоб станція
@@ -376,12 +421,19 @@ export function syncMapWithCheckins() {
 
   applyVisitedHatchOverlays();
   updateMapAccessibilityIcons();
+  updateClosedStationsOnMap();
 }
 
 bus.on('map:sync-checkins', syncMapWithCheckins);
 bus.on('data:stations-hydrated', () => {
   invalidateStationZoneCache();
+  _closedShapesCache.clear();
   updateMapAccessibilityIcons();
+  updateClosedStationsOnMap();
+});
+bus.on('station:reopened-changed', () => {
+  updateMapAccessibilityIcons();
+  updateClosedStationsOnMap();
 });
 // Значок візочка для SVG-карти (однаковий для всіх гілок)
 const MAP_ICON_WHEELCHAIR = {
@@ -413,6 +465,7 @@ export function updateMapAccessibilityIcons() {
     if (!slug || processedSlugs.has(slug)) return;
 
     const stData = state.stationsData[slug];
+    if (isStationClosed(stData)) return; // станція не працює — знак доступності не потрібен
     const hasLift = stData?.directions?.some(d =>
       d.exits?.some(e => e.positions?.some(p => p.isLift || (p.isHoist && mode === 'hoists')))
     );

@@ -1,13 +1,13 @@
 import { state }                   from '../core/state.js';
 import { heartSvg, lineTextColor } from '../ui/components.js';
-import { LINE_COLOR }              from '../core/constants.js';
 import { isFav }                   from '../features/favorites/index.js';
 import { renderHintSlot, useHint, initHintGestures } from '../features/hints.js';
 import { attachDevModeUI, setupDevStationNoteButton } from '../features/devHooks.js';
 import { bus }                     from '../core/eventBus.js';
 import { showSheet, hideSheet }    from '../ui/sheetNav.js';
 import { withUnsavedCheck }        from '../core/unsavedCheck.js';
-import { renderDirections, renderStationConnections, renderStationClock, hasStationClock } from './renderStation.js';
+import { renderDirections, renderStationConnections, renderStationClock, hasStationClock,
+         stationColor, renderStationClosedNotice } from './renderStation.js';
 import { bindSheetGestures, applyInitialFavStyles,
          getOpenNumberedExitsIdx, reopenNumberedExitsPanel } from './stationEvents.js';
 
@@ -53,9 +53,9 @@ clockBtn?.addEventListener('click', e => {
 function _syncClockBtn() {
   if (!clockBtn) return;
   const isOpen = !!document.getElementById('stationClockPanel')?.classList.contains('panel-open');
-  const line   = state.stationsData?.[state.currentStationSlug]?.line;
+  const s      = state.stationsData?.[state.currentStationSlug];
   clockBtn.classList.toggle('is-active', isOpen);
-  clockBtn.style.color = isOpen ? lineTextColor(LINE_COLOR[line] || '') : '';
+  clockBtn.style.color = isOpen && s ? lineTextColor(stationColor(s)) : '';
 }
 
 // ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
@@ -63,8 +63,7 @@ bindSheetGestures(
   sheetBody,
   () => ({
     slug:      state.currentStationSlug,
-    lineColor: LINE_COLOR[state.stationsData?.[state.currentStationSlug]?.line]
-               ?? 'var(--text-muted)',
+    lineColor: stationColor(state.stationsData?.[state.currentStationSlug]),
   }),
 );
 initHintGestures(sheetBody);
@@ -87,7 +86,7 @@ bus.on('station:refresh', () => {
 bus.on('fav:updated', () => {
   const slug = state.currentStationSlug;
   if (!slug || !sheet.classList.contains('sheet-open')) return;
-  _updateFavBtn(slug, LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)');
+  _updateFavBtn(slug, stationColor(state.stationsData?.[slug]));
 });
 
 // Вибране змінили в іншій вкладці — оновлюємо серця відкритої картки
@@ -128,7 +127,7 @@ function actualOpenStation(slug) {
   if (!state.stationsData?.[slug]) return;
 
   const s     = state.stationsData[slug];
-  const color = LINE_COLOR[s.line] || 'var(--text-muted)';
+  const color = stationColor(s);
 
   // Guard: та сама станція вже відкрита — пропускаємо повний re-render
   if (state.currentStationSlug === slug && sheet.classList.contains('sheet-open')) {
@@ -150,16 +149,16 @@ function actualOpenStation(slug) {
   );
 
   if (!hasDirections) {
-    sheetBody.innerHTML = CLOCK_PANEL_HTML + '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>';
+    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationClosedNotice(s) + '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>';
   } else if (allExitsClosed) {
-    sheetBody.innerHTML = CLOCK_PANEL_HTML + '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
+    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationClosedNotice(s) + '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
   } else {
     let directionsHtml = _directionsHtmlCache.get(slug);
     if (!directionsHtml) {
       directionsHtml = renderDirections(s, color);
       _directionsHtmlCache.set(slug, directionsHtml);
     }
-    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationConnections(s) + renderHintSlot(s, color) + directionsHtml;
+    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationClosedNotice(s) + renderStationConnections(s) + renderHintSlot(s, color) + directionsHtml;
   }
 
   sheetBody.scrollTop = 0;
@@ -207,7 +206,7 @@ export function refreshCurrentStation() {
   if (!s || !sheet.classList.contains('sheet-open')) return;
 
   const slug       = state.currentStationSlug;
-  const color      = LINE_COLOR[s.line] || 'var(--text-muted)';
+  const color      = stationColor(s);
   const prevScroll = sheetBody.scrollTop;
 
   // Відкрита панель годинника не має закриватися від перемальовування (напр. дотик до шпильки check-in)
@@ -220,12 +219,15 @@ export function refreshCurrentStation() {
   sheetBody.innerHTML = renderDirections(s, color);
   // Зберігаємо свіжий HTML в кеш для наступного відкриття
   _directionsHtmlCache.set(slug, sheetBody.innerHTML);
-  sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationConnections(s) + renderHintSlot(s, color));
+  sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationClosedNotice(s) + renderStationConnections(s) + renderHintSlot(s, color));
   if (connWasOpen) {
     const wrap = document.getElementById('stationConnectionsWrap');
     wrap?.classList.add('is-open');
     wrap?.querySelector('.station-connections-toggle')?.setAttribute('aria-expanded', 'true');
   }
+
+  const handle = sheet.querySelector('.sheet-handle');
+  if (handle) handle.style.background = lineTextColor(color);
 
   if (clockBtn) clockBtn.hidden = !hasStationClock(s);
   if (clockWasOpen && !clockBtn?.hidden) {

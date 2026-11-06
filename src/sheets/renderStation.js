@@ -6,7 +6,28 @@ import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
 import { appNow }              from '../core/clock.js';
 import { richText } from '../ui/html.js';
-import { isVestibuleClosed, isVestibuleReopened } from '../domain/vestibules.js';
+import { isVestibuleClosed, isVestibuleReopened,
+         isStationClosed, isStationReopened, stationColor } from '../domain/vestibules.js';
+
+export { stationColor };
+
+/**
+ * Над виходами недоступної станції: «Станція тимчасово не працює» і кнопка
+ * «Станція запрацювала? Повідомте розробника». Якщо людина вже відкрила її
+ * в себе — лише «скасувати відкриття».
+ */
+export function renderStationClosedNotice(s) {
+  if (isStationClosed(s)) {
+    return `<div class="station-closed-notice">
+      <div class="station-closed-title">Станція тимчасово не працює</div>
+      <button type="button" class="station-reopen-btn">Станція запрацювала? Повідомте розробника</button>
+    </div>`;
+  }
+  if (isStationReopened(s)) {
+    return `<div class="vestibule-undo station-closed-undo"><button type="button" class="station-undo-btn">скасувати відкриття станції</button></div>`;
+  }
+  return '';
+}
 
 function formatDirLabel(raw) {
   if (!raw) return raw;
@@ -251,6 +272,8 @@ export function hasStationClock(s) {
 export function renderStationClock(s, now = appNow()) {
   const sch = s.schedule;
   if (!sch) return '';
+  // Станція не працює — поїзди не зупиняються, інтервалу немає
+  if (isStationClosed(s)) return '<span class="clock-pill">Інтервал руху: <span class="clock-interval">—</span></span>';
   const nowMin = toMin(`${now.getHours()}:${now.getMinutes()}`);
   const open   = toMin(sch.open);
   const close  = toMin(sch.close);

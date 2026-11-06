@@ -23,7 +23,7 @@ import { STORAGE_KEYS, Storage } from '../../core/storage.js';
 import { getPref, setPref } from '../../core/prefs.js';
 import { bus }             from '../../core/eventBus.js';
 import { Icons }           from '../../ui/icons.js';
-import { LINE_COLOR, FAV_DISPLAY_NAMES, DIR_SHORT_NAMES } from '../../core/constants.js';
+import { FAV_DISPLAY_NAMES, DIR_SHORT_NAMES } from '../../core/constants.js';
 import { lineTextColor } from '../../ui/components.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
 import { showSheet, hideSheet } from '../../ui/sheetNav.js';
@@ -47,6 +47,7 @@ import {
   clearExitFavs,
 } from '../../domain/favorites.js';
 import { escapeHtml, richText } from '../../ui/html.js';
+import { stationColor } from '../../domain/vestibules.js';
 
 // ── Ре-експорти для зворотної сумісності ─────────────────────
 // sheetsManager.js, stationSheet.js, stationEvents.js, settings.js
@@ -125,7 +126,7 @@ function _renderAddResults(input) {
 function _showAddStation(slug) {
   const s = state.stationsData?.[slug];
   if (!s) return;
-  const color = LINE_COLOR[s.line];
+  const color = stationColor(s);
   favBody.innerHTML = `
     <div class="fav-add-station" data-slug="${slug}">
       <div class="search-item fav-add-head">
@@ -152,7 +153,7 @@ function _backToAddSearch() {
 function _pickAddExit(target, slug) {
   const pos = target.dataset.pos;
   if (!pos) return;
-  const color = LINE_COLOR[state.stationsData?.[slug]?.line];
+  const color = stationColor(state.stationsData?.[slug]);
   const paint = (el, on) => el && applyFavPillStyles(el, color, on);
   let result = toggleExitFav(slug, pos);
   if (result.status === 'replace') {
@@ -243,7 +244,7 @@ export function renderFavList(favs) {
     if (!s) return;
     const stationExits = exitFavsList.filter(f => f.slug === slug);
     if (!stationExits.length) {
-      items.push({ slug, name: s.name, dir: '', color: LINE_COLOR[s.line], exits: [] });
+      items.push({ slug, name: s.name, dir: '', color: stationColor(s), exits: [] });
     } else {
       const grouped = {};
       stationExits.forEach(e => {
@@ -251,7 +252,7 @@ export function renderFavList(favs) {
         grouped[e.dir].push(e);
       });
       Object.entries(grouped).forEach(([dir, eList]) => {
-        items.push({ slug, name: s.name, dir, color: LINE_COLOR[s.line], exits: eList });
+        items.push({ slug, name: s.name, dir, color: stationColor(s), exits: eList });
       });
     }
   });

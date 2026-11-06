@@ -532,9 +532,23 @@ z-index: var(--z-fullscreen-sheet);
   color: var(--text-muted);
 }
 .vestibule-undo { text-align: center; margin: -4px 0 2px; }
+/* Тимчасово недоступна станція (temporarily_closed) — напис над виходами */
+.station-closed-notice {
+  text-align: center;
+  padding: 2px 0 10px;
+  margin-bottom: 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+.station-closed-title {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.station-closed-undo { margin: 0 0 6px; }
 .vestibule-undo + .position-row { border-top: none; }
 .vestibule-reopen-btn,
-.vestibule-undo-btn {
+.vestibule-undo-btn,
+.station-reopen-btn,
+.station-undo-btn {
   margin-top: 2px;
   padding: 6px 10px;
   background: none;
@@ -5793,3 +5807,8 @@ body:has(.offline-banner:not([hidden])) .emu-banner { top: calc(env(safe-area-in
   display: flex;
   justify-content: center;
 }
+
+/* Тимчасово недоступна станція на карті (mapInteraction.js → updateClosedStationsOnMap) */
+#mapInner .map-station-closed { fill: #6e6e73 !important; }
+[data-theme="light"] #mapInner .map-station-closed { fill: #b4b4b8 !important; }
+#mapInner path[aria-label].map-station-closed { opacity: 0.45; }
