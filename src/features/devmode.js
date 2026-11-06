@@ -68,6 +68,7 @@ import {
   mergePhotoTombstones as _mergePhotoTombstones,
   purgePhotoTombstones as _purgePhotoTombstones,
 } from '../domain/devMerge.js';
+import { stationColor } from '../domain/vestibules.js';
 
 export { isDevMode, toggleDevMode, getDevLog, appendDevLog } from './devFlags.js';
 
@@ -784,7 +785,7 @@ document.addEventListener('click', _closeDevMoreMenus);
 export function attachDevModeUI(container, slug) {
   if (!isDevMode()) return;
   // Відтінок лінії з урахуванням теми — як у пілюль, серця й шпильок картки
-  const lineColor = lineTextColor(LINE_COLOR[state.stationsData?.[slug]?.line] || 'var(--text-muted)');
+  const lineColor = lineTextColor(stationColor(state.stationsData?.[slug]));
 
   const defaultColor   = 'var(--dev-icon)';
   const defaultOpacity = '1';

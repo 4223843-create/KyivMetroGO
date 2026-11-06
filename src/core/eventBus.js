@@ -48,6 +48,7 @@ export const bus = {
 // 'station:open'             { slug }
 // 'station:refresh'          void              — перемалювати відкриту картку станції
 // 'station:clock-settings'   void              — змінились налаштування годин/інтервалів
+// 'station:reopened-changed' { slug }          — недоступну станцію відкрили / скасували відкриття (карта)
 // 'sheet:close'              { sheetEl }
 // 'sheet:open-feedback'      void
 // 'sheet:open-feedback-for'  { slug }

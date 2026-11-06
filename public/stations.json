@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261109",
+  "version": "20261110",
   "line_intervals": {
     "green": [
       {
@@ -12140,6 +12140,7 @@
       "slug": "G.Slavutych",
       "name": "Славутич",
       "line": "green",
+      "temporarily_closed": true,
       "code_st": "321",
       "map_zones": [
         {

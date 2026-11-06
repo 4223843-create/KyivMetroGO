@@ -14,6 +14,7 @@ import { dismissHintWithDoors }  from '../ui/animations.js';
 import { getExitFavs }           from '../domain/favorites.js';
 import { getCheckins, isCheckinMode, isStationCheckinMode } from '../domain/checkin.js';
 import { hasStationClock }       from '../sheets/renderStation.js';
+import { isStationClosed }       from '../domain/vestibules.js';
 
 const CLOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></svg>`;
 // Ненатиснений пін — такий, як на картці: сірий угорі, ледь помітний біля виходу
@@ -130,7 +131,8 @@ function _hintHtml(hint, color) {
  * Викликається при кожному рендері картки.
  */
 export function renderHintSlot(station, color) {
-  const hint = _pick(station);
+  // На тимчасово недоступній станції підказки не показуємо
+  const hint = isStationClosed(station) ? null : _pick(station);
   _shown = hint ? { id: hint.id, slug: station.slug } : null;
   return `<div class="hint-slot" id="hintSlot" data-color="${color}">${hint ? _hintHtml(hint, color) : ''}</div>`;
 }

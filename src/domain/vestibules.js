@@ -5,8 +5,11 @@
 // через хвилину йде лист. Поки лист не пішов, «скасувати» прибирає і його.
 // Невідправлені листи лежать у Storage: переживають перезапуск і відправляються,
 // щойно з'явиться мережа.
+// Так само працює тимчасово недоступна станція ("temporarily_closed": true на рівні
+// станції): сіра на карті й у картці, «Станція запрацювала? Повідомте розробника».
 
 import { Storage, STORAGE_KEYS } from '../core/storage.js';
+import { LINE_COLOR, CLOSED_STATION_COLOR } from '../core/constants.js';
 
 const FORMSPREE_URL   = 'https://formspree.io/f/xrejbjww';
 export const REPORT_DELAY_MS = 60 * 1000;
@@ -35,6 +38,35 @@ export function isVestibuleClosed(slug, exit) {
 /** Закритий за даними вестибюль, який людина відкрила в себе (тоді є «скасувати»). */
 export function isVestibuleReopened(slug, exit) {
   return !!exit?.vestibule_closed && _readReopened().includes(_key(slug, exit.id));
+}
+
+// Ключ станції цілком (у тому ж списку, що й вестибюлі): «slug|*»
+const STATION_KEY = '*';
+
+/** Станція тимчасово не працює (за даними) і людина не відкрила її в себе. */
+export function isStationClosed(s) {
+  return !!s?.temporarily_closed && !_readReopened().includes(_key(s.slug, STATION_KEY));
+}
+
+/** Колір станції: гілки, а для тимчасово недоступної — сірий. */
+export function stationColor(s) {
+  if (isStationClosed(s)) return CLOSED_STATION_COLOR;
+  return LINE_COLOR[s?.line] || 'var(--text-muted)';
+}
+
+/** Недоступна за даними станція, яку людина відкрила в себе (тоді є «скасувати»). */
+export function isStationReopened(s) {
+  return !!s?.temporarily_closed && _readReopened().includes(_key(s.slug, STATION_KEY));
+}
+
+/** Відкриває станцію лише на цьому пристрої і ставить лист розробнику в чергу. */
+export function reopenStation(s) {
+  reopenVestibule(s.slug, STATION_KEY, { station: s.name });
+}
+
+/** Скасовує відкриття станції. @returns {boolean} true — лист ще не пішов */
+export function cancelStationReopen(s) {
+  return cancelVestibuleReopen(s.slug, STATION_KEY);
 }
 
 /**
@@ -75,7 +107,9 @@ async function _send(report) {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body:    JSON.stringify({
         station: report.station,
-        changes: `Вестибюль ${report.exitId}${report.label ? ` (${report.label})` : ''}: користувач повідомляє, що вже працює`,
+        changes: report.exitId === STATION_KEY
+          ? 'Станція: користувач повідомляє, що вже працює'
+          : `Вестибюль ${report.exitId}${report.label ? ` (${report.label})` : ''}: користувач повідомляє, що вже працює`,
       }),
       signal: controller.signal,
     });
