@@ -55,7 +55,11 @@ def doh_resolve(host):
         try:
             req = urllib.request.Request(url, headers={'Accept': 'application/dns-json', 'User-Agent': UA})
             with urllib.request.urlopen(req, timeout=20) as r:
-                ans = [a['data'] for a in json.load(r).get('Answer', []) if a.get('type') == 1]
+                resp = json.load(r)
+            ans = [a['data'] for a in resp.get('Answer', []) if a.get('type') == 1]
+            if not ans:
+                print(f'DoH {url.split("/")[2]}: {host} → Status {resp.get("Status")}, '
+                      f'{resp.get("Answer") or resp.get("Authority") or resp.get("Comment")}', file=sys.stderr)
             if ans:
                 return ans[0]
         except Exception as e:  # noqa: BLE001
