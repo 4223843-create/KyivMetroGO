@@ -1,0 +1,93 @@
+name: Schedule refresh
+
+# Щотижня звіряє розклад метро з міським ГІС (KyivMetro, шари 5–7):
+# години роботи станцій, перший/останній поїзд, погодинні інтервали.
+# Якщо щось змінилось — оновлює public/stations.json (лише schedule і
+# line_intervals), піднімає version, перевіряє дані й збірку, комітить у main
+# і запускає деплой на GitHub Pages.
+# Вручну: Actions → Schedule refresh → Run workflow (можна з «лише показати»).
+# Пуш у claude/** зі змінами скрипта — пробний запуск без коміту.
+on:
+  schedule:
+    - cron: "0 1 * * 1" # понеділок, 03:00 за Києвом (взимку)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Лише показати зміни, нічого не комітити"
+        type: boolean
+        default: false
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "scripts/refresh-schedule.py"
+      - ".github/workflows/schedule-refresh.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: schedule-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DRY_RUN: ${{ github.event_name == 'push' || inputs.dry_run == true }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Download from city GIS and update stations.json
+        id: refresh
+        run: |
+          python scripts/refresh-schedule.py --summary changes.md
+          echo "changed=$([ -s changes.md ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Розклад з міського ГІС"
+            if [ -s changes.md ]; then cat changes.md; else echo "Без змін"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check data and build
+        if: steps.refresh.outputs.changed == 'yes'
+        run: |
+          git diff --stat
+          npm ci
+          npm run validate:data
+          npm test
+          npm run build
+
+      - name: Commit to main and deploy
+        if: steps.refresh.outputs.changed == 'yes' && env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/stations.json
+          git commit -q -m "Дані: розклад метро з міського ГІС" -m "$(cat changes.md)"
+          for i in 1 2 3; do
+            git push origin HEAD:main && break
+            # Хтось запушив у main за цей час — перебудувати поверх свіжого main
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            python scripts/refresh-schedule.py --summary changes.md
+            [ -s changes.md ] || { echo "вже оновлено"; exit 0; }
+            npm run validate:data
+            git add public/stations.json
+            git commit -q -m "Дані: розклад метро з міського ГІС" -m "$(cat changes.md)"
+          done
+          # Пуш від GITHUB_TOKEN сам не запускає інші workflow — деплой запускаємо явно
+          gh workflow run deploy.yml --ref main
