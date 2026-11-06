@@ -20,6 +20,7 @@ import datetime
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -46,33 +47,65 @@ DIRECTION = {'Прямий': 1, 'Зворотній': 2, 'Зворотний': 2
 MIN_ROWS = {5: 50, 6: 100, 7: 54}
 
 
+def doh_resolve(host):
+    """Адреса через DNS-over-HTTPS — на раннерах GitHub звичайний DNS
+    інколи не знаходить *.kyivcity.gov.ua."""
+    for url in (f'https://dns.google/resolve?name={host}&type=A',
+                f'https://cloudflare-dns.com/dns-query?name={host}&type=A'):
+        try:
+            req = urllib.request.Request(url, headers={'Accept': 'application/dns-json', 'User-Agent': UA})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                ans = [a['data'] for a in json.load(r).get('Answer', []) if a.get('type') == 1]
+            if ans:
+                return ans[0]
+        except Exception as e:  # noqa: BLE001
+            print(f'DoH {url.split("/")[2]}: {e}', file=sys.stderr)
+    return None
+
+
+def get_json(url, ip=None):
+    host = urllib.parse.urlsplit(url).hostname
+    cmd = ['curl', '-fsS', '-m', '90', '--retry', '2', '-A', UA, url]
+    if ip:
+        cmd[1:1] = ['--resolve', f'{host}:443:{ip}']
+    out = subprocess.run(cmd, capture_output=True, text=True)
+    if out.returncode:
+        raise RuntimeError(out.stderr.strip() or f'curl {out.returncode}')
+    return json.loads(out.stdout)
+
+
 def fetch_layer(layer):
     last_err = None
     for base in SERVERS:
-        try:
-            rows, offset = [], 0
-            while True:
-                q = urllib.parse.urlencode({
-                    'where': '1=1', 'outFields': '*', 'returnGeometry': 'false',
-                    'orderByFields': 'objectid', 'resultOffset': offset,
-                    'resultRecordCount': 1000, 'f': 'json',
-                })
-                req = urllib.request.Request(f'{base}/{layer}/query?{q}', headers={'User-Agent': UA})
-                with urllib.request.urlopen(req, timeout=60) as r:
-                    d = json.load(r)
-                if 'error' in d:
-                    raise RuntimeError(d['error'])
-                feats = d.get('features', [])
-                rows += [f['attributes'] for f in feats]
-                if not d.get('exceededTransferLimit') or not feats:
-                    break
-                offset += len(feats)
-            print(f'шар {layer}: {len(rows)} рядків ({base.split("/")[2]})')
-            return rows
-        except Exception as e:  # noqa: BLE001 — пробуємо наступний сервер
-            last_err = e
-            print(f'шар {layer}: {base.split("/")[2]} не відповів: {e}', file=sys.stderr)
-            time.sleep(2)
+        host = urllib.parse.urlsplit(base).hostname
+        for ip in (None, 'doh'):
+            try:
+                if ip == 'doh':
+                    ip = doh_resolve(host)
+                    if not ip:
+                        break
+                    print(f'{host}: пробую через DoH → {ip}', file=sys.stderr)
+                rows, offset = [], 0
+                while True:
+                    q = urllib.parse.urlencode({
+                        'where': '1=1', 'outFields': '*', 'returnGeometry': 'false',
+                        'orderByFields': 'objectid', 'resultOffset': offset,
+                        'resultRecordCount': 1000, 'f': 'json',
+                    })
+                    d = get_json(f'{base}/{layer}/query?{q}', ip)
+                    if 'error' in d:
+                        raise RuntimeError(d['error'])
+                    feats = d.get('features', [])
+                    rows += [f['attributes'] for f in feats]
+                    if not d.get('exceededTransferLimit') or not feats:
+                        break
+                    offset += len(feats)
+                print(f'шар {layer}: {len(rows)} рядків ({host})')
+                return rows
+            except Exception as e:  # noqa: BLE001 — пробуємо далі
+                last_err = e
+                print(f'шар {layer}: {host} не відповів: {e}', file=sys.stderr)
+                time.sleep(2)
     raise SystemExit(f'шар {layer}: жоден сервер не відповів ({last_err})')
 
 
