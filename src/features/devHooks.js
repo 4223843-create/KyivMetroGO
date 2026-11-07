@@ -36,6 +36,7 @@ export function setupDevStationNoteButton(sheet, slug, lineColor) {
     return;
   }
   sheet.querySelector('#devStationNoteBtn')?.classList.add('is-hidden');
+  sheet.querySelector('#devStationPhotoBtn')?.classList.add('is-hidden');
 }
 
 export function closeAllDevPanels() {
