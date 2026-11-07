@@ -3831,6 +3831,48 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   cursor: pointer;
 }
 
+/* ── Перенесення фото на інший вихід ── */
+.dev-photo-move-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  padding: 2px 0 8px;
+}
+.dev-photo-move-list {
+  max-height: 230px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dev-photo-move-dir {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  padding: 4px 2px 0;
+}
+.dev-photo-move-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.dev-photo-move-item:active { opacity: 0.6; }
+.dev-photo-move-pos {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
 /* ── Повноекранне photo ── */
 .dev-photo-overlay {
   position: fixed;
