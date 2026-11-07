@@ -1448,22 +1448,17 @@ async function _paintPhotoPanel(panel, { slug, key, legacyKeys = [], setCount, m
         onLongPress: () => showCustomConfirm(
           'Що зробити з фото?',
           () => paintMovePicker(photoId),
-          () => showCustomConfirm(
-            'Видалити фото?',
-            async () => {
-              try {
-                // Через tombstone — інакше наступна синхронізація поверне фото з хмари
-                await removeDevPhoto(photoId);
-                await paint();
-              } catch (err) {
-                console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
-                _showToast('Не вдалося видалити фото');
-              }
-            },
-            () => {}, null,
-            'Видалити', 'Скасувати',
-            'confirm-btn-discard', 'confirm-btn-neutral',
-          ),
+          // Видаляємо одразу — вибір «Видалити» в першому вікні вже є підтвердженням
+          async () => {
+            try {
+              // Через tombstone — інакше наступна синхронізація поверне фото з хмари
+              await removeDevPhoto(photoId);
+              await paint();
+            } catch (err) {
+              console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
+              _showToast('Не вдалося видалити фото');
+            }
+          },
           () => {},
           'Перенести', 'Видалити',
           'confirm-btn-neutral', 'confirm-btn-discard',
