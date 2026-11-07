@@ -782,6 +782,30 @@ function _closeDevMoreMenus() {
 }
 document.addEventListener('click', _closeDevMoreMenus);
 
+// Меню «⋮» за замовчуванням відкривається вниз; якщо внизу не влазить
+// (останній рядок картки, низ екрана) — відкриваємо вгору.
+function _placeDevMoreMenu(menu) {
+  menu.classList.remove('is-up');
+  const rect = menu.getBoundingClientRect();
+  let bottomLimit = window.visualViewport?.height ?? window.innerHeight;
+  let topLimit = 0;
+  for (let el = menu.parentElement; el && el !== document.body; el = el.parentElement) {
+    const oy = getComputedStyle(el).overflowY;
+    if (oy === 'auto' || oy === 'scroll' || oy === 'hidden') {
+      const r = el.getBoundingClientRect();
+      bottomLimit = Math.min(bottomLimit, r.bottom);
+      topLimit = Math.max(topLimit, r.top);
+    }
+  }
+  if (rect.bottom <= bottomLimit - 8) return;
+  menu.classList.add('is-up');
+  // Якщо й угорі місця менше, ніж унизу — лишаємо вниз
+  const up = menu.getBoundingClientRect();
+  if (up.top < topLimit + 8 && (topLimit - up.top) > (rect.bottom - bottomLimit)) {
+    menu.classList.remove('is-up');
+  }
+}
+
 export function attachDevModeUI(container, slug) {
   if (!isDevMode()) return;
   // Відтінок лінії з урахуванням теми — як у пілюль, серця й шпильок картки
@@ -922,6 +946,7 @@ export function attachDevModeUI(container, slug) {
       const willOpen = !moreMenu.classList.contains('is-open');
       _closeDevMoreMenus();
       moreMenu.classList.toggle('is-open', willOpen);
+      if (willOpen) _placeDevMoreMenu(moreMenu);
     });
 
     listPhotoIdsForPosition(slug, posIdx, [rowIdx, row.dataset.devOldKey]).then(ids => {
