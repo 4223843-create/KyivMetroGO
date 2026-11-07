@@ -3709,6 +3709,10 @@ color: var(--text-muted); /* Повернули фірмовий сірий */
   z-index: 5;
 }
 .dev-more-menu.is-open { display: flex; }
+.dev-more-menu.is-up {
+  top: auto;
+  bottom: calc(50% + 16px);
+}
 
 .dev-more-menu .dev-camera-btn,
 .dev-more-menu .dev-note-btn,
