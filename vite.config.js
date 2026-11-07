@@ -85,7 +85,9 @@ export default defineConfig({
         globPatterns:   ['**/*.{js,css,html,png,woff2,json}'],
         // Firebase потрібен лише режиму розробника (services/devCloud.js) —
         // не змушуємо кожного користувача завантажувати його при встановленні SW.
-        globIgnores:    ['**/firebaseSync.*.js'],
+        // addresses-geo.json — лише для кнопки «Поточне місцезнаходження» (типово вимкнена):
+        // service worker збереже його при першому використанні.
+        globIgnores:    ['**/firebaseSync.*.js', '**/addresses-geo.json'],
         // addresses.json (~1–2 МБ) — для офлайн-пошуку адрес; ліміт Workbox за замовчуванням 2 МБ
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },

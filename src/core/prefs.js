@@ -19,6 +19,8 @@ const PREFS = {
   showIntervals:        { key: STORAGE_KEYS.SHOW_INTERVALS,         def: true },
   // Зупинки наземного транспорту в панелі виходів
   showGroundTransport:  { key: STORAGE_KEYS.SHOW_GROUND_TRANSPORT,  def: true },
+  // Кнопка «Поточне місцезнаходження» в полі пошуку
+  locateInSearch:       { key: STORAGE_KEYS.LOCATE_IN_SEARCH,       def: false },
   checkinMode:          { key: STORAGE_KEYS.CHECKIN_MODE,           def: true },
   // false — відмітка залежить від попередньої станції (у налаштуваннях «Check-in за попередньою станцією» увімкнено)
   checkinByExit:        { key: STORAGE_KEYS.CHECKIN_BY_EXIT,        def: false },

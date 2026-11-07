@@ -35,6 +35,7 @@ export const STORAGE_KEYS = {
   SHOW_STATION_HOURS:      'metro_show_station_hours',
   REDUCE_MOTION:           'metro_reduce_motion',
   SHOW_GROUND_TRANSPORT:   'metro_show_ground_transport',
+  LOCATE_IN_SEARCH:        'metro_locate_in_search',
   DEV_MODE:     'metro_dev_mode',
   DEV_LOG:      'metro_dev_log',
   DEV_VERIFIED: 'metro_dev_verified',
