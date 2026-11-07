@@ -945,7 +945,7 @@ export function attachDevModeUI(container, slug) {
     photoBtn.addEventListener('click', e => {
       e.stopPropagation();
       _closeDevMoreMenus();
-      toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity);
+      toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity, container);
     });
 
     cameraBtn.addEventListener('click', e => {
@@ -1304,6 +1304,28 @@ async function listPhotosForPosition(slug, posIdx, legacyKeys = []) {
 }
 
 /**
+ * Рядки відкритої картки станції, куди можна перенести фото (усі, крім fromRow),
+ * з підписами напрямку, виходу й вагон/двері — як їх видно в картці.
+ * @returns {Array<{row:HTMLElement, key:string, dir:string, exit:string, pos:string}>}
+ */
+function _photoMoveTargets(container, fromRow) {
+  if (!container) return [];
+  const clean = el => (el?.textContent || '').replace(/\s+/g, ' ').trim();
+  const items = [];
+  let dir = '', exit = '';
+  container.querySelectorAll('.direction-label, .exit-label, .position-row').forEach(el => {
+    if (el.classList.contains('direction-label')) { dir = clean(el); exit = ''; return; }
+    if (el.classList.contains('exit-label')) { exit = clean(el); return; }
+    if (el === fromRow || !el.dataset.devSlug) return;
+    const pos = Array.from(el.querySelectorAll('.fav-tap-target'))
+      .map(t => `вагон ${t.dataset.wagon}, двері ${t.dataset.doors}`)
+      .join(' · ');
+    items.push({ row: el, key: el.dataset.rowKey || el.dataset.devPosIdx, dir, exit, pos });
+  });
+  return items;
+}
+
+/**
  * Тап і довгий тап на одному елементі (миша й дотик).
  * Після довгого тапу звичайний тап не спрацьовує; рух пальця скасовує обидва.
  */
@@ -1330,7 +1352,7 @@ function bindLongPress(el, { onTap, onLongPress }) {
   });
 }
 
-async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity) {
+async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity, container) {
   const next = row.nextElementSibling;
 
   if (next?.classList.contains('dev-note-panel') && next.dataset.type === 'photo') {
@@ -1382,20 +1404,27 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
       bindLongPress(img, {
         onTap: () => showDevPhotoFullscreen(photos.map(p => p.dataUrl), photos.findIndex(p => p.id === photoId)),
         onLongPress: () => showCustomConfirm(
-          'Видалити фото?',
-          async () => {
-            try {
-              // Через tombstone — інакше наступна синхронізація поверне фото з хмари
-              await removeDevPhoto(photoId);
-              await paint();
-            } catch (err) {
-              console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
-              _showToast('Не вдалося видалити фото');
-            }
-          },
-          () => {}, null,
-          'Видалити', 'Скасувати',
-          'confirm-btn-discard', 'confirm-btn-neutral',
+          'Що зробити з фото?',
+          () => paintMovePicker(photoId),
+          () => showCustomConfirm(
+            'Видалити фото?',
+            async () => {
+              try {
+                // Через tombstone — інакше наступна синхронізація поверне фото з хмари
+                await removeDevPhoto(photoId);
+                await paint();
+              } catch (err) {
+                console.warn('[KyivMetroGO] Не вдалося видалити фото:', err);
+                _showToast('Не вдалося видалити фото');
+              }
+            },
+            () => {}, null,
+            'Видалити', 'Скасувати',
+            'confirm-btn-discard', 'confirm-btn-neutral',
+          ),
+          () => {},
+          'Перенести', 'Видалити',
+          'confirm-btn-neutral', 'confirm-btn-discard',
         ),
       });
     });
@@ -1422,6 +1451,57 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
         console.warn('[KyивMetroGO] Не вдалося зберегти фото:', err);
         _showToast('Не вдалося зберегти одне або кілька фото');
       }
+    });
+  };
+
+  // ── Перенести фото на інший вихід цієї ж станції ──
+  // Список будуємо з рядків відкритої картки (той самий порядок і підписи,
+  // що бачить користувач), поточний рядок пропускаємо.
+  const paintMovePicker = (photoId) => {
+    const items = _photoMoveTargets(container, row);
+    if (!items.length) { _showToast('На станції немає інших виходів'); return; }
+
+    let lastDir = null;
+    const listHtml = items.map((it, i) => {
+      const dirHtml = it.dir !== lastDir && it.dir
+        ? `<div class="dev-photo-move-dir">${escapeHtml(it.dir)}</div>` : '';
+      lastDir = it.dir;
+      return `${dirHtml}<button type="button" class="dev-photo-move-item" data-i="${i}">
+        <span class="dev-photo-move-exit">${escapeHtml(it.exit || 'Вихід')}</span>
+        <span class="dev-photo-move-pos">${escapeHtml(it.pos)}</span>
+      </button>`;
+    }).join('');
+
+    panel.innerHTML = `
+      <div class="dev-photo-move-title">Куди перенести фото?</div>
+      <div class="dev-photo-move-list">${listHtml}</div>
+      <div class="dev-note-actions">
+        <button type="button" class="dev-photo-move-cancel confirm-main-btn confirm-btn-neutral">Назад</button>
+      </div>`;
+
+    panel.querySelector('.dev-photo-move-cancel').addEventListener('click', e => {
+      e.stopPropagation();
+      paint();
+    });
+
+    panel.querySelectorAll('.dev-photo-move-item').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        const target = items[Number(btn.dataset.i)];
+        try {
+          const dataUrl = await PhotoStorage.loadPhoto(photoId);
+          if (!dataUrl) throw new Error('photo not found');
+          await PhotoStorage.savePhoto(_newPhotoId(slug, target.key), dataUrl);
+          await removeDevPhoto(photoId);
+          const targetBtn = target.row.querySelector('.dev-photo-btn');
+          if (targetBtn) { targetBtn.style.color = lineColor; targetBtn.style.opacity = '1'; }
+          _showToast(target.exit ? `Фото перенесено: ${target.exit}` : 'Фото перенесено');
+        } catch (err) {
+          console.warn('[KyivMetroGO] Не вдалося перенести фото:', err);
+          _showToast('Не вдалося перенести фото');
+        }
+        await paint();
+      });
     });
   };
 
