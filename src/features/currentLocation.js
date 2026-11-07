@@ -15,6 +15,7 @@
 
 import { getPref } from '../core/prefs.js';
 import { showToast } from '../ui/toast.js';
+import { isDevMode } from './devFlags.js';
 
 // Як xy() у scripts/build-addresses.py
 const LAT0 = 50.45;
@@ -38,7 +39,7 @@ const MSG = {
 
 const TOAST_MS = 4000;
 
-// Підставні місця для меню розробника (sessionStorage — до закриття вкладки)
+// Підставні місця для меню розробника: діють на одне натискання стрілки
 const EMU_KEY = 'metro_emu_location';
 const EMU = {
   khreshchatyk: { lat: 50.4477, lon: 30.5222 },
@@ -110,6 +111,7 @@ function _emulation() {
 function _position() {
   const emu = _emulation();
   if (emu) {
+    setLocateEmulation('');
     return new Promise((resolve, reject) => setTimeout(() =>
       (emu.error ? reject({ code: emu.error }) : resolve({ lat: emu.lat, lon: emu.lon })), 400));
   }
@@ -175,7 +177,10 @@ export async function locateToSearch(input, btn) {
     try {
       pos = await _position();
     } catch (err) {
-      showToast(err?.code === 1 ? MSG.denied : MSG.unavailable, TOAST_MS);
+      const text = err?.code === 1 ? MSG.denied : MSG.unavailable;
+      // Розробнику — що саме відповів телефон, щоб відрізнити заборону від збою
+      const detail = isDevMode() && err?.message ? ` (код ${err.code}: ${err.message})` : '';
+      showToast(text + detail, TOAST_MS);
       return;
     }
     const km = _haversineKm(pos, KHRESHCHATYK);
