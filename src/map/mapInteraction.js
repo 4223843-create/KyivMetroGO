@@ -109,7 +109,32 @@ export function updateClosedStationsOnMap() {
   inner.querySelectorAll(`.${CLOSED_CLASS}`).forEach(el => el.classList.remove(CLOSED_CLASS));
   Object.values(state.stationsData).forEach(s => {
     if (!isStationClosed(s)) return;
-    _stationShapes(s.slug).forEach(el => el.classList.add(CLOSED_CLASS));
+    const shapes = _stationShapes(s.slug);
+    shapes.forEach(el => el.classList.add(CLOSED_CLASS));
+    _sendClosedShapesBack(shapes);
+  });
+}
+
+// Сіра плашка не має перекривати кольорові шматки сусідніх станцій/гілки,
+// які в SVG намальовані раніше (Славутич накривав «хвостик» Осокорків).
+// Опускаємо фігури плашки під перший такий шматок; напис лишається зверху.
+// Коли всі фігури одного кольору, порядок непомітний, тож назад не повертаємо.
+function _sendClosedShapesBack(shapes) {
+  const own = new Set(shapes);
+  shapes.forEach(el => {
+    if (el.hasAttribute('aria-label')) return; // назва станції
+    const r = el.getBoundingClientRect();
+    let first = null;
+    for (let sib = el.previousElementSibling; sib; sib = sib.previousElementSibling) {
+      if (own.has(sib) || sib.hasAttribute('aria-label') || /^[RGB]\./.test(sib.id)) continue;
+      if (!/^(path|rect|polygon|circle)$/i.test(sib.tagName)) continue;
+      const o = sib.getBoundingClientRect();
+      if (!o.width || !o.height) continue;
+      // фон чи велика фігура, що накриває всю плашку, — не чіпаємо
+      if (o.left <= r.left && o.right >= r.right && o.top <= r.top && o.bottom >= r.bottom) continue;
+      if (o.left < r.right - 0.5 && o.right > r.left + 0.5 && o.top < r.bottom - 0.5 && o.bottom > r.top + 0.5) first = sib;
+    }
+    if (first) first.before(el);
   });
 }
 
