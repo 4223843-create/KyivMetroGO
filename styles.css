@@ -5838,3 +5838,10 @@ body:has(.offline-banner:not([hidden])) .emu-banner { top: calc(env(safe-area-in
 @keyframes search-locate-pulse {
   50% { opacity: 0.3; }
 }
+
+/* Довгі повідомлення (жарти геолокації) переносяться, а не вилазять за екран */
+.app-toast {
+  white-space: normal;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+}
