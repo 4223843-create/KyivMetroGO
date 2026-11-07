@@ -689,6 +689,7 @@ export function setupDevStationNoteButton(sheet, slug, rawLineColor) {
 
   const active = isDevMode();
   btn.classList.toggle('is-hidden', !active);
+  _setupDevStationPhotoButton(sheet, slug, lineColor, active);
   if (!active) {
     panel.classList.remove('panel-open');
     panel.innerHTML = '';
@@ -907,15 +908,6 @@ export function attachDevModeUI(container, slug) {
     photoBtn.style.color   = defaultColor;
     photoBtn.style.opacity = defaultOpacity;
 
-    // ── Кнопка «Камера»: знімок одразу йде у фото цього виходу ──
-    const cameraBtn = document.createElement('button');
-    cameraBtn.className = 'dev-camera-btn';
-    cameraBtn.type = 'button';
-    cameraBtn.setAttribute('aria-label', 'Зняти фото');
-    cameraBtn.innerHTML = DEV_CAMERA_SVG;
-    cameraBtn.style.color   = defaultColor;
-    cameraBtn.style.opacity = defaultOpacity;
-
     // ── «⋮» праворуч від піна: ховає нотатку і фото, щоб ліворуч лишалась
     //    тільки кнопка підтвердження і не перекривала значки доступності ──
     const moreBtn = document.createElement('button');
@@ -926,7 +918,7 @@ export function attachDevModeUI(container, slug) {
 
     const moreMenu = document.createElement('div');
     moreMenu.className = 'dev-more-menu';
-    moreMenu.append(cameraBtn, noteBtn, photoBtn);
+    moreMenu.append(noteBtn, photoBtn);
 
     // «⋮» підсвічується кольором лінії, якщо є нотатка або фото
     const syncMoreColor = () => {
@@ -971,23 +963,6 @@ export function attachDevModeUI(container, slug) {
       e.stopPropagation();
       _closeDevMoreMenus();
       toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity, container);
-    });
-
-    cameraBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      _closeDevMoreMenus();
-      openDevCamera(async files => {
-        for (const file of files) {
-          await PhotoStorage.savePhoto(_newPhotoId(slug, posIdx), await _photoToDataUrl(file));
-        }
-        _touchSyncTimestamp();
-        photoBtn.style.color   = lineColor;
-        photoBtn.style.opacity = '1';
-        // Панель фото цього виходу відкрита — одразу показати новий знімок
-        const panel = row.nextElementSibling;
-        if (panel?.classList.contains('dev-note-panel') && panel.dataset.type === 'photo') await panel._repaint?.();
-        _showToast(files.length > 1 ? `Збережено фото: ${files.length}` : 'Фото збережено');
-      });
     });
   });
 }
@@ -1377,6 +1352,10 @@ function bindLongPress(el, { onTap, onLongPress }) {
   });
 }
 
+// Ключ фото станції загалом (не конкретного виходу). Ключі рядків — 'k…' або
+// числа, тож зі «station» вони не перетинаються.
+const STATION_PHOTO_KEY = 'station';
+
 async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defaultColor, defaultOpacity, container) {
   const next = row.nextElementSibling;
 
@@ -1386,12 +1365,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
     return;
   }
 
-  document.querySelectorAll('.dev-note-panel').forEach(p => {
-    p.classList.remove('panel-open');
-    if (p.id !== 'devStationNotePanel') {
-      setTimeout(() => p.remove(), 280);
-    }
-  });
+  _closeOtherDevPanels();
 
   const panel = document.createElement('div');
   panel.className = 'dev-note-panel';
@@ -1399,14 +1373,56 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
   row.after(panel);
   requestAnimationFrame(() => panel.classList.add('panel-open'));
 
-  const updateBtnState = (count) => {
-    photoBtn.style.color   = count > 0 ? lineColor : defaultColor;
-    photoBtn.style.opacity = count > 0 ? '1' : defaultOpacity;
+  const sheet = row.closest('.station-sheet');
+  await _paintPhotoPanel(panel, {
+    slug,
+    key: posIdx,
+    legacyKeys: [row.dataset.devPosIdx, row.dataset.devOldKey],
+    setCount: count => {
+      photoBtn.style.color   = count > 0 ? lineColor : defaultColor;
+      photoBtn.style.opacity = count > 0 ? '1' : defaultOpacity;
+    },
+    // Куди можна перенести: станція загалом + інші виходи картки
+    moveTargets: () => [
+      _stationPhotoTarget(sheet),
+      ..._photoMoveTargets(container, row),
+    ].filter(Boolean),
+    lineColor,
+  });
+}
+
+// Закриває всі панелі розробника, крім постійної панелі нотатки станції
+// (її лише ховаємо — без неї кнопка нотатки нічого не відкриє)
+function _closeOtherDevPanels() {
+  document.querySelectorAll('.dev-note-panel').forEach(p => {
+    p.classList.remove('panel-open');
+    if (p.id !== 'devStationNotePanel') {
+      setTimeout(() => p.remove(), 280);
+    }
+  });
+}
+
+function _stationPhotoTarget(sheet) {
+  const btn = sheet?.querySelector('#devStationPhotoBtn');
+  if (!btn || btn.classList.contains('is-hidden')) return null;
+  return { key: STATION_PHOTO_KEY, dir: '', exit: 'Станція загалом', pos: '', btn };
+}
+
+/**
+ * Малює галерею фото в panel: мініатюри, «+» (вибрати з галереї телефона),
+ * камера (знімати одне за одним), перенесення та видалення довгим тапом.
+ * Спільна для фото виходу і фото станції загалом.
+ */
+async function _paintPhotoPanel(panel, { slug, key, legacyKeys = [], setCount, moveTargets, lineColor }) {
+  const savePhoto = async file => {
+    const id = _newPhotoId(slug, key);
+    await PhotoStorage.savePhoto(id, await _photoToDataUrl(file));
+    return id;
   };
 
   const paint = async () => {
-    const photos = await listPhotosForPosition(slug, posIdx, [row.dataset.devPosIdx, row.dataset.devOldKey]);
-    updateBtnState(photos.length);
+    const photos = await listPhotosForPosition(slug, key, legacyKeys);
+    setCount(photos.length);
 
     panel.innerHTML = `
       <div class="dev-photo-grid">
@@ -1414,7 +1430,8 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
           <div class="dev-photo-thumb-wrap" data-id="${p.id}">
             <img src="${p.dataUrl}" class="dev-photo-thumb" draggable="false" alt="Фото, утримуйте, щоб видалити"/>
           </div>`).join('')}
-        <label class="dev-photo-add-tile">
+        <button type="button" class="dev-photo-add-tile dev-photo-camera-tile" aria-label="Зняти фото">${DEV_CAMERA_SVG}</button>
+        <label class="dev-photo-add-tile" aria-label="Додати фото з галереї">
           +
           <input type="file" accept="image/*" multiple class="dev-photo-input" style="display:none;">
         </label>
@@ -1423,7 +1440,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
         <button type="button" class="dev-photo-back confirm-main-btn confirm-btn-neutral">Назад</button>
       </div>`;
 
-    // Тап — відкрити фото, довгий тап — запитати про видалення
+    // Тап — відкрити фото, довгий тап — запитати, що зробити
     panel.querySelectorAll('.dev-photo-thumb').forEach(img => {
       const photoId = img.closest('.dev-photo-thumb-wrap')?.dataset.id;
       bindLongPress(img, {
@@ -1460,6 +1477,16 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
       setTimeout(() => panel.remove(), 280);
     });
 
+    // Камера: знімки зберігаються одразу, без кнопки «Підтвердити»
+    panel.querySelector('.dev-photo-camera-tile').addEventListener('click', e => {
+      e.stopPropagation();
+      openDevCameraSession({
+        onShot: async file => { const id = await savePhoto(file); _touchSyncTimestamp(); return id; },
+        onDiscard: id => removeDevPhoto(id),
+        onClose: () => paint(),
+      });
+    });
+
     const fileInput = panel.querySelector('.dev-photo-input');
     fileInput.addEventListener('click', e => e.stopPropagation());
     fileInput.addEventListener('change', async e => {
@@ -1467,23 +1494,21 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
       if (!files.length) return;
       try {
         // По одному: кожне фото з камери в пам'яті займає десятки мегабайт
-        for (const file of files) {
-          await PhotoStorage.savePhoto(_newPhotoId(slug, posIdx), await _photoToDataUrl(file));
-        }
+        for (const file of files) await savePhoto(file);
         _touchSyncTimestamp();
         await paint();
       } catch (err) {
-        console.warn('[KyивMetroGO] Не вдалося зберегти фото:', err);
+        console.warn('[KyivMetroGO] Не вдалося зберегти фото:', err);
         _showToast('Не вдалося зберегти одне або кілька фото');
       }
     });
   };
 
-  // ── Перенести фото на інший вихід цієї ж станції ──
+  // ── Перенести фото на інший вихід цієї ж станції (або на станцію загалом) ──
   // Список будуємо з рядків відкритої картки (той самий порядок і підписи,
   // що бачить користувач), поточний рядок пропускаємо.
   const paintMovePicker = (photoId) => {
-    const items = _photoMoveTargets(container, row);
+    const items = moveTargets();
     if (!items.length) { _showToast('На станції немає інших виходів'); return; }
 
     let lastDir = null;
@@ -1493,7 +1518,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
       lastDir = it.dir;
       return `${dirHtml}<button type="button" class="dev-photo-move-item" data-i="${i}">
         <span class="dev-photo-move-exit">${escapeHtml(it.exit || 'Вихід')}</span>
-        <span class="dev-photo-move-pos">${escapeHtml(it.pos)}</span>
+        ${it.pos ? `<span class="dev-photo-move-pos">${escapeHtml(it.pos)}</span>` : ''}
       </button>`;
     }).join('');
 
@@ -1518,7 +1543,7 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
           if (!dataUrl) throw new Error('photo not found');
           await PhotoStorage.savePhoto(_newPhotoId(slug, target.key), dataUrl);
           await removeDevPhoto(photoId);
-          const targetBtn = target.row.querySelector('.dev-photo-btn');
+          const targetBtn = target.btn || target.row?.querySelector('.dev-photo-btn');
           if (targetBtn) { targetBtn.style.color = lineColor; targetBtn.style.opacity = '1'; }
           _showToast(target.exit ? `Фото перенесено: ${target.exit}` : 'Фото перенесено');
         } catch (err) {
@@ -1530,14 +1555,183 @@ async function toggleDevPhotoPanel(row, slug, posIdx, lineColor, photoBtn, defau
     });
   };
 
-  panel._repaint = paint; // для швидкої камери з меню «⋮»
+  panel._repaint = paint;
   await paint();
 }
 
+// ── Фото станції загалом: кнопка в шапці картки праворуч від піна ──
+let _lastStationPhotoSlug = null;
+
+function _setupDevStationPhotoButton(sheet, slug, lineColor, active) {
+  const btn = sheet.querySelector('#devStationPhotoBtn');
+  if (!btn) return;
+  const openPanel = sheet.querySelector('.dev-station-photo-panel');
+  btn.classList.toggle('is-hidden', !active);
+  if (!active || slug !== _lastStationPhotoSlug) {
+    openPanel?.remove();
+    _lastStationPhotoSlug = active ? slug : null;
+  }
+  if (!active) return;
+
+  const defaultColor = 'var(--text-muted)';
+  btn.innerHTML = DEV_PHOTO_SVG;
+  const setCount = count => { btn.style.color = count > 0 ? lineColor : defaultColor; };
+  if (!sheet.querySelector('.dev-station-photo-panel')) setCount(0);
+  listPhotoIdsForPosition(slug, STATION_PHOTO_KEY).then(ids => setCount(ids.length)).catch(() => {});
+
+  btn.onclick = async e => {
+    e.stopPropagation();
+    const existing = sheet.querySelector('.dev-station-photo-panel');
+    if (existing) {
+      existing.classList.remove('panel-open');
+      setTimeout(() => existing.remove(), 280);
+      return;
+    }
+    _closeOtherDevPanels();
+    const panel = document.createElement('div');
+    panel.className = 'dev-note-panel dev-station-note-panel dev-station-photo-panel';
+    panel.dataset.type = 'photo';
+    sheet.querySelector('#sheetBody')?.before(panel);
+    requestAnimationFrame(() => panel.classList.add('panel-open'));
+    await _paintPhotoPanel(panel, {
+      slug,
+      key: STATION_PHOTO_KEY,
+      setCount,
+      moveTargets: () => _photoMoveTargets(sheet.querySelector('#sheetBody'), null),
+      lineColor,
+    });
+  };
+}
+
 /**
- * Швидка камера: відкриває камеру телефона (на комп'ютері — вибір файлу)
- * і віддає знімок без панелі фото та без кнопки «Зберегти» в застосунку.
- * Системний крок iOS «Використати фото» вебсторінка пропустити не може.
+ * Камера всередині застосунку: видошукач, кнопка знімка, після знімка —
+ * [Скасувати] (прибрати цей знімок) і [Ще одне фото]. Знімок зберігається
+ * одразу, окремого «Підтвердити» немає. ✕ закриває камеру.
+ * Якщо камера недоступна (немає дозволу, старий браузер, Android-застосунок
+ * без дозволу камери) — відкриваємо системну камеру через вибір файлу.
+ * @param {{onShot:(file:Blob)=>Promise<string>, onDiscard:(id:string)=>Promise<void>, onClose:()=>void}} opts
+ */
+async function openDevCameraSession({ onShot, onDiscard, onClose }) {
+  const fallback = () => openDevCamera(async files => {
+    for (const file of files) await onShot(file);
+    _showToast(files.length > 1 ? `Збережено фото: ${files.length}` : 'Фото збережено');
+    onClose();
+  });
+
+  if (!navigator.mediaDevices?.getUserMedia) { fallback(); return; }
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 2560 }, height: { ideal: 1920 } },
+    });
+  } catch (err) {
+    console.warn('[KyivMetroGO] Камера недоступна, відкриваю системну:', err);
+    fallback();
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'dev-camera-overlay';
+  overlay.innerHTML = `
+    <video class="dev-camera-video" autoplay playsinline muted></video>
+    <img class="dev-camera-preview" alt="" hidden>
+    <button type="button" class="dev-camera-close" aria-label="Закрити камеру">✕</button>
+    <div class="dev-camera-bar">
+      <button type="button" class="dev-camera-shutter" aria-label="Зняти"></button>
+      <div class="dev-note-actions dev-camera-after" hidden>
+        <button type="button" class="dev-camera-cancel confirm-main-btn confirm-btn-neutral">Скасувати</button>
+        <button type="button" class="dev-camera-more confirm-main-btn confirm-btn-save">Ще одне фото</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const video    = overlay.querySelector('.dev-camera-video');
+  const preview  = overlay.querySelector('.dev-camera-preview');
+  const shutter  = overlay.querySelector('.dev-camera-shutter');
+  const after    = overlay.querySelector('.dev-camera-after');
+  video.srcObject = stream;
+  video.play?.().catch(() => {});
+
+  let lastId = null;
+  let lastUrl = null;
+  let busy = false;
+  let saved = 0;
+
+  const showViewfinder = () => {
+    if (lastUrl) URL.revokeObjectURL(lastUrl);
+    lastUrl = null;
+    lastId = null;
+    preview.hidden = true;
+    preview.removeAttribute('src');
+    video.hidden = false;
+    shutter.hidden = false;
+    after.hidden = true;
+  };
+
+  const close = () => {
+    stream.getTracks().forEach(t => t.stop());
+    if (lastUrl) URL.revokeObjectURL(lastUrl);
+    overlay.remove();
+    document.removeEventListener('visibilitychange', onHide);
+    if (saved) _showToast(saved > 1 ? `Збережено фото: ${saved}` : 'Фото збережено');
+    onClose();
+  };
+  // Застосунок пішов у фон — камеру вимикаємо (iOS однаково зупинить потік)
+  const onHide = () => { if (document.visibilityState === 'hidden') close(); };
+  document.addEventListener('visibilitychange', onHide);
+
+  overlay.addEventListener('click', e => e.stopPropagation());
+  overlay.querySelector('.dev-camera-close').addEventListener('click', close);
+
+  shutter.addEventListener('click', async () => {
+    if (busy || !video.videoWidth) return;
+    busy = true;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+      canvas.width = canvas.height = 0;
+      if (!blob) throw new Error('empty frame');
+      lastUrl = URL.createObjectURL(blob);
+      preview.src = lastUrl;
+      preview.hidden = false;
+      video.hidden = true;
+      shutter.hidden = true;
+      after.hidden = false;
+      lastId = await onShot(blob); // зберігаємо одразу — без «Підтвердити»
+      saved++;
+    } catch (err) {
+      console.warn('[KyivMetroGO] Не вдалося зберегти фото:', err);
+      _showToast('Не вдалося зберегти фото');
+      showViewfinder();
+    } finally {
+      busy = false;
+    }
+  });
+
+  overlay.querySelector('.dev-camera-cancel').addEventListener('click', async () => {
+    if (busy) return;
+    const id = lastId;
+    showViewfinder();
+    if (id) {
+      saved--;
+      try { await onDiscard(id); } catch (err) { console.warn('[KyivMetroGO] Не вдалося прибрати фото:', err); }
+    }
+  });
+
+  overlay.querySelector('.dev-camera-more').addEventListener('click', () => {
+    if (!busy) showViewfinder();
+  });
+}
+
+/**
+ * Системна камера: відкриває камеру телефона (на комп'ютері — вибір файлу).
+ * Запасний шлях, коли камера всередині застосунку недоступна. Тут системний
+ * крок iOS «Використати фото» вебсторінка пропустити не може.
  * @param {(files: File[]) => Promise<void>} onFiles
  */
 function openDevCamera(onFiles) {
