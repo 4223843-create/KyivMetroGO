@@ -146,6 +146,10 @@ export function openSettingsSheet() {
     document.getElementById('settingsShowGroundTransportToggle')?.addEventListener('change', e => {
       setPref('showGroundTransport', e.target.checked);
     });
+    document.getElementById('settingsLocateToggle')?.addEventListener('change', e => {
+      setPref('locateInSearch', e.target.checked);
+      if (e.target.checked) import('./currentLocation.js').then(m => m.prefetchAddressGeo());
+    });
     const hoursSeg = document.getElementById('settingsStationHoursSeg');
     hoursSeg?.querySelectorAll('.settings-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -487,6 +491,8 @@ export function openSettingsSheet() {
     if (si) si.checked = getPref('showIntervals');
     const gt = document.getElementById('settingsShowGroundTransportToggle');
     if (gt) gt.checked = getPref('showGroundTransport');
+    const lc = document.getElementById('settingsLocateToggle');
+    if (lc) lc.checked = getPref('locateInSearch');
     const hoursMode = getPref('stationHours');
     document.querySelectorAll('#settingsStationHoursSeg .settings-seg-btn').forEach(b =>
       b.classList.toggle('is-active', b.dataset.hoursVal === hoursMode));

@@ -16,6 +16,7 @@ import { richText } from '../ui/html.js';
 import { addressResultsHtml } from './addressSearch.js';
 import { queryWordsForExits, matchExitSearch, exitHintText } from '../data/exitSearch.js';
 import { stationColor } from '../domain/vestibules.js';
+import { isLocateEnabled, locateToSearch, prefetchAddressGeo } from './currentLocation.js';
 
 const SEARCH_ALIASES = {
   'площа льва толстого': 'B.Ploshcha_Ukrainskikh_heroiv',
@@ -243,6 +244,10 @@ export function openSearchSheet() {
       });
     });
 
+    // Поточне місцезнаходження → найближча адреса в полі
+    const locateBtn = document.getElementById('searchLocateBtn');
+    locateBtn.addEventListener('click', () => locateToSearch(input, locateBtn));
+
     // Фільтри ліній
     document.getElementById('searchLineFilter').addEventListener('click', e => {
       const btn = e.target.closest('.search-line-btn');
@@ -324,6 +329,11 @@ export function openSearchSheet() {
   
   input.value = '';
   renderSearchResults('', resultsContainer, new Set());
+
+  const locateOn = isLocateEnabled();
+  document.getElementById('searchLocateBtn').hidden = !locateOn;
+  input.classList.toggle('has-locate', locateOn);
+  if (locateOn) prefetchAddressGeo();
 
   // Відкриття шторки
   showSheet(searchSheet);

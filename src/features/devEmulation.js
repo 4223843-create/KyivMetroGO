@@ -72,6 +72,7 @@ export async function runEmulation(action, { custom } = {}) {
     case 'clock':     return _setClock(arg, custom);
     case 'hint':      return _hint(arg);
     case 'tour':      return _tour(arg);
+    case 'location':  return _location(arg);
   }
 }
 
@@ -399,4 +400,19 @@ function _renderBanner() {
   }
   el.querySelector('.emu-banner-text').textContent = parts.join(' · ');
   if (getClockOverride()) _bannerTimer = setInterval(_renderBanner, 30000);
+}
+
+// ══ ГЕОЛОКАЦІЯ ══
+
+async function _location(kind) {
+  const { setLocateEmulation } = await import('./currentLocation.js');
+  if (kind === 'off') {
+    setLocateEmulation('');
+    showToast('Геолокація справжня');
+    return;
+  }
+  setLocateEmulation(kind);
+  const { openSearchSheet } = await import('./search.js');
+  openSearchSheet();
+  showToast('Натисніть стрілку в полі пошуку');
 }

@@ -5812,3 +5812,29 @@ body:has(.offline-banner:not([hidden])) .emu-banner { top: calc(env(safe-area-in
 #mapInner .map-station-closed { fill: #6e6e73 !important; }
 [data-theme="light"] #mapInner .map-station-closed { fill: #b4b4b8 !important; }
 #mapInner path[aria-label].map-station-closed { opacity: 0.45; }
+
+/* ── Поточне місцезнаходження в полі пошуку ── */
+.search-input-wrap { position: relative; }
+.search-input.has-locate { padding-right: 48px; }
+.search-locate-btn {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  width: 48px;
+  height: calc(100% - 12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.search-locate-btn[hidden] { display: none; }
+.search-locate-btn:active { opacity: 0.6; }
+.search-locate-btn.is-busy svg { animation: search-locate-pulse 1s ease-in-out infinite; }
+@keyframes search-locate-pulse {
+  50% { opacity: 0.3; }
+}
