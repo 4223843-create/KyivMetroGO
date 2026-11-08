@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261115",
+  "version": "20261116",
   "line_intervals": {
     "green": [
       {
@@ -4303,7 +4303,13 @@
                 30.57569,
                 50.44598
               ]
-            },
+            }
+          ]
+        },
+        "122b": {
+          "label": "",
+          "hidden": true,
+          "exit_numbers": [
             {
               "num": "3",
               "text": "",

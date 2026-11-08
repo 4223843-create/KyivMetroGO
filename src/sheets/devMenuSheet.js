@@ -4,7 +4,7 @@
 // узагальнені нотатки по всіх станціях, список станцій з непозначеними
 // виходами (дизайн скопійовано зі списку станцій "Запропонувати зміни" —
 // кольорові кружечки ліній + фільтр по гілці), і простий беклог ідей.
-// Усі три розгортні секції (Нотатки/Потребують перевірки/Backlog)
+// Розгортні секції (Нотатки з підрозділами/Потребують перевірки/Backlog)
 // пам'ятають стан згорнуто/розгорнуто між відкриттями (Storage).
 
 import { state }   from '../core/state.js';
@@ -746,7 +746,10 @@ export function openDevMenuSheet({ section } = {}) {
 
   const target = section && sheet.querySelector(`.dev-menu-collapsible[data-section="${section}"]`);
   if (target) {
-    target.classList.remove('is-collapsed');
+    // Розгортаємо і сам розділ, і всі батьківські (підрозділи «Нотаток»)
+    for (let el = target; el; el = el.parentElement?.closest('.dev-menu-collapsible')) {
+      el.classList.remove('is-collapsed');
+    }
     requestAnimationFrame(() => target.scrollIntoView({ block: 'start' }));
   }
 }

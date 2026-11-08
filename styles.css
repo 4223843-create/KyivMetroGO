@@ -4204,7 +4204,7 @@ button.dev-photo-add-tile {
   transition: transform 0.2s ease;
 }
 
-.dev-menu-collapsible.is-collapsed .dev-menu-chevron {
+.dev-menu-collapsible.is-collapsed > .dev-menu-section-toggle .dev-menu-chevron {
   transform: rotate(-90deg);
 }
 
@@ -4212,8 +4212,24 @@ button.dev-photo-add-tile {
   overflow: hidden;
 }
 
-.dev-menu-collapsible.is-collapsed .dev-menu-section-body {
+.dev-menu-collapsible.is-collapsed > .dev-menu-section-body {
   display: none;
+}
+
+/* Підрозділ усередині розділу (Нотатки → по станціях / по виходах) */
+.dev-menu-subsection {
+  margin: 4px 0 16px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
+.dev-menu-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.dev-menu-subsection > .dev-menu-section-title {
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* .search-item скопійований з "Запропонувати зміни" — тут трохи інший
