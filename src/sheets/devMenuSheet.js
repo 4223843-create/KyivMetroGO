@@ -602,18 +602,27 @@ function _bindExitsLineFilter(sheet) {
  * (exits_catalog → exit_numbers[].source === 'osm'). Тап — відкрити станцію.
  */
 function _renderOsmExitsSection(container) {
+  _renderExitsByFlag(container, ex => ex.source === 'osm', 'Немає виходів, внесених за OSM');
+}
+
+/** «Відсутня фотофіксація»: виходи з no_photo (немає на фото розробника). */
+function _renderNoPhotoExitsSection(container) {
+  _renderExitsByFlag(container, ex => ex.no_photo === true, 'Немає виходів без фото');
+}
+
+function _renderExitsByFlag(container, match, emptyText) {
   const rows = [];
   for (const [slug, station] of Object.entries(state.stationsData || {})) {
     const exits = [];
     for (const item of Object.values(station.exits_catalog || {})) {
       for (const ex of item.exit_numbers || []) {
-        if (ex.source === 'osm') exits.push(ex);
+        if (match(ex)) exits.push(ex);
       }
     }
     if (exits.length) rows.push({ slug, station, exits });
   }
   if (!rows.length) {
-    container.innerHTML = '<div class="dev-menu-empty">Немає виходів, внесених за OSM</div>';
+    container.innerHTML = `<div class="dev-menu-empty">${emptyText}</div>`;
     return;
   }
   rows.sort((a, b) => a.station.name.localeCompare(b.station.name, 'uk'));
@@ -647,6 +656,8 @@ function _renderAll(sheet) {
   if (exitsEl)  { _renderExitsSection(exitsEl); _bindExitsLineFilter(sheet); }
   const osmEl = sheet.querySelector('#devMenuOsmExits');
   if (osmEl) _renderOsmExitsSection(osmEl);
+  const noPhotoEl = sheet.querySelector('#devMenuNoPhotoExits');
+  if (noPhotoEl) _renderNoPhotoExitsSection(noPhotoEl);
   if (backlogEl) {
     // iOS WebKit скидає позицію курсора при будь-якому .value= навіть з тим самим текстом.
     // Пропускаємо перезапис поки textarea у фокусі.
