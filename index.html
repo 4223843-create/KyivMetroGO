@@ -376,14 +376,18 @@ document.documentElement.setAttribute('data-theme', actual);
         </div>
       </div>
 
-      <div class="dev-menu-section dev-menu-collapsible" data-section="osmExits">
+      <div class="dev-menu-section dev-menu-collapsible" data-section="exitsMeta">
         <button type="button" class="dev-menu-section-title dev-menu-section-toggle">
-          <span>Внесено за OSM</span>
+          <span>Виходи</span>
           <svg class="dev-menu-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="dev-menu-section-body">
+          <div class="dev-emu-group-title">Внесено за OSM</div>
           <p class="dev-emu-hint">Підписи виходів, які взято з OpenStreetMap, а не з табличок</p>
           <div id="devMenuOsmExits" class="dev-osm-exits"></div>
+          <div class="dev-emu-group-title">Відсутня фотофіксація</div>
+          <p class="dev-emu-hint">Виходи, яких немає на ваших фото (загальні схеми не рахуються)</p>
+          <div id="devMenuNoPhotoExits" class="dev-osm-exits"></div>
         </div>
       </div>
 

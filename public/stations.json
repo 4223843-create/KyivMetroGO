@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "20261112",
+  "version": "20261113",
   "line_intervals": {
     "green": [
       {
@@ -1690,6 +1690,7 @@
             {
               "num": "4",
               "text": "Університет „Україна“",
+              "no_photo": true,
               "id": 818,
               "coordinates": [
                 30.36455,
@@ -1708,6 +1709,7 @@
             {
               "num": "6",
               "text": "просп. Берестейський, 136",
+              "no_photo": true,
               "id": 814,
               "coordinates": [
                 30.36635,
@@ -1717,6 +1719,7 @@
             {
               "num": "7",
               "text": "Сквер",
+              "no_photo": true,
               "id": 812,
               "coordinates": [
                 30.36676,
@@ -1920,6 +1923,7 @@
               "num": "9",
               "text": "пл. Чорнобаївська",
               "source": "osm",
+              "no_photo": true,
               "id": 830,
               "coordinates": [
                 30.38794,
@@ -1930,6 +1934,7 @@
               "num": "10",
               "text": "пл. Чорнобаївська<br>вул. Депутатська",
               "source": "osm",
+              "no_photo": true,
               "id": 831,
               "coordinates": [
                 30.38746,
@@ -1940,6 +1945,7 @@
               "num": "11",
               "text": "вул. Депутатська<br>вул. Василя Степанченка",
               "source": "osm",
+              "no_photo": true,
               "id": 833,
               "coordinates": [
                 30.38741,
@@ -1950,6 +1956,7 @@
               "num": "12",
               "text": "пл. Чорнобаївська<br>вул. Депутатська",
               "source": "osm",
+              "no_photo": true,
               "id": 832,
               "coordinates": [
                 30.38728,
