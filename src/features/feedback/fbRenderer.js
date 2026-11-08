@@ -10,6 +10,7 @@ import { Icons }                                  from '../../ui/icons.js';
 import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '../../core/constants.js';
 import { richText } from '../../ui/html.js';
 import { lineTextColor } from '../../ui/components.js';
+import { hiddenVestibules, vestibuleExitsText } from '../../domain/vestibules.js';
 
 const INFO_SVG = Icons.info;
 const UNDO_SVG = Icons.undo;
@@ -128,7 +129,14 @@ function positionItemHtml(item, st, lineColor) {
     isClosed    ? 'fb-pos-closed'                 : '',
   ].filter(Boolean).join(' ');
 
-  return `${exitLabelHtml(i, fbState.labels[i] ?? '')}
+  const vestItem = st.vestibule
+    ? appState.stationsData[fbState.slug]?.exits_catalog?.[st.vestibule]
+    : null;
+  const vestNote = vestItem
+    ? `<div class="fb-vestibule-note">Ще один вестибюль: ${vestibuleExitsText(vestItem)}</div>`
+    : '';
+
+  return `${vestNote}${exitLabelHtml(i, fbState.labels[i] ?? '')}
     <div class="${classes}" data-idx="${i}" id="fbItemInner${i}">
       ${isClosed ? closedBlock : openBlock}
     </div>`;
@@ -146,7 +154,7 @@ function dirGroupHtml(g, slug, lineColor) {
   }).join('');
 
   const canAddMore  = STATIONS_WITH_POTENTIAL_EXITS.has(slug);
-  const hasNewAlrdy = Object.values(fbState.current).some(s => s.isNew && s.dir === g.dir);
+  const hasNewAlrdy = Object.values(fbState.current).some(s => s.isNew && !s.vestibule && s.dir === g.dir);
   const addBtnHtml  = (canAddMore && !hasNewAlrdy)
     ? `<div class="fb-add-exit-row">
          <button type="button" class="fb-add-exit-btn" data-dir="${richText(g.dir)}">
@@ -155,10 +163,25 @@ function dirGroupHtml(g, slug, lineColor) {
        </div>`
     : '';
 
+  // Прихований вестибюль (exits_catalog …hidden) — лише тут його можна додати
+  const station     = appState.stationsData[slug];
+  const dirExits    = station?.directions?.find(d => d.from === g.dir)?.exits || [];
+  const vestBtnHtml = hiddenVestibules(station)
+    .filter(([id]) => !dirExits.some(ex => ex.id === id)
+      && !Object.values(fbState.current).some(s => s.isNew && s.dir === g.dir && s.vestibule === id))
+    .map(([id]) => `<div class="fb-add-exit-row">
+         <button type="button" class="fb-add-exit-btn fb-add-vestibule-btn"
+           data-dir="${richText(g.dir)}" data-vestibule="${richText(id)}">
+           + Додати вестибюль
+         </button>
+       </div>`)
+    .join('');
+
   return `<div class="fb-pos-row">
     <div class="fb-dir-label-wrap"><div class="fb-dir-label">${dirLabel}</div></div>
     ${itemsHtml}
     ${addBtnHtml}
+    ${vestBtnHtml}
   </div>`;
 }
 

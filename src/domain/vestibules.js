@@ -157,3 +157,25 @@ export function initVestibuleReports() {
   flushVestibuleReports();
   window.addEventListener('online', () => flushVestibuleReports());
 }
+
+// ── Приховані вестибюлі ──────────────────────────────────────────────────────
+// "hidden": true у exits_catalog — вестибюль є в даних (виходи, координати), але
+// directions на нього не посилаються, тож картка, пошук і Вибране його не бачать.
+// Єдиний шлях в інтерфейс — меню правок: «+ Додати вестибюль» додає його в напрям
+// як новий вихід із номерами виходів цього вестибюля.
+
+/**
+ * Приховані вестибюлі станції.
+ * @param {object} s — станція (з exits_catalog)
+ * @returns {Array<[string, object]>} пари [id групи, запис каталогу]
+ */
+export function hiddenVestibules(s) {
+  return Object.entries(s?.exits_catalog || {}).filter(([, v]) => v?.hidden);
+}
+
+/** «виходи 6, 7» / «вихід 3» для запису каталогу. */
+export function vestibuleExitsText(item) {
+  const nums = (item?.exit_numbers || []).map(e => e.num).filter(Boolean);
+  if (!nums.length) return '';
+  return `${nums.length > 1 ? 'виходи' : 'вихід'} ${nums.join(', ')}`;
+}

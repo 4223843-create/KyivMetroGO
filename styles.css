@@ -1482,6 +1482,13 @@ html {
   text-underline-offset: 3px;
 }
 .fb-add-exit-btn:active { opacity: 1; }
+/* Прихований вестибюль, доданий через меню правок */
+.fb-vestibule-note {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin: 8px 0 2px;
+}
 /* 1. Оновлена обгортка пілюль */
 .fb-pos-wrap {
   display: grid;

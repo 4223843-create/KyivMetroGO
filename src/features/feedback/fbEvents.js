@@ -235,7 +235,7 @@ function _handlePosClick(e, stationHidden, afterRender) {
   // Додати новий вихід
   const addExitBtn = e.target.closest('.fb-add-exit-btn');
   if (addExitBtn) {
-    _handleAddExit(addExitBtn.dataset.dir, slug, afterRender);
+    _handleAddExit(addExitBtn.dataset.dir, slug, afterRender, addExitBtn.dataset.vestibule);
     return;
   }
 
@@ -421,7 +421,7 @@ function _toggleLabelInput(itemIdx) {
   }
 }
 
-function _handleAddExit(dir, slug, afterRender) {
+function _handleAddExit(dir, slug, afterRender, vestibule) {
   const newIdx   = Object.keys(fbState.current).length;
   const sameDir  = Object.values(fbState.current).filter(s => s.dir === dir && !s.isNew);
   const { w, d } = sameDir.length
@@ -431,10 +431,13 @@ function _handleAddExit(dir, slug, afterRender) {
   fbState.current[newIdx] = {
     wMain: w, dMain: d, wEx: '-', dEx: '-', wEx2: '-', dEx2: '-',
     hasExtra: false, hasThird: false, isClosed: false, isNew: true, dir,
+    ...(vestibule ? { vestibule } : {}),
   };
   fbState.labels[newIdx] = '';
 
   renderFeedbackPositions(fbState.slug, { onAfterRender: afterRender });
+  // Вестибюль уже має підписи виходів — опис не обов'язковий
+  if (vestibule) return;
   setTimeout(() =>
     document.querySelector(`.fb-add-desc-btn[data-item-idx="${newIdx}"]`)?.click(), 100);
 }
