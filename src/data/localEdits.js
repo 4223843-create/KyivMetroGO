@@ -233,8 +233,15 @@ function _applyLocalEdits(stationsData) {
       if (!targetDir) continue;
 
       const posIdx = s.positions.length;
+      // Прихований вестибюль, доданий через меню правок: беремо його виходи з каталогу
+      const vest = edit.vestibule ? s.exits_catalog?.[edit.vestibule] : null;
       const newExit = {
-        label:     edit.label || '',
+        ...(vest ? {
+          id:             edit.vestibule,
+          exit_numbers:   vest.exit_numbers,
+          numbered_exits: vest.exit_numbers,
+        } : {}),
+        label:     edit.label || vest?.label || '',
         positions: [{
           wagon:    String(edit.wagon),
           doors:    String(edit.doors),

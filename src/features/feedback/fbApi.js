@@ -82,6 +82,7 @@ export async function submitFeedback(background = false) {
     saveLocalEdit(slug, idx, {
       wagon: vals.finalW, doors: vals.finalD,
       dir: st.dir, label: fbState.labels[idx], isNew: true,
+      ...(st.vestibule ? { vestibule: st.vestibule } : {}),
     })
   );
 
@@ -120,7 +121,9 @@ export async function submitFeedback(background = false) {
   try {
     const formspreeLines = [
       ...posChanges.map(c => buildChangeText(c.p, c.nw ?? c.p.wagon, c.nd ?? c.p.doors, !!c.closed)),
-      ...newExits.map(({ st, vals }) => `${st.dir}: НОВИЙ ВИХІД (вагон ${vals.finalW}, двері ${vals.finalD})`),
+      ...newExits.map(({ st, vals }) => st.vestibule
+        ? `${st.dir}: ВЕСТИБЮЛЬ ${st.vestibule} ВІДКРИТО (вагон ${vals.finalW}, двері ${vals.finalD})`
+        : `${st.dir}: НОВИЙ ВИХІД (вагон ${vals.finalW}, двері ${vals.finalD})`),
       ...labelChanges,
     ];
 

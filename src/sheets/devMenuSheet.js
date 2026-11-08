@@ -11,6 +11,7 @@ import { state }   from '../core/state.js';
 import { bus }     from '../core/eventBus.js';
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 import { LINE_COLOR } from '../core/constants.js';
+import { vestibuleExitsText } from '../domain/vestibules.js';
 import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { getPositionDescriptorsForStation } from './renderStation.js';
 import {
@@ -421,6 +422,7 @@ function _countStationExits(station) {
   if (!catalog) return 0;
   let count = 0;
   for (const ev of Object.values(catalog)) {
+    if (ev.hidden) continue;   // прихований вестибюль у картці не показується
     for (const en of (ev.exit_numbers || [])) {
       if ((en.num || '').trim()) count++;
     }
@@ -615,6 +617,7 @@ function _renderExitsByFlag(container, match, emptyText) {
   for (const [slug, station] of Object.entries(state.stationsData || {})) {
     const exits = [];
     for (const item of Object.values(station.exits_catalog || {})) {
+      if (item.hidden) continue;   // його виходи — у «Закриті вестибюлі»
       for (const ex of item.exit_numbers || []) {
         if (match(ex)) exits.push(ex);
       }
@@ -632,6 +635,38 @@ function _renderExitsByFlag(container, match, emptyText) {
       <div class="dev-menu-row-station" style="color:${LINE_COLOR[station.line] || 'inherit'}">${escapeHtml(station.name)}</div>
       ${exits.sort(byNum).map(ex => `<div class="dev-menu-row-detail">Вихід ${escapeHtml(String(ex.num))}: ${
         escapeHtml(String(ex.text || '')).replace(/&lt;br\s*\/?&gt;/gi, ' / ')}</div>`).join('')}
+    </button>`).join('');
+  _bindNotesClicks(container);
+}
+
+/**
+ * «Закриті вестибюлі»: vestibule_closed (заглушка в картці), hidden (прихований,
+ * лише через меню правок) і станції з temporarily_closed. Тап — відкрити станцію.
+ */
+function _renderClosedVestibulesSection(container) {
+  const rows = [];
+  for (const [slug, station] of Object.entries(state.stationsData || {})) {
+    const lines = [];
+    if (station.temporarily_closed) lines.push('Станція тимчасово не працює');
+    for (const item of Object.values(station.exits_catalog || {})) {
+      if (!item.vestibule_closed && !item.hidden) continue;
+      const kind  = item.hidden ? 'Прихований вестибюль' : 'Вестибюль';
+      const exits = vestibuleExitsText(item);
+      const name  = item.label ? ` (${item.label})` : '';
+      const why   = item.closed_reason ? ` — ${item.closed_reason}` : '';
+      lines.push(`${kind}${exits ? `: ${exits}` : ''}${name}${why}`);
+    }
+    if (lines.length) rows.push({ slug, station, lines });
+  }
+  if (!rows.length) {
+    container.innerHTML = '<div class="dev-menu-empty">Немає закритих вестибюлів</div>';
+    return;
+  }
+  rows.sort((a, b) => a.station.name.localeCompare(b.station.name, 'uk'));
+  container.innerHTML = rows.map(({ slug, station, lines }) => `
+    <button type="button" class="dev-menu-row" data-slug="${escapeHtml(slug)}">
+      <div class="dev-menu-row-station" style="color:${LINE_COLOR[station.line] || 'inherit'}">${escapeHtml(station.name)}</div>
+      ${lines.map(l => `<div class="dev-menu-row-detail">${escapeHtml(l)}</div>`).join('')}
     </button>`).join('');
   _bindNotesClicks(container);
 }
@@ -658,6 +693,8 @@ function _renderAll(sheet) {
   if (osmEl) _renderOsmExitsSection(osmEl);
   const noPhotoEl = sheet.querySelector('#devMenuNoPhotoExits');
   if (noPhotoEl) _renderNoPhotoExitsSection(noPhotoEl);
+  const closedEl = sheet.querySelector('#devMenuClosedVestibules');
+  if (closedEl) _renderClosedVestibulesSection(closedEl);
   if (backlogEl) {
     // iOS WebKit скидає позицію курсора при будь-якому .value= навіть з тим самим текстом.
     // Пропускаємо перезапис поки textarea у фокусі.
