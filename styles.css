@@ -5969,3 +5969,7 @@ body:has(.offline-banner:not([hidden])) .emu-banner { top: calc(env(safe-area-in
   max-width: calc(100vw - 32px);
   box-sizing: border-box;
 }
+
+/* Меню розробника: «Внесено за OSM» */
+.dev-osm-exits { display: flex; flex-direction: column; gap: 6px; }
+.dev-osm-exits .dev-menu-row-station { margin-bottom: 2px; }

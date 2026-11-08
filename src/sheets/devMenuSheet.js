@@ -597,6 +597,36 @@ function _bindExitsLineFilter(sheet) {
   });
 }
 
+/**
+ * «Внесено за OSM»: виходи, підпис яких узято з OpenStreetMap
+ * (exits_catalog → exit_numbers[].source === 'osm'). Тап — відкрити станцію.
+ */
+function _renderOsmExitsSection(container) {
+  const rows = [];
+  for (const [slug, station] of Object.entries(state.stationsData || {})) {
+    const exits = [];
+    for (const item of Object.values(station.exits_catalog || {})) {
+      for (const ex of item.exit_numbers || []) {
+        if (ex.source === 'osm') exits.push(ex);
+      }
+    }
+    if (exits.length) rows.push({ slug, station, exits });
+  }
+  if (!rows.length) {
+    container.innerHTML = '<div class="dev-menu-empty">Немає виходів, внесених за OSM</div>';
+    return;
+  }
+  rows.sort((a, b) => a.station.name.localeCompare(b.station.name, 'uk'));
+  const byNum = (a, b) => (parseInt(a.num, 10) || 0) - (parseInt(b.num, 10) || 0);
+  container.innerHTML = rows.map(({ slug, station, exits }) => `
+    <button type="button" class="dev-menu-row" data-slug="${escapeHtml(slug)}">
+      <div class="dev-menu-row-station" style="color:${LINE_COLOR[station.line] || 'inherit'}">${escapeHtml(station.name)}</div>
+      ${exits.sort(byNum).map(ex => `<div class="dev-menu-row-detail">Вихід ${escapeHtml(String(ex.num))}: ${
+        escapeHtml(String(ex.text || '')).replace(/&lt;br\s*\/?&gt;/gi, ' / ')}</div>`).join('')}
+    </button>`).join('');
+  _bindNotesClicks(container);
+}
+
 function _renderAll(sheet) {
   const stationNotesEl = sheet.querySelector('#devMenuStationNotes');
   const exitNotesEl    = sheet.querySelector('#devMenuExitNotes');
@@ -615,6 +645,8 @@ function _renderAll(sheet) {
   if (verifyEl) { _renderVerificationSection(verifyEl); _bindVerifyClicks(verifyEl); _bindVerifyLineFilter(sheet); }
   const exitsEl = sheet.querySelector('#devMenuExits');
   if (exitsEl)  { _renderExitsSection(exitsEl); _bindExitsLineFilter(sheet); }
+  const osmEl = sheet.querySelector('#devMenuOsmExits');
+  if (osmEl) _renderOsmExitsSection(osmEl);
   if (backlogEl) {
     // iOS WebKit скидає позицію курсора при будь-якому .value= навіть з тим самим текстом.
     // Пропускаємо перезапис поки textarea у фокусі.
