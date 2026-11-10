@@ -3,6 +3,7 @@
 
 import { Icons } from './icons.js';
 import { LINE_COLOR } from '../core/constants.js';
+import { escapeHtml } from './html.js';
 
 // Колір лінії для елементів інтерфейсу (цифри на пілюлях, серце, шпильки,
 // іконки картки станції): у світлій темі — темніший відтінок, бо колір лінії
@@ -20,8 +21,8 @@ export const lineTextColor = color => PILL_TEXT_COLOR[color] || color;
  */
 export function pill(label, value, color) {
   return `<div class="pos-pill">
-    <div class="pos-pill-label">${label}</div>
-    <div class="pos-pill-num" style="color:${lineTextColor(color)}">${value}</div>
+    <div class="pos-pill-label">${escapeHtml(label)}</div>
+    <div class="pos-pill-num" style="color:${lineTextColor(color)}">${escapeHtml(value)}</div>
   </div>`;
 }
 

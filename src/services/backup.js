@@ -12,6 +12,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share }                           from '@capacitor/share';
 import { FilePicker }                      from '@capawesome/capacitor-file-picker';
 import { STORAGE_KEYS, Storage }           from '../core/storage.js';
+import { localEditsLookValid }             from '../domain/backupShape.js';
 
 // ── Константи ─────────────────────────────────────────────────
 
@@ -83,6 +84,9 @@ function _validate(data) {
     || 'metro_favs' in data; // legacy ключ до міграції STORAGE_KEYS
   if (!hasKnownKey) {
     return { valid: false, reason: 'Файл не містить даних KyivMetroGO' };
+  }
+  if (!localEditsLookValid(data[STORAGE_KEYS.LOCAL_EDITS])) {
+    return { valid: false, reason: 'Файл містить пошкоджені правки вагонів і дверей' };
   }
   return { valid: true };
 }

@@ -73,3 +73,29 @@ test('пошук за адресою екранує вулицю, район і 
     assert.ok(!html.includes('<img'), html);
   }
 });
+
+test('пересадки: назва вокзалу й підказка на тап екрануються', async () => {
+  const { renderStationConnections } = await import('../src/sheets/renderStation.js');
+  const html = renderStationConnections({ connections: { hubs: [{ kind: 'bus', name: EVIL, note: `"${EVIL}` }] } });
+  assert.ok(!html.includes('<img'), html);
+  assert.ok(html.includes('&lt;img'), html);
+});
+
+test('вагон і двері (зокрема з локальних правок) не стають розміткою', async () => {
+  const { renderDirections } = await import('../src/sheets/renderStation.js');
+  const s = { slug: 'x', name: 'X', positions: [], directions: [{ from: 'A', exits: [
+    { label: 'Вихід', positions: [{ id: '1-1', wagon: EVIL, doors: `"><svg onload=alert(1)>` }] },
+  ] }] };
+  const html = renderDirections(s, '#e4181c');
+  assert.ok(!html.includes('<img'), html);
+  assert.ok(!html.includes('<svg onload'), html);
+});
+
+test('резервна копія з чужим текстом у вагоні чи дверях не імпортується', async () => {
+  const { localEditsLookValid } = await import('../src/domain/backupShape.js');
+  assert.equal(localEditsLookValid(undefined), true);
+  assert.equal(localEditsLookValid(JSON.stringify({ lisova: { '1-1': { wagon: '2', doors: '1–3' } } })), true);
+  assert.equal(localEditsLookValid({ lisova: { '1-2': { wagon: '4, 5', doors: '1-2', closed: true } } }), true);
+  assert.equal(localEditsLookValid(JSON.stringify({ lisova: { '1-1': { wagon: EVIL, doors: '1' } } })), false);
+  assert.equal(localEditsLookValid('{не json'), false);
+});
