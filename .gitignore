@@ -3,3 +3,8 @@ dist/
 *.backup.js
 *.backup.ts
 svgo.config.mjs
+
+# Випадкові файли з домашньої теки (скрипти, кеш Windows), щоб не потрапили в репозиторій знову
+/*.py
+/prompt.txt
+/Microsoft/
