@@ -3,7 +3,7 @@
 import { STORAGE_KEYS, Storage }          from './core/storage.js';
 import { getPref } from './core/prefs.js';
 import { applyTheme }                     from './ui/theme.js';
-import { applyReduceMotion }              from './ui/motion.js';
+import { applyReduceMotion, applyPageZoom } from './ui/motion.js';
 import { configureEdgeToEdge }            from './ui/system.js';
 import { initMap }                        from './map/mapInit.js';
 import { reloadStationsData, loadedStationsVersion } from './data/stations.js';
@@ -68,6 +68,7 @@ async function bootstrap() {
     const savedTheme = Storage.get(STORAGE_KEYS.THEME) || 'system';
     applyTheme(savedTheme, false);
     applyReduceMotion();
+    applyPageZoom();
 
     initMap();
     await configureEdgeToEdge();

@@ -4,7 +4,11 @@
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
 
-const _devFlag = () => Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
+// Збірка для Google Play (VITE_PLAY_BUILD=1 у CI-завданні aab): режиму розробника
+// немає взагалі — ні 5 дотиків, ні форми входу. PWA і тестовий APK — як раніше.
+export const DEV_MODE_AVAILABLE = import.meta.env?.VITE_PLAY_BUILD !== '1';
+
+const _devFlag = () => DEV_MODE_AVAILABLE && Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
 
 /** Активна емуляція стану (devEmulation.js): підставні дані чи час. */
 export function isEmulating() {

@@ -2,6 +2,15 @@ apply plugin: 'com.android.application'
 
 // versionCode росте сам: кількість комітів у гілці (Google Play вимагає, щоб
 // кожна нова збірка мала більший номер). Можна задати вручну: -PversionCode=123.
+// versionName — з package.json (одне місце для номера версії PWA і Android).
+def packageVersion = { ->
+    try {
+        return new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
+    } catch (ignored) {
+        return '1.0'
+    }
+}
+
 def autoVersionCode = { ->
     def manual = project.findProperty('versionCode')
     if (manual) return manual.toString().toInteger()
@@ -35,7 +44,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode autoVersionCode()
-        versionName "1.0"
+        versionName packageVersion()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

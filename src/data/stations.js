@@ -14,7 +14,10 @@ import { buildExitSearchIndex } from './exitSearch.js';
 //   1. одразу — новіша з копій: Filesystem.Cache або bundled в APK (localhost/stations.json)
 //   2. у фоні — fetch(REMOTE_STATIONS_URL); нова версія → Filesystem.Cache + тост
 
-const REMOTE_STATIONS_URL = 'https://raw.githubusercontent.com/4223843-create/KyivMetroGO/refs/heads/main/public/stations.json';
+// Копія з сайту на GitHub Pages, а не прямо з main: сайт оновлюється лише після
+// зеленої перевірки Check (.github/workflows/deploy.yml), тож зламаний коміт до
+// встановлених застосунків не доходить.
+const REMOTE_STATIONS_URL = 'https://4223843-create.github.io/KyivMetroGO/stations.json';
 const NATIVE_CACHE_PATH   = 'stations_cache.json';
 const FETCH_TIMEOUT_MS    = 4000;
 const BACKGROUND_FETCH_TIMEOUT_MS = 20000;
@@ -338,7 +341,7 @@ async function _fetchRemoteStations(timeoutMs) {
   try {
     const response = await fetch(REMOTE_STATIONS_URL, { signal: controller.signal, cache: 'no-store' });
     if (!response.ok) return null;
-    // raw.githubusercontent.com віддає .json як text/plain — тому перевіряємо вміст, а не content-type.
+    // Перевіряємо вміст, а не content-type: проксі чи дзеркало можуть віддати text/plain.
     const data = await response.json();
     // Зіпсований або несумісний файл не потрапляє в кеш і не ламає запуск.
     return isValidStationsData(data) ? data : null;

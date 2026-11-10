@@ -1,8 +1,13 @@
 name: Deploy to GitHub Pages
 
+# Деплой лише після зеленої перевірки Check на main: зламаний коміт (дані,
+# тести, збірка) не потрапляє на сайт, а звідти — і в застосунок Android.
 on:
-  push:
-    branches: ["main"] # Запускати при кожному пуші в гілку main
+  workflow_run:
+    workflows: ["Check"]
+    types: [completed]
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,6 +20,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Лише успішний Check після пуша в main (не PR з гілки, яку теж звуть main)
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -22,6 +29,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Саме той коміт, який перевірив Check
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v4

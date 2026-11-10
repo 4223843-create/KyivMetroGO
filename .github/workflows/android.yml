@@ -83,6 +83,8 @@ jobs:
         run: npm ci
 
       - name: Build web app
+        env:
+          VITE_PLAY_BUILD: "1"   # без режиму розробника в Google Play
         run: npm run build
 
       - name: Copy web app into Android project
