@@ -1,0 +1,206 @@
+/* Карта, зони станцій, кнопка Check-in на карті */
+
+/* ══ КАРТА ТА ЗОНИ ══ */
+.map-viewport { width: 100%; height: 100vh; overflow: auto; position: relative; }
+.map-inner { position: relative; transform-origin: 0 0; }
+
+/* Кажемо браузеру не втручатися в жести на SVG-карті */
+#mapInner svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+body#map-page {
+  min-height: 100vh;
+}
+
+body#map-page main.container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  min-height: 100vh;
+  height: 100vh;
+  position: relative; /* контекст позиціонування для .dev-menu-fab */
+}
+
+body#map-page .map-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: none;
+  padding-top: 8dvh; 
+  padding-bottom: 8dvh;
+}
+
+
+:root {
+  --bg:         #000000;
+  --bg-sheet:   #2c2c2e;
+  --bg-card:    #3a3a3c;
+  --bg-pill:    #1c1c1e;
+  --text:       #f0f0f0;
+  --text-muted: #ababab;
+  --icon-color: #ababab;
+  /* Неактивні значки режиму розробника — той самий сірий, що й «−»/«+» степера */
+  --dev-icon:   var(--text-muted);
+  --line-red:   #c8523a;
+  --line-blue:  #5b9bd5;
+  --line-green: #5aaa6a;
+  /* Логотип у «Про застосунок» — завжди початкові кольори ліній, в обох темах */
+  --logo-red:   #c8523a;
+  --logo-blue:  #5b9bd5;
+  --logo-green: #5aaa6a;
+  --hatch-color: #0d0d0d;
+
+  --border:     rgba(255,255,255,0.08);
+  --overlay:    rgba(0,0,0,0.55);
+
+  --z-fav-toast: 10;
+  --z-fb-sticky: 100;
+  --z-map-zones: 999;
+  --z-ui-buttons: 1010;
+  --z-overlay: 1020;
+  --z-bottom-sheet: 1030;
+  --z-dropdown: 1050;
+  --z-btn-top: 1010;
+  --z-fullscreen-sheet: 1060;
+  --z-dropdown-active: 1070;
+  --z-tour: 1900;
+  --z-global-modal: 2000;
+
+  --fs-micro: 9px;
+  --fs-xs:    11px;
+  --fs-sm:    13px;
+  --fs-md:    15px;
+  --fs-lg:    17px;
+  --fs-xl:    24px;
+
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semi:   600;
+  --fw-bold:   700;
+
+  --pos-pill-size:         26px;
+  --pos-pill-size-compact: 22px;
+
+  --accent-star: #ffcc00;
+}
+
+
+
+[data-theme="light"] {
+  --bg:         #e5e5ea;
+  --bg-sheet:   #d0d0d5;
+  --bg-card:    #e0e0e6;
+  --bg-pill:    #cacace;
+  --text:       #1c1c1e;
+  --hatch-color: #1c1c1e;
+  
+  --text-muted: #2c2c2e;
+  --icon-color: #2c2c2e;
+  --dev-icon:   #636366;
+  
+  --border:     rgba(0,0,0,0.14);
+  --overlay:    rgba(0,0,0,0.35);
+
+}
+
+[data-theme="light"] .about-input-group {
+  background: var(--bg-pill) !important;
+}
+
+[data-theme="light"] .about-input-group .about-beta-input {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .about-input-group .about-beta-input::placeholder {
+  color: var(--text);
+}
+
+[data-theme="light"] .about-btn-mono-fixed {
+  background: var(--text-muted) !important;
+  color: var(--bg) !important; /* Текст стає світлим кольором фону */
+}
+
+[data-theme="light"] .about-support-platform-icon {
+  color: var(--text-muted); 
+  opacity: 0.85;
+}
+
+[data-theme="light"] .about-support-divider {
+  background: var(--text-muted);
+  opacity: 0.15;
+}
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg); color: var(--text);
+  font-family: 'ProbaNav2', Arial, sans-serif;
+  text-align: center;
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none; user-select: none;
+  /* Без цього в браузері (Chrome, Safari) потягування вниз, коли карта чи
+     картка вже прокручені до верху, вмикає «потягніть, щоб оновити» —
+     сторінка перезавантажується і відкривається з нуля. */
+  overscroll-behavior: none;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+input, textarea { -webkit-user-select: text; user-select: text; font-family: inherit; }
+button { font-family: inherit; }
+
+
+
+.bottom-nav-dock {
+  position: fixed;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-ui-buttons);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  /* Dock завжди симетричний: серце — центр — лупа */
+}
+/* Кнопка Check-in: фіксована строго вгорі по центру */
+.dock-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--icon-color);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dock-btn:active {
+  opacity: 0.5;
+  transform: scale(0.9);
+}
+
+#favListBtn { color: var(--text-muted); position: relative; }
+
+.fav-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--line-red);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  line-height: 16px;
+  border-radius: 8px;
+  text-align: center;
+  pointer-events: none;
+}

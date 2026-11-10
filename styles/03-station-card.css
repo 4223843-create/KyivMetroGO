@@ -1,0 +1,225 @@
+/* Картка станції: напрямки, виходи, закриті вестибюлі, рядки позицій, пілюлі, Хрещатик */
+
+/* ══ DIRECTION BLOCKS ══ */
+.direction-block {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.direction-label {
+  font-size: var(--fs-sm);
+  /* text-transform: uppercase — прибрано, рядок тепер форматується через formatDirLabel() */
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+/* "вихід праворуч" — вертикально відцентрований */
+.direction-exit-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+.direction-exit-right .direction-label { margin-bottom: 0; }
+
+
+
+/* ══ EXIT LABEL ══ */
+.exit-label {
+  text-align: center;
+  margin: 10px 0 4px;
+}
+.exit-label-text {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.transfer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-sm);
+}
+.transfer-line {
+  display: inline-block;
+  width: 2px; height: 14px;
+  border-radius: 1px;
+  flex-shrink: 0; opacity: 0.85;
+}
+.transfer-text { color: var(--text-muted); font-size: var(--fs-sm); }
+
+/* ══ ЗАКРИТИЙ ВЕСТИБЮЛЬ ══ */
+.vestibule-closed {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+.exit-label + .position-row + .vestibule-closed,
+.position-row + .vestibule-closed {
+  border-top: 0.5px solid var(--border);
+  margin-top: 9px;
+  padding-top: 10px;
+}
+.vestibule-closed + .exit-label {
+  border-top: 0.5px solid var(--border);
+  margin-top: 9px;
+  padding-top: 6px;
+}
+.vestibule-ghost-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 0 0;
+}
+.vestibule-ghost-row .pos-pill {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.vestibule-ghost-row .pos-pill > * { opacity: 0.35; }
+.vestibule-ghost-row .pos-pill-num { color: var(--text-muted) !important; }
+.vestibule-closed-title {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.vestibule-undo { text-align: center; margin: -4px 0 2px; }
+/* Тимчасово недоступна станція (temporarily_closed) — напис над виходами */
+.station-closed-notice {
+  text-align: center;
+  padding: 2px 0 10px;
+  margin-bottom: 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+.station-closed-title {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.station-closed-undo { margin: 0 0 6px; }
+.vestibule-undo + .position-row { border-top: none; }
+.vestibule-reopen-btn,
+.vestibule-undo-btn,
+.station-reopen-btn,
+.station-undo-btn {
+  margin-top: 2px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* Довгий текст кнопки в confirm («Відкрити і повідомити розробника») — у два рядки */
+.global-confirm-btns-main .confirm-btn-wrap {
+  white-space: normal;
+  line-height: 1.25;
+  height: auto;
+  min-height: 44px;
+  padding: 6px 10px;
+}
+
+/* ══ POSITION ROWS ══ */
+.position-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 0.5px solid var(--border);
+  position: relative;
+}
+
+/* Надійно прибираємо лінію зверху для найпершого елемента */
+.position-row:first-child { 
+  border-top: none; 
+}
+
+/* ЗАБОРОНЯЄМО малювати лінію між текстом опису і його пілюлями */
+.exit-label + .position-row { 
+  border-top: none; 
+}
+
+/* ПЕРЕНОСИМО лінію так, щоб вона розділяла різні групи (над текстом) */
+.position-row + .exit-label {
+  border-top: 0.5px solid var(--border);
+  margin-top: 9px;   /* <--- Відступ НАД лінією (від пілюль до лінії). Зменшили, щоб підтягнути лінію вгору */
+  padding-top: 6px; /* <--- Відступ ПІД лінією (від лінії до тексту). Збільшили, щоб відштовхнути текст */
+}
+.position-row-multi {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 4px;
+}
+.pos-multi-sep {
+  color: var(--text-muted);
+  font-size: 18px; padding: 0 2px;
+}
+
+/* Прибираємо лінію, якщо пілюлі йдуть одразу під головним заголовком (коли немає опису) */
+.direction-label + .position-row { 
+  border-top: none; 
+}
+
+/* ══ PILLS ══ */
+.pos-pill {
+  background: var(--bg-pill);
+  border-radius: 8px;
+  padding: 5px 14px;
+  text-align: center;
+  min-width: 64px;
+}
+.pos-pill-label {
+  font-size: var(--fs-micro);
+  letter-spacing: .06em;
+color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 1px;
+}
+.pos-pill-num {
+  font-size: var(--pos-pill-size); 
+  font-weight: var(--fw-bold); 
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+/* ══ ХРЕЩАТИК: компактний блок довгого переходу ══ */
+.long-transfer-block {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 10px 14px 12px;
+  margin-bottom: 10px;
+}
+.long-transfer-title {
+  text-align: center;
+  margin-bottom: 10px;
+}
+.long-transfer-title .transfer-text {
+  letter-spacing: 0.05em;
+  font-size: var(--fs-xs);
+}
+.long-transfer-exit {
+  margin-top: 8px;
+}
+.long-transfer-exit-label {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 4px;
+}
+.long-transfer-pos-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+.long-transfer-pos-row .pos-pill {
+  padding: 4px 12px;
+  min-width: 56px;
+}
+.long-transfer-pos-row .pos-pill-num {
+  font-size: var(--pos-pill-size-compact);
+}

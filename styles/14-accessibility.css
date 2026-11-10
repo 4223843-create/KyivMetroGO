@@ -1,0 +1,406 @@
+/* Ліфти й ескалатори, значки візочків на карті, без анімації, зони натискання, контраст, пари кнопок */
+
+/* ══ ЛІФТ ТА ЕСКАЛАТОР ══ */
+.position-row {
+  position: relative;
+}
+
+/* ── Панель "виходи за номерами" — використовує базову анімацію
+   .dev-note-panel (max-height), тут додатково домішуємо translateY,
+   щоб вміст виглядав так, ніби підіймається знизу вгору, а не просто
+   розкривається зверху вниз ── */
+.pos-numbered-exits {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform: translateY(-8px);
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease, transform 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+.pos-numbered-exits.panel-open {
+  max-height: var(--open-h, 350px);
+  transform: translateY(0);
+}
+.pos-numbered-exit-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.pos-numbered-exit-num {
+  flex-shrink: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: 1.35;
+  align-self: start;
+  padding-top: 0;
+}
+.pos-numbered-exit-text {
+  display: block;
+  white-space: pre-line;
+  text-align: left;
+}
+
+/* Маршрути наземного транспорту біля виходу (station.connections.ground) */
+.pos-numbered-exit-routes {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+/* Зупинки біля виходу (station.connections.stops): назва, відстань, маршрути */
+.pos-numbered-exit-stops {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.exit-stop { display: flex; flex-direction: column; text-align: left; }
+.exit-stop-name { font-size: 12px; }
+.exit-stop .pos-numbered-exit-routes { margin-top: 2px; }
+.exit-routes-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+.exit-routes-icon {
+  font-size: var(--fs-sm);
+  line-height: 1;
+  margin-right: 1px;
+}
+.exit-route-chip {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Маршрут, що зупиняється лише з одного боку */
+.exit-route-chip--oneway { border: 1px dashed var(--text-muted); }
+.exit-stop-range {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+/* Пересадки на кільцеву електричку / фунікулер — над напрямками */
+/* Стовпчики: назва · виходи · відстань — щоб у кількох пересадок
+   (Чернігівська) назви й відстані стояли одна під одною */
+.station-connections {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  justify-content: center;
+  row-gap: 6px;
+  margin: 0 16px 12px;
+}
+.station-connection-row { display: contents; }
+.station-connection-name  { grid-column: 1; }
+.station-connection-exits { grid-column: 2; margin-left: 6px; }
+.station-connection-dist  { grid-column: 3; margin-left: 6px; }
+.station-connection {
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+}
+
+/* Кілька пересадок — згорнуто під «Пересадки ⌄» */
+.station-connections-wrap { margin: 0 16px 12px; }
+.station-connections-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 auto;
+  padding: 4px 12px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.station-connections-chevron {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 0.22s ease;
+}
+.station-connections-wrap.is-open .station-connections-chevron { transform: rotate(180deg); }
+.station-connections-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease;
+}
+.station-connections-panel > .station-connections { overflow: hidden; min-height: 0; margin: 0; }
+.station-connections-wrap.is-open .station-connections-panel { grid-template-rows: 1fr; opacity: 1; }
+.station-connections-wrap.is-open .station-connections-panel > .station-connections { padding-top: 6px; }
+
+/* Панель годинника (кнопка біля серця): години роботи та інтервал зараз */
+.sheet-clock-btn[hidden], .sheet-checkin-btn[hidden] { display: none; }
+.station-clock-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease,
+              margin 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+.station-clock-panel.panel-open {
+  max-height: 200px;
+  opacity: 1;
+  margin: 0 0 12px;
+}
+/* Пілюлі — як у пересадок на електричку / фунікулер */
+.clock-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+}
+.clock-pill-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 14px;
+  padding: 6px 12px;
+}
+.clock-interval { white-space: nowrap; }
+.clock-time { white-space: nowrap; }
+
+/* Розпластана стрілка-смуга внизу панелі — тап згортає */
+.pos-numbered-exits-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 18px;
+  margin-top: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-top: 0.5px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pos-numbered-exits-collapse svg {
+  width: 28px;
+  height: 8px;
+  display: block;
+}
+
+.pos-lift-marks-wrap {
+  position: absolute;
+  left: calc(25% - 34px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pos-lift-mark {
+  position: static !important;
+  transform: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted) !important;
+  width: 22px;
+  height: 22px;
+}
+
+.pos-lift-mark svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-muted) !important;
+}
+
+/* ══ Значки візочків на самій SVG-карті (біля станцій з ліфтами) ══ */
+.map-accessibility-icon {
+  color: var(--icon-color);
+}
+
+.pos-lift-marks-wrap {
+  position: absolute;
+  left: calc(25% - 34px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pos-lift-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted) !important;
+  width: 22px;
+  height: 22px;
+}
+
+.pos-lift-mark svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-muted) !important;
+}
+
+/* ══ ДЕКІЛЬКА ІКОНОК (ЛІФТ + ЕСКАЛАТОР) ══ */
+.pos-lift-marks-wrap {
+  position: absolute;
+  left: calc(25% - 34px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pos-lift-marks-wrap .pos-lift-mark {
+  position: static !important;
+  transform: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted) !important;
+  width: 22px;
+  height: 22px;
+}
+
+.pos-lift-marks-wrap .pos-lift-mark svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-muted) !important;
+}
+
+/* Збільшення ескалатора на 50% */
+.pos-escalator-mark {
+  width: 32px !important;
+  height: 32px !important;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.pos-escalator-mark svg {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.pos-elevator-mark {
+  width: 26px !important;
+  height: 26px !important;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pos-elevator-mark svg {
+  width: 24px !important;
+  height: 24px !important;
+  fill: none !important;
+  stroke: var(--text-muted) !important;
+}
+
+/* Значок підйомника (часткова доступність) — клікабельний, показує підказку */
+.pos-hoist-mark {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Значок спецпідйомника контурний: заливаються лише голова й тулуб */
+.pos-lift-marks-wrap .pos-hoist-mark svg {
+  fill: none !important;
+  stroke: var(--text-muted);
+}
+/* ══ ВИМКНУТИ АНІМАЦІЮ ══
+   Налаштування «Вимкнути анімацію» (src/ui/motion.js). Поки його не змінювали,
+   воно повторює системне «Вимкнути анімацію» (Android) чи «Зменшення руху» (iOS).
+   Шторки, «двері ліфта», підказки й тости з'являються та зникають одразу.
+   !important перекриває й inline-переходи з animations.js.
+   Спінери (нескінченні анімації) не чіпаємо: вони показують, що йде робота. */
+/* Саме none, а не коротка тривалість: з будь-якою тривалістю браузер «переводить»
+   і visibility, тож вкладені елементи ховаються по черзі, кадр за кадром,
+   і закриту картку видно, як вона «зменшується». */
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+html.reduce-motion .global-confirm-card { animation: none !important; }
+
+/* ══ БІЛЬША ЗОНА НАТИСКАННЯ ══
+   Невидиме розширення вгору й униз для низьких елементів: вигляд не змінюється,
+   а влучити пальцем легше (перемикачі в налаштуваннях — 24 px, «попередня …» — 15 px). */
+.settings-seg-btn { position: relative; }
+.settings-seg-btn::after,
+.direction-label.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -8px;
+  bottom: -8px;
+}
+
+/* ══ КОНТРАСТ ══
+   Цифри вагона/дверей: у світлій темі темніший відтінок кольору лінії
+   (на сірій пілюлі колір лінії має контраст 1,7–2,7 при нормі 3).
+   Примітки в «Про застосунок» і неактивні перемикачі — до норми 4,5. */
+:root {
+  --line-red-text:   var(--line-red);
+  --line-blue-text:  var(--line-blue);
+  --line-green-text: var(--line-green);
+}
+[data-theme="light"] {
+  --line-red-text:   #ba4a34;
+  --line-blue-text:  #2c70ad;
+  --line-green-text: #3e794a;
+  /* У світлій темі лінії скрізь мають один відтінок: фільтри пошуку,
+     логотип, позначки й тексти з var(--line-*) — той самий, що й цифри */
+  --line-red:   var(--line-red-text);
+  --line-blue:  var(--line-blue-text);
+  --line-green: var(--line-green-text);
+}
+.about-card-note { opacity: 1; }
+[data-theme="light"] .about-card-note { opacity: 0.75; }
+[data-theme="dark"] .settings-seg-btn:not(.is-active) { color: #bdbdbd; }
+
+/* ══ ПАРИ КНОПОК ОДНАКОВОГО РОЗМІРУ ══
+   Кнопки, що стоять поруч, мають однакову ширину незалежно від довжини
+   підпису («Зберегти» / «Не зберігати», «Замінити» / «Скасувати»). */
+.global-confirm-btns-main .confirm-main-btn,
+.exit-replace-btn,
+.bug-actions button,
+.dev-note-actions button {
+  box-sizing: border-box;
+  flex: 1 1 0;
+}
+/* Рамка «Скасувати» 0,5 px — така ж прозора в «Замінити», інакше ширина різна */
+.exit-replace-btn { border: 0.5px solid transparent; }

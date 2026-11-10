@@ -1,0 +1,263 @@
+/* Вибране: зона перетягування, налаштування; іконки, штрихування шторок, утиліти, лоадер карти */
+
+/* ══ ЗОНА ПЕРЕТЯГУВАННЯ (Точки) ══ */
+.fav-drag-handle {
+  width: 36px; /* Ті самі 36px */
+  display: flex;
+  justify-content: center; /* Рівно по центру своїх 36px */
+  align-items: center;
+  font-size: 22px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: grab;
+  flex-shrink: 0;
+  touch-action: none;
+  /* ЖОДНИХ transform чи margin тут більше немає! */
+}
+
+/* ══ НАЛАШТУВАННЯ В ОБРАНОМУ (Вертикальний тумблер) ══ */
+.fav-settings-container {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Такий же відступ, як між карткою і точками */
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.fav-settings-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 6px 14px;
+  min-height: 36px;
+}
+
+.fav-settings-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* ЗОНА ТУМБЛЕРА (Має бути ідентичною до зони точок) */
+.fav-settings-toggle-wrap {
+  width: 36px; /* Ті самі 36px */
+  display: flex;
+  justify-content: center; /* Рівно по центру своїх 36px */
+  align-items: center;
+  flex-shrink: 0;
+  /* ЖОДНИХ transform чи margin тут більше немає! */
+}
+
+/* Крихітний сірий тумблер */
+.ios-toggle {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.ios-toggle input { opacity: 0; width: 0; height: 0; }
+.ios-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--bg-pill);
+  border-radius: 20px;
+  transition: background-color 0.2s;
+  border: 1px solid var(--border);
+}
+.ios-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 1px;
+  bottom: 1px;
+  background-color: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.ios-toggle input:checked + .ios-toggle-slider {
+  background-color: var(--bg-card);
+  border-color: var(--text-muted);
+}
+.ios-toggle input:checked + .ios-toggle-slider:before {
+  transform: translateY(-14px);
+  background-color: var(--text-muted);
+}
+.checkin-dots-circle {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.checkin-dots-circle.is-checked { background: var(--text); }
+
+#favListBtn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.search-btn-top svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+.search-btn-top:active { opacity: 0.6; }
+
+.search-input-wrap {
+  padding: 0 16px 12px;
+}
+.search-input {
+  width: 100%;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+.search-input:focus {
+  border-color: var(--text-muted);
+}
+.search-results {
+  display: flex;
+  flex-direction: column;
+}
+.search-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  font-weight: var(--fw-medium);
+  -webkit-tap-highlight-color: transparent;
+}
+.search-item:active { background: var(--bg-card); }
+.search-item:last-child { border-bottom: none; }
+
+.search-item-line {
+  width: 10px; 
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+/* Контейнер для назви + підказки (хінт виходу) */
+.search-item-text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+/* Підказка при збігу по виходах — блідіший текст поруч з назвою */
+.search-item-hint {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal);
+  color: var(--text-muted);
+  opacity: 0.50;
+  flex-shrink: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ══ ІКОНКИ ══ */
+.fb-exit-label-edit-btn svg { width: 11px; height: 11px; }
+.fb-restore-exit svg { width: 18px; height: 18px; }
+/* search-btn-top svg: see .search-btn-top svg above */
+
+
+/* ══ ФІНАЛЬНИЙ БЛОК ШТРИХУВАННЯ (ДЛЯ ОБОХ ТЕМ) ══ */
+
+/* --- СВІТЛА ТЕМА --- */
+[data-theme="light"] .map-viewport {
+  background-color: #d0d0d5;
+  background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.07) 0px, rgba(0,0,0,0.07) 1px, transparent 1px, transparent 8px);
+}
+
+[data-theme="light"] .station-sheet .sheet-handle-bar,
+[data-theme="light"] .search-station-sheet .sheet-handle-bar,
+[data-theme="light"] .about-station-sheet .sheet-handle-bar,
+[data-theme="light"] #feedbackSheet .sheet-handle-bar,
+[data-theme="light"] .drop-menu {
+  background-color: #d0d0d5;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E");
+  background-position: bottom left;
+}
+
+/* Основна частина шторки: штрихи вниз (\) */
+[data-theme="light"] .sheet-body,
+[data-theme="light"] .fb-footer-sticky {
+  background-color: #d0d0d5 !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: bottom left !important;
+}
+
+/* Футер: штрихи вгору (/), ЯК У ШАПЦІ */
+[data-theme="light"] .about-footer-wrap {
+  background-color: #d0d0d5 !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%23C1C1C6' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: top left !important;
+}
+
+/* --- ТЕМНА ТЕМА --- */
+[data-theme="dark"] .map-viewport {
+  background-color: #000000;
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 8px);
+}
+
+[data-theme="dark"] .station-sheet .sheet-handle-bar,
+[data-theme="dark"] .search-station-sheet .sheet-handle-bar,
+[data-theme="dark"] .about-station-sheet .sheet-handle-bar,
+[data-theme="dark"] #feedbackSheet .sheet-handle-bar,
+[data-theme="dark"] .drop-menu {
+  background-color: var(--bg-sheet);
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E");
+  background-position: bottom left;
+}
+
+/* Основна частина шторки: штрихи вниз (\) */
+[data-theme="dark"] .sheet-body,
+[data-theme="dark"] .fb-footer-sticky {
+  background-color: var(--bg-sheet) !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,-1 L13,13 M11,-1 L13,1 M-1,11 L1,13' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: bottom left !important;
+}
+
+/* Футер: штрихи вгору (/), ЯК У ШАПЦІ */
+[data-theme="dark"] .about-footer-wrap {
+  background-color: var(--bg-sheet) !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1,13 L13,-1 M-1,1 L1,-1 M11,13 L13,11' stroke='%233A3A3C' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-position: top left !important;
+}
+
+
+/* ══ УТИЛІТИ ДЛЯ ПРИХОВУВАННЯ ЕЛЕМЕНТІВ ══ */
+.is-hidden {
+  display: none !important;
+}
+
+/* ══ АДАПТИВНЕ ЦЕНТРУВАННЯ ЗАГОЛОВКА ОБРАНОГО ══ */
+#favSheet:has(.fav-item) .sheet-sheet-title {
+  transform: translateX(calc(-50% - 22px)) !important;
+}
+
+/* ══ СТАН ЗАВАНТАЖЕННЯ КАРТИ ══ */
+.map-inner {
+  transition: opacity 0.35s ease; /* Плавна поява карти */
+}
+.map-viewport.is-loading #mapInner {
+  opacity: 0; /* Ховаємо карту, поки вона крива і не готова */
+}
