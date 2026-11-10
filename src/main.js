@@ -6,7 +6,8 @@ import { applyTheme }                     from './ui/theme.js';
 import { applyReduceMotion }              from './ui/motion.js';
 import { configureEdgeToEdge }            from './ui/system.js';
 import { initMap }                        from './map/mapInit.js';
-import { reloadStationsData }             from './data/stations.js';
+import { reloadStationsData, loadedStationsVersion } from './data/stations.js';
+import { showStartupError }               from './ui/startupError.js';
 import { updateFavDock, openFavSheet }    from './features/favorites/index.js';
 import { updateCheckinDock }              from './features/checkin/index.js';
 import { openSearchSheet }                from './features/search.js';
@@ -104,22 +105,7 @@ async function bootstrap() {
   } catch (err) {
     console.error('[startup] bootstrap failed', err);
     releaseStartupLoader();
-    // Показуємо зрозуміле повідомлення замість технічного alert().
-    // Найімовірніша причина — неможливість завантажити stations.json.
-    const msg = document.createElement('div');
-    msg.style.cssText =
-      'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;' +
-      'justify-content:center;gap:12px;padding:32px;background:var(--bg,#0e0e0f);' +
-      'color:var(--text,#e8e6e3);font-family:system-ui,sans-serif;text-align:center;z-index:9999';
-    msg.innerHTML =
-      '<span style="font-size:2rem">⚠️</span>' +
-      '<strong style="font-size:1.1rem">Не вдалося запустити застосунок</strong>' +
-      '<p style="font-size:.9rem;opacity:.7;max-width:320px">' +
-      'Перевірте зʼєднання з інтернетом і спробуйте ще раз</p>' +
-      '<button onclick="location.reload()" ' +
-      'style="margin-top:8px;padding:12px 28px;border-radius:8px;border:none;' +
-      'background:#c8523a;color:#fff;font-size:1rem;cursor:pointer">Спробувати ще раз</button>';
-    document.body.appendChild(msg);
+    showStartupError(err, loadedStationsVersion());
   }
 }
 

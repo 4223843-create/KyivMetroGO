@@ -6,8 +6,7 @@ import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { showToast }             from '../ui/toast.js';
 import { addBetaSignup, supportNotices } from '../domain/support.js';
 
-// Форма Formspree, куди приходять записи на ранній доступ до Android.
-const BETA_FORM_URL = 'https://formspree.io/f/mgopobnd';
+import { FORM_BETA_SIGNUP as BETA_FORM_URL, FORM_BUG_REPORTS } from '../core/forms.js';
 
 
 // ══ ДОПОМІЖНІ УТИЛІТИ КОЛЬОРУ ══
@@ -441,7 +440,7 @@ function _bindBugForm(aboutSheet) {
       const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
       try {
-        const res = await fetch('https://formspree.io/f/xpqbovbw', {
+        const res = await fetch(FORM_BUG_REPORTS, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({

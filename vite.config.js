@@ -47,7 +47,9 @@ export default defineConfig({
   },
 
   build: {
-    target:        'esnext',
+    // Явна нижня межа: на старому WebView/Safari новий синтаксис дав би білий екран.
+    // Для Android ту саму межу задає android.minWebViewVersion у capacitor.config.json.
+    target:        ['chrome90', 'safari15'],
     sourcemap:     false,          // явно вимкнено для production — менший bundle, без витоку коду
     modulePreload: { polyfill: false },
     outDir:        'dist',
@@ -61,10 +63,11 @@ export default defineConfig({
     },
   },
 
-  // Видаляємо console.* та debugger з production-збірки через esbuild.
-  // esbuild вбудований у Vite і не потребує окремої залежності.
+  // З production-збірки прибираємо debugger і «балакучі» console.log/debug/info.
+  // console.error і console.warn лишаються — без них після релізу не видно причин збоїв.
   esbuild: {
-    drop:        ['console', 'debugger'],
+    drop:        ['debugger'],
+    pure:        ['console.log', 'console.debug', 'console.info'],
     legalComments: 'none',          // прибирає copyright-коментарі з vendor-коду
   },
 

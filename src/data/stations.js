@@ -527,3 +527,8 @@ function handleStartupStation(data) {
     requestAnimationFrame(() => bus.emit('station:open', { slug: startupSlug }));
   }
 }
+
+/** Версія даних станцій, з якою працює застосунок (0 — ще не завантажено). Для звіту про збій. */
+export function loadedStationsVersion() {
+  return _newestKnownVersion;
+}
