@@ -4,7 +4,7 @@
 // лише коли режим розробника увімкнено. Решта застосунку викликає ці функції;
 // поки режим вимкнено, вони нічого не завантажують.
 
-import { isDevMode, toggleDevMode } from './devFlags.js';
+import { isDevMode, toggleDevMode, DEV_MODE_AVAILABLE } from './devFlags.js';
 import { STORAGE_KEYS, Storage }     from '../core/storage.js';
 
 let _mod     = null;
@@ -61,6 +61,7 @@ export function openDevMenuSheet() {
  * режим розробника. Викликається один раз, коли шторка створюється.
  */
 export function setupDevModeTapCounter(aboutSheet) {
+  if (!DEV_MODE_AVAILABLE) return;
   if (isDevMode()) _withDev(m => m.attachAboutSheet(aboutSheet));
 
   const trigger = aboutSheet.querySelector('.about-footer') ||

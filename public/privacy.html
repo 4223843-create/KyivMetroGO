@@ -485,8 +485,9 @@
     <p>
       У <strong>режимі розробника</strong> (прихована функція для тестування даних) Застосунок
       також може зберігати фотографії позицій у локальній базі IndexedDB
-      (<code>MetroPhotoDB</code>) на вашому пристрої. Ці дані жодним чином не
-      передаються зовні.
+      (<code>MetroPhotoDB</code>) на вашому пристрої. Після входу автора в його акаунт
+      ці фото синхронізуються з його сховищем Firebase. Режим розробника призначений
+      лише для автора Застосунку; у версії з Google Play його немає.
     </p>
 
     <h2>4. Канали зворотного зв'язку та треті сторони</h2>
@@ -553,7 +554,7 @@
       <strong>Оновлення бази станцій та GitHub.</strong>
       Нативна версія Застосунку (Android) завантажує оновлення файлу
       <code>stations.json</code> з сервера GitHub
-      (<code>raw.githubusercontent.com</code>). Це є виключно технічними даними про
+      (<code>4223843-create.github.io</code>, GitHub Pages). Це є виключно технічними даними про
       станції метро — жодна інформація про користувача не передається. Проте GitHub,
       як і будь-який HTTP-сервер, отримує IP-адресу пристрою у складі стандартних
       метаданих мережевого запиту та обробляє її відповідно до
@@ -570,7 +571,7 @@
     </p>
     <p>
       Застосунок містить бібліотеку Firebase лише для прихованого режиму розробника: через неї
-      автор Застосунку синхронізує власні робочі нотатки після входу у свій акаунт. Для звичайних
+      автор Застосунку синхронізує власні робочі нотатки й фото після входу у свій акаунт. Для звичайних
       користувачів вона не завантажується і жодних даних не передає.
     </p>
 
@@ -695,7 +696,9 @@
     <p>
       In <strong>Developer Mode</strong> (a hidden feature for data verification),
       the App may also store position photos in a local IndexedDB database
-      (<code>MetroPhotoDB</code>) on your device. This data is never transmitted externally.
+      (<code>MetroPhotoDB</code>) on your device. After the author signs in to their account,
+      these photos are synced to the author's Firebase storage. Developer Mode is meant only
+      for the App's author and is not present in the Google Play version.
     </p>
 
     <h2>4. Feedback Channels &amp; Third Parties</h2>
@@ -761,7 +764,7 @@
       <strong>Station data updates &amp; GitHub.</strong>
       The native Android version of the App downloads updates to the
       <code>stations.json</code> file from a GitHub server
-      (<code>raw.githubusercontent.com</code>). This file contains only technical
+      (<code>4223843-create.github.io</code>, GitHub Pages). This file contains only technical
       metro station data — no user information is transmitted. However, GitHub, like any
       HTTP server, receives the device's IP address as part of standard network request
       metadata and processes it in accordance with the
@@ -778,7 +781,7 @@
     </p>
     <p>
       The App includes the Firebase library only for a hidden developer mode, which the App's
-      author uses to sync their own working notes after signing in to their account. It is not
+      author uses to sync their own working notes and photos after signing in to their account. It is not
       loaded for regular users and transmits no data.
     </p>
 

@@ -13,7 +13,7 @@ import {
 import { fbState, resetFbState }    from './fbState.js';
 import { extractFinalValues, buildChangeText } from './fbUtils.js';
 
-const FORMSPREE_URL = 'https://formspree.io/f/xrejbjww';
+import { FORM_STATION_EDITS as FORMSPREE_URL } from '../../core/forms.js';
 let _isSubmitting   = false;
 
 /**

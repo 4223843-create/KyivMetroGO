@@ -118,6 +118,18 @@ function closeSheetsOnBack() {
   closeAllSheets(true);
 }
 
+// Escape на клавіатурі (зокрема зовнішній до планшета) — як «Назад», але не
+// поверх діалогу підтвердження: той закривається своїми кнопками.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  if (document.querySelector('.global-confirm-overlay')) return;
+  const dropMenu = document.getElementById('dropMenu');
+  if (dropMenu && !dropMenu.hidden) { closeDropMenu(); e.preventDefault(); return; }
+  if (!hasOpenSheet()) return;
+  e.preventDefault();
+  closeSheetsOnBack();
+});
+
 if (Capacitor.isNativePlatform()) {
   App.addListener('backButton', ({ canGoBack }) => {
     if (hasOpenSheet()) {

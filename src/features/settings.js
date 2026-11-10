@@ -5,7 +5,7 @@
 import { STORAGE_KEYS, Storage }   from '../core/storage.js';
 import { getPref, setPref } from '../core/prefs.js';
 import { applyTheme }              from '../ui/theme.js';
-import { setReduceMotion }         from '../ui/motion.js';
+import { setReduceMotion, setPageZoom } from '../ui/motion.js';
 import { initKinematicSwipe }      from '../ui/swipe.js';
 import { showSheet, hideSheet }    from '../ui/sheetNav.js';
 import { bus }                     from '../core/eventBus.js';
@@ -159,6 +159,9 @@ export function openSettingsSheet() {
         if (btn.dataset.hoursVal === 'soon') showHoursSoonToast(btn);
       });
     });
+
+    document.getElementById('settingsPageZoomToggle')
+      ?.addEventListener('change', e => setPageZoom(e.target.checked));
 
     const hideNoLiftToggle = document.getElementById('settingsHideNoLiftToggle');
     if (hideNoLiftToggle) {
@@ -486,6 +489,8 @@ export function openSettingsSheet() {
     if (rm) rm.checked = getPref('reduceMotion');
     if (em) em.checked = isEditOn;
     if (nl) nl.checked = getPref('hideNoLift');
+    const pz = document.getElementById('settingsPageZoomToggle');
+    if (pz) pz.checked = getPref('pageZoom');
 
     const si = document.getElementById('settingsShowIntervalsToggle');
     if (si) si.checked = getPref('showIntervals');

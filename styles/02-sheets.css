@@ -244,3 +244,9 @@ z-index: var(--z-fullscreen-sheet);
 .fav-empty-state .onboarding-hint {
   margin-top: 4px;
 }
+
+/* Фокус переноситься на заголовок шторки лише для читачів екрана (tabindex=-1,
+   Tab на нього не потрапляє) — рамка фокуса тут не потрібна */
+.station-sheet[tabindex="-1"]:focus,
+.sheet-station-title[tabindex="-1"]:focus,
+.sheet-sheet-title[tabindex="-1"]:focus { outline: none; }

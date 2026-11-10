@@ -11,7 +11,7 @@
 import { Storage, STORAGE_KEYS } from '../core/storage.js';
 import { LINE_COLOR, CLOSED_STATION_COLOR } from '../core/constants.js';
 
-const FORMSPREE_URL   = 'https://formspree.io/f/xrejbjww';
+import { FORM_STATION_EDITS as FORMSPREE_URL } from '../core/forms.js';
 export const REPORT_DELAY_MS = 60 * 1000;
 
 const _key = (slug, exitId) => `${slug}|${exitId}`;

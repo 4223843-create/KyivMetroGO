@@ -31,6 +31,8 @@ const PREFS = {
   // Вимкнути анімацію. Поки не обрано — як у системі («Вимкнути анімацію» / «Зменшення руху»).
   reduceMotion:         { key: STORAGE_KEYS.REDUCE_MOTION,          def: false,
                           auto: () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches },
+  // Дозволити збільшувати сторінку двома пальцями (Доступність)
+  pageZoom:             { key: STORAGE_KEYS.PAGE_ZOOM,              def: false },
 };
 
 function _def(name) {
