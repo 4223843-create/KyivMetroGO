@@ -1,0 +1,311 @@
+/* Вибране: порожній стан, список з перетягуванням, компактний вигляд, клікабельні назви */
+
+/* ══ FAV EMPTY STATE ══ */
+.fav-empty-state {
+  text-align: center;
+  padding: 40px 16px;
+}
+.fav-empty-text-lg {
+  font-size: var(--fs-md);
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0 0 16px;
+}
+.fav-empty-text-lg:last-child { margin-bottom: 0; }
+.fav-empty-heart {
+  width: 20px;
+  height: 20px;
+  vertical-align: -4px;
+  display: inline-block;
+  margin: 0 2px;
+}
+
+/* ══ FAV LIST з drag-and-drop ══ */
+.fav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+
+
+
+
+
+/* --- СТИЛІ ДЛЯ МАГІЧНОГО ОБМІНУ В "ОБРАНОМУ" --- */
+.fav-item.fav-dragging { opacity: 1 !important; }
+.fav-item.fav-dragging .fav-open-btn {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.fav-item.fav-dragging .fav-drag-handle { opacity: 0 !important; }
+
+.fav-item.fav-ghost {
+  opacity: 1 !important;
+  visibility: visible !important;
+  background: var(--bg-card) !important;
+}
+
+.fav-item.fav-swap-highlight .fav-open-btn {
+  background: var(--bg-pill) !important;
+}
+
+.fav-open-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Назва зліва, виходи справа */
+  gap: 12px;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px 12px 16px;
+  cursor: pointer;
+  border-left: 3px solid;
+  min-height: 54px;
+  min-width: 0;
+}
+
+
+
+.fav-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  padding-right: 8px;
+}
+
+.fav-station-name {
+  display: block;
+  font-size: 16px; /* Базовий розмір */
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-bottom: 2px;
+  transition: font-size 0.2s ease;
+}
+
+.fav-station-name.fav-small {
+  font-size: var(--fs-md);
+}
+
+.fav-dir-name {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: font-size 0.2s ease, letter-spacing 0.2s ease;
+}
+
+/* Зменшуємо розмір напрямку та відстань між літерами, якщо виходів багато */
+.fav-dir-name.fav-small-dir {
+  font-size: 10px;
+  letter-spacing: -0.2px;
+}
+
+.fav-exits-container {
+  display: flex;
+  justify-content: flex-end; /* Квадрати туляться до правого краю */
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto; /* Займають рівно стільки місця, скільки їм треба */
+}
+
+/* Група з двох квадратів (вагон + двері) */
+.fav-exit-group {
+  display: flex;
+  gap: 4px;
+}
+
+/* Стиль самих квадратів (ВЕЛИКІ) */
+.fav-pos-square {
+  background: var(--bg-pill);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px; /* Більше заокруглення для великого розміру */
+  font-size: 20px; /* Великий і соковитий шрифт */
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1); /* Плавна анімація зменшення */
+}
+
+/* Акуратний вертикальний відбивач */
+.fav-exit-sep {
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+  background: var(--text-muted);
+  opacity: 0.25;
+  margin: 0 2px;
+}
+
+/* ══ КОМПАКТНИЙ ВИГЛЯД (Коли 3 виходи) ══ */
+.fav-exits-compact .fav-pos-square {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  border-radius: 6px;
+}
+
+.fav-exits-compact .fav-exit-sep {
+  height: 12px;
+  opacity: 0.2;
+}
+
+.fav-btn-bar {
+  background: none; 
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+  
+  /* Зменшуємо габарити до 32px для кращого вигляду на мобільних */
+  padding: 0; 
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: none; 
+}
+
+/* Явно задаємо розмір іконки всередині, щоб вона збігалася з хрестиком (18px) */
+.fav-btn-bar svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.fav-btn-bar.fav-active { color: var(--accent-star); }
+
+/* ── Кнопка загальної нотатки станції (праворуч від серця, лише в Dev Mode) ── */
+.dev-station-note-btn {
+  background: none;
+  border: none;
+  color: var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.dev-station-note-btn.is-hidden { display: none; }
+.dev-station-note-btn:active { opacity: 0.5; }
+.dev-station-note-btn svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+
+/* Панель загальної нотатки — під шапкою, над списком напрямків */
+.dev-station-note-panel {
+  margin: 0 16px;
+  flex-shrink: 0; /* у високій картці не стискається — стискається список під нею */
+}
+.dev-station-note-panel.panel-open {
+  margin: 6px 16px 2px;
+}
+.dev-station-note-textarea {
+  height: 72px;
+}
+/* Фото станції: та сама іконка, що в меню «⋮» виходу, трохи більша за нотатку */
+.dev-station-photo-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* ══ КЛІКАБЕЛЬНІ НАЗВИ СТАНЦІЙ ══ */
+.nav-link {
+  cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.drop-menu {
+  display: none;
+  position: fixed;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-dropdown);
+  background: var(--bg-sheet);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  min-width: auto;
+  overflow: hidden;
+  border: 0.5px solid var(--border);
+  
+  /* Робимо весь блок прозорим на 70% */
+  opacity: 0.6;
+}
+.drop-menu.show {
+  display: block;
+}
+.drop-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 0.5px solid var(--border);
+}
+.drop-item:last-child { border-bottom: none; }
+.drop-item:active { background: var(--bg-card); }
+
+.about-content {
+  padding: 0 0 0px; 
+  margin-top: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+}
+.about-content p { margin: 0 0 14px; }
+.about-content h3 {
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin: 20px 0 8px;
+  opacity: 0.6;
+}
+
+
+
+/* ══ FAV EMPTY TEXT ══ */
+.fav-empty-text {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 8px;
+  line-height: 1.7;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-normal);
+  margin: 0;
+  opacity: 1;
+}

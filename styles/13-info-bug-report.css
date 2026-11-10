@@ -1,0 +1,573 @@
+/* Кнопки довідки «i», форма повідомлення про помилку */
+
+/* ════════════════════════════════════════════════════════════
+   ══ КНОПКИ ДОВІДКИ "i" (РОЗДІЛЕНА БЕЗПЕЧНА ЛОГІКА) ══
+   ════════════════════════════════════════════════════════════ */
+
+#btnInfoAndroid, #btnInfoIOS {
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+#btnInfoAndroid {
+  right: 100% !important;
+}
+
+#btnInfoIOS {
+  left: 100% !important;
+}
+
+#btnInfoAndroid svg, #btnInfoIOS svg {
+  height: 12px !important;
+  width: auto !important;
+}
+[data-theme="dark"] .info-btn-active {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+[data-theme="light"] .info-btn-active {
+  color: #000000 !important;
+  opacity: 1 !important;
+}
+
+.fb-add-doors-info {
+  position: relative;
+}
+.settings-info-btn::after, .fb-add-doors-info::after {
+  content: '';
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  bottom: -12px;
+  left: -12px;
+  z-index: 10;
+}
+
+#aboutDevBtnContainer {
+  width: 36px;
+  height: 36px;
+  transform: scale(1.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#aboutDevBtnContainer svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.fb-add-doors-info, #btnInfoAndroid, #btnInfoIOS {
+  position: relative;
+}
+.settings-info-btn::after, .fb-add-doors-info::after, #btnInfoAndroid::after, #btnInfoIOS::after {
+  content: '';
+  position: absolute;
+  top: -12px; right: -12px; bottom: -12px; left: -12px;
+  z-index: 10;
+}
+
+#aboutDevBtnContainer {
+  background: none;
+  border: none;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#aboutDevBtnContainer:active {
+  opacity: 0.5;
+}
+
+#aboutDevBtnContainer svg {
+  width: 18px !important;
+  height: 18px !important;
+  transform: none !important;
+  display: block;
+}
+
+#aboutDevSyncBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#aboutDevSyncBtn.is-hidden {
+  display: none;
+}
+
+#aboutDevSyncBtn:active {
+  opacity: 0.5;
+}
+
+#aboutDevSyncBtn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+#aboutDevSyncBtn.dev-sync-busy svg {
+  animation: dev-sync-spin 0.8s linear infinite;
+}
+
+@keyframes dev-sync-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.about-version-title {
+  position: absolute !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  top: 24px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  font-weight: normal !important;
+  opacity: 0.5 !important;
+  margin: 0 !important;
+  display: block !important;
+  pointer-events: none;
+}
+
+.dev-mode-toast {
+  position: fixed;
+  top: 56px;
+  left: 16px;
+  bottom: auto;
+  transform: translateY(-10px);
+  
+  opacity: 0;
+  pointer-events: none;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  z-index: var(--z-global-modal);
+  white-space: nowrap;
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+}
+
+[data-theme="light"] .dev-mode-toast {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+/* Тост над іконкою ліфта/ескалатора/підйомника — вузький, з переносом рядків,
+   щоб довге "Спецпідйомник (забезпечує часткову доступність)" не вилазило за межі екрана */
+.icon-info-toast {
+  white-space: normal;
+  width: 132px;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.dev-mode-toast.dev-mode-toast-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pos-edited-mark.label-pencil {
+  right: auto;
+  left: 100%;
+  margin-left: 0px;
+}
+.pos-edited-mark.label-pencil svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* ══ ФОРМА ПОВІДОМЛЕННЯ ПРО ПОМИЛКУ ══ */
+.bug-report-container {
+  margin: 16px 16px 8px; 
+  text-align: center;
+}
+
+.bug-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 8px;
+  opacity: 0.6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bug-form-wrap {
+  display: none; /* Форма повністю прихована за замовчуванням */
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-card);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  text-align: left;
+  margin-top: 8px;
+}
+
+/* Коли JS прибирає атрибут hidden, форма стає flex-контейнером */
+.bug-form-wrap:not([hidden]) {
+  display: flex;
+}
+
+/* Наше поле з фірмовим сірим фоном */
+.bug-textarea {
+  width: 100%;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  overflow-y: hidden;
+  transition: border-color 0.2s;
+}
+
+[data-theme="light"] .bug-textarea {
+  background: var(--bg-pill);
+  border-color: rgba(0,0,0,0.1);
+}
+
+.bug-textarea:focus {
+  border-color: var(--text-muted);
+}
+
+.bug-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Робимо кнопки фірмовими */
+.bug-actions button {
+  flex: 1;
+  height: 38px;
+  padding-bottom: 2px;
+  border-radius: 10px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  background: var(--bg-pill);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bug-actions button:active {
+  opacity: 0.6;
+}
+
+.bug-actions .confirm-btn-save {
+  border-left: 3px solid var(--line-green);
+  border-right: 3px solid var(--line-green);
+}
+
+.bug-actions .confirm-btn-neutral {
+  border-left: 3px solid var(--text-muted);
+  border-right: 3px solid var(--text-muted);
+}
+
+.bug-result-msg {
+  font-size: var(--fs-sm);
+  text-align: center;
+  min-height: 0;
+}
+
+/* HEATMAP: visited station hatch overlays */
+#mapInner .ci-visited-hatch-overlay,
+#mapInner .ci-visited-hatch-overlay * {
+  pointer-events: none !important;
+}
+
+#mapInner .ci-visited-hatch-geometry {
+  fill: #000 !important;
+  stroke: none !important;
+  opacity: 0 !important;
+}
+
+.ci-visited-hatch-line {
+  fill: none;
+  stroke-linecap: butt;
+}
+
+.ci-hatch-full .ci-visited-hatch-line {
+  stroke: var(--hatch-color);
+  stroke-opacity: 0.28;
+}
+
+.ci-hatch-partial .ci-visited-hatch-line {
+  stroke: var(--hatch-color);
+  stroke-opacity: 0.12;
+}
+
+.ci-line-rings-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  padding: 12px 16px 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.ci-line-ring-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 96px;
+  background: none;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.ci-line-ring-card:active,
+.ci-line-ring-card.ci-ring-active {
+  background: var(--bg-card);
+}
+.ci-ring-svg {
+  display: block;
+  overflow: visible;
+}
+.ci-ring-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+}
+.ci-ring-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.ci-line-detail {
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 4px;
+}
+.ci-line-detail-empty {
+  padding: 12px 16px;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.ci-detail-dates {
+  font-size: 10px;
+  opacity: 0.65;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.settings-row.row-disabled {
+  opacity: 0.6;
+  filter: grayscale(0.6);
+  transition: opacity 0.3s ease;
+}
+
+.settings-row.row-disabled .ios-toggle {
+  pointer-events: none;
+}
+
+#checkinLockToast {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  pointer-events: none;
+}
+
+.station-checked-in {
+  filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 0.9)) 
+          drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.6)) !important;
+          
+    font-weight: 600; 
+}
+
+/* ── Settings: card headers ── */
+.settings-card-header {
+  padding: 12px 16px 4px;
+  font-size: 0.78rem;
+  font-variant: small-caps;
+  letter-spacing: 0.07em;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ── Settings: segmented control ── */
+.settings-seg {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-input, rgba(120,120,128,0.16));
+  border-radius: 9px;
+  padding: 2px;
+}
+
+.settings-seg-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 4px 8px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  white-space: nowrap;
+}
+
+.settings-seg-btn.is-active {
+  background: var(--bg-card, #3a3a3c);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+/* ── Settings: header-row (заголовок + тумблер в одному рядку) ── */
+.settings-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 6px;
+}
+
+.settings-card-header-row .settings-card-header {
+  padding: 0;
+}
+
+/* ── Settings: мітка «Очистити» перед кнопками ── */
+.settings-actions-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-right: 2px;
+  white-space: nowrap;
+}
+
+.clear-data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.clear-data-chevron {
+  color: var(--text-muted);
+  opacity: 0.6;
+  font-size: 14px;
+  transition: transform 0.22s ease;
+  display: inline-block;
+  line-height: 1;
+}
+.clear-data-chevron.open { transform: rotate(180deg); }
+.clear-data-dropdown {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+.clear-data-dropdown.open { max-height: 200px; }
+.clear-data-separator {
+  height: 0.5px;
+  background: var(--border);
+  margin: 0 16px;
+}
+.clear-data-item {
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  -webkit-tap-highlight-color: transparent;
+  background: var(--bg-sheet); /* 🛠️ ВИПРАВЛЕНО: замість #2c2c2e використовуємо динамічну змінну */
+  transition: opacity 0.15s;
+}
+.clear-data-item:last-child { border-bottom: none; }
+.clear-data-item:active { opacity: 0.6; }
+/* Порожня категорія: тап лишається активним, щоб показати «… немає» */
+.clear-data-item.is-empty { opacity: 0.4; }
+.clear-data-item.is-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ── СТИЛІ ДЛЯ ПІДПИСІВ (СУБЛЕЙБЛІВ) ── */
+.settings-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  padding-right: 6px; /* Відступ від тумблера */
+}
+
+.settings-sublabel {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.75;
+  line-height: 1.3;
+  text-transform: none;
+  font-weight: normal;
+  text-align: left !important;
+}
+
+/* ── ВЕРТИКАЛЬНЕ ЦЕНТРУВАННЯ ЗАГОЛОВКІВ (Вигляд, Check-in, Дані) ── */
+.settings-card-header {
+  padding: 14px 16px; /* Симетричні відступи зверху і знизу */
+  line-height: 1;
+}
+
+.settings-card-header-row {
+  padding: 14px 16px; /* Щоб Check-in збігався з іншими */
+}
+
+/* ── ВЕРТИКАЛЬНИЙ РОЗДІЛЮВАЧ (Зберегти | Відновити) ── */
+.settings-divider-v {
+  width: 1px; /* Точно як горизонтальна лінія .settings-rule */
+  height: 16px;
+  background: var(--border);
+  flex-shrink: 0;
+}

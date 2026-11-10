@@ -1,0 +1,132 @@
+/* Картка підтримки (донат), додавання станції з порожнього Вибраного */
+
+/* ══ КАРТКА ПІДТРИМКИ: СУМА ДОНАТУ Й СПОВІЩЕННЯ ══ */
+.about-donate-ask {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 0;
+}
+.about-support-card .about-donate-ask-text {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.about-support-notices {
+  width: 100%;
+  border-top: 0.5px solid var(--border);
+  padding-top: 8px;
+}
+.about-support-card .about-support-notices p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.about-support-notices p + p { margin-top: 4px; }
+.about-support-notices strong { font-weight: var(--fw-medium); color: var(--text); }
+.about-donate-ask[hidden],
+.about-support-notices[hidden] { display: none; }
+
+/* Підказка з кнопками (Вибране: «Під час запуску: вибране») */
+.onboarding-hint-actions {
+  flex-wrap: wrap;
+  max-height: 240px;
+  margin: 0 0 12px;
+}
+.onboarding-hint-actions .hint-icon-wrap { top: 13px; }
+.onboarding-hint-actions .exit-replace-btns { flex-basis: 100%; }
+.onboarding-hint-actions .exit-replace-btn { height: 34px; font-size: var(--fs-sm); }
+.about-tour-btn { display: block; margin: 4px auto 12px; }
+
+/* ══ ДОДАВАННЯ СТАНЦІЇ З ПОРОЖНЬОГО ВИБРАНОГО ══ */
+.fav-add-search {
+  margin: -16px 0 32px;
+  text-align: left;
+}
+.fav-empty-state.fav-adding {
+  padding-top: 8px;
+}
+.fav-empty-state.fav-adding .fav-add-search { margin: 0; }
+.fav-empty-state.fav-adding .fav-empty-explain { display: none; }
+.fav-add-results { margin-top: 4px; }
+.fav-add-station {
+  padding: 4px 16px 24px;
+}
+.fav-add-head {
+  padding: 8px 0 12px;
+  border-bottom: none;
+  cursor: default;
+  color: var(--text);
+}
+.fav-add-head:active { background: none; }
+.fav-add-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+.fav-add-btns { margin-bottom: 20px; }
+.fav-add-btns .exit-replace-btn {
+  height: 38px;
+  font-size: var(--fs-sm);
+}
+.fav-add-dirs .fav-tap-target { cursor: pointer; }
+
+
+/* Рядки степерів виправлення «−1» (основні / другі / треті двері) */
+.dev-confirm-fix-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dev-confirm-fix-rows .fb-add-doors-row {
+  display: flex;
+  justify-content: center;
+}
+
+/* Тимчасово недоступна станція на карті (mapInteraction.js → updateClosedStationsOnMap) */
+#mapInner .map-station-closed { fill: #6e6e73 !important; }
+[data-theme="light"] #mapInner .map-station-closed { fill: #b4b4b8 !important; }
+#mapInner path[aria-label].map-station-closed { opacity: 0.45; }
+
+/* ── Поточне місцезнаходження в полі пошуку ── */
+.search-input-wrap { position: relative; }
+.search-input.has-locate { padding-right: 48px; }
+.search-locate-btn {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  width: 48px;
+  height: calc(100% - 12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.search-locate-btn[hidden] { display: none; }
+.search-locate-btn:active { opacity: 0.6; }
+.search-locate-btn.is-busy svg { animation: search-locate-pulse 1s ease-in-out infinite; }
+@keyframes search-locate-pulse {
+  50% { opacity: 0.3; }
+}
+
+/* Довгі повідомлення (жарти геолокації) переносяться, а не вилазять за екран */
+.app-toast {
+  white-space: normal;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+}
+
+/* Меню розробника: «Внесено за OSM» */
+.dev-osm-exits { display: flex; flex-direction: column; gap: 6px; }
+.dev-osm-exits .dev-menu-row-station { margin-bottom: 2px; }

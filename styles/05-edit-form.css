@@ -1,0 +1,587 @@
+/* Меню «три крапки», форма «Запропонувати зміни»: dropdown, пілюлі, степер, кнопки, додавання виходу */
+
+/* ══ MENU BUTTON — три крапки ══ */
+.menu-btn {
+  font-size: 26px;
+  color: var(--icon-color);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  letter-spacing: 0;
+  
+  /* Прибираємо фон і тінь (обводку) в усіх темах */
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Легкий ефект при натисканні, щоб кнопка відчувалась живою */
+.menu-btn:active {
+  opacity: 0.6;
+}
+
+
+
+/* ══ DROPDOWN — тільки іконки ══ */
+
+.drop-item-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px 16px;
+  width: 100%;
+}
+
+.drop-item-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  color: var(--icon-color);
+}
+
+/* ══ FEEDBACK FORM ══ */
+
+
+/* ══ КАСТОМНИЙ DROPDOWN для Android ══ */
+.fb-custom-select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 0;
+  font-size: var(--fs-md);
+  font-family: inherit;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  position: relative;
+}
+.fb-custom-select span:first-child {
+  grid-column: 2;
+  text-align: center;
+}
+.fb-dropdown {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  overflow-y: auto;
+  max-height: 55vh;
+  margin-bottom: 4px;
+}
+.fb-dropdown-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-family: inherit;
+  padding: 11px 14px;
+  text-align: center;
+  cursor: pointer;
+}
+.fb-dropdown-item:last-child { border-bottom: none; }
+.fb-dropdown-item:active { background: var(--bg-sheet); }
+.fb-dropdown-item.fb-dropdown-selected { font-weight: var(--fw-semi); }
+.fb-pos-row {
+  background: var(--bg-card);
+  border-radius: 12px;
+  /*ЗГОРИ | СПРАВА | ЗНИЗУ | ЗЛІВА */
+  padding: 11px 12px 16px 12px; 
+  margin-bottom: 10px;
+  margin-top: 0;
+}
+
+.fb-pos-inputs {
+  grid-column: 2;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+
+/* ══ ПІЛЮЛІ У ФОРМІ ЗМІН (стилізовані під основні) ══ */
+.fb-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-pill);
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-width: 80px;
+}
+.fb-input-label { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 2px; }
+
+/* ══ Кнопка "Обрати іншу станцію" (Стиль пілюлі) ══ */
+.fb-change-station-btn {
+  display: block;
+  margin: 0 auto 16px auto;
+  padding: 5px 18px 7px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.fb-change-station-btn:active {
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+/* КНОПКА ТА ПОВІДОМЛЕННЯ (Без змін) */
+.fb-send-btn { width: 100%; margin: 16px 0 8px; padding: 12px 13px 14px; background: var(--bg-card); color: var(--text); border: 0.5px solid var(--border); border-radius: 12px; font-size: var(--fs-md); font-weight: var(--fw-semi); cursor: pointer; }
+.fb-send-btn:disabled { 
+  opacity: 0.4; 
+  cursor: default; 
+  pointer-events: none; /* Забороняє будь-які кліки на рівні браузера */
+}
+.fb-send-btn:not(:disabled):active { opacity: 0.7; }
+.fb-note { font-size: var(--fs-md); color: var(--text-muted); text-align: center; padding: 12px 0; margin: 0; }
+.fb-success { color: var(--line-green); }
+
+/* ══ STEPPER (Оновлений для пілюль) ══ */
+.fb-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+}
+.fb-step {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 36px; /* у 1,5 раза більші за цифру (--fs-xl) */
+  line-height: 1;
+  width: 32px; height: 32px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.fb-step:active { opacity: 0.6; background: transparent; }
+/* Світла тема: «−»/«+» сірі, щоб відрізнялися від цифри (темна тема без змін) */
+[data-theme="light"] .fb-step { color: var(--dev-icon); }
+.fb-step-val {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semi);
+  color: var(--text-muted);
+  min-width: 28px;
+  text-align: center;
+  user-select: none;
+}
+
+.fb-edited-mark {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+
+
+.fb-reset-btn {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 12px 0 4px;
+  text-align: center;
+  opacity: 0.6;
+}
+.fb-reset-btn:active { opacity: 1; }
+
+
+.global-confirm-overlay {
+  position: fixed;
+  inset: 0;
+z-index: var(--z-global-modal);
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+
+
+
+.global-confirm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 24px; 
+  background: var(--bg-card);
+  border-radius: 14px; 
+  width: auto;
+  min-width: 280px;
+  max-width: 320px;
+  animation: popUpBottom 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.global-confirm-text {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium); 
+  text-align: center;
+  margin-bottom: 14px;
+color: var(--text-muted);
+}
+
+.global-confirm-btns-main {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.confirm-main-btn {
+  padding: 0 32px 2px;
+  min-width: 120px;
+  height: 38px;
+  border-radius: 10px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  background: var(--bg-pill);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  white-space: nowrap;
+  border: none;
+}
+
+.confirm-btn-save {
+  border-left: 3px solid var(--line-green);
+  border-right: 3px solid var(--line-green);
+}
+
+.confirm-btn-discard {
+  border-left: 3px solid var(--line-red);
+  border-right: 3px solid var(--line-red);
+}
+
+.confirm-text-btn {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal); 
+  cursor: pointer;
+  padding: 6px;
+  font-family: inherit;
+  opacity: 0.6;
+}
+
+.fb-closed-note-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  margin: 12px 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.fb-closed-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-sheet);
+  border-radius: 12px;
+  width: 226px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+  line-height: 1.2;
+  font-weight: var(--fw-medium);
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.fb-restore-exit {
+  position: relative;
+  background: var(--bg-sheet);
+  border: none;
+  color: var(--text-muted);
+  width: 44px;
+  border-radius: 0 0 12px 12px;
+  margin: -16px auto 0 auto;
+  padding: 14px 0 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  z-index: 1;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fb-restore-exit svg {
+  transition: transform 0.1s, opacity 0.15s;
+  pointer-events: none;
+}
+.fb-restore-exit:active svg {
+  transform: scale(0.85);
+  opacity: 0.6;
+}
+
+[data-theme="light"] .fb-closed-note {
+  background: var(--bg-pill); 
+  color: var(--text-muted); /* Текст сірий, як і "Попередня..." */
+}
+[data-theme="light"] .fb-item-inner .fb-restore-exit {
+  background: var(--bg-pill); 
+  color: var(--text);
+}
+
+
+.nav-link,
+.nav-link:link,
+.nav-link:visited,
+.nav-link:hover,
+.nav-link:active,
+.nav-link:focus {
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.fb-dir-label {
+  font-size: var(--fs-sm);
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+  padding: 0;
+  display: block;
+}
+.fb-exit-label {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* ══ ФІНАЛЬНИЙ БЛОК: ШТРИХОВКА, ПОВЗУНОК ТА ВІДСТУПИ ══ */
+
+/* 5. Двоколірний повзунок для вікна "Про додаток" */
+.about-station-sheet .sheet-handle {
+background: linear-gradient(to right, var(--line-blue) 50%, var(--line-green) 50%);
+}
+
+
+
+/* =========================================
+   ІНДИВІДУАЛЬНІ ВІДСТУПИ ДЛЯ КОЖНОГО ВІКНА
+   ========================================= */
+
+/* --- 1. ВІКНО "ЗАПРОПОНУВАТИ ЗМІНИ" --- */
+#feedbackSheet .sheet-handle-bar {
+  padding-bottom: 1px;
+}
+
+
+
+
+/* ══ ЗАБОРОНА ВИДІЛЕННЯ ТЕКСТУ ══ */
+body, .station-sheet, .sheet-body, .about-content, .drop-menu, .sheet-handle-bar {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Дозволяємо виділення тільки в полях вводу */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Заборона zoom при подвійному тапі на зображення */
+img {
+  -webkit-touch-callout: none;
+  touch-action: pan-x pan-y;
+}
+
+/* Заборона zoom по всьому body */
+html {
+  touch-action: pan-x pan-y;
+}
+
+
+/* ══ ФІКСОВАНА КНОПКА У ФОРМІ ЗМІН ══ */
+.fb-footer-sticky {
+  position: sticky;
+  bottom: -32px;
+  padding: 12px 16px 32px;
+  margin: 0 -16px -32px;
+  z-index: var(--z-fb-sticky);
+  border-top: 1px solid var(--border);
+  background-color: var(--bg-sheet); /* Базовий фон */
+}
+
+
+
+.fb-footer-sticky .fb-send-btn {
+  margin: 0 0 8px 0;
+}
+/* ══ ПЛАВАЮЧЕ ВІКНО ПІДТВЕРДЖЕННЯ ЗМІН ══ */
+
+
+@keyframes popUpBottom {
+  from { transform: translateY(150%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+
+
+/* ══ Task 1: Спінер в кнопці "Надсилаємо" ══ */
+@keyframes fb-spin {
+  to { transform: rotate(360deg); }
+}
+.fb-send-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--text-muted);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: fb-spin 0.7s linear infinite;
+  opacity: 0.6;
+}
+
+/* ══ Task 5: Кнопка "Додати вихід" (технічні підвалини, поки прихована) ══ */
+.fb-add-exit-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+.fb-add-exit-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 6px 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fb-add-exit-btn:active { opacity: 1; }
+/* Прихований вестибюль, доданий через меню правок */
+.fb-vestibule-note {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin: 8px 0 2px;
+}
+/* 1. Оновлена обгортка пілюль */
+.fb-pos-wrap {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+}
+
+/* Ліва колонка grid — місце для кнопки i (перший елемент групи) */
+.fb-pos-left-slot {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* Контейнер для кнопок праворуч від пілюль */
+.fb-side-actions {
+  position: static;
+  grid-column: 3;
+  justify-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: unset;
+  padding-left: 8px;
+  margin: 0;
+  width: auto;
+  gap: 0;
+}
+
+
+/* Хрестики: закрити вихід / скасувати другі двері */
+.fb-close-exit, .fb-cancel-extra-btn {
+  position: static;
+  background: none;
+  border: none;
+  color: inherit; /* колір задається inline style="color:${fbLineColor}" */
+  font-size: var(--fs-md);
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-top: 0;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  height: auto;
+}
+.fb-close-exit:active, .fb-cancel-extra-btn:active { opacity: 0.6; }
+
+/* 5. Додаткові двері */
+.fb-extra-door-wrap {
+  display: flex; flex-direction: column;
+  margin-top: 2px;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.fb-extra-note {
+  font-size: var(--fs-sm); color: var(--text-muted);
+  text-align: center; line-height: 1.3;
+  padding: 10px 0 6px; margin: 0;
+  opacity: 0.8;
+}
+
+/* 6. Кнопка та попап інфо */
+
+.fb-info-text {
+  font-size: var(--fs-sm); color: var(--text-muted);
+  text-align: center; line-height: 1.4;
+  background: rgba(255,255,255,0.03);
+  padding: 12px; border-radius: 8px; margin-top: 8px;
+}
