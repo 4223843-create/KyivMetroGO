@@ -54,6 +54,7 @@ export const STORAGE_KEYS = {
   LOGO_EGG_CYCLE: 'metro_logo_egg_cycle',
   CHECKIN_HATCH:  'metro_checkin_hatch',
   VESTIBULE_REPORTS:   'metro_vestibule_reports',   // листи розробнику «вестибюль працює», що чекають відправки
+  FEEDBACK_OUTBOX:     'metro_feedback_outbox',     // правки станцій, що не пішли через відсутність мережі
   VESTIBULES_REOPENED: 'metro_vestibules_reopened', // ["slug|exitId"] — закриті вестибюлі, які людина відкрила («повідомити про відновлення роботи»)
   BETA_SIGNUPS:   'metro_beta_signups',   // [{ email, t }] — заявки на ранній доступ
   // Емуляція станів у режимі розробника (features/devEmulation.js)

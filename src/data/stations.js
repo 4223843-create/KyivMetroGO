@@ -7,6 +7,7 @@ import { bus }                from '../core/eventBus.js';
 import { traversePositions } from './positions.js';
 import { validateStationsData, isValidStationsData, stationsVersion } from './validateStations.js';
 import { buildExitSearchIndex } from './exitSearch.js';
+import { appFileUrl }          from '../core/appUrl.js';
 
 // ══ НАТИВНЕ ОНОВЛЕННЯ ДАНИХ СТАНЦІЙ ══════════════════════════
 // SW обробляє stations.json для веб/PWA (спершу локальна копія, мережа у фоні + postMessage).
@@ -42,19 +43,7 @@ const STATION_ALIASES = {
 
 // ══ ДОПОМІЖНІ ФУНКЦІЇ ════════════════════════════════════════
 
-function getAppBaseHref() {
-  const { origin, pathname } = window.location;
-  const normalizedPath = pathname.endsWith('/')
-    ? pathname
-    : pathname.split('/').pop()?.includes('.')
-      ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
-      : `${pathname}/`;
-  return new URL(normalizedPath, origin);
-}
-
-function getStationsUrl() {
-  return new URL('stations.json', getAppBaseHref());
-}
+const getStationsUrl = () => appFileUrl('stations.json');
 
 // ══ ПУБЛІЧНІ ХЕЛПЕРИ ══════════════════════════════════════════
 

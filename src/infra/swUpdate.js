@@ -1,48 +1,41 @@
 // ══ TOAST «НОВА ВЕРСІЯ ДОСТУПНА» ══
 
-export function showUpdateToast() {
-  if (document.getElementById('swUpdateToast')) return;
+/**
+ * Тост «щось оновилось» з кнопкою перезавантаження і ✕.
+ * Один і той самий для нової збірки і для нових даних станцій.
+ */
+function _showReloadToast(id, text, buttonText) {
+  if (document.getElementById(id)) return;
 
   const toast = document.createElement('div');
-  toast.id        = 'swUpdateToast';
+  toast.id        = id;
   toast.className = 'sw-update-toast';
   toast.innerHTML = `
-    <span class="sw-update-text">Доступна нова версія</span>
-    <button class="sw-update-btn"     id="swUpdateBtn">Оновити</button>
-    <button class="sw-update-dismiss" id="swUpdateDismiss" aria-label="Закрити">✕</button>`;
+    <span class="sw-update-text"></span>
+    <button class="sw-update-btn"></button>
+    <button class="sw-update-dismiss" aria-label="Закрити">✕</button>`;
+  toast.querySelector('.sw-update-text').textContent = text;
+  toast.querySelector('.sw-update-btn').textContent  = buttonText;
   document.body.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('sw-toast-visible'));
 
-  document.getElementById('swUpdateBtn').addEventListener('click', () => location.reload());
-  document.getElementById('swUpdateDismiss').addEventListener('click', () => {
+  toast.querySelector('.sw-update-btn').addEventListener('click', () => location.reload());
+  toast.querySelector('.sw-update-dismiss').addEventListener('click', () => {
     toast.classList.remove('sw-toast-visible');
     setTimeout(() => toast.remove(), 300);
   });
 }
 
+export function showUpdateToast() {
+  _showReloadToast('swUpdateToast', 'Доступна нова версія', 'Оновити');
+}
+
 // ── Тост для оновлення даних станцій ──────────────────────────
-// Показується коли SW виявляє нову версію stations.json у мережі.
+// Показується коли SW (або на Android — data/stations.js) знаходить нову версію stations.json.
 function showDataUpdateToast(version) {
-  const existingId = 'swDataUpdateToast';
-  if (document.getElementById(existingId)) return;
-
-  const toast = document.createElement('div');
-  toast.id        = existingId;
-  toast.className = 'sw-update-toast';
-  const m         = /^(\d{4})(\d{2})(\d{2})$/.exec(version ?? '');
-  const verLabel  = m ? ` від ${m[3]}.${m[2]}.${m[1]}` : '';
-  toast.innerHTML = `
-    <span class="sw-update-text">Оновлено дані станцій${verLabel}</span>
-    <button class="sw-update-btn"     id="swDataUpdateBtn">Перезавантажити</button>
-    <button class="sw-update-dismiss" id="swDataUpdateDismiss" aria-label="Закрити">✕</button>`;
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('sw-toast-visible'));
-
-  document.getElementById('swDataUpdateBtn').addEventListener('click', () => location.reload());
-  document.getElementById('swDataUpdateDismiss').addEventListener('click', () => {
-    toast.classList.remove('sw-toast-visible');
-    setTimeout(() => toast.remove(), 300);
-  });
+  const m        = /^(\d{4})(\d{2})(\d{2})$/.exec(version ?? '');
+  const verLabel = m ? ` від ${m[3]}.${m[2]}.${m[1]}` : '';
+  _showReloadToast('swDataUpdateToast', `Оновлено дані станцій${verLabel}`, 'Перезавантажити');
 }
 
 if ('serviceWorker' in navigator) {

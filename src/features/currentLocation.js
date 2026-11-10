@@ -16,6 +16,7 @@
 import { getPref } from '../core/prefs.js';
 import { showToast } from '../ui/toast.js';
 import { isDevMode } from './devFlags.js';
+import { appFileUrl } from '../core/appUrl.js';
 
 // Як xy() у scripts/build-addresses.py
 const LAT0 = 50.45;
@@ -54,11 +55,7 @@ const EMU = {
 let _geo     = null;     // { streets, xs: Int32Array, ys, si: Int32Array, house: string[] }
 let _loading = null;
 
-function _url() {
-  const { origin, pathname } = window.location;
-  const dir = pathname.endsWith('/') ? pathname : pathname.slice(0, pathname.lastIndexOf('/') + 1);
-  return new URL('addresses-geo.json', origin + dir);
-}
+const _url = () => appFileUrl('addresses-geo.json');
 
 function _loadGeo() {
   if (_geo) return Promise.resolve(_geo);
