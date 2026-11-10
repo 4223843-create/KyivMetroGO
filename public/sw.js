@@ -4,6 +4,12 @@ import { isValidStationsData, stationsVersion } from '../src/data/validateStatio
 const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'dev';
 const CACHE_NAME = `kyivmetro-${BUILD_DATE}`;
 
+// Великі файли, без яких застосунок запускається: пошук адрес офлайн.
+// Їх не кладемо в атомарний cache.addAll() — на слабкій мережі один обрив на
+// 1,6 МБ addresses.json зривав би встановлення, і офлайн не працював би взагалі.
+// Докешовуються окремо після активації; до того пошук адрес бере їх із мережі.
+const DEFERRED_ASSETS = ['./addresses.json'].map(url => new URL(url, self.location).href);
+
 // Унікальні за повною адресою: cache.addAll() відхиляє весь список, якщо
 // в ньому є дублікати (а index.html вже є в __WB_MANIFEST) — тоді SW не встановлюється.
 const PRECACHE_ASSETS = [...new Set(
@@ -16,7 +22,12 @@ const PRECACHE_ASSETS = [...new Set(
       './ProbaNav2-Medium.woff2',
     ])
     .map(url => new URL(url, self.location).href),
-)];
+)].filter(url => !DEFERRED_ASSETS.includes(url));
+
+// Скільки попередніх збірок тримати. Сторінка, відкрита до оновлення, ще може
+// попросити лінивий шматок старої збірки (assets/web.<hash>.js) — він знайдеться
+// в кеші попередньої версії. Старші за неї видаляються.
+const KEEP_PREVIOUS_CACHES = 1;
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -27,11 +38,36 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)),
-    )).then(() => self.clients.claim()),
+    pruneOldCaches()
+      .then(() => self.clients.claim())
+      .then(() => cacheDeferredAssets()),
   );
 });
+
+/** Лишає поточний кеш і KEEP_PREVIOUS_CACHES найновіших попередніх збірок. */
+async function pruneOldCaches() {
+  const builds = (await caches.keys())
+    .filter(key => key !== CACHE_NAME && /^kyivmetro-/.test(key))
+    .sort((a, b) => (Number(b.split('-')[1]) || 0) - (Number(a.split('-')[1]) || 0));
+  await Promise.all(builds.slice(KEEP_PREVIOUS_CACHES).map(key => caches.delete(key)));
+}
+
+/** Докешовує великі файли по одному; помилка не заважає роботі (спробуємо при використанні). */
+async function cacheDeferredAssets() {
+  const cache = await caches.open(CACHE_NAME);
+  for (const url of DEFERRED_ASSETS) {
+    try {
+      if (await cache.match(url, { ignoreVary: true })) continue;
+      // no-cache: якщо файл не змінився, сервер відповість коротким 304 з HTTP-кешу
+      const previous = await caches.match(url, { ignoreVary: true });
+      const fresh = await fetch(url, { cache: 'no-cache' });
+      if (!fresh.ok) { if (previous) await cache.put(url, previous); continue; }
+      await cache.put(url, fresh);
+    } catch {
+      // Немає мережі — файл закешується, коли його вперше запитає пошук.
+    }
+  }
+}
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
@@ -48,8 +84,31 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Файли збірки з хешем у назві незмінні: з кешу без перевірки мережі.
+  if (HASHED_ASSET_RE.test(url.pathname)) {
+    event.respondWith(cacheFirst(event.request));
+    return;
+  }
+
   event.respondWith(staleWhileRevalidate(event.request));
 });
+
+// assets/index.Bx3k9_aZ.js, assets/styles.C1d2e3f4.css — Vite додає хеш до кожного файлу збірки.
+const HASHED_ASSET_RE = /\/assets\/[^/]+\.[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/;
+
+async function cacheFirst(request) {
+  // Шукаємо в усіх кешах: сторінка старої збірки може просити свій файл,
+  // що лишився в кеші попередньої версії.
+  const cached = await caches.match(request, { ignoreVary: true });
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) (await caches.open(CACHE_NAME)).put(request, response.clone());
+    return response;
+  } catch {
+    return new Response('Офлайн', { status: 503 });
+  }
+}
 
 // stations.json — спершу локальна копія: якщо вона є, віддаємо одразу, а мережу
 // перевіряємо у фоні. Нова версія застосується після тосту «Перезавантажити»
