@@ -5,7 +5,7 @@ import { LINE_COLOR }          from '../core/constants.js';
 import { Icons }               from '../ui/icons.js';
 import { getPref }             from '../core/prefs.js';
 import { appNow }              from '../core/clock.js';
-import { richText } from '../ui/html.js';
+import { escapeHtml, richText } from '../ui/html.js';
 import { isVestibuleClosed, isVestibuleReopened,
          isStationClosed, isStationReopened, stationColor } from '../domain/vestibules.js';
 
@@ -74,10 +74,11 @@ function routeGroups(routes, oneWay = {}) {
     .map(([key, icon, title]) =>
       `<span class="exit-routes-group" data-kind-label="${title}" aria-label="${title}"><span class="exit-routes-icon">${icon}</span>` +
       routes[key].map(r => {
-        if (!oneWay[key] || !(r in oneWay[key])) return `<span class="exit-route-chip">${r}</span>`;
+        // Номери маршрутів — з міського ГІС, тож екрануємо, як і назви зупинок
+        if (!oneWay[key] || !(r in oneWay[key])) return `<span class="exit-route-chip">${escapeHtml(r)}</span>`;
         const d = oneWay[key][r];
         const where = Number.isFinite(d) ? ` (${roundMeters(d)} м)` : '';
-        return `<span class="exit-route-chip exit-route-chip--oneway" data-oneway-label="лише в один бік${where}">${r}</span>`;
+        return `<span class="exit-route-chip exit-route-chip--oneway" data-oneway-label="лише в один бік${where}">${escapeHtml(r)}</span>`;
       }).join('') +
       `</span>`
     );
