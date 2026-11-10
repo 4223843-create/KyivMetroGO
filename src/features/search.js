@@ -12,7 +12,7 @@ import { showSheet, hideSheet } from '../ui/sheetNav.js';
 import { initKinematicSwipe } from '../ui/swipe.js';
 import { bus }                from '../core/eventBus.js';
 import { lineTextColor } from '../ui/components.js';
-import { richText } from '../ui/html.js';
+import { escapeHtml, richText } from '../ui/html.js';
 import { addressResultsHtml } from './addressSearch.js';
 import { queryWordsForExits, matchExitSearch, exitHintText } from '../data/exitSearch.js';
 import { stationColor } from '../domain/vestibules.js';
@@ -190,7 +190,7 @@ export function stationItemHtml(s, isExitOnly = false, exitHint = null) {
     : '';
   return `<div class="search-item" data-slug="${s.slug}">
     <div class="search-item-line" style="background-color:${color}"></div>
-    <div class="search-item-text"><span>${s.name}</span>${hintHtml}</div>
+    <div class="search-item-text"><span>${escapeHtml(s.name)}</span>${hintHtml}</div>
   </div>`;
 }
 

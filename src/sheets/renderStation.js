@@ -148,7 +148,7 @@ function connectionPills(label, conn) {
     pills.push(['exits', `виходи&nbsp;${exits.slice(0, -1).join(', ')} і&nbsp;${exits.at(-1)}`]);
   }
   if (Number.isFinite(conn?.distance_m)) pills.push(['dist', fmtWalk(conn.distance_m)]);
-  const note = conn?.note ? ` data-note="${conn.note.replace(/"/g, '&quot;')}"` : '';
+  const note = conn?.note ? ` data-note="${escapeHtml(conn.note)}"` : '';
   const html = pills.map(([col, t]) => `<span class="station-connection station-connection-${col}">${t}</span>`).join('');
   return `<div class="station-connection-row"${note}>${html}</div>`;
 }
@@ -161,7 +161,7 @@ export function renderStationConnections(s) {
   const items = [];
   if (c.city_train) items.push(connectionPills('🚆 Кільцева електричка', c.city_train));
   if (c.funicular)  items.push(connectionPills('🚡 Фунікулер', c.funicular));
-  for (const hub of c.hubs ?? []) items.push(connectionPills(`${HUB_ICON[hub.kind] ?? ''} ${hub.name}`, hub));
+  for (const hub of c.hubs ?? []) items.push(connectionPills(`${HUB_ICON[hub.kind] ?? ''} ${escapeHtml(hub.name)}`, hub));
   if (!items.length) return '';
   const grid = `<div class="station-connections">${items.join('')}</div>`;
   if (items.length === 1) return grid;
@@ -337,9 +337,9 @@ function generatePills(wStr, dStr, color) {
 
 function favTargetHtml(wStr, dStr, color, posId) {
   return `<div class="fav-tap-target"
-               data-pos="${posId ?? ''}"
-               data-wagon="${wStr}"
-               data-doors="${dStr}"
+               data-pos="${escapeHtml(posId)}"
+               data-wagon="${escapeHtml(wStr)}"
+               data-doors="${escapeHtml(dStr)}"
                style="display:flex;gap:6px;align-items:center;">
     ${generatePills(wStr, dStr, color)}
   </div>`;

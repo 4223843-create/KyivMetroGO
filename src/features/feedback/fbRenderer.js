@@ -8,7 +8,7 @@ import { hasLocalEdits }                          from '../../data/localEdits.js
 import { fbState, initFeedbackState }             from './fbState.js';
 import { Icons }                                  from '../../ui/icons.js';
 import { LINE_COLOR, STATIONS_WITH_POTENTIAL_EXITS } from '../../core/constants.js';
-import { richText } from '../../ui/html.js';
+import { escapeHtml, richText } from '../../ui/html.js';
 import { lineTextColor } from '../../ui/components.js';
 import { hiddenVestibules, vestibuleExitsText } from '../../domain/vestibules.js';
 
@@ -267,7 +267,7 @@ export function stationListHtml(activeLine, activeSlug = '') {
       const active = st.slug === activeSlug ? ' fb-station-active' : '';
       return `<div class="search-item fb-station-item${active}" data-slug="${st.slug}">
         <div class="search-item-line" style="background-color:${color}"></div>
-        <div>${st.name}</div>
+        <div>${escapeHtml(st.name)}</div>
       </div>`;
     })
     .join('');

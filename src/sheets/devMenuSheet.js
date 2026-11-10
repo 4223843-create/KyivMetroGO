@@ -197,7 +197,7 @@ function _renderVerificationSection(container) {
     <div class="search-item dev-menu-verify-item" data-slug="${slug}">
       <div class="search-item-line" style="background-color:${color}"></div>
       <div class="search-item-text">
-        <div>${station.name}</div>
+        <div>${escapeHtml(station.name)}</div>
         <div class="search-item-hint">${count} ${count === 1 ? 'вихід' : 'виходів'}</div>
       </div>
     </div>`).join('');
@@ -512,7 +512,7 @@ function _exitStationRowHtml(slug, station, color, status, total, count) {
       <span class="dev-exits-check" style="color:${cycleColor}; opacity:${cycleOpacity}">${DEV_CHECK_SVG}</span>
     </button>
     <div class="dev-exits-row-center">
-      <span class="dev-exits-row-name">${station.name}</span>
+      <span class="dev-exits-row-name">${escapeHtml(station.name)}</span>
       ${counter}
     </div>
     <button type="button" class="dev-exits-full-btn" data-slug="${slug}" data-total="${total}" aria-label="Позначити як повністю перевірені">

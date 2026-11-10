@@ -21,6 +21,7 @@ import { Icons }              from '../../ui/icons.js';
 import { LINE_COLOR }         from '../../core/constants.js';
 import { initKinematicSwipe } from '../../ui/swipe.js';
 import { showSheet, hideSheet } from '../../ui/sheetNav.js';
+import { escapeHtml } from '../../ui/html.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 import {
@@ -321,7 +322,7 @@ export function openCheckinSheet() {
             const color = lineTextColor(LINE_COLOR[s.line] || 'var(--text-muted)');
             return `<button class="checkin-station-card" data-slug="${s.slug}" style="--ci-accent:${color}">
               <div class="checkin-card-top">
-                <span class="checkin-station-name-text">${s.name}</span>
+                <span class="checkin-station-name-text">${escapeHtml(s.name)}</span>
                 ${byExits ? `<span class="checkin-count-badge" style="${badgeStyle}">${s.total - s.unvisitedCount} / ${s.total}</span>` : ''}
               </div>
             </button>`;
@@ -355,7 +356,7 @@ export function openCheckinSheet() {
 
             return `<button class="checkin-station-card" data-slug="${slug}" style="--ci-accent:${color}">
               <div class="checkin-card-top">
-                <span class="checkin-station-name-text">${st?.name || slug}</span>
+                <span class="checkin-station-name-text">${escapeHtml(st?.name || slug)}</span>
                 <span class="checkin-time">${formatCheckinTime(lastTs)}</span>
               </div>
               ${byExits ? `<div class="checkin-card-bottom" style="margin-top:4px;">

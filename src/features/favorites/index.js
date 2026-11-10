@@ -131,7 +131,7 @@ function _showAddStation(slug) {
     <div class="fav-add-station" data-slug="${slug}">
       <div class="search-item fav-add-head">
         <div class="search-item-line" style="background-color:${lineTextColor(color)}"></div>
-        <div class="search-item-text"><span>${s.name}</span></div>
+        <div class="search-item-text"><span>${escapeHtml(s.name)}</span></div>
       </div>
       <p class="fav-add-hint">Натисніть на вагон і двері біля потрібного виходу або&nbsp;додайте всю станцію</p>
       <div class="exit-replace-btns fav-add-btns">
