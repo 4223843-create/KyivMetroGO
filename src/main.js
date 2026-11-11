@@ -15,6 +15,8 @@ import { registerServiceWorker }          from './infra/serviceWorker.js';
 import { initOfflineBanner }              from './infra/offline.js';
 import { initUpdateToasts }               from './infra/swUpdate.js';
 import { initResumeUpdates }              from './infra/resumeUpdates.js';
+import { initMapGestures }                from './map/mapGestures.js';
+import { initMapInteraction }             from './map/mapInteraction.js';
 import { updateDevMenuButtonVisibility, runEmulationStartup } from './features/devHooks.js';
 import { maybeStartTour }                 from './features/tour.js';
 import { initVestibuleReports }           from './domain/vestibules.js';
@@ -25,8 +27,6 @@ import { state, startupSlug }             from './core/state.js';
 import { bus }                            from './core/eventBus.js';
 
 // Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
-import './map/mapGestures.js';
-import './map/mapInteraction.js';
 import './features/feedback/index.js';
 import './features/checkin/index.js';
 import './features/favorites/index.js';
@@ -40,6 +40,8 @@ import './app.js';
 initOfflineBanner();
 initUpdateToasts();
 initResumeUpdates();
+initMapGestures();
+initMapInteraction();
 
 /** Гарантовано приховує заставку — викликається з обробників помилок. */
 function releaseStartupLoader() {
