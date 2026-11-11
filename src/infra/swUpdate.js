@@ -1,5 +1,7 @@
 // ══ TOAST «НОВА ВЕРСІЯ ДОСТУПНА» ══
 
+import { bus } from '../core/eventBus.js';
+
 /**
  * Тост «щось оновилось» з кнопкою перезавантаження і ✕.
  * Один і той самий для нової збірки і для нових даних станцій.
@@ -38,39 +40,49 @@ function showDataUpdateToast(version) {
   _showReloadToast('swDataUpdateToast', `Оновлено дані станцій${verLabel}`, 'Перезавантажити');
 }
 
-if ('serviceWorker' in navigator) {
-  // Перше встановлення SW (clients.claim) теж дає controllerchange — тоді це не оновлення.
-  const hadController = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener('controllerchange', async () => {
-    if (!hadController) return;
-    // Сторінка могла вже завантажитися з новою збіркою (перше відкриття, перезавантаження повз кеш),
-    // а новий SW активувався слідом. Якщо наш головний скрипт є в кеші нового SW,
-    // то ми й так на новій версії. Кеш нового SW — kyivmetro-<час збірки> з
-    // найбільшим часом (старий у цей момент ще може існувати).
-    const mainScript = /** @type {HTMLScriptElement|null} */ (document.querySelector('script[type="module"][src]'))?.src;
-    try {
-      const newest = (await caches.keys())
-        .filter(k => /^kyivmetro-\d+$/.test(k))
-        .sort((a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1]))
-        .pop();
-      if (mainScript && newest && await (await caches.open(newest)).match(mainScript)) return;
-    } catch { /* немає доступу до кешу — показуємо тост */ }
-    showUpdateToast();
-  });
+let _started = false;
 
-  // Слухаємо повідомлення від SW — зокрема STATIONS_UPDATED.
-  navigator.serviceWorker.addEventListener('message', event => {
-    try {
-      if (event.data?.type === 'STATIONS_UPDATED') {
-        showDataUpdateToast(event.data.version);
+/**
+ * Тости про нову збірку й нові дані станцій. Викликає main.js один раз,
+ * якомога раніше: повідомлення від SW може прийти ще під час запуску.
+ */
+export function initUpdateToasts() {
+  if (_started) return;
+  _started = true;
+
+  if ('serviceWorker' in navigator) {
+    // Перше встановлення SW (clients.claim) теж дає controllerchange — тоді це не оновлення.
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', async () => {
+      if (!hadController) return;
+      // Сторінка могла вже завантажитися з новою збіркою (перше відкриття, перезавантаження повз кеш),
+      // а новий SW активувався слідом. Якщо наш головний скрипт є в кеші нового SW,
+      // то ми й так на новій версії. Кеш нового SW — kyivmetro-<час збірки> з
+      // найбільшим часом (старий у цей момент ще може існувати).
+      const mainScript = /** @type {HTMLScriptElement|null} */ (document.querySelector('script[type="module"][src]'))?.src;
+      try {
+        const newest = (await caches.keys())
+          .filter(k => /^kyivmetro-\d+$/.test(k))
+          .sort((a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1]))
+          .pop();
+        if (mainScript && newest && await (await caches.open(newest)).match(mainScript)) return;
+      } catch { /* немає доступу до кешу — показуємо тост */ }
+      showUpdateToast();
+    });
+
+    // Слухаємо повідомлення від SW — зокрема STATIONS_UPDATED.
+    navigator.serviceWorker.addEventListener('message', event => {
+      try {
+        if (event.data?.type === 'STATIONS_UPDATED') {
+          showDataUpdateToast(event.data.version);
+        }
+      } catch {
+        // Ігноруємо нерозпізнані повідомлення.
       }
-    } catch {
-      // Ігноруємо нерозпізнані повідомлення.
-    }
-  });
-}
+    });
+  }
 
-// ── Нативна платформа: SW не реєструється, тому stations.js емітує подію через bus ──
-// Дзеркало SW-логіки: той самий тост, той самий UX — незалежно від платформи.
-import { bus } from '../core/eventBus.js';
-bus.on('stations:updated', ({ version }) => showDataUpdateToast(version));
+  // Нативна платформа: SW не реєструється, тому stations.js емітує подію через bus.
+  // Дзеркало SW-логіки: той самий тост, той самий UX — незалежно від платформи.
+  bus.on('stations:updated', ({ version }) => showDataUpdateToast(version));
+}

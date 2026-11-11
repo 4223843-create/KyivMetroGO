@@ -25,10 +25,19 @@ function _checkOnResume() {
   }
 }
 
-if (Capacitor.isNativePlatform()) {
-  App.addListener('resume', _checkOnResume);
-} else {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') _checkOnResume();
-  });
+let _started = false;
+
+/** Перевірка оновлень при поверненні з фону. Викликає main.js один раз. */
+export function initResumeUpdates() {
+  if (_started) return;
+  _started = true;
+  _lastCheck = Date.now();
+
+  if (Capacitor.isNativePlatform()) {
+    App.addListener('resume', _checkOnResume);
+  } else {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') _checkOnResume();
+    });
+  }
 }
