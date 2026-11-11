@@ -146,6 +146,7 @@ function _applyExitLabels(stationsData) {
  * @returns {Record<string, Record<number, object>>}
  */
 export function getLocalEdits() {
+  /** @type {Record<string, Record<number, object>>} */
   const result = {};
   for (const [slug, keyEdits] of Object.entries(_getStoredEdits())) {
     const index = _indexByKey(slug);

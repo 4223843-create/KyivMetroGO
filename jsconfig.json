@@ -1,0 +1,52 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable",
+      "WebWorker.ImportScripts"
+    ],
+    "types": [
+      "vite/client"
+    ],
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": [
+        "src/core/*"
+      ],
+      "@ui/*": [
+        "src/ui/*"
+      ],
+      "@data/*": [
+        "src/data/*"
+      ],
+      "@map/*": [
+        "src/map/*"
+      ],
+      "@sheets/*": [
+        "src/sheets/*"
+      ],
+      "@features/*": [
+        "src/features/*"
+      ],
+      "@infra/*": [
+        "src/infra/*"
+      ]
+    }
+  },
+  "include": [
+    "src/core/**/*.js",
+    "src/data/**/*.js",
+    "src/domain/**/*.js",
+    "src/services/**/*.js",
+    "src/infra/**/*.js",
+    "src/vite-env.d.ts"
+  ]
+}

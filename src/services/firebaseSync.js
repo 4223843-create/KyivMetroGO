@@ -147,7 +147,7 @@ export async function downloadDevPhoto(photoId) {
   const blob = await res.blob();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload  = () => resolve(reader.result);
+    reader.onload  = () => resolve(/** @type {string} */ (reader.result));  // readAsDataURL → рядок
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });

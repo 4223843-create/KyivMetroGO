@@ -105,6 +105,7 @@ export async function getAllPhotos() {
   const db = await _openDB();
   return new Promise((resolve, reject) => {
     const store  = db.transaction(STORE_NAME).objectStore(STORE_NAME);
+    /** @type {Record<string, string>} */
     const result = {};
 
     // getAllKeys/getAll підтримуються у всіх платформах, де є IndexedDB
