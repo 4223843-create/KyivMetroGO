@@ -53,6 +53,9 @@ try {
   await page.locator('[role="button"][aria-label="Станція Хрещатик"]').first().waitFor({ timeout: 15000 });
   step('офлайн-перезавантаження показує карту');
 
+  assert.equal(await page.locator('#offlineBanner').isVisible(), true, 'немає плашки «Офлайн»');
+  step('плашка «Офлайн» на місці');
+
   assert.deepEqual(errors, [], `помилки на сторінці: ${errors.join('; ')}`);
   await browser.close();
   step('без помилок JS');

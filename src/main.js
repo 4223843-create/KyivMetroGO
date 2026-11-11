@@ -12,6 +12,9 @@ import { updateFavDock, openFavSheet }    from './features/favorites/index.js';
 import { updateCheckinDock }              from './features/checkin/index.js';
 import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
+import { initOfflineBanner }              from './infra/offline.js';
+import { initUpdateToasts }               from './infra/swUpdate.js';
+import { initResumeUpdates }              from './infra/resumeUpdates.js';
 import { updateDevMenuButtonVisibility, runEmulationStartup } from './features/devHooks.js';
 import { maybeStartTour }                 from './features/tour.js';
 import { initVestibuleReports }           from './domain/vestibules.js';
@@ -24,9 +27,6 @@ import { bus }                            from './core/eventBus.js';
 // Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
 import './map/mapGestures.js';
 import './map/mapInteraction.js';
-import './infra/offline.js';
-import './infra/swUpdate.js';
-import './infra/resumeUpdates.js';
 import './features/feedback/index.js';
 import './features/checkin/index.js';
 import './features/favorites/index.js';
@@ -34,6 +34,12 @@ import './data/localEdits.js';
 import './sheets/sheetsManager.js';
 import './ui/confirm.js';
 import './app.js';
+
+// Явний запуск модулів (без побічних ефектів при імпорті). Порядок — той самий,
+// що й колись у списку імпортів нижче; переводимо модулі сюди поступово.
+initOfflineBanner();
+initUpdateToasts();
+initResumeUpdates();
 
 /** Гарантовано приховує заставку — викликається з обробників помилок. */
 function releaseStartupLoader() {
