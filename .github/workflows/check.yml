@@ -28,6 +28,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Перевірка типів за JSDoc у шарі даних (core, data, domain, services, infra) — jsconfig.json
+      - name: Type check
+        run: npm run typecheck
+
       - name: Unit tests
         run: npm test
 

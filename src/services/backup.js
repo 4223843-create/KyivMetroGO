@@ -37,8 +37,9 @@ export const USER_DATA_KEYS = [
 /**
  * @typedef {Object} ImportResult
  * @property {ImportStatus} status
- * @property {string}       [reason]   — для 'invalid'
- * @property {Error}        [error]    — для 'error'
+ * @property {string}       [reason]   для 'invalid'
+ * @property {Error}        [error]    для 'error'
+ * @property {Record<string, unknown>} [data] для 'success': розібраний файл копії
  */
 
 // ── Хелпери ───────────────────────────────────────────────────
@@ -47,9 +48,10 @@ export const USER_DATA_KEYS = [
  * Зчитує всі metro_* ключі з in-memory кешу Storage.
  * Коректно читає дані незалежно від платформи (Preferences / localStorage fallback).
  *
- * @returns {Record<string, string>}
+ * @returns {Record<string, any>} рядки зі сховища (експорт може додати лог розробника)
  */
 function _readAllAppData() {
+  /** @type {Record<string, any>} */
   const result = {};
   for (const key of Object.values(STORAGE_KEYS)) {
     if (key.startsWith('metro_dev_emu_')) continue; // службові ключі емуляції — не дані людини
@@ -210,7 +212,7 @@ function _pickWeb() {
 
       const reader = new FileReader();
       reader.onerror = () => settle({ status: 'error', error: reader.error });
-      reader.onload  = ev => settle(_parseAndValidate(ev.target.result));
+      reader.onload  = () => settle(_parseAndValidate(/** @type {string} */ (reader.result)));  // readAsText → рядок
       reader.readAsText(file);
     });
 

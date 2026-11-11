@@ -110,7 +110,7 @@ export function getSlugByLower(lowerSlug) {
  * кладе в stationsData копії з правками (EventBus синхронний, тож це відбувається
  * до повернення emit).
  *
- * @param {{ stations: Array }} data — розібраний stations.json
+ * @param {{ stations: Array, line_intervals?: object }} data — розібраний stations.json
  * @returns {Record<string, object>} state.stationsData
  */
 export function hydrateStations(data) {
@@ -214,7 +214,7 @@ export function renderMapZones() {
   const svgEl = inner?.querySelector('svg');
   if (!svgEl || !state.stationsData) return;
 
-  svgEl.querySelectorAll('[id]').forEach(el => {
+  svgEl.querySelectorAll('[id]').forEach((/** @type {SVGElement} */ el) => {
     const rawId = el.id.replace(/\d+$/, '').toLowerCase();
     const slug  = _slugByLower[rawId];
 
@@ -224,7 +224,7 @@ export function renderMapZones() {
     el.style.stroke                  = 'transparent';
     el.style.pointerEvents           = 'all';
     el.style.cursor                  = 'pointer';
-    el.style.webkitTapHighlightColor = 'transparent';
+    el.style.setProperty('-webkit-tap-highlight-color', 'transparent');
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
     el.setAttribute('aria-label', `Станція ${state.stationsData[slug].name}`);
@@ -266,7 +266,7 @@ async function _readFilesystemCache() {
       directory: Directory.Cache,
       encoding:  Encoding.UTF8,
     });
-    const data = JSON.parse(cached.data);
+    const data = JSON.parse(/** @type {string} */ (cached.data));  // UTF8 → завжди рядок
     if (!isValidStationsData(data)) throw new Error('invalid');
     return { data, version: data.version ?? null };
   } catch {
@@ -405,7 +405,7 @@ export function checkStationsUpdate() {
  * На нативній платформі — _fetchStationsNative() (локальна копія, мережа у фоні).
  * На веб/PWA — прямий fetch; SW віддає збережену копію й оновлює її у фоні.
  *
- * @param {boolean} [forceFresh=false] — примусово оновити дані (ігнорувати кеш/SW)
+ * @param {boolean} [forceFresh] примусово (типово false) оновити дані (ігнорувати кеш/SW)
  * @returns {Promise<Record<string, object>>} state.stationsData після гідратації
  */
 export async function reloadStationsData(forceFresh = false) {

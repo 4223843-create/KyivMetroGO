@@ -47,7 +47,7 @@ if ('serviceWorker' in navigator) {
     // а новий SW активувався слідом. Якщо наш головний скрипт є в кеші нового SW,
     // то ми й так на новій версії. Кеш нового SW — kyivmetro-<час збірки> з
     // найбільшим часом (старий у цей момент ще може існувати).
-    const mainScript = document.querySelector('script[type="module"][src]')?.src;
+    const mainScript = /** @type {HTMLScriptElement|null} */ (document.querySelector('script[type="module"][src]'))?.src;
     try {
       const newest = (await caches.keys())
         .filter(k => /^kyivmetro-\d+$/.test(k))

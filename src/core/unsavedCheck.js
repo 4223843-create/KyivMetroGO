@@ -21,7 +21,7 @@ export function withUnsavedCheck(proceed) {
     return false;
   }
 
-  const fbSlug      = document.getElementById('fbStation')?.value || '';
+  const fbSlug      = /** @type {HTMLInputElement|null} */ (document.getElementById('fbStation'))?.value || '';
   const stationName = (fbSlug ? state.stationsData?.[fbSlug]?.name : '') || '';
   const question    = stationName
     ? `Зберегти зміни для станції <span style="white-space:nowrap;font-variant:small-caps;letter-spacing:0.04em;">${stationName}?</span>`

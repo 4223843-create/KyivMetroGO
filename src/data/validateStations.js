@@ -12,10 +12,12 @@ const LINES = new Set(['red', 'blue', 'green']);
 
 /**
  * Перевіряє структуру, від якої залежить запуск (hydrateStations, обхід позицій).
- * @param {unknown} data — розібраний stations.json
+ * @param {unknown} input — розібраний stations.json
  * @returns {string[]} список помилок; порожній — дані придатні
  */
-export function validateStationsData(data) {
+export function validateStationsData(input) {
+  /** @type {any} — форму якраз і перевіряємо */
+  const data = input;
   const errors = [];
   const fail = msg => { if (errors.length < 20) errors.push(msg); };
 
