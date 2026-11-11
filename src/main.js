@@ -17,6 +17,9 @@ import { initUpdateToasts }               from './infra/swUpdate.js';
 import { initResumeUpdates }              from './infra/resumeUpdates.js';
 import { initMapGestures }                from './map/mapGestures.js';
 import { initMapInteraction }             from './map/mapInteraction.js';
+import { initSheetsManager }              from './sheets/sheetsManager.js';
+import { initConfirmDialogs }             from './ui/confirm.js';
+import { initAppControls }                from './app.js';
 import { updateDevMenuButtonVisibility, runEmulationStartup } from './features/devHooks.js';
 import { maybeStartTour }                 from './features/tour.js';
 import { initVestibuleReports }           from './domain/vestibules.js';
@@ -31,9 +34,6 @@ import './features/feedback/index.js';
 import './features/checkin/index.js';
 import './features/favorites/index.js';
 import './data/localEdits.js';
-import './sheets/sheetsManager.js';
-import './ui/confirm.js';
-import './app.js';
 
 // Явний запуск модулів (без побічних ефектів при імпорті). Порядок — той самий,
 // що й колись у списку імпортів нижче; переводимо модулі сюди поступово.
@@ -42,6 +42,9 @@ initUpdateToasts();
 initResumeUpdates();
 initMapGestures();
 initMapInteraction();
+initSheetsManager();
+initConfirmDialogs();
+initAppControls();
 
 /** Гарантовано приховує заставку — викликається з обробників помилок. */
 function releaseStartupLoader() {

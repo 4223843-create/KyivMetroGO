@@ -1,7 +1,7 @@
 // ══ UI-ПРИВ'ЯЗКИ ДОДАТКУ ══
 // Відповідальність: підключення DOM-кнопок до функцій-обробників.
 // Тільки addEventListener. Нуль мережевих запитів, нуль ініціалізації даних.
-// Виконується як side-effect при імпорті в main.js.
+// Запускається з main.js викликом initAppControls().
 
 import { Capacitor } from '@capacitor/core';
 import { App }       from '@capacitor/app';
@@ -22,16 +22,6 @@ import { hasOpenSheet }     from './ui/sheetNav.js';
 import { showToast }        from './ui/toast.js';
 import { openDevMenuSheet } from './features/devHooks.js';
 
-// ── Bottom bar ─────────────────────────────────────────────────
-document.getElementById('favListBtn')?.addEventListener('click', openFavSheet);
-document.getElementById('searchBtnTop')?.addEventListener('click', openSearchSheet);
-
-// ── Меню розробника (плаваюча кнопка зверху карти) ──────────────
-// Видимість кнопки виставляється з main.js ПІСЛЯ Storage.init() —
-// тут, при імпорті цього файлу, Storage ще не завантажений, тож
-// isDevMode() тут завжди хибно повернув би false.
-document.getElementById('devMenuBtn')?.addEventListener('click', openDevMenuSheet);
-
 // ── Dropdown меню ──────────────────────────────────────────────
 const menuBtn  = document.getElementById('menuBtn');
 const dropMenu = document.getElementById('dropMenu');
@@ -41,60 +31,10 @@ function closeDropMenu() {
   dropMenu.hidden = true;
 }
 
-if (menuBtn && dropMenu) {
-  const feedbackMenuItem = document.getElementById('feedbackItem');
-  menuBtn.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (feedbackMenuItem) feedbackMenuItem.hidden = !getPref('editMode');
-    updateCheckinDock();
-    const willShow = !dropMenu.classList.contains('show');
-    dropMenu.classList.toggle('show', willShow);
-    dropMenu.hidden = !willShow;
-  });
-
-  document.addEventListener('click', e => {
-    if (!dropMenu.contains(e.target) && !menuBtn.contains(e.target)) closeDropMenu();
-  });
-
-  document.getElementById('settingsItem')?.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    closeDropMenu();
-    openSettingsSheet();
-  });
-
-  document.getElementById('checkinBtn')?.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    closeDropMenu();
-    openCheckinSheet();
-  });
-
-  document.getElementById('feedbackItem')?.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    closeDropMenu();
-    document.getElementById('aboutSheet')?.classList.remove('sheet-open');
-    bus.emit('sheet:open-feedback');
-  });
-
-  document.getElementById('aboutItem')?.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    closeDropMenu();
-    withUnsavedCheck(() => {
-      document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
-      openAboutSheet();
-    });
-  });
-}
-
 // ── Помилка запису на пристрій ─────────────────────────────────
 // Storage пише у фоні; якщо запис не вдався, користувач має про це знати.
 let _writeFailShown = false;
 export const showWriteFailToast = () => showToast('Не вдалося зберегти зміни на пристрої');
-bus.on('storage:write-failed', () => {
-  if (_writeFailShown) return;     // одне повідомлення на сесію, а не на кожен ключ
-  _writeFailShown = true;
-  showWriteFailToast();
-});
 
 // ── Кнопка «Назад» ────────────────────────────────────────────
 // Нативний Android: апаратна кнопка через @capacitor/app.
@@ -118,36 +58,6 @@ function closeSheetsOnBack() {
   closeAllSheets(true);
 }
 
-// Escape на клавіатурі (зокрема зовнішній до планшета) — як «Назад», але не
-// поверх діалогу підтвердження: той закривається своїми кнопками.
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape' || e.defaultPrevented) return;
-  if (document.querySelector('.global-confirm-overlay')) return;
-  const dropMenu = document.getElementById('dropMenu');
-  if (dropMenu && !dropMenu.hidden) { closeDropMenu(); e.preventDefault(); return; }
-  if (!hasOpenSheet()) return;
-  e.preventDefault();
-  closeSheetsOnBack();
-});
-
-if (Capacitor.isNativePlatform()) {
-  App.addListener('backButton', ({ canGoBack }) => {
-    if (hasOpenSheet()) {
-      closeSheetsOnBack();
-    } else if (canGoBack) {
-      window.history.back();
-    } else {
-      App.exitApp();
-    }
-  });
-} else {
-  window.addEventListener('popstate', () => {
-    if (hasOpenSheet()) {
-      closeSheetsOnBack();
-    }
-  });
-}
-
 // ── «Вибране при запуску» — і при поверненні з фону ─────────────
 // bootstrap() (main.js) виконує це лише один раз, при справжньому холодному
 // старті. Але стандартний сценарій на iOS — згорнути застосунок (не закрити),
@@ -164,10 +74,109 @@ function _maybeOpenFavOnResume() {
   openFavSheet();
 }
 
-if (Capacitor.isNativePlatform()) {
-  App.addListener('resume', _maybeOpenFavOnResume);
-} else {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') _maybeOpenFavOnResume();
+let _started = false;
+
+/** Підключає кнопки, меню, «Назад» і повернення з фону. Повторний виклик нічого не робить. */
+export function initAppControls() {
+  if (_started) return;
+  _started = true;
+
+  // ── Bottom bar ─────────────────────────────────────────────────
+  document.getElementById('favListBtn')?.addEventListener('click', openFavSheet);
+  document.getElementById('searchBtnTop')?.addEventListener('click', openSearchSheet);
+
+  // ── Меню розробника (плаваюча кнопка зверху карти) ──────────────
+  // Видимість кнопки виставляється з main.js ПІСЛЯ Storage.init() —
+  // тут, у initAppControls(), Storage ще не завантажений, тож
+  // isDevMode() тут завжди хибно повернув би false.
+  document.getElementById('devMenuBtn')?.addEventListener('click', openDevMenuSheet);
+
+  if (menuBtn && dropMenu) {
+    const feedbackMenuItem = document.getElementById('feedbackItem');
+    menuBtn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (feedbackMenuItem) feedbackMenuItem.hidden = !getPref('editMode');
+      updateCheckinDock();
+      const willShow = !dropMenu.classList.contains('show');
+      dropMenu.classList.toggle('show', willShow);
+      dropMenu.hidden = !willShow;
+    });
+
+    document.addEventListener('click', e => {
+      if (!dropMenu.contains(e.target) && !menuBtn.contains(e.target)) closeDropMenu();
+    });
+
+    document.getElementById('settingsItem')?.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      closeDropMenu();
+      openSettingsSheet();
+    });
+
+    document.getElementById('checkinBtn')?.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      closeDropMenu();
+      openCheckinSheet();
+    });
+
+    document.getElementById('feedbackItem')?.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      closeDropMenu();
+      document.getElementById('aboutSheet')?.classList.remove('sheet-open');
+      bus.emit('sheet:open-feedback');
+    });
+
+    document.getElementById('aboutItem')?.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      closeDropMenu();
+      withUnsavedCheck(() => {
+        document.getElementById('feedbackSheet')?.classList.remove('sheet-open');
+        openAboutSheet();
+      });
+    });
+  }
+
+  bus.on('storage:write-failed', () => {
+    if (_writeFailShown) return;     // одне повідомлення на сесію, а не на кожен ключ
+    _writeFailShown = true;
+    showWriteFailToast();
   });
+
+  // Escape на клавіатурі (зокрема зовнішній до планшета) — як «Назад», але не
+  // поверх діалогу підтвердження: той закривається своїми кнопками.
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    if (document.querySelector('.global-confirm-overlay')) return;
+    const dropMenu = document.getElementById('dropMenu');
+    if (dropMenu && !dropMenu.hidden) { closeDropMenu(); e.preventDefault(); return; }
+    if (!hasOpenSheet()) return;
+    e.preventDefault();
+    closeSheetsOnBack();
+  });
+
+  if (Capacitor.isNativePlatform()) {
+    App.addListener('backButton', ({ canGoBack }) => {
+      if (hasOpenSheet()) {
+        closeSheetsOnBack();
+      } else if (canGoBack) {
+        window.history.back();
+      } else {
+        App.exitApp();
+      }
+    });
+  } else {
+    window.addEventListener('popstate', () => {
+      if (hasOpenSheet()) {
+        closeSheetsOnBack();
+      }
+    });
+  }
+
+  if (Capacitor.isNativePlatform()) {
+    App.addListener('resume', _maybeOpenFavOnResume);
+  } else {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') _maybeOpenFavOnResume();
+    });
+  }
 }
