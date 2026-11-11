@@ -191,21 +191,6 @@ function _onAddClick(e) {
   return false;
 }
 
-favBody.addEventListener('input', e => {
-  if (e.target.classList.contains('fav-add-input')) _renderAddResults(e.target);
-});
-favBody.addEventListener('focusin', e => {
-  if (e.target.classList.contains('fav-add-input')) {
-    favBody.querySelector('.fav-empty-state')?.classList.add('fav-adding');
-    _fitAboveKeyboard();
-  }
-});
-favBody.addEventListener('focusout', e => {
-  if (!e.target.classList.contains('fav-add-input')) return;
-  _releaseKeyboardFit();
-  if (!e.target.value.trim()) favBody.querySelector('.fav-empty-state')?.classList.remove('fav-adding');
-});
-
 // Клавіатура: шторка піднімається над нею, як у пошуку
 let _vpCleanup = null;
 function _fitAboveKeyboard() {
@@ -352,12 +337,6 @@ export function renderFavList(favs) {
   }
 }
 
-favBody.addEventListener('click', e => {
-  if (_onAddClick(e)) return;
-  const btn = e.target.closest('.fav-open-btn');
-  if (btn?.dataset.slug) bus.emit('station:open', { slug: btn.dataset.slug });
-});
-
 // ══ ВІДКРИТТЯ / ЗАКРИТТЯ ══════════════════════════════════════
 
 export function openFavSheet() {
@@ -437,29 +416,58 @@ function _dismissFavOnlyHint() {
   document.getElementById('favOnlyHint')?.remove();
 }
 
-// ══ BUS-ПІДПИСКИ ══════════════════════════════════════════════
-
-// Після toggleFav / replaceExitFav (domain) → оновлюємо dock.
-bus.on('fav:updated', updateFavDock);
-
-// Крос-табна синхронізація: domain оновив кеш і емітував подію.
-bus.on('fav:externally-updated', () => {
-  updateFavDock();
-  if (favSheet?.classList.contains('sheet-open')) {
-    renderFavList(getFavs());
-  }
-});
-
-bus.on('fav:render-on-load', () => {
-  const favs = getFavs();
-  if (!favs.length) favBody.innerHTML = getEmptyFavHtml();
-  else renderFavList(favs);
-});
-
-bus.on('fav:dismiss-hint', _dismissFavOnlyHint);
-
 // ══ ІНІЦІАЛІЗАЦІЯ ═════════════════════════════════════════════
 
-favClose.addEventListener('click', closeFavSheet);
-setTimeout(() => initKinematicSwipe(favSheet, favBody, closeFavSheet), 0);
-initHintGestures(favBody);
+let _started = false;
+
+/** Вмикає шторку «Вибране» та її bus-підписки. Повторний виклик нічого не робить. */
+export function initFavorites() {
+  if (_started) return;
+  _started = true;
+
+  favBody.addEventListener('input', e => {
+    if (e.target.classList.contains('fav-add-input')) _renderAddResults(e.target);
+  });
+  favBody.addEventListener('focusin', e => {
+    if (e.target.classList.contains('fav-add-input')) {
+      favBody.querySelector('.fav-empty-state')?.classList.add('fav-adding');
+      _fitAboveKeyboard();
+    }
+  });
+  favBody.addEventListener('focusout', e => {
+    if (!e.target.classList.contains('fav-add-input')) return;
+    _releaseKeyboardFit();
+    if (!e.target.value.trim()) favBody.querySelector('.fav-empty-state')?.classList.remove('fav-adding');
+  });
+
+  favBody.addEventListener('click', e => {
+    if (_onAddClick(e)) return;
+    const btn = e.target.closest('.fav-open-btn');
+    if (btn?.dataset.slug) bus.emit('station:open', { slug: btn.dataset.slug });
+  });
+
+  // ── Bus-підписки ──
+
+  // Після toggleFav / replaceExitFav (domain) → оновлюємо dock.
+  bus.on('fav:updated', updateFavDock);
+
+  // Крос-табна синхронізація: domain оновив кеш і емітував подію.
+  bus.on('fav:externally-updated', () => {
+    updateFavDock();
+    if (favSheet?.classList.contains('sheet-open')) {
+      renderFavList(getFavs());
+    }
+  });
+
+  bus.on('fav:render-on-load', () => {
+    const favs = getFavs();
+    if (!favs.length) favBody.innerHTML = getEmptyFavHtml();
+    else renderFavList(favs);
+  });
+
+  bus.on('fav:dismiss-hint', _dismissFavOnlyHint);
+
+  favClose.addEventListener('click', closeFavSheet);
+  setTimeout(() => initKinematicSwipe(favSheet, favBody, closeFavSheet), 0);
+  initHintGestures(favBody);
+}

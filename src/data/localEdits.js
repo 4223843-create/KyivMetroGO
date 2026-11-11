@@ -328,15 +328,27 @@ function _migrateLegacy(stationsData) {
 // EventBus — синхронний: handlers виконуються до повернення bus.emit(),
 // тому правки гарантовано застосовані до того, як hydrateStations поверне дані.
 
-// Правки чи підписи змінили в іншій вкладці
-bus.on('storage:changed', ({ key }) => {
-  if (key !== STORAGE_KEYS.LOCAL_EDITS && key !== STORAGE_KEYS.EXIT_LABELS) return;
-  applyLocalLayer();
-  bus.emit('station:refresh');
-});
+let _started = false;
 
-bus.on('data:stations-hydrated', ({ stationsData }) => {
-  _migrateLegacy(stationsData);
-  _base = structuredClone(stationsData);
-  applyLocalLayer();
-});
+/**
+ * Підписує шар локальних правок на дані станцій. Повторний виклик нічого не робить.
+ * Викликати до першого завантаження даних і після того, як імпортовано domain/checkin
+ * і domain/favorites: їхні переходи зі старого формату мають бачити дані ще без правок.
+ */
+export function initLocalEdits() {
+  if (_started) return;
+  _started = true;
+
+  // Правки чи підписи змінили в іншій вкладці
+  bus.on('storage:changed', ({ key }) => {
+    if (key !== STORAGE_KEYS.LOCAL_EDITS && key !== STORAGE_KEYS.EXIT_LABELS) return;
+    applyLocalLayer();
+    bus.emit('station:refresh');
+  });
+
+  bus.on('data:stations-hydrated', ({ stationsData }) => {
+    _migrateLegacy(stationsData);
+    _base = structuredClone(stationsData);
+    applyLocalLayer();
+  });
+}
