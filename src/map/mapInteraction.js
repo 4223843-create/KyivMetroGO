@@ -34,9 +34,6 @@ export function handleMapInteraction(e) {
   if (slug) { e.preventDefault(); bus.emit('station:open', { slug }); }
 }
 
-inner?.addEventListener('click',   handleMapInteraction);
-inner?.addEventListener('keydown', handleMapInteraction);
-
 function removeVisitedHatchOverlays(root = inner) {
   root?.querySelectorAll(`.${HATCH_OVERLAY_CLASS}`).forEach(el => el.remove());
 }
@@ -200,17 +197,6 @@ function _setBottomSpace(vp, px) {
 function _reducedMotion() {
   return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
-
-// Додане місце не прибираємо при закритті картки (карта стрибнула б униз):
-// воно зникає саме, щойно людина прогорне карту вгору в звичайні межі
-const _mapVp = document.getElementById('mapViewport');
-_mapVp?.addEventListener('scroll', () => {
-  if (!_bottomSpace) return;
-  if (document.getElementById('stationSheet')?.classList.contains('sheet-open')) return;
-  if (_mapVp.scrollTop <= _mapVp.scrollHeight - _mapVp.clientHeight - _bottomSpace) _setBottomSpace(_mapVp, 0);
-}, { passive: true });
-
-bus.on('map:center-station', ({ slug }) => centerMapOnStation(slug));
 
 let _clipIdCounter = 0;
 
@@ -449,17 +435,6 @@ export function syncMapWithCheckins() {
   updateClosedStationsOnMap();
 }
 
-bus.on('map:sync-checkins', syncMapWithCheckins);
-bus.on('data:stations-hydrated', () => {
-  invalidateStationZoneCache();
-  _closedShapesCache.clear();
-  updateMapAccessibilityIcons();
-  updateClosedStationsOnMap();
-});
-bus.on('station:reopened-changed', () => {
-  updateMapAccessibilityIcons();
-  updateClosedStationsOnMap();
-});
 // Значок візочка для SVG-карти (однаковий для всіх гілок)
 const MAP_ICON_WHEELCHAIR = {
   viewBox: '0 0 100 100',
@@ -531,4 +506,39 @@ export function updateMapAccessibilityIcons() {
   });
 }
 
-bus.on('map:update-accessibility', updateMapAccessibilityIcons);
+let _started = false;
+
+/**
+ * Вмикає кліки по станціях на карті та підписки карти на події.
+ * Повторний виклик нічого не робить.
+ */
+export function initMapInteraction() {
+  if (_started) return;
+  _started = true;
+
+  inner?.addEventListener('click',   handleMapInteraction);
+  inner?.addEventListener('keydown', handleMapInteraction);
+
+  // Додане місце не прибираємо при закритті картки (карта стрибнула б униз):
+  // воно зникає саме, щойно людина прогорне карту вгору в звичайні межі
+  const _mapVp = document.getElementById('mapViewport');
+  _mapVp?.addEventListener('scroll', () => {
+    if (!_bottomSpace) return;
+    if (document.getElementById('stationSheet')?.classList.contains('sheet-open')) return;
+    if (_mapVp.scrollTop <= _mapVp.scrollHeight - _mapVp.clientHeight - _bottomSpace) _setBottomSpace(_mapVp, 0);
+  }, { passive: true });
+
+  bus.on('map:center-station', ({ slug }) => centerMapOnStation(slug));
+  bus.on('map:sync-checkins', syncMapWithCheckins);
+  bus.on('data:stations-hydrated', () => {
+    invalidateStationZoneCache();
+    _closedShapesCache.clear();
+    updateMapAccessibilityIcons();
+    updateClosedStationsOnMap();
+  });
+  bus.on('station:reopened-changed', () => {
+    updateMapAccessibilityIcons();
+    updateClosedStationsOnMap();
+  });
+  bus.on('map:update-accessibility', updateMapAccessibilityIcons);
+}
