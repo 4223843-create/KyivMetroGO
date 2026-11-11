@@ -1,10 +1,9 @@
-import svgText from '../../KyivMetroScheme.svg?raw';
 import { state }                        from '../core/state.js';
 import { renderMapZones, checkAppReady } from '../data/stations.js';
 import { applyVisitedHatchOverlays } from './mapInteraction.js';
 
 // ══ ІНІЦІАЛІЗАЦІЯ КАРТИ ══
-// Відповідальність: вставка SVG, розрахунок масштабу та центрування,
+// Відповідальність: підготовка SVG (вже вставленого в index.html), розрахунок масштабу та центрування,
 // адаптація висоти viewport під реальний розмір екрана (враховує адресний рядок браузера).
 
 
@@ -83,7 +82,7 @@ export function applyZoomAndCenter() {
  * Викликається один раз з main.js під час bootstrap.
  */
 export function initMap() {
-  inner.innerHTML = svgText;
+  // Схему вже вставлено в index.html під час збірки (vite.config.js, inlineMetroScheme)
 
   const svgEl = inner.querySelector('svg');
   if (svgEl) {

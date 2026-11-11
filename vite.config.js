@@ -1,8 +1,26 @@
 import { defineConfig } from 'vite';
 import { VitePWA }      from 'vite-plugin-pwa';
 import path             from 'path';
+import fs               from 'fs';
 
 const buildDate = Date.now().toString();
+
+// Схема метро вставляється прямо в index.html під час збірки (і в dev-сервері),
+// а не імпортом ?raw у JS: головний скрипт легший на ~138 КБ, і браузер
+// розбирає SVG як розмітку, а не як рядок JavaScript.
+const MAP_PLACEHOLDER = '<div id="mapInner" class="map-inner"></div>';
+function inlineMetroScheme() {
+  const file = path.resolve(__dirname, 'KyivMetroScheme.svg');
+  return {
+    name: 'inline-metro-scheme',
+    configureServer(server) { server.watcher.add(file); },
+    transformIndexHtml(html) {
+      if (!html.includes(MAP_PLACEHOLDER)) throw new Error('index.html: немає місця для схеми метро (#mapInner)');
+      const svg = fs.readFileSync(file, 'utf8').replace(/<\?xml[^>]*>\s*/, '').trim();
+      return html.replace(MAP_PLACEHOLDER, `<div id="mapInner" class="map-inner">${svg}</div>`);
+    },
+  };
+}
 
 export default defineConfig({
   base:      './',
@@ -72,6 +90,7 @@ export default defineConfig({
   },
 
   plugins: [
+    inlineMetroScheme(),
     VitePWA({
       strategies:      'injectManifest',
       srcDir:          'public',

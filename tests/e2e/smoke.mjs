@@ -8,7 +8,8 @@ import assert       from 'node:assert/strict';
 const PORT = 4174;
 const URL  = `http://localhost:${PORT}/`;
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' });
+// Сам vite, а не через npx: інакше kill() зупинив би лише npx, а сервер лишився б
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' });
 const stop   = () => { try { server.kill(); } catch { /* вже зупинено */ } };
 
 async function waitForServer() {
