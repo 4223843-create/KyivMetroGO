@@ -156,25 +156,6 @@ function _syncStationCheckinBtn(slug, lineColor) {
   stationCheckinBtn.style.color = color;
 }
 
-stationCheckinBtn?.addEventListener('click', e => {
-  e.stopPropagation();
-  const { slug, color } = stationCheckinBtn.dataset;
-  if (!slug) return;
-  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-
-  // Зняти відмітку станції — разом із виходами, відміченими раніше в режимі «за виходами»
-  const exits = isStationCheckedIn(slug) ? stationExitCheckinCount(slug) : 0;
-  if (!exits) { toggleStationCheckin(slug, color); return; }
-  bus.emit('ui:confirm', {
-    message:  `Зняти відмітку зі станції? Відмічені виходи (${exits}) теж буде знято`,
-    onYes:    () => toggleStationCheckin(slug, color),
-    labelYes: 'Зняти',
-    labelNo:  'Скасувати',
-    styleYes: 'confirm-btn-discard',
-    styleNo:  'confirm-btn-save',
-  });
-});
-
 // ══ РЕНДЕР КІЛЕЦЬ ГІЛОК ══════════════════════════════════════
 
 function renderLineRings(lineStats) {
@@ -432,16 +413,43 @@ export function openCheckinSheet() {
   showSheet(checkinSheet, 'sheet-fullscreen', 'sheet-scrollable');
 }
 
-// ══ BUS-ПІДПИСКИ ══════════════════════════════════════════════
+// ══ ІНІЦІАЛІЗАЦІЯ ═════════════════════════════════════════════
 
-bus.on('checkin:attach-buttons', ({ sheetEl, slug, color }) => {
-  attachCheckinButtons(sheetEl, slug, color);
-});
+let _started = false;
 
-// Після toggleCheckin (domain/checkin) → оновлюємо dock та синхронізуємо карту.
-bus.on('checkin:updated', () => {
-  _checkinCount = null;
-  updateCheckinDock();
-  bus.emit('map:sync-checkins');
-  bus.emit('station:refresh'); // Оновлюємо станцію на льоту, щоб підсвітити дзеркальні піни
-});
+/** Вмикає пін станції в картці та bus-підписки Check-in. Повторний виклик нічого не робить. */
+export function initCheckin() {
+  if (_started) return;
+  _started = true;
+
+  stationCheckinBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    const { slug, color } = stationCheckinBtn.dataset;
+    if (!slug) return;
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+
+    // Зняти відмітку станції — разом із виходами, відміченими раніше в режимі «за виходами»
+    const exits = isStationCheckedIn(slug) ? stationExitCheckinCount(slug) : 0;
+    if (!exits) { toggleStationCheckin(slug, color); return; }
+    bus.emit('ui:confirm', {
+      message:  `Зняти відмітку зі станції? Відмічені виходи (${exits}) теж буде знято`,
+      onYes:    () => toggleStationCheckin(slug, color),
+      labelYes: 'Зняти',
+      labelNo:  'Скасувати',
+      styleYes: 'confirm-btn-discard',
+      styleNo:  'confirm-btn-save',
+    });
+  });
+
+  bus.on('checkin:attach-buttons', ({ sheetEl, slug, color }) => {
+    attachCheckinButtons(sheetEl, slug, color);
+  });
+
+  // Після toggleCheckin (domain/checkin) → оновлюємо dock та синхронізуємо карту.
+  bus.on('checkin:updated', () => {
+    _checkinCount = null;
+    updateCheckinDock();
+    bus.emit('map:sync-checkins');
+    bus.emit('station:refresh'); // Оновлюємо станцію на льоту, щоб підсвітити дзеркальні піни
+  });
+}

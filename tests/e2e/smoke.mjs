@@ -54,6 +54,12 @@ try {
   await page.waitForSelector('#settingsSheet:not(.sheet-open)', { state: 'attached', timeout: 5000 });
   step('меню відкриває налаштування');
 
+  await page.click('#favListBtn');
+  await page.waitForSelector('#favSheet.sheet-open', { timeout: 5000 });
+  await page.click('#favClose');
+  await page.waitForSelector('#favSheet:not(.sheet-open)', { state: 'attached', timeout: 5000 });
+  step('«Вибране» відкривається і закривається');
+
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 })
     .catch(async () => { await page.reload(); });

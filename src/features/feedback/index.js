@@ -11,43 +11,6 @@ import { showSheet }                     from '../../ui/sheetNav.js';
 
 export { renderFeedbackPositions }               from './fbRenderer.js';
 
-bus.on('sheet:open-feedback', openFeedbackSheet);
-bus.on('feedback:close', closeFeedbackSheet);
-bus.on('feedback:dirty-changed', ({ isDirty }) => { appState.hasUnsavedFeedback = isDirty; });
-bus.on('feedback:submit-silent', () => submitFeedback(true));
-
-bus.on('feedback:submit-ui', ({ status, background }) => {
-  if (background) return;
-
-  const resultEl = document.getElementById('fbResult');
-  const sendBtn  = document.getElementById('fbSend');
-  if (!resultEl) return;
-
-  // Кнопка заблокована на час відправки, попередній результат прибрано
-  if (status === 'sending') {
-    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Надсилання…'; }
-    resultEl.innerHTML = '';
-    return;
-  }
-
-  if (sendBtn) {
-    sendBtn.disabled    = false;
-    sendBtn.textContent = 'Застосувати';
-  }
-
-  if (status === 'success') {
-    resultEl.innerHTML =
-      '<p class="fb-note fb-success">✓ Дякуємо! Зміни надіслано та збережено локально</p>';
-  } else if (status === 'network-error') {
-    resultEl.innerHTML =
-      '<p class="fb-note fb-warn">Немає зʼєднання з інтернетом. Зміни збережено на пристрої, ' +
-      'їх буде надіслано, щойно зʼявиться мережа</p>';
-  } else if (status === 'local-only') {
-    resultEl.innerHTML =
-      '<p class="fb-note fb-success">✓ Зміни збережено локально</p>';
-  }
-});
-
 let _sheetEl    = null;   
 let _sheetBound = false;  
 
@@ -134,4 +97,49 @@ function _openSheetDOM() {
 function _forceClose() {
   resetFbState();
   bus.emit('sheet:close', { sheetEl: _sheetEl });
+}
+
+let _started = false;
+
+/** Підписує шторку правок на bus-події. Повторний виклик нічого не робить. */
+export function initFeedback() {
+  if (_started) return;
+  _started = true;
+
+  bus.on('sheet:open-feedback', openFeedbackSheet);
+  bus.on('feedback:close', closeFeedbackSheet);
+  bus.on('feedback:dirty-changed', ({ isDirty }) => { appState.hasUnsavedFeedback = isDirty; });
+  bus.on('feedback:submit-silent', () => submitFeedback(true));
+
+  bus.on('feedback:submit-ui', ({ status, background }) => {
+    if (background) return;
+
+    const resultEl = document.getElementById('fbResult');
+    const sendBtn  = document.getElementById('fbSend');
+    if (!resultEl) return;
+
+    // Кнопка заблокована на час відправки, попередній результат прибрано
+    if (status === 'sending') {
+      if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Надсилання…'; }
+      resultEl.innerHTML = '';
+      return;
+    }
+
+    if (sendBtn) {
+      sendBtn.disabled    = false;
+      sendBtn.textContent = 'Застосувати';
+    }
+
+    if (status === 'success') {
+      resultEl.innerHTML =
+        '<p class="fb-note fb-success">✓ Дякуємо! Зміни надіслано та збережено локально</p>';
+    } else if (status === 'network-error') {
+      resultEl.innerHTML =
+        '<p class="fb-note fb-warn">Немає зʼєднання з інтернетом. Зміни збережено на пристрої, ' +
+        'їх буде надіслано, щойно зʼявиться мережа</p>';
+    } else if (status === 'local-only') {
+      resultEl.innerHTML =
+        '<p class="fb-note fb-success">✓ Зміни збережено локально</p>';
+    }
+  });
 }

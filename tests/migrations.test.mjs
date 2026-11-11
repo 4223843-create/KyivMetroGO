@@ -67,10 +67,12 @@ before(async () => {
   Storage.set(STORAGE_KEYS.LOCAL_EDITS, JSON.stringify(OLD.localEdits));
   Storage.set(STORAGE_KEYS.EXIT_LABELS, JSON.stringify(OLD.labels));
 
-  // Модулі, що переводять записи, підписуються на data:stations-hydrated при імпорті
+  // domain/* підписуються на data:stations-hydrated при імпорті, локальні правки —
+  // через initLocalEdits(), як у main.js
   const favorites  = await import('../src/domain/favorites.js');
   const checkin    = await import('../src/domain/checkin.js');
   const localEdits = await import('../src/data/localEdits.js');
+  localEdits.initLocalEdits();
   const stations   = await import('../src/data/stations.js');
   const { state }  = await import('../src/core/state.js');
   stations.hydrateStations(structuredClone(data));

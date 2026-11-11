@@ -8,8 +8,10 @@ import { configureEdgeToEdge }            from './ui/system.js';
 import { initMap }                        from './map/mapInit.js';
 import { reloadStationsData, loadedStationsVersion } from './data/stations.js';
 import { showStartupError }               from './ui/startupError.js';
-import { updateFavDock, openFavSheet }    from './features/favorites/index.js';
-import { updateCheckinDock }              from './features/checkin/index.js';
+import { updateFavDock, openFavSheet, initFavorites } from './features/favorites/index.js';
+import { updateCheckinDock, initCheckin }  from './features/checkin/index.js';
+import { initFeedback }                   from './features/feedback/index.js';
+import { initLocalEdits }                 from './data/localEdits.js';
 import { openSearchSheet }                from './features/search.js';
 import { registerServiceWorker }          from './infra/serviceWorker.js';
 import { initOfflineBanner }              from './infra/offline.js';
@@ -29,19 +31,17 @@ import { openStation }                    from './sheets/stationSheet.js';
 import { state, startupSlug }             from './core/state.js';
 import { bus }                            from './core/eventBus.js';
 
-// Імпорти модулів з побічними ефектами (ініціалізація жестів та інфраструктури)
-import './features/feedback/index.js';
-import './features/checkin/index.js';
-import './features/favorites/index.js';
-import './data/localEdits.js';
-
-// Явний запуск модулів (без побічних ефектів при імпорті). Порядок — той самий,
-// що й колись у списку імпортів нижче; переводимо модулі сюди поступово.
+// Явний запуск модулів: при імпорті вони нічого не вмикають. Виклики — до
+// завантаження даних (bootstrap нижче), бо частина підписана на data:stations-hydrated.
 initOfflineBanner();
 initUpdateToasts();
 initResumeUpdates();
+initLocalEdits();       // до карти: та має бачити дані вже з правками
 initMapGestures();
 initMapInteraction();
+initFeedback();
+initCheckin();
+initFavorites();
 initSheetsManager();
 initConfirmDialogs();
 initAppControls();
