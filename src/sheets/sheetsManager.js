@@ -49,56 +49,63 @@ export function closeAllSheets(force = false) {
   }
 }
 
-// ══ ОБРОБНИКИ ПОДІЙ ══
+let _started = false;
 
-if (sheetClose) {
-  sheetClose.addEventListener('click', () => closeAllSheets());
-}
+/** Вмикає кнопки, overlay, свайп і bus-підписки шторок. Повторний виклик нічого не робить. */
+export function initSheetsManager() {
+  if (_started) return;
+  _started = true;
 
-if (sheetOverlay) {
-  sheetOverlay.addEventListener('click', e => {
-    if (e.target !== sheetOverlay) return;
-    if (dropMenuEl?.classList.contains('show')) return;
+  // ══ ОБРОБНИКИ ПОДІЙ ══
 
-    sheetOverlay.style.pointerEvents = 'none';
-    const elUnder = document.elementFromPoint(e.clientX, e.clientY);
-    sheetOverlay.style.pointerEvents = '';
+  if (sheetClose) {
+    sheetClose.addEventListener('click', () => closeAllSheets());
+  }
 
-    const zone = elUnder?.closest('[id]');
-    if (zone?.id) {
-      const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
-      const slug  = getSlugByLower(rawId);
-      if (slug) { openStation(slug); return; }
-    }
-    closeAllSheets();
+  if (sheetOverlay) {
+    sheetOverlay.addEventListener('click', e => {
+      if (e.target !== sheetOverlay) return;
+      if (dropMenuEl?.classList.contains('show')) return;
+
+      sheetOverlay.style.pointerEvents = 'none';
+      const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+      sheetOverlay.style.pointerEvents = '';
+
+      const zone = elUnder?.closest('[id]');
+      if (zone?.id) {
+        const rawId = zone.id.replace(/\d+$/, '').toLowerCase();
+        const slug  = getSlugByLower(rawId);
+        if (slug) { openStation(slug); return; }
+      }
+      closeAllSheets();
+    });
+  }
+
+  const mainFavBtn = sheet?.querySelector('.fav-btn-bar');
+  if (mainFavBtn) {
+    mainFavBtn.addEventListener('click', e => {
+      const btn  = e.currentTarget;
+      const slug = btn.dataset.slug;
+      if (!slug) return;
+
+      // Додаємо вібровідгук саме сюди: після перевірки, перед збереженням
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+
+      const nowFav = toggleFav(slug);
+      btn.innerHTML = heartSvg(nowFav, slug, btn.dataset.color || 'var(--text-muted)');
+      btn.classList.toggle('fav-active', nowFav);
+    });
+  }
+
+  setTimeout(() => {
+    initKinematicSwipe(sheet, sheetBody, () => closeAllSheets());
+  }, 0);
+
+  // ══ BUS-ПІДПИСКИ ══
+
+  // feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
+  bus.on('sheet:close', ({ sheetEl }) => {
+    if (!sheetEl) return;
+    hideSheet(sheetEl);
   });
 }
-
-const mainFavBtn = sheet?.querySelector('.fav-btn-bar');
-if (mainFavBtn) {
-  mainFavBtn.addEventListener('click', e => {
-    const btn  = e.currentTarget;
-    const slug = btn.dataset.slug;
-    if (!slug) return;
-
-    // Додаємо вібровідгук саме сюди: після перевірки, перед збереженням
-    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-
-    const nowFav = toggleFav(slug);
-    btn.innerHTML = heartSvg(nowFav, slug, btn.dataset.color || 'var(--text-muted)');
-    btn.classList.toggle('fav-active', nowFav);
-  });
-}
-
-setTimeout(() => {
-  initKinematicSwipe(sheet, sheetBody, () => closeAllSheets());
-}, 0);
-
-// ══ BUS-ПІДПИСКИ ══
-
-// feedback/index.js емітує 'sheet:close' коли треба закрити шторку.
-bus.on('sheet:close', ({ sheetEl }) => {
-  if (!sheetEl) return;
-  hideSheet(sheetEl);
-});
-

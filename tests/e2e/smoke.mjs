@@ -43,6 +43,17 @@ try {
   assert.ok(await page.locator('#sheetBody .pos-pill').count() > 0, 'у картці немає вагонів і дверей');
   step('картка станції відкривається');
 
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('#stationSheet:not(.sheet-open)', { state: 'attached', timeout: 5000 });
+  step('Escape закриває картку');
+
+  await page.click('#menuBtn');
+  await page.click('#settingsItem');
+  await page.waitForSelector('#settingsSheet.sheet-open', { timeout: 5000 });
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('#settingsSheet:not(.sheet-open)', { state: 'attached', timeout: 5000 });
+  step('меню відкриває налаштування');
+
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 })
     .catch(async () => { await page.reload(); });

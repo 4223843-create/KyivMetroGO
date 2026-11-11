@@ -59,18 +59,26 @@ export function showCustomConfirm(
   overlay.querySelector('#confirmCancel')?.addEventListener('click', () => animateClose(onCancel));
 }
 
-// ── Єдиний bus-обробник ──
-// Підтримує розширені параметри (labelYes, labelNo, styleYes, styleNo)
-// для сумісності з bus.emit із settings.js та backup.js.
-bus.on('ui:confirm', (payload) => {
-  showCustomConfirm(
-    payload.message,
-    payload.onYes,
-    payload.onNo    ?? null,
-    payload.onCancel ?? null,
-    payload.labelYes ?? 'Зберегти',
-    payload.labelNo  ?? 'Не зберігати',
-    payload.styleYes ?? 'confirm-btn-save',
-    payload.styleNo  ?? 'confirm-btn-discard',
-  );
-});
+let _started = false;
+
+/** Підписує діалог підтвердження на 'ui:confirm'. Повторний виклик нічого не робить. */
+export function initConfirmDialogs() {
+  if (_started) return;
+  _started = true;
+
+  // ── Єдиний bus-обробник ──
+  // Підтримує розширені параметри (labelYes, labelNo, styleYes, styleNo)
+  // для сумісності з bus.emit із settings.js та backup.js.
+  bus.on('ui:confirm', (payload) => {
+    showCustomConfirm(
+      payload.message,
+      payload.onYes,
+      payload.onNo    ?? null,
+      payload.onCancel ?? null,
+      payload.labelYes ?? 'Зберегти',
+      payload.labelNo  ?? 'Не зберігати',
+      payload.styleYes ?? 'confirm-btn-save',
+      payload.styleNo  ?? 'confirm-btn-discard',
+    );
+  });
+}
