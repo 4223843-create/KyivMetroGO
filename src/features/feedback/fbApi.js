@@ -13,7 +13,7 @@ import {
 import { fbState, resetFbState }    from './fbState.js';
 import { extractFinalValues, buildChangeText } from './fbUtils.js';
 
-import { FORM_STATION_EDITS as FORMSPREE_URL } from '../../core/forms.js';
+import { sendStationEdit, queueStationEdit } from '../../services/feedbackOutbox.js';
 let _isSubmitting   = false;
 
 /**
@@ -113,35 +113,26 @@ export async function submitFeedback(background = false) {
     return;
   }
 
-  const controller = new AbortController();
-  const timeoutId  = setTimeout(() => controller.abort(), 8000);
-
   bus.emit('feedback:submit-ui', { status: 'sending', background });
 
+  const formspreeLines = [
+    ...posChanges.map(c => buildChangeText(c.p, c.nw ?? c.p.wagon, c.nd ?? c.p.doors, !!c.closed)),
+    ...newExits.map(({ st, vals }) => st.vestibule
+      ? `${st.dir}: ВЕСТИБЮЛЬ ${st.vestibule} ВІДКРИТО (вагон ${vals.finalW}, двері ${vals.finalD})`
+      : `${st.dir}: НОВИЙ ВИХІД (вагон ${vals.finalW}, двері ${vals.finalD})`),
+    ...labelChanges,
+  ];
+  const body = { station: s.name, changes: formspreeLines.join('\n') };
+
   try {
-    const formspreeLines = [
-      ...posChanges.map(c => buildChangeText(c.p, c.nw ?? c.p.wagon, c.nd ?? c.p.doors, !!c.closed)),
-      ...newExits.map(({ st, vals }) => st.vestibule
-        ? `${st.dir}: ВЕСТИБЮЛЬ ${st.vestibule} ВІДКРИТО (вагон ${vals.finalW}, двері ${vals.finalD})`
-        : `${st.dir}: НОВИЙ ВИХІД (вагон ${vals.finalW}, двері ${vals.finalD})`),
-      ...labelChanges,
-    ];
-
-    const response = await fetch(FORMSPREE_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ station: s.name, changes: formspreeLines.join('\n') }),
-      signal:  controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    bus.emit('feedback:submit-ui', { status: 'success', background });
-
-  } catch (error) {
-    clearTimeout(timeoutId);
-    console.warn('[KyivMetroGO] Formspree недоступний, зміни збережено локально:', error);
-    bus.emit('feedback:submit-ui', { status: 'network-error', background });
-
+    if (await sendStationEdit(body)) {
+      bus.emit('feedback:submit-ui', { status: 'success', background });
+    } else {
+      // Лист чекає в черзі й піде сам, щойно з'явиться мережа
+      queueStationEdit(body);
+      console.warn('[KyivMetroGO] Formspree недоступний, правку поставлено в чергу');
+      bus.emit('feedback:submit-ui', { status: 'network-error', background });
+    }
   } finally {
     _isSubmitting = false;
   }

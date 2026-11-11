@@ -33,3 +33,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Наскрізна перевірка зібраного застосунку: картка станції й офлайн-запуск
+      - name: Install Chromium for e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke (open → station card → offline reload)
+        run: npm run e2e

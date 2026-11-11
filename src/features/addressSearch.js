@@ -12,6 +12,7 @@ import { LINE_COLOR } from '../core/constants.js';
 import { lineTextColor } from '../ui/components.js';
 import { escapeHtml } from '../ui/html.js';
 import { searchTokens, queryWordsForExits } from '../data/exitSearch.js';
+import { appFileUrl } from '../core/appUrl.js';
 
 const MAX_BLOCKS     = 3;    // скільки адрес / вулиць показувати розгорнуто
 const MAX_STREETS    = 6;    // скільки вулиць показувати списком
@@ -20,11 +21,7 @@ const WALK_M_PER_MIN = 75;   // ~4,5 км/год
 let _data    = null;   // { exits, streets: [...], dupNames: Set }
 let _loading = null;
 
-function _url() {
-  const { origin, pathname } = window.location;
-  const dir = pathname.endsWith('/') ? pathname : pathname.slice(0, pathname.lastIndexOf('/') + 1);
-  return new URL('addresses.json', origin + dir);
-}
+const _url = () => appFileUrl('addresses.json');
 
 function _load(onLoaded) {
   if (_loading) return;
