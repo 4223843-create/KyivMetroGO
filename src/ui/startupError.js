@@ -2,7 +2,8 @@
 // Показується, коли bootstrap() у main.js упав. Застосунок працює офлайн, тож
 // «перевірте інтернет» тут майже завжди хибна порада: причина зазвичай у коді
 // чи пошкоджених даних на пристрої. Людина може одним дотиком надіслати звіт
-// (текст помилки + версія збірки й даних) у форму «Повідомити про помилку».
+// (текст помилки + версія збірки й даних) у форму «Повідомити про помилку»,
+// а якщо винні пошкоджені дані — зберегти копію і скинути дані застосунку.
 
 import { Capacitor }        from '@capacitor/core';
 import { FORM_BUG_REPORTS } from '../core/forms.js';
@@ -47,6 +48,11 @@ export function showStartupError(err, dataVersion) {
     `<button type="button" data-act="retry" style="${btn};background:#c8523a;color:#fff">Спробувати ще раз</button>` +
     `<button type="button" data-act="report" style="${btn};background:#3a3a3c;color:#fff">Надіслати звіт</button>` +
     '</div>' +
+    // Якщо збій через пошкоджені дані на пристрої: спершу зберегти копію, потім скинути
+    '<div style="display:flex;gap:10px;width:100%;max-width:340px">' +
+    `<button type="button" data-act="backup" style="${btn};background:#3a3a3c;color:#fff">Зберегти копію даних</button>` +
+    `<button type="button" data-act="reset" style="${btn};background:#3a3a3c;color:#fff">Скинути дані</button>` +
+    '</div>' +
     '<p data-role="status" style="font-size:.85rem;min-height:1.2em;margin:0" aria-live="polite"></p>';
 
   const status    = box.querySelector('[data-role="status"]');
@@ -69,6 +75,23 @@ export function showStartupError(err, dataVersion) {
         ? 'Не вдалося надіслати. Спробуйте пізніше'
         : 'Для звіту потрібен інтернет';
     }
+  });
+  box.querySelector('[data-act="backup"]').addEventListener('click', async () => {
+    try {
+      const { exportData } = await import('../services/backup.js');
+      await exportData();
+      status.textContent = '';
+    } catch {
+      status.textContent = 'Не вдалося зберегти копію';
+    }
+  });
+  box.querySelector('[data-act="reset"]').addEventListener('click', async () => {
+    if (!confirm('Скинути всі дані застосунку: Вибране, статистику, правки й налаштування? Це не можна скасувати')) return;
+    try {
+      const { Storage } = await import('../core/storage.js');
+      await Storage.restoreFromBackup({});   // очищує всі ключі застосунку й чекає запису
+    } catch { /* сховище недоступне — перезапуск усе одно варто спробувати */ }
+    location.reload();
   });
   document.body.appendChild(box);
 }

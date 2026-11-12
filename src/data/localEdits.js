@@ -16,7 +16,7 @@
 // правками й підписами. Після будь-якої зміни правок виклик applyLocalLayer()
 // складає вид заново з бази, тож скасована правка зникає без перечитування файлу.
 
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { STORAGE_KEYS, Storage, readJsonObject } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
 import { state }                 from '../core/state.js';
 import { traversePositions, legacyKeyMap } from './positions.js';
@@ -38,12 +38,10 @@ export function invalidateLocalEditsCache() {
 }
 
 function _readJson(key) {
-  try {
-    return JSON.parse(Storage.get(key) || '{}');
-  } catch (e) {
-    console.warn('[localEdits] Помилка парсингу', key, e);
-    return {};
-  }
+  const raw = readJsonObject(key);
+  // { slug: { key: правка } } — станції з чимось іншим замість обʼєкта пропускаємо
+  return Object.fromEntries(Object.entries(raw)
+    .filter(([, byKey]) => byKey && typeof byKey === 'object' && !Array.isArray(byKey)));
 }
 
 function _getStoredLabels() {
