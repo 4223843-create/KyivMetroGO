@@ -5,7 +5,7 @@
 // Крос-модульні сигнали — виключно через EventBus.
 
 import { state }                from '../core/state.js';
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { STORAGE_KEYS, Storage, readJsonObject } from '../core/storage.js';
 import { getPref } from '../core/prefs.js';
 import { bus }                   from '../core/eventBus.js';
 import { traversePositions, findPosition, positionId, isLongTransferDir } from '../data/positions.js';
@@ -33,11 +33,9 @@ bus.on('storage:changed', ({ key }) => {
 
 export function getCheckins() {
   if (_checkinsCache) return _checkinsCache;
-  try {
-    _checkinsCache = JSON.parse(Storage.get(STORAGE_KEYS.CHECKINS) || '{}');
-  } catch {
-    _checkinsCache = {};
-  }
+  const raw = readJsonObject(STORAGE_KEYS.CHECKINS);
+  _checkinsCache = Object.fromEntries(Object.entries(raw)
+    .filter(([, e]) => e && typeof e === 'object' && typeof e.slug === 'string'));
   return _checkinsCache;
 }
 

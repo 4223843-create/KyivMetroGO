@@ -187,6 +187,36 @@ export const Storage = {
   },
 };
 
+// ══ ЧИТАННЯ JSON ЗІ ЗБЕРЕЖЕНИМ ТИПОМ ══
+// Зі старої чи чужої резервної копії в ключі може опинитися не той тип
+// (обʼєкт замість масиву). Такі значення вважаємо порожніми, а не валимо запуск.
+
+/**
+ * @param {string} key
+ * @returns {any[]} масив або [], якщо значення немає, воно зіпсоване чи не масив
+ */
+export function readJsonArray(key) {
+  try {
+    const v = JSON.parse(Storage.get(key) || '[]');
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * @param {string} key
+ * @returns {Record<string, any>} звичайний обʼєкт або {}
+ */
+export function readJsonObject(key) {
+  try {
+    const v = JSON.parse(Storage.get(key) || '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+
 // ══ СИНХРОНІЗАЦІЯ КЕШУ МІЖ ВКЛАДКАМИ (ДЛЯ ВЕБ-ВЕРСІЇ) ══
 // На нативному Android Storage event між вкладками ніколи не тригериться
 // (WebView — єдиний процес, вкладок немає). Реєструємо тільки на вебі.

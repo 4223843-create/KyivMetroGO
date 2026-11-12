@@ -5,7 +5,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { state, startupSlug } from '../core/state.js';
 import { bus }                from '../core/eventBus.js';
 import { traversePositions } from './positions.js';
-import { validateStationsData, isValidStationsData, stationsVersion } from './validateStations.js';
+import { validateStationsData, isValidStationsData, stationsVersion, newerSchemaAvailable, SUPPORTED_SCHEMA } from './validateStations.js';
 import { buildExitSearchIndex } from './exitSearch.js';
 import { appFileUrl }          from '../core/appUrl.js';
 
@@ -18,7 +18,11 @@ import { appFileUrl }          from '../core/appUrl.js';
 // Копія з сайту на GitHub Pages, а не прямо з main: сайт оновлюється лише після
 // зеленої перевірки Check (.github/workflows/deploy.yml), тож зламаний коміт до
 // встановлених застосунків не доходить.
-const REMOTE_STATIONS_URL = 'https://4223843-create.github.io/KyivMetroGO/stations.json';
+// Файл своєї схеми (stations.v1.json): після несумісної зміни формату старі APK
+// і далі отримують дані, які вміють читати. stations.json — запасний варіант,
+// поки сайт ще не має файла зі схемою.
+const REMOTE_BASE = 'https://4223843-create.github.io/KyivMetroGO/';
+const REMOTE_STATIONS_URLS = [`${REMOTE_BASE}stations.v${SUPPORTED_SCHEMA}.json`, `${REMOTE_BASE}stations.json`];
 const NATIVE_CACHE_PATH   = 'stations_cache.json';
 const FETCH_TIMEOUT_MS    = 4000;
 const BACKGROUND_FETCH_TIMEOUT_MS = 20000;
@@ -323,17 +327,23 @@ async function _readLocalStations() {
   return bundled;
 }
 
-/** Завантажує stations.json з GitHub; null — якщо мережі немає або відповідь некоректна. */
+/** Завантажує stations.json з сайту; null — якщо мережі немає або відповідь некоректна. */
 async function _fetchRemoteStations(timeoutMs) {
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(REMOTE_STATIONS_URL, { signal: controller.signal, cache: 'no-store' });
-    if (!response.ok) return null;
-    // Перевіряємо вміст, а не content-type: проксі чи дзеркало можуть віддати text/plain.
-    const data = await response.json();
-    // Зіпсований або несумісний файл не потрапляє в кеш і не ламає запуск.
-    return isValidStationsData(data) ? data : null;
+    for (const url of REMOTE_STATIONS_URLS) {
+      const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+      if (response.status === 404) continue;   // файла зі схемою ще немає — беремо загальний
+      if (!response.ok) return null;
+      // Перевіряємо вміст, а не content-type: проксі чи дзеркало можуть віддати text/plain.
+      const data = await response.json();
+      // Дані вже в новішому форматі — цей застосунок їх не прочитає; просимо оновитися
+      if (newerSchemaAvailable(data)) bus.emit('stations:app-outdated');
+      // Зіпсований або несумісний файл не потрапляє в кеш і не ламає запуск.
+      return isValidStationsData(data) ? data : null;
+    }
+    return null;
   } catch {
     return null;
   } finally {

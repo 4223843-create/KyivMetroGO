@@ -14,7 +14,7 @@
 //   toggleExitFav(slug, pos)                     → ToggleResult
 //   replaceExitFav(slug, existing, newPos)       → { status: 'replaced' }
 
-import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { STORAGE_KEYS, Storage, readJsonArray } from '../core/storage.js';
 import { bus }                   from '../core/eventBus.js';
 import { state }                 from '../core/state.js';
 import { findPosition, displayDirOf } from '../data/positions.js';
@@ -26,12 +26,7 @@ let _favCache = null;
 
 function _readFavCache() {
   if (_favCache) return _favCache;
-  try {
-    _favCache = JSON.parse(Storage.get(STORAGE_KEYS.FAVS) || '[]');
-  } catch (e) {
-    console.warn('[domain/favorites] Помилка парсингу Обраних:', e);
-    _favCache = [];
-  }
+  _favCache = readJsonArray(STORAGE_KEYS.FAVS).filter(slug => typeof slug === 'string');
   return _favCache;
 }
 
@@ -99,12 +94,8 @@ let _exitFavCache = null;
 
 function _readExitFavCache() {
   if (_exitFavCache) return _exitFavCache;
-  try {
-    _exitFavCache = JSON.parse(Storage.get(STORAGE_KEYS.EXIT_FAVS) || '[]');
-  } catch (e) {
-    console.warn('[domain/favorites] Помилка парсингу Обраних виходів:', e);
-    _exitFavCache = [];
-  }
+  _exitFavCache = readJsonArray(STORAGE_KEYS.EXIT_FAVS)
+    .filter(f => f && typeof f === 'object' && typeof f.slug === 'string');
   return _exitFavCache;
 }
 

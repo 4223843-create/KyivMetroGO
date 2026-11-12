@@ -1,6 +1,7 @@
 // ══ TOAST «НОВА ВЕРСІЯ ДОСТУПНА» ══
 
-import { bus } from '../core/eventBus.js';
+import { bus }       from '../core/eventBus.js';
+import { showToast } from '../ui/toast.js';
 
 /**
  * Тост «щось оновилось» з кнопкою перезавантаження і ✕.
@@ -38,6 +39,15 @@ function showDataUpdateToast(version) {
   const m        = /^(\d{4})(\d{2})(\d{2})$/.exec(version ?? '');
   const verLabel = m ? ` від ${m[3]}.${m[2]}.${m[1]}` : '';
   _showReloadToast('swDataUpdateToast', `Оновлено дані станцій${verLabel}`, 'Перезавантажити');
+}
+
+// ── Дані в новішому форматі, ніж уміє цей застосунок ──────────
+// Лише на Android/iOS (data/stations.js): PWA оновлюється разом із сайтом.
+let _outdatedShown = false;
+function showAppOutdatedToast() {
+  if (_outdatedShown) return;
+  _outdatedShown = true;
+  showToast('Оновіть застосунок, щоб отримувати нові дані станцій', 6000);
 }
 
 let _started = false;
@@ -85,4 +95,5 @@ export function initUpdateToasts() {
   // Нативна платформа: SW не реєструється, тому stations.js емітує подію через bus.
   // Дзеркало SW-логіки: той самий тост, той самий UX — незалежно від платформи.
   bus.on('stations:updated', ({ version }) => showDataUpdateToast(version));
+  bus.on('stations:app-outdated', showAppOutdatedToast);
 }

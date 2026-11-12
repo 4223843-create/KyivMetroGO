@@ -22,6 +22,22 @@ function inlineMetroScheme() {
   };
 }
 
+// Копія stations.json під назвою зі схемою (stations.v1.json). Встановлені
+// застосунки Android беруть файл своєї схеми, тож коли формат зміниться
+// несумісно (schema 2), старі APK і далі отримуватимуть оновлення в старому
+// форматі — якщо поряд публікувати і stations.v1.json (див. data/validateStations.js).
+function stationsBySchema() {
+  return {
+    name: 'stations-by-schema',
+    apply: 'build',
+    generateBundle() {
+      const source = fs.readFileSync(path.resolve(__dirname, 'public/stations.json'), 'utf8');
+      const schema = JSON.parse(source).schema ?? 1;
+      this.emitFile({ type: 'asset', fileName: `stations.v${schema}.json`, source });
+    },
+  };
+}
+
 export default defineConfig({
   base:      './',
   root:      '.',
@@ -93,6 +109,7 @@ export default defineConfig({
 
   plugins: [
     inlineMetroScheme(),
+    stationsBySchema(),
     VitePWA({
       strategies:      'injectManifest',
       srcDir:          'public',
@@ -111,7 +128,7 @@ export default defineConfig({
         // не змушуємо кожного користувача завантажувати його при встановленні SW.
         // addresses-geo.json — лише для кнопки «Поточне місцезнаходження» (типово вимкнена):
         // service worker збереже його при першому використанні.
-        globIgnores:    ['**/firebaseSync.*.js', '**/addresses-geo.json'],
+        globIgnores:    ['**/firebaseSync.*.js', '**/addresses-geo.json', '**/stations.v*.json'],
         // addresses.json (~1–2 МБ) — для офлайн-пошуку адрес; ліміт Workbox за замовчуванням 2 МБ
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },

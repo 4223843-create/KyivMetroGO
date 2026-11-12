@@ -43,6 +43,12 @@ try {
   assert.ok(await page.locator('#sheetBody .pos-pill').count() > 0, 'у картці немає вагонів і дверей');
   step('картка станції відкривається');
 
+  await page.click('#stationSheet .fav-btn-bar');
+  await page.waitForSelector('#stationSheet .fav-btn-bar.fav-active', { timeout: 3000 });
+  assert.ok(await page.locator('#sheetBody .pos-pill').count() > 0, 'після ♥ картка порожня');
+  await page.click('#stationSheet .fav-btn-bar');
+  step('♥ у картці не ламає вміст');
+
   await page.keyboard.press('Escape');
   await page.waitForSelector('#stationSheet:not(.sheet-open)', { state: 'attached', timeout: 5000 });
   step('Escape закриває картку');

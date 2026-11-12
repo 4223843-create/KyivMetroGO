@@ -28,3 +28,23 @@ export function localEditsLookValid(raw) {
   }
   return true;
 }
+
+/**
+ * Вибране й чекіни з копії мають очікуваний тип: масиви та обʼєкт.
+ * @param {Record<string, unknown>} data — розібраний файл копії
+ * @param {{ FAVS: string, EXIT_FAVS: string, CHECKINS: string }} keys
+ */
+export function userDataLooksValid(data, keys) {
+  const parsed = raw => {
+    if (raw === undefined || raw === null) return undefined;
+    if (typeof raw !== 'string') return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  };
+  for (const key of [keys.FAVS, keys.EXIT_FAVS]) {
+    const v = parsed(data[key]);
+    if (v !== undefined && !Array.isArray(v)) return false;
+  }
+  const checkins = parsed(data[keys.CHECKINS]);
+  if (checkins !== undefined && (!checkins || typeof checkins !== 'object' || Array.isArray(checkins))) return false;
+  return true;
+}

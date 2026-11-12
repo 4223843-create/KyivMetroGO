@@ -67,3 +67,11 @@ test('пересадки й посилання на станції задані 
     if (d.from.startsWith('попередня')) assert.equal(bySlug[d.from_slug]?.line, s.line, `${s.slug}: ${d.from}`);
   }
 });
+
+test('новіший формат даних помічається, свій — ні', async () => {
+  const { newerSchemaAvailable, SUPPORTED_SCHEMA } = await import('../src/data/validateStations.js');
+  assert.equal(newerSchemaAvailable({ schema: SUPPORTED_SCHEMA }), false);
+  assert.equal(newerSchemaAvailable({}), false);
+  assert.equal(newerSchemaAvailable({ schema: SUPPORTED_SCHEMA + 1 }), true);
+  assert.equal(newerSchemaAvailable({ schema: SUPPORTED_SCHEMA, newest_schema: SUPPORTED_SCHEMA + 1 }), true);
+});
