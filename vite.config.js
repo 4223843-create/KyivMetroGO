@@ -42,6 +42,8 @@ export default defineConfig({
 
   define: {
     __BUILD_DATE__: JSON.stringify(buildDate),
+    // Збірка для Google Play (VITE_PLAY_BUILD=1 у CI-завданні aab), див. src/core/build.js
+    __PLAY_BUILD__: JSON.stringify(process.env.VITE_PLAY_BUILD === '1'),
   },
 
   // Явна конфігурація dev-сервера. Без цього Vite сам вгадує порт для

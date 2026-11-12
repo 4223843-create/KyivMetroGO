@@ -3,15 +3,19 @@
 // могли перевірити режим, не тягнучи весь код розробника і без циклу імпортів.
 
 import { STORAGE_KEYS, Storage } from '../core/storage.js';
+import { PLAY_BUILD }             from '../core/build.js';
 
 // Збірка для Google Play (VITE_PLAY_BUILD=1 у CI-завданні aab): режиму розробника
-// немає взагалі — ні 5 дотиків, ні форми входу. PWA і тестовий APK — як раніше.
-export const DEV_MODE_AVAILABLE = import.meta.env?.VITE_PLAY_BUILD !== '1';
+// немає взагалі — ні 5 дотиків, ні форми входу, ні емуляції; файли розробника й
+// Firebase у збірку не потрапляють (кожен import() стоїть за цим прапорцем).
+// PWA і тестовий APK — як раніше.
+export const DEV_MODE_AVAILABLE = !PLAY_BUILD;
 
 const _devFlag = () => DEV_MODE_AVAILABLE && Storage.get(STORAGE_KEYS.DEV_MODE) === 'true';
 
 /** Активна емуляція стану (devEmulation.js): підставні дані чи час. */
 export function isEmulating() {
+  if (!DEV_MODE_AVAILABLE) return false;
   return !!(Storage.get(STORAGE_KEYS.DEV_EMU_PROFILE) || Storage.get(STORAGE_KEYS.DEV_EMU_SNAPSHOT)
     || Storage.get(STORAGE_KEYS.DEV_EMU_CLOCK));
 }

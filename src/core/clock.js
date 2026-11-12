@@ -4,9 +4,11 @@
 // від заданої миті, тож хвилини змінюються як справжні.
 
 import { STORAGE_KEYS, Storage } from './storage.js';
+import { PLAY_BUILD }             from './build.js';
 
 /** { target, setAt } — заданий час і мить, коли його задали (мс). */
 export function getClockOverride() {
+  if (PLAY_BUILD) return null; // у збірці для Play підставного часу не буває
   try {
     const v = JSON.parse(Storage.get(STORAGE_KEYS.DEV_EMU_CLOCK) || 'null');
     return Number.isFinite(v?.target) && Number.isFinite(v?.setAt) ? v : null;

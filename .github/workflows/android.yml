@@ -87,6 +87,12 @@ jobs:
           VITE_PLAY_BUILD: "1"   # без режиму розробника в Google Play
         run: npm run build
 
+      - name: Check Play build has no developer code
+        run: |
+          if ls dist/assets | grep -E '^(firebaseSync|devmode|devMenuSheet|devEmulation)'; then
+            echo "Developer code leaked into the Play build"; exit 1
+          fi
+
       - name: Copy web app into Android project
         run: npx cap sync android
 

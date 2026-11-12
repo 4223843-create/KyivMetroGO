@@ -12,6 +12,7 @@ let _promise = null;
 
 /** Завантажує devmode.js (один раз). */
 export function loadDevMode() {
+  if (!DEV_MODE_AVAILABLE) return Promise.reject(new Error('dev mode unavailable'));
   _promise ??= import('./devmode.js')
     .then(m => (_mod = m))
     .catch(err => { _promise = null; throw err; });
@@ -51,6 +52,7 @@ export function updateDevMenuButtonVisibility() {
 
 /** Меню розробника (окремий файл збірки разом із devmode.js). */
 export function openDevMenuSheet() {
+  if (!DEV_MODE_AVAILABLE) return;
   import('../sheets/devMenuSheet.js')
     .then(m => m.openDevMenuSheet())
     .catch(err => console.warn('[devHooks] меню розробника не завантажилось:', err));
@@ -95,6 +97,7 @@ export function setupDevModeTapCounter(aboutSheet) {
  * й показує смужку «Повернути». Без активної емуляції нічого не завантажує.
  */
 export async function runEmulationStartup() {
+  if (!DEV_MODE_AVAILABLE) return;
   let note = null;
   try { note = sessionStorage.getItem('metro_emu_note'); } catch { /* немає sessionStorage */ }
   const active = note || Storage.get(STORAGE_KEYS.DEV_EMU_PROFILE)
