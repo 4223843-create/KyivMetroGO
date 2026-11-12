@@ -13,7 +13,7 @@ import { appFileUrl }          from '../core/appUrl.js';
 // SW обробляє stations.json для веб/PWA (спершу локальна копія, мережа у фоні + postMessage).
 // На нативній платформі SW не реєструється (infra/serviceWorker.js) — та сама логіка тут:
 //   1. одразу — новіша з копій: Filesystem.Cache або bundled в APK (localhost/stations.json)
-//   2. у фоні — fetch(REMOTE_STATIONS_URL); нова версія → Filesystem.Cache + тост
+//   2. у фоні — fetch з REMOTE_BASES; нова версія → Filesystem.Cache + тост
 
 // Копія з сайту на GitHub Pages, а не прямо з main: сайт оновлюється лише після
 // зеленої перевірки Check (.github/workflows/deploy.yml), тож зламаний коміт до
@@ -21,8 +21,15 @@ import { appFileUrl }          from '../core/appUrl.js';
 // Файл своєї схеми (stations.v1.json): після несумісної зміни формату старі APK
 // і далі отримують дані, які вміють читати. stations.json — запасний варіант,
 // поки сайт ще не має файла зі схемою.
-const REMOTE_BASE = 'https://4223843-create.github.io/KyivMetroGO/';
-const REMOTE_STATIONS_URLS = [`${REMOTE_BASE}stations.v${SUPPORTED_SCHEMA}.json`, `${REMOTE_BASE}stations.json`];
+// Vercel — запасна адреса: адреси вшиті у встановлені APK, тож якщо GitHub Pages
+// стане недоступним (перейменування, переїзд), дані й далі приходитимуть.
+// Vercel публікує main без чекання Check, але файл однаково перевіряється
+// isValidStationsData перед записом у кеш.
+const REMOTE_BASES = [
+  'https://4223843-create.github.io/KyivMetroGO/',
+  'https://kyiv-metro-go.vercel.app/',
+];
+const remoteStationsUrls = base => [`${base}stations.v${SUPPORTED_SCHEMA}.json`, `${base}stations.json`];
 const NATIVE_CACHE_PATH   = 'stations_cache.json';
 const FETCH_TIMEOUT_MS    = 4000;
 const BACKGROUND_FETCH_TIMEOUT_MS = 20000;
@@ -327,12 +334,21 @@ async function _readLocalStations() {
   return bundled;
 }
 
-/** Завантажує stations.json з сайту; null — якщо мережі немає або відповідь некоректна. */
-async function _fetchRemoteStations(timeoutMs) {
+/** Завантажує stations.json з сайту (основна адреса, потім запасна); null — якщо ніде не вдалося. Експорт — для тесту. */
+export async function _fetchRemoteStations(timeoutMs) {
+  const perBase = Math.ceil(timeoutMs / REMOTE_BASES.length);
+  for (const base of REMOTE_BASES) {
+    const data = await _fetchFromBase(base, perBase);
+    if (data) return data;
+  }
+  return null;
+}
+
+async function _fetchFromBase(base, timeoutMs) {
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    for (const url of REMOTE_STATIONS_URLS) {
+    for (const url of remoteStationsUrls(base)) {
       const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
       if (response.status === 404) continue;   // файла зі схемою ще немає — беремо загальний
       if (!response.ok) return null;

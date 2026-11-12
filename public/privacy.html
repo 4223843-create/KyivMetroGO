@@ -554,7 +554,8 @@
       <strong>Оновлення бази станцій та GitHub.</strong>
       Нативна версія Застосунку (Android) завантажує оновлення файлу
       <code>stations.json</code> з сервера GitHub
-      (<code>4223843-create.github.io</code>, GitHub Pages). Це є виключно технічними даними про
+      (<code>4223843-create.github.io</code>, GitHub Pages), а якщо він недоступний — з резервної
+      адреси на Vercel (<code>kyiv-metro-go.vercel.app</code>). Це є виключно технічними даними про
       станції метро — жодна інформація про користувача не передається. Проте GitHub,
       як і будь-який HTTP-сервер, отримує IP-адресу пристрою у складі стандартних
       метаданих мережевого запиту та обробляє її відповідно до
@@ -764,7 +765,8 @@
       <strong>Station data updates &amp; GitHub.</strong>
       The native Android version of the App downloads updates to the
       <code>stations.json</code> file from a GitHub server
-      (<code>4223843-create.github.io</code>, GitHub Pages). This file contains only technical
+      (<code>4223843-create.github.io</code>, GitHub Pages), or, if it is unavailable, from a backup
+      address on Vercel (<code>kyiv-metro-go.vercel.app</code>). This file contains only technical
       metro station data — no user information is transmitted. However, GitHub, like any
       HTTP server, receives the device's IP address as part of standard network request
       metadata and processes it in accordance with the
