@@ -5,8 +5,7 @@
 
 import { Storage, STORAGE_KEYS } from '../core/storage.js';
 import { FORM_STATION_EDITS }    from '../core/forms.js';
-
-const RETRY_MS = 60 * 1000;
+import { postForm, retryDelay, MAX_QUEUE_AGE_MS } from './formPost.js';
 
 function _read() {
   try {
@@ -23,26 +22,13 @@ function _save(list) {
 }
 
 /**
- * Надсилає один лист. true — пішов.
+ * Надсилає один лист.
  * @param {{ station: string, changes: string }} body
  * @param {number} [timeoutMs]
+ * @returns {Promise<import('./formPost.js').PostResult>}
  */
-export async function sendStationEdit(body, timeoutMs = 8000) {
-  const controller = new AbortController();
-  const timeoutId  = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(FORM_STATION_EDITS, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body:    JSON.stringify(body),
-      signal:  controller.signal,
-    });
-    return res.ok;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timeoutId);
-  }
+export function sendStationEdit(body, timeoutMs = 8000) {
+  return postForm(FORM_STATION_EDITS, body, timeoutMs);
 }
 
 /** Кладе лист у чергу й планує повторну спробу. */
@@ -51,18 +37,27 @@ export function queueStationEdit(body) {
   _schedule();
 }
 
-let _timer   = null;
-let _sending = false;
+let _timer    = null;
+let _sending  = false;
+let _failures = 0;   // невдалі спроби поспіль — для зростаючої паузи
 
-/** Досилає все з черги; невдалі лишаються. */
+/**
+ * Досилає все з черги по порядку. Лист, який Formspree відхилив (4xx), або
+ * старший за 14 днів викидається; при обриві мережі чи 429/5xx решта чекає.
+ */
 export async function flushFeedbackOutbox() {
   if (_sending) return;
   _sending = true;
   try {
     for (const item of _read()) {
-      const { at: _at, ...body } = item;
-      if (!(await sendStationEdit(body))) break;   // мережі немає — решту теж не відправимо
-      _save(_read().filter(r => !(r.at === item.at && r.station === item.station)));
+      const { at, ...body } = item;
+      const drop = () => _save(_read().filter(r => !(r.at === item.at && r.station === item.station)));
+      if (!(Date.now() - at < MAX_QUEUE_AGE_MS)) { drop(); continue; }
+      const result = await sendStationEdit(body);
+      if (result === 'retry') { _failures++; break; }
+      if (result === 'rejected') console.warn('[outbox] Formspree відхилив правку, її прибрано з черги');
+      _failures = 0;
+      drop();
     }
   } finally {
     _sending = false;
@@ -72,11 +67,11 @@ export async function flushFeedbackOutbox() {
 
 function _schedule() {
   clearTimeout(_timer);
-  _timer = _read().length ? setTimeout(flushFeedbackOutbox, RETRY_MS) : null;
+  _timer = _read().length ? setTimeout(flushFeedbackOutbox, retryDelay(_failures)) : null;
 }
 
 /** Після Storage.init(): дослати те, що лишилося з минулого запуску. */
 export function initFeedbackOutbox() {
   flushFeedbackOutbox();
-  window.addEventListener('online', () => flushFeedbackOutbox());
+  window.addEventListener('online', () => { _failures = 0; flushFeedbackOutbox(); });
 }

@@ -12,6 +12,7 @@ import { Storage, STORAGE_KEYS } from '../core/storage.js';
 import { LINE_COLOR, CLOSED_STATION_COLOR } from '../core/constants.js';
 
 import { FORM_STATION_EDITS as FORMSPREE_URL } from '../core/forms.js';
+import { postForm, retryDelay, MAX_QUEUE_AGE_MS } from '../services/formPost.js';
 export const REPORT_DELAY_MS = 60 * 1000;
 
 const _key = (slug, exitId) => `${slug}|${exitId}`;
@@ -98,31 +99,18 @@ export function cancelVestibuleReopen(slug, exitId) {
   return left.length !== reports.length;
 }
 
-async function _send(report) {
-  const controller = new AbortController();
-  const timeoutId  = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(FORMSPREE_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body:    JSON.stringify({
-        station: report.station,
-        changes: report.exitId === STATION_KEY
-          ? 'Станція: користувач повідомляє, що вже працює'
-          : `Вестибюль ${report.exitId}${report.label ? ` (${report.label})` : ''}: користувач повідомляє, що вже працює`,
-      }),
-      signal: controller.signal,
-    });
-    return res.ok;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timeoutId);
-  }
+function _send(report) {
+  return postForm(FORMSPREE_URL, {
+    station: report.station,
+    changes: report.exitId === STATION_KEY
+      ? 'Станція: користувач повідомляє, що вже працює'
+      : `Вестибюль ${report.exitId}${report.label ? ` (${report.label})` : ''}: користувач повідомляє, що вже працює`,
+  });
 }
 
-let _timer   = null;
-let _sending = false;
+let _timer    = null;
+let _sending  = false;
+let _failures = 0;   // невдалі спроби поспіль — для зростаючої паузи
 
 /** Надсилає листи, чия хвилина минула; невдалі лишаються в черзі. */
 export async function flushVestibuleReports() {
@@ -131,7 +119,10 @@ export async function flushVestibuleReports() {
   try {
     const due = _readReports().filter(r => Date.now() - r.at >= REPORT_DELAY_MS);
     for (const report of due) {
-      if (!(await _send(report))) continue;
+      // Лист старший за 14 днів чи відхилений Formspree (4xx) — викидаємо
+      const result = Date.now() - report.at >= MAX_QUEUE_AGE_MS ? 'rejected' : await _send(report);
+      if (result === 'retry') { _failures++; continue; }
+      _failures = 0;
       // Перечитуємо: поки йшов запит, людина могла скасувати чи відкрити ще раз
       _saveReports(_readReports().filter(r => !(r.key === report.key && r.at === report.at)));
     }
@@ -147,15 +138,15 @@ function _scheduleFlush() {
   const reports = _readReports();
   if (!reports.length) return;
   const nextAt = Math.min(...reports.map(r => r.at + REPORT_DELAY_MS));
-  // Час минув, але лист не пішов (немає мережі) — пробуємо знову за хвилину
-  const wait = nextAt > Date.now() ? nextAt - Date.now() : REPORT_DELAY_MS;
+  // Час минув, але лист не пішов (немає мережі) — пауза зростає з кожною невдачею
+  const wait = nextAt > Date.now() ? nextAt - Date.now() : retryDelay(_failures);
   _timer = setTimeout(flushVestibuleReports, wait);
 }
 
 /** Після Storage.init(): дослати те, що лишилося з минулого запуску. */
 export function initVestibuleReports() {
   flushVestibuleReports();
-  window.addEventListener('online', () => flushVestibuleReports());
+  window.addEventListener('online', () => { _failures = 0; flushVestibuleReports(); });
 }
 
 // ── Приховані вестибюлі ──────────────────────────────────────────────────────
