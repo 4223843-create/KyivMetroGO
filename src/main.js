@@ -27,7 +27,7 @@ import { maybeStartTour }                 from './features/tour.js';
 import { initVestibuleReports }           from './domain/vestibules.js';
 import { initFeedbackOutbox }             from './services/feedbackOutbox.js';
 import { takeCardToRestore }              from './infra/restoreCard.js';
-import { openStation }                    from './sheets/stationSheet.js';
+import { openStation, initStationSheet }  from './sheets/stationSheet.js';
 import { state, startupSlug }             from './core/state.js';
 import { bus }                            from './core/eventBus.js';
 
@@ -39,6 +39,7 @@ initResumeUpdates();
 initLocalEdits();       // до карти: та має бачити дані вже з правками
 initMapGestures();
 initMapInteraction();
+initStationSheet();
 initFeedback();
 initCheckin();
 initFavorites();

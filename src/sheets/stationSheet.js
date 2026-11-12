@@ -25,30 +25,6 @@ const clockBtn         = document.getElementById('sheetClockBtn');
 // перемальовується разом з ним.
 const CLOCK_PANEL_HTML = '<div id="stationClockPanel" class="station-clock-panel"></div>';
 
-// ══ ГОДИННИК: години роботи та поточний інтервал ══
-// Налаштування змінились — ховаємо кнопку, якщо показувати нічого, і оновлюємо відкриту панель.
-bus.on('station:clock-settings', () => {
-  const s = state.stationsData?.[state.currentStationSlug];
-  if (clockBtn) clockBtn.hidden = !hasStationClock(s);
-  const clockPanel = document.getElementById('stationClockPanel');
-  if (!clockPanel) return;
-  if (clockBtn?.hidden) clockPanel.classList.remove('panel-open');
-  else if (clockPanel.classList.contains('panel-open')) clockPanel.innerHTML = renderStationClock(s);
-  _syncClockBtn();
-});
-// Вміст рахується в момент натискання — за часом на телефоні.
-clockBtn?.addEventListener('click', e => {
-  e.stopPropagation();
-  const clockPanel = document.getElementById('stationClockPanel');
-  if (!clockPanel) return;
-  if (clockPanel.classList.toggle('panel-open')) {
-    const s = state.stationsData?.[state.currentStationSlug];
-    clockPanel.innerHTML = s ? renderStationClock(s) : '';
-    useHint('clock', s);
-  }
-  _syncClockBtn();
-});
-
 /** Поки панель годинника розгорнута, кнопка світиться кольором гілки. */
 function _syncClockBtn() {
   if (!clockBtn) return;
@@ -58,50 +34,11 @@ function _syncClockBtn() {
   clockBtn.style.color = isOpen && s ? lineTextColor(stationColor(s)) : '';
 }
 
-// ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
-bindSheetGestures(
-  sheetBody,
-  () => ({
-    slug:      state.currentStationSlug,
-    lineColor: stationColor(state.stationsData?.[state.currentStationSlug]),
-  }),
-);
-initHintGestures(sheetBody);
-
 // ══ КЕШІ (module scope) ══════════════════════════════════════
 
 // Кеш HTML рядка renderDirections.
 // Ключ: slug. Інвалідується при station:refresh (дані змінились).
 const _directionsHtmlCache = new Map(); // slug → html
-
-// ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
-
-// При оновленні даних — інвалідуємо кеш HTML поточної станції
-bus.on('station:refresh', () => {
-  _directionsHtmlCache.clear();
-  refreshCurrentStation();
-});
-
-// Обране змінилось (зокрема при заміні виходу) — оновлюємо серце в шапці
-bus.on('fav:updated', () => {
-  const slug = state.currentStationSlug;
-  if (!slug || !sheet.classList.contains('sheet-open')) return;
-  _updateFavBtn(slug, stationColor(state.stationsData?.[slug]));
-});
-
-// Вибране змінили в іншій вкладці — оновлюємо серця відкритої картки
-bus.on('fav:externally-updated', () => refreshCurrentStation());
-
-bus.on('station:open', ({ slug }) => openStation(slug));
-
-bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
-  hideSheet(sheet, { onClosed: () => {
-    bus.emit('sheet:open-feedback');
-    setTimeout(() => {
-      document.querySelector(`.fb-station-item[data-slug="${editSlug}"]`)?.click();
-    }, 50);
-  } });
-});
 
 // ── ПОСИЛАННЯ НА ІНШІ СТАНЦІЇ ─────────────────────────────────
 // Підпис веде на станцію, лише якщо в даних є data-target (transfer_to,
@@ -115,6 +52,34 @@ function applyNavLinks(slug) {
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
   });
+}
+
+// ── ВМІСТ КАРТКИ ──────────────────────────────────────────────
+
+const _EMPTY_NOTE_STYLE = 'text-align:center;margin:40px 0 0 0;width:100%;';
+
+/**
+ * Увесь вміст картки під назвою — і при відкритті, і при перемальовуванні
+ * (серце, check-in, правка), щоб заглушки «немає даних» / «усі виходи закриті»
+ * не губилися після station:refresh.
+ */
+function _cardBodyHtml(s, color) {
+  const hasDirections  = s.directions?.length > 0;
+  const allExitsClosed = hasDirections && !s.directions.some(dir =>
+    dir.exits?.some(exit => exit.positions?.some(pos => !pos.closed))
+  );
+  if (!hasDirections || allExitsClosed) {
+    const text = hasDirections ? 'Усі виходи закриті' : 'Дані про виходи відсутні';
+    return CLOCK_PANEL_HTML + renderStationClosedNotice(s) +
+      `<p class="fav-empty-text" style="${_EMPTY_NOTE_STYLE}">${text}</p>`;
+  }
+  let directionsHtml = _directionsHtmlCache.get(s.slug);
+  if (!directionsHtml) {
+    directionsHtml = renderDirections(s, color);
+    _directionsHtmlCache.set(s.slug, directionsHtml);
+  }
+  return CLOCK_PANEL_HTML + renderStationClosedNotice(s) + renderStationConnections(s) +
+    renderHintSlot(s, color) + directionsHtml;
 }
 
 // ── ВІДКРИТТЯ СТАНЦІЇ ─────────────────────────────────────────
@@ -143,23 +108,7 @@ function actualOpenStation(slug) {
   stationTitleMain.textContent = s.name;
   if (clockBtn) clockBtn.hidden = !hasStationClock(s);
 
-  const hasDirections  = s.directions?.length > 0;
-  const allExitsClosed = hasDirections && !s.directions.some(dir =>
-    dir.exits?.some(exit => exit.positions?.some(pos => !pos.closed))
-  );
-
-  if (!hasDirections) {
-    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationClosedNotice(s) + '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Дані про виходи відсутні</p>';
-  } else if (allExitsClosed) {
-    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationClosedNotice(s) + '<p class="fav-empty-text" style="text-align:center;margin:40px 0 0 0;width:100%;">Усі виходи закриті</p>';
-  } else {
-    let directionsHtml = _directionsHtmlCache.get(slug);
-    if (!directionsHtml) {
-      directionsHtml = renderDirections(s, color);
-      _directionsHtmlCache.set(slug, directionsHtml);
-    }
-    sheetBody.innerHTML = CLOCK_PANEL_HTML + renderStationClosedNotice(s) + renderStationConnections(s) + renderHintSlot(s, color) + directionsHtml;
-  }
+  sheetBody.innerHTML = _cardBodyHtml(s, color);
 
   sheetBody.scrollTop = 0;
   applyNavLinks(slug);
@@ -214,12 +163,10 @@ export function refreshCurrentStation() {
   const numberedExitsIdx = getOpenNumberedExitsIdx(sheetBody);
   const connWasOpen = !!document.getElementById('stationConnectionsWrap')?.classList.contains('is-open');
 
-  // Кеш вже інвалідовано в bus.on('station:refresh') вище
+  // Перемальовуємо зі свіжих даних (не з кешу: серця чи правки могли змінитись)
+  _directionsHtmlCache.delete(slug);
   stationTitleMain.textContent = s.name;
-  sheetBody.innerHTML = renderDirections(s, color);
-  // Зберігаємо свіжий HTML в кеш для наступного відкриття
-  _directionsHtmlCache.set(slug, sheetBody.innerHTML);
-  sheetBody.insertAdjacentHTML('afterbegin', CLOCK_PANEL_HTML + renderStationClosedNotice(s) + renderStationConnections(s) + renderHintSlot(s, color));
+  sheetBody.innerHTML = _cardBodyHtml(s, color);
   if (connWasOpen) {
     const wrap = document.getElementById('stationConnectionsWrap');
     wrap?.classList.add('is-open');
@@ -249,4 +196,77 @@ export function refreshCurrentStation() {
   if (numberedExitsIdx >= 0) reopenNumberedExitsPanel(sheetBody, numberedExitsIdx, slug, color);
 
   sheetBody.scrollTop = prevScroll;
+}
+
+// ══ ЗАПУСК ══════════════════════════════════════════════════
+
+let _started = false;
+
+/** Кнопка годинника, жести картки й bus-підписки. Повторний виклик нічого не робить. */
+export function initStationSheet() {
+  if (_started) return;
+  _started = true;
+
+  // ══ ГОДИННИК: години роботи та поточний інтервал ══
+  // Налаштування змінились — ховаємо кнопку, якщо показувати нічого, і оновлюємо відкриту панель.
+  bus.on('station:clock-settings', () => {
+    const s = state.stationsData?.[state.currentStationSlug];
+    if (clockBtn) clockBtn.hidden = !hasStationClock(s);
+    const clockPanel = document.getElementById('stationClockPanel');
+    if (!clockPanel) return;
+    if (clockBtn?.hidden) clockPanel.classList.remove('panel-open');
+    else if (clockPanel.classList.contains('panel-open')) clockPanel.innerHTML = renderStationClock(s);
+    _syncClockBtn();
+  });
+  // Вміст рахується в момент натискання — за часом на телефоні.
+  clockBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    const clockPanel = document.getElementById('stationClockPanel');
+    if (!clockPanel) return;
+    if (clockPanel.classList.toggle('panel-open')) {
+      const s = state.stationsData?.[state.currentStationSlug];
+      clockPanel.innerHTML = s ? renderStationClock(s) : '';
+      useHint('clock', s);
+    }
+    _syncClockBtn();
+  });
+
+  // ══ ІНІЦІАЛІЗАЦІЯ ЖЕСТІВ ══
+  bindSheetGestures(
+    sheetBody,
+    () => ({
+      slug:      state.currentStationSlug,
+      lineColor: stationColor(state.stationsData?.[state.currentStationSlug]),
+    }),
+  );
+  initHintGestures(sheetBody);
+
+  // ── BUS-ПІДПИСКИ ──────────────────────────────────────────────
+
+  // При оновленні даних — інвалідуємо кеш HTML поточної станції
+  bus.on('station:refresh', () => {
+    _directionsHtmlCache.clear();
+    refreshCurrentStation();
+  });
+
+  // Обране змінилось (зокрема при заміні виходу) — оновлюємо серце в шапці
+  bus.on('fav:updated', () => {
+    const slug = state.currentStationSlug;
+    if (!slug || !sheet.classList.contains('sheet-open')) return;
+    _updateFavBtn(slug, stationColor(state.stationsData?.[slug]));
+  });
+
+  // Вибране змінили в іншій вкладці — оновлюємо серця відкритої картки
+  bus.on('fav:externally-updated', () => refreshCurrentStation());
+
+  bus.on('station:open', ({ slug }) => openStation(slug));
+
+  bus.on('sheet:open-feedback-for', ({ slug: editSlug }) => {
+    hideSheet(sheet, { onClosed: () => {
+      bus.emit('sheet:open-feedback');
+      setTimeout(() => {
+        document.querySelector(`.fb-station-item[data-slug="${editSlug}"]`)?.click();
+      }, 50);
+    } });
+  });
 }
