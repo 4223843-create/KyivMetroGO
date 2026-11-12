@@ -32,6 +32,9 @@ let exitLabelsCache = null;
 /** slug → станція з даних без локальних правок (не змінюється до наступної гідратації). */
 let _base = {};
 
+/** Станції, на які у виді (state.stationsData) зараз накладено правки чи підписи. */
+let _layered = new Set();
+
 export function invalidateLocalEditsCache() {
   localEditsCache = null;
   exitLabelsCache = null;
@@ -327,11 +330,16 @@ export function applyLocalLayer() {
   const view = state.stationsData;
   if (!view) return;
   invalidateLocalEditsCache();
-  for (const slug of Object.keys(_base)) view[slug] = structuredClone(_base[slug]);
+  // Перескладаємо лише станції з правками чи підписами (зараз або до цієї зміни),
+  // решта у виді й так збігається з базою — без копіювання всіх 52 станцій
+  const layered = new Set([...Object.keys(_getStoredEdits()), ...Object.keys(_getStoredLabels())]);
+  const touched = [...new Set([..._layered, ...layered])].filter(slug => _base[slug]);
+  for (const slug of touched) view[slug] = structuredClone(_base[slug]);
   _applyLocalEdits(view);
   _applyExitLabels(view);
   // Пошук бачить і локальні підписи та нові виходи
-  for (const slug of Object.keys(_base)) view[slug]._exitSearch = buildExitSearchIndex(view[slug]);
+  for (const slug of touched) view[slug]._exitSearch = buildExitSearchIndex(view[slug]);
+  _layered = layered;
 }
 
 // ══ ПЕРЕХІД ЗІ СТАРИХ ФОРМАТІВ ════════════════════════════════
@@ -400,6 +408,7 @@ export function initLocalEdits() {
   bus.on('data:stations-hydrated', ({ stationsData }) => {
     _migrateLegacy(stationsData);
     _base = structuredClone(stationsData);
+    _layered = new Set();   // свіжі дані — ще без жодних правок
     _reconcileWithData();
     applyLocalLayer();
   });

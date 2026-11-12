@@ -49,6 +49,11 @@ try {
   await page.click('#stationSheet .fav-btn-bar');
   step('♥ у картці не ламає вміст');
 
+  for (let i = 0; i < 40; i++) await page.keyboard.press('Tab');
+  assert.ok(await page.evaluate(() => document.getElementById('stationSheet').contains(document.activeElement)),
+    'Tab вивів фокус зі шторки');
+  step('Tab не виходить зі шторки');
+
   await page.keyboard.press('Escape');
   await page.waitForSelector('#stationSheet:not(.sheet-open)', { state: 'attached', timeout: 5000 });
   step('Escape закриває картку');
