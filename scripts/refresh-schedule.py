@@ -78,6 +78,10 @@ def get_json(url, ip=None):
     return json.loads(out.stdout)
 
 
+class ServerUnavailable(Exception):
+    """Сервер ГІС недоступний (з листопада 2026 його адреси зникли з DNS)."""
+
+
 def fetch_layer(layer):
     last_err = None
     for base in SERVERS:
@@ -110,7 +114,7 @@ def fetch_layer(layer):
                 last_err = e
                 print(f'шар {layer}: {host} не відповів: {e}', file=sys.stderr)
                 time.sleep(2)
-    raise SystemExit(f'шар {layer}: жоден сервер не відповів ({last_err})')
+    raise ServerUnavailable(f'шар {layer}: жоден сервер не відповів ({last_err})')
 
 
 def load_dir(path, layer):
@@ -231,7 +235,14 @@ def main():
     if args.from_dir:
         rows = [load_dir(args.from_dir, n) for n in (5, 6, 7)]
     else:
-        rows = [fetch_layer(n) for n in (5, 6, 7)]
+        try:
+            rows = [fetch_layer(n) for n in (5, 6, 7)]
+        except ServerUnavailable as e:
+            # Не валимо щотижневий запуск: дані лишаються як є, спробуємо наступного тижня
+            print(f'::warning::Сервер ГІС недоступний, розклад не оновлено. {e}')
+            if args.summary:
+                open(args.summary, 'w', encoding='utf-8').close()
+            return
     schedule, intervals = build(*rows)
 
     with open(STATIONS, encoding='utf-8', newline='') as f:
