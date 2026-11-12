@@ -2,12 +2,16 @@
 
 import { bus }       from '../core/eventBus.js';
 import { showToast } from '../ui/toast.js';
+import { Storage }   from '../core/storage.js';
+import { withUnsavedCheck } from '../core/unsavedCheck.js';
+import { reloadStationsData } from '../data/stations.js';
+import { state }            from '../core/state.js';
 
 /**
  * Тост «щось оновилось» з кнопкою перезавантаження і ✕.
  * Один і той самий для нової збірки і для нових даних станцій.
  */
-function _showReloadToast(id, text, buttonText) {
+function _showReloadToast(id, text, buttonText, onApply = _reloadPage) {
   if (document.getElementById(id)) return;
 
   const toast = document.createElement('div');
@@ -22,10 +26,19 @@ function _showReloadToast(id, text, buttonText) {
   document.body.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('sw-toast-visible'));
 
-  toast.querySelector('.sw-update-btn').addEventListener('click', () => location.reload());
-  toast.querySelector('.sw-update-dismiss').addEventListener('click', () => {
+  const close = () => {
     toast.classList.remove('sw-toast-visible');
     setTimeout(() => toast.remove(), 300);
+  };
+  toast.querySelector('.sw-update-btn').addEventListener('click', () => { close(); onApply(); });
+  toast.querySelector('.sw-update-dismiss').addEventListener('click', close);
+}
+
+/** Перезавантаження сторінки: спершу незбережена форма правок, потім запис у сховище. */
+function _reloadPage() {
+  withUnsavedCheck(async () => {
+    await Storage.flush();
+    location.reload();
   });
 }
 
@@ -33,12 +46,55 @@ export function showUpdateToast() {
   _showReloadToast('swUpdateToast', 'Доступна нова версія', 'Оновити');
 }
 
-// ── Тост для оновлення даних станцій ──────────────────────────
-// Показується коли SW (або на Android — data/stations.js) знаходить нову версію stations.json.
-function showDataUpdateToast(version) {
-  const m        = /^(\d{4})(\d{2})(\d{2})$/.exec(version ?? '');
-  const verLabel = m ? ` від ${m[3]}.${m[2]}.${m[1]}` : '';
-  _showReloadToast('swDataUpdateToast', `Оновлено дані станцій${verLabel}`, 'Перезавантажити');
+// ── Нові дані станцій ─────────────────────────────────────────
+// SW (або на Android — data/stations.js) знайшов і зберіг нову версію stations.json.
+// Якщо жодна шторка не відкрита — підхоплюємо її одразу, без перезавантаження.
+// Інакше (людина дивиться картку чи заповнює форму) — тост, і оновлення лише за дотиком.
+
+/** Відкрита якась шторка (картка, Вибране, налаштування…) — її затемнення видно. */
+function _sheetOpen() {
+  return !!document.getElementById('sheetOverlay')?.classList.contains('overlay-visible')
+    || !!document.querySelector('.sheet-open');
+}
+
+function _dateLabel(version) {
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(String(version ?? ''));
+  return m ? ` від ${m[3]}.${m[2]}.${m[1]}` : '';
+}
+
+let _applying = false;
+async function applyStationsUpdate() {
+  if (_applying) return;
+  _applying = true;
+  try {
+    await reloadStationsData();
+    bus.emit('station:refresh');
+    return true;
+  } catch (err) {
+    console.error('[swUpdate] не вдалося застосувати нові дані:', err);
+    return false;
+  } finally {
+    _applying = false;
+  }
+}
+
+function onStationsUpdated(version) {
+  // Застосунок ще запускається (дані не гідратовано) — запуск і так візьме
+  // нову копію чи підхопить її одразу після себе
+  if (!state.stationsData) {
+    const later = () => { bus.off('data:stations-hydrated', later); setTimeout(() => onStationsUpdated(version), 0); };
+    bus.on('data:stations-hydrated', later);
+    return;
+  }
+  if (!_sheetOpen()) {
+    applyStationsUpdate().then(ok => { if (ok) showToast(`Оновлено дані станцій${_dateLabel(version)}`); });
+    return;
+  }
+  _showReloadToast('swDataUpdateToast', `Нові дані станцій${_dateLabel(version)}`, 'Оновити',
+    () => withUnsavedCheck(async () => {
+      await Storage.flush();
+      if (!(await applyStationsUpdate())) location.reload();
+    }));
 }
 
 // ── Дані в новішому форматі, ніж уміє цей застосунок ──────────
@@ -84,7 +140,7 @@ export function initUpdateToasts() {
     navigator.serviceWorker.addEventListener('message', event => {
       try {
         if (event.data?.type === 'STATIONS_UPDATED') {
-          showDataUpdateToast(event.data.version);
+          onStationsUpdated(event.data.version);
         }
       } catch {
         // Ігноруємо нерозпізнані повідомлення.
@@ -94,6 +150,6 @@ export function initUpdateToasts() {
 
   // Нативна платформа: SW не реєструється, тому stations.js емітує подію через bus.
   // Дзеркало SW-логіки: той самий тост, той самий UX — незалежно від платформи.
-  bus.on('stations:updated', ({ version }) => showDataUpdateToast(version));
+  bus.on('stations:updated', ({ version }) => onStationsUpdated(version));
   bus.on('stations:app-outdated', showAppOutdatedToast);
 }

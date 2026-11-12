@@ -71,6 +71,16 @@ try {
     .catch(async () => { await page.reload(); });
   step('service worker встановлено');
 
+  // Нова версія даних, поки шторок немає, — застосовується сама, без перезавантаження
+  const fresh = await (await fetch(URL + 'stations.json')).json();
+  fresh.version = String(Number(fresh.version) + 1);
+  await ctx.route(/stations\.json/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fresh) }));
+  await page.evaluate(() => fetch('./stations.json'));
+  const applied = await page.waitForSelector('.app-toast', { timeout: 8000 }).then(t => t.textContent());
+  assert.match(applied, /Оновлено дані станцій/);
+  await ctx.unroute(/stations\.json/);
+  step('нові дані підхоплюються без перезавантаження');
+
   await ctx.setOffline(true);
   await page.reload();
   await page.locator('[role="button"][aria-label="Станція Хрещатик"]').first().waitFor({ timeout: 15000 });
