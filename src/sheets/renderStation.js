@@ -200,7 +200,9 @@ function currentInterval(line, terminal, now, firstHour = false) {
   const p = periods.find(x => x.from.startsWith(hh))
     ?? (firstHour && periods[0] && hh < periods[0].from ? periods[0] : null);
   if (!p) return null;
-  const day = now.getDay();
+  // Після півночі (до 03:00) поїзди ще ходять за розкладом попереднього дня:
+  // ніч із п'ятниці на суботу — будній, із неділі на понеділок — вихідний
+  const day = (now.getDay() + (now.getHours() < 3 ? 6 : 0)) % 7;
   return p[day === 0 || day === 6 ? 'holiday' : 'weekday']?.[terminal] || null;
 }
 
@@ -261,7 +263,7 @@ function directionLabel(s, terminal) {
 }
 
 /**
- * Вміст панелі годинника (кнопка біля серця) станом на час телефону:
+ * Вміст панелі годинника (кнопка біля серця) за київським часом:
  * «закрита, відкриється о …», якщо вхід зараз закритий; години роботи — залежно
  * від налаштування; інтервал у кожен бік на поточну годину.
  */

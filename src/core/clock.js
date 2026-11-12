@@ -17,8 +17,43 @@ export function getClockOverride() {
   }
 }
 
-/** Поточний час для годинника станції, інтервалів і годин роботи. */
+// ── Київський час ────────────────────────────────────────────
+// Метро живе за київським часом, а телефон може бути в іншому поясі (поїздка,
+// налаштування). Повертаємо Date, чиї getHours()/getDay() показують час у Києві.
+
+let _kyivFormat;
+function _kyivFormatter() {
+  if (_kyivFormat !== undefined) return _kyivFormat;
+  _kyivFormat = null;
+  // «Europe/Kyiv» знають новіші браузери, старіші — лише «Europe/Kiev»
+  for (const timeZone of ['Europe/Kyiv', 'Europe/Kiev']) {
+    try {
+      _kyivFormat = new Intl.DateTimeFormat('en-US', {
+        timeZone, hourCycle: 'h23',
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+      });
+      break;
+    } catch { /* пояс невідомий — пробуємо наступну назву */ }
+  }
+  return _kyivFormat;
+}
+
+/**
+ * Той самий момент, переведений на київський «настінний» час: getHours(),
+ * getMinutes(), getDay() дають київські значення. Без Intl — час телефону.
+ * @param {Date} d
+ */
+export function kyivWallClock(d) {
+  const fmt = _kyivFormatter();
+  if (!fmt) return d;
+  const v = Object.fromEntries(fmt.formatToParts(d).map(p => [p.type, Number(p.value)]));
+  return new Date(v.year, v.month - 1, v.day, v.hour, v.minute, v.second);
+}
+
+/** Поточний час для годинника станції, інтервалів і годин роботи (за Києвом). */
 export function appNow() {
   const o = getClockOverride();
-  return o ? new Date(o.target + (Date.now() - o.setAt)) : new Date();
+  // Підставний час розробник задає вже як «настінний» — без перерахунку
+  return o ? new Date(o.target + (Date.now() - o.setAt)) : kyivWallClock(new Date());
 }

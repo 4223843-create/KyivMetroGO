@@ -218,7 +218,7 @@ export function initStationSheet() {
     else if (clockPanel.classList.contains('panel-open')) clockPanel.innerHTML = renderStationClock(s);
     _syncClockBtn();
   });
-  // Вміст рахується в момент натискання — за часом на телефоні.
+  // Вміст рахується в момент натискання — за київським часом (core/clock.js).
   clockBtn?.addEventListener('click', e => {
     e.stopPropagation();
     const clockPanel = document.getElementById('stationClockPanel');

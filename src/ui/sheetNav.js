@@ -54,6 +54,31 @@ function _focusSheet(sheetEl, title) {
   });
 }
 
+// ── Фокус не виходить зі шторки ───────────────────────────────
+// Tab / Shift+Tab із зовнішньої клавіатури ходять по кнопках відкритої шторки
+// по колу, а не тікають на карту під затемненням (як у модальному діалозі).
+// Діалог підтвердження поверх шторки має власні кнопки — його не чіпаємо.
+
+const _FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), ' +
+  'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function _trapTab(e) {
+  if (e.key !== 'Tab' || e.defaultPrevented) return;
+  const sheetEl = getOpenSheet();
+  if (!sheetEl || document.querySelector('.global-confirm-overlay')) return;
+  const items = [...sheetEl.querySelectorAll(_FOCUSABLE)]
+    .filter(el => /** @type {HTMLElement} */ (el).offsetParent !== null || el === document.activeElement);
+  if (!items.length) { e.preventDefault(); return; }
+  const first = /** @type {HTMLElement} */ (items[0]);
+  const last  = /** @type {HTMLElement} */ (items[items.length - 1]);
+  const active = document.activeElement;
+  const inside = active && sheetEl.contains(active);
+  if (e.shiftKey && (!inside || active === first || active === sheetEl)) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (!inside || active === last)) { e.preventDefault(); first.focus(); }
+}
+
+let _trapInstalled = false;
+
 /** Відкрита шторка або null. */
 export function getOpenSheet() {
   return document.querySelector('.station-sheet.sheet-open');
@@ -68,6 +93,7 @@ export const hasOpenSheet = () => !!getOpenSheet();
  */
 export function showSheet(sheetEl, ...extraClasses) {
   if (!sheetEl) return;
+  if (!_trapInstalled) { _trapInstalled = true; document.addEventListener('keydown', _trapTab); }
   pushSheetHistory();
   document.querySelectorAll('.station-sheet.sheet-open').forEach(el => {
     if (el !== sheetEl) el.classList.remove('sheet-open');
