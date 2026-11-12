@@ -125,8 +125,13 @@ export async function submitFeedback(background = false) {
   const body = { station: s.name, changes: formspreeLines.join('\n') };
 
   try {
-    if (await sendStationEdit(body)) {
+    const result = await sendStationEdit(body);
+    if (result === 'sent') {
       bus.emit('feedback:submit-ui', { status: 'success', background });
+    } else if (result === 'rejected') {
+      // Formspree лист не прийме і пізніше — у черзі він би лише висів
+      console.error('[KyivMetroGO] Formspree відхилив правку');
+      bus.emit('feedback:submit-ui', { status: 'local-only', background });
     } else {
       // Лист чекає в черзі й піде сам, щойно з'явиться мережа
       queueStationEdit(body);
