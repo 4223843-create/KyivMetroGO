@@ -111,8 +111,8 @@ async function cacheFirst(request) {
 }
 
 // stations.json — спершу локальна копія: якщо вона є, віддаємо одразу, а мережу
-// перевіряємо у фоні. Нова версія застосується після тосту «Перезавантажити»
-// або при наступному запуску — інтернет ніколи не гальмує відкриття.
+// перевіряємо у фоні. Нову версію сторінка підхоплює сама (infra/swUpdate.js),
+// тож інтернет ніколи не гальмує відкриття.
 async function stationsLocalFirst(event) {
   const request = event.request;
   const cache   = await caches.open(CACHE_NAME);
@@ -131,23 +131,30 @@ async function stationsLocalFirst(event) {
     // Зіпсований чи несумісний файл не кешуємо: лишається попередня робоча копія.
     if (!isValidStationsData(newData)) return cached ? cachedForCompare.clone() : response;
 
+    // Порівнюємо з наявною копією: старішу (застарілий CDN) не записуємо поверх новішої
+    let newer = false;
+    let older = false;
     if (cachedForCompare) {
       try {
         const oldData = await cachedForCompare.clone().json();
-        if (stationsVersion(newData) > stationsVersion(oldData)) {
-          // Версія змінилась — повідомляємо всі вкладки, зокрема ту, що саме
-          // завантажується (її ще може не бути в matchAll — тому й через clientId).
-          const message = { type: 'STATIONS_UPDATED', version: newData.version };
-          const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .catch(() => []);
-          const own = event.clientId ? await self.clients.get(event.clientId).catch(() => null) : null;
-          new Set([...clients, own].filter(Boolean)).forEach(client => client.postMessage(message));
-        }
+        newer = stationsVersion(newData) > stationsVersion(oldData);
+        older = stationsVersion(newData) < stationsVersion(oldData);
       } catch {
         // Стара копія не читається — просто замінюємо її нижче.
       }
     }
+    if (older) return cachedForCompare.clone();
     await cache.put(new URL('./stations.json', self.location).href, response.clone());
+    if (newer) {
+      // Версія змінилась — повідомляємо всі вкладки (вже після запису в кеш, щоб
+      // сторінка, яка одразу перечитає дані, отримала нову копію), зокрема ту, що
+      // саме завантажується (її ще може не бути в matchAll — тому й через clientId).
+      const message = { type: 'STATIONS_UPDATED', version: newData.version };
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .catch(() => []);
+      const own = event.clientId ? await self.clients.get(event.clientId).catch(() => null) : null;
+      new Set([...clients, own].filter(Boolean)).forEach(client => client.postMessage(message));
+    }
     return response;
   });
 

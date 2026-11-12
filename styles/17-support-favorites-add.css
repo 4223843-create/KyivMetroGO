@@ -130,3 +130,51 @@
 /* Меню розробника: «Внесено за OSM» */
 .dev-osm-exits { display: flex; flex-direction: column; gap: 6px; }
 .dev-osm-exits .dev-menu-row-station { margin-bottom: 2px; }
+
+/* Тост «Доступна нова версія» / «Нові дані станцій» з кнопкою (infra/swUpdate.js).
+   Над усім, зокрема над повноекранною карткою: людина має побачити кнопку. */
+.sw-update-toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 56px);
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 14px;
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  z-index: var(--z-global-modal);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+}
+.sw-update-toast.sw-toast-visible { opacity: 1; transform: translateY(0); }
+.sw-update-text { flex: 1 1 auto; min-width: 0; line-height: 1.3; text-align: left; }
+.sw-update-btn {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--line-red);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sw-update-dismiss {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+[data-theme="light"] .sw-update-toast { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+body:has(.offline-banner:not([hidden])) .sw-update-toast { top: calc(env(safe-area-inset-top) + 102px); }
