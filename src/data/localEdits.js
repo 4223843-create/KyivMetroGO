@@ -170,8 +170,11 @@ export function saveLocalEdit(slug, posIdx, data) {
     if (!data.isNew) return;
     key = `${NEW_PREFIX}${Date.now().toString(36)}-${posIdx}`;
   }
+  // Запам'ятовуємо, які значення були в даних на момент правки: коли дані
+  // згодом зміняться, стара правка не перекриватиме їх назавжди
+  const basePos = data.isNew ? null : _basePosition(slug, key);
   const edits = _getStoredEdits();
-  (edits[slug] ??= {})[key] = data;
+  (edits[slug] ??= {})[key] = basePos ? { ...data, base: _snapshot(basePos) } : data;
   _writeEdits(edits);
 }
 
@@ -219,7 +222,8 @@ function _applyLocalEdits(stationsData) {
     traversePositions(s, ({ position }) => {
       const edit = keyEdits[position._key];
       if (edit !== undefined && !edit.isNew) {
-        Object.assign(position, edit, {
+        const { base: _base_, ...fields } = edit;
+        Object.assign(position, fields, {
           _edited: true, _slug: slug, _posIdx: posIdxByKey.get(position._key),
         });
       }
@@ -261,6 +265,55 @@ function _applyLocalEdits(stationsData) {
       posIdxByKey.set(key, posIdx);
     }
   }
+}
+
+// ══ ПРАВКИ ПРОТИ ОНОВЛЕНИХ ДАНИХ ═══════════════════════════════
+// Правка зберігає base — значення з даних у момент редагування. Після кожного
+// завантаження даних: якщо дані вже такі самі, як правка (її прийняли), — правку
+// прибираємо мовчки; якщо дані змінились інакше — правка застаріла, прибираємо
+// і повідомляємо. Старим правкам без base запам'ятовуємо поточні дані.
+
+/** @param {any} p — позиція чи правка */
+function _snapshot(p) {
+  return { wagon: String(p?.wagon ?? ''), doors: String(p?.doors ?? ''), closed: !!p?.closed };
+}
+
+const _same = (a, b) => a.wagon === b.wagon && a.doors === b.doors && a.closed === b.closed;
+
+/** Позиція з даних без правок за ключем або null. */
+function _basePosition(slug, key) {
+  let found = null;
+  traversePositions(_base[slug], ({ position }) => { if (!found && position._key === key) found = position; });
+  return found;
+}
+
+function _reconcileWithData() {
+  const edits = _getStoredEdits();
+  let changed = false;
+  const superseded = new Set();
+  for (const [slug, keyEdits] of Object.entries(edits)) {
+    const s = _base[slug];
+    if (!s) continue;
+    traversePositions(s, ({ position }) => {
+      const edit = keyEdits[position._key];
+      if (!edit || edit.isNew) return;
+      const now = _snapshot(position);
+      if (_same(now, _snapshot(edit))) {
+        delete keyEdits[position._key];
+      } else if (!edit.base) {
+        edit.base = now;
+      } else if (!_same(_snapshot(edit.base), now)) {
+        delete keyEdits[position._key];
+        superseded.add(s.name);
+      } else {
+        return;
+      }
+      changed = true;
+    });
+    if (!Object.keys(keyEdits).length) delete edits[slug];
+  }
+  if (changed) _writeEdits(edits);
+  if (superseded.size) bus.emit('local-edits:superseded', { stations: [...superseded] });
 }
 
 // ══ ВИД = БАЗА + ПРАВКИ ═════════════════════════════════════════
@@ -347,6 +400,7 @@ export function initLocalEdits() {
   bus.on('data:stations-hydrated', ({ stationsData }) => {
     _migrateLegacy(stationsData);
     _base = structuredClone(stationsData);
+    _reconcileWithData();
     applyLocalLayer();
   });
 }

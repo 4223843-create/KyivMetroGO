@@ -103,8 +103,13 @@ test('check-in старого формату переходить на «slug|id
 
 test('локальні правки з номерних і старих шляхових ключів переходять на id', () => {
   const edits = stored('LOCAL_EDITS')[SLUG];
-  assert.deepEqual(edits[p0.position.id], { wagon: '3', doors: '2' });
-  assert.deepEqual(edits[p2.position.id], { wagon: '5', doors: '4' });
+  // base — значення з даних, які правка перекриває (додається при першому завантаженні)
+  const { base: base0, ...edit0 } = edits[p0.position.id];
+  const { base: base2, ...edit2 } = edits[p2.position.id];
+  assert.deepEqual(edit0, { wagon: '3', doors: '2' });
+  assert.deepEqual(edit2, { wagon: '5', doors: '4' });
+  assert.equal(base0.wagon, String(p0.position.wagon));
+  assert.equal(base2.doors, String(p2.position.doors));
   assert.equal(Object.keys(edits).length, 2);
   // І вони реально накладені на дані, які бачить картка
   const view = positionsOf(mods.state.stationsData[SLUG]).find(x => x.position.id === p0.position.id);

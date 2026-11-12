@@ -142,6 +142,13 @@ export function initAppControls() {
     showWriteFailToast();
   });
 
+  // Офіційні дані змінились після правки людини — правку прибрано, кажемо про це
+  bus.on('local-edits:superseded', ({ stations }) => {
+    showToast(stations.length === 1
+      ? `Дані станції ${stations[0]} оновлено, ваші правки замінено`
+      : `Дані станцій оновлено, ваші правки замінено: ${stations.join(', ')}`, 5000);
+  });
+
   // Escape на клавіатурі (зокрема зовнішній до планшета) — як «Назад», але не
   // поверх діалогу підтвердження: той закривається своїми кнопками.
   document.addEventListener('keydown', e => {
