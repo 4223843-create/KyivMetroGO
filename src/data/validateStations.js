@@ -5,6 +5,11 @@
 // schema — версія формату файлу. Застосунок приймає лише схеми, які вміє
 // читати; новішу (несумісну) ігнорує і лишається на своїй копії. Якщо формат
 // змінюється несумісно, збільшуйте schema в stations.json і SUPPORTED_SCHEMA тут.
+//
+// Android бере дані з stations.v<SUPPORTED_SCHEMA>.json (збірка кладе туди копію
+// stations.json, vite.config.js → stationsBySchema). Перехід на schema 2:
+//   1. далі публікувати і stations.v1.json — дані в старому форматі для старих APK;
+//   2. додати в нього "newest_schema": 2 — старі застосунки покажуть «Оновіть застосунок».
 
 export const SUPPORTED_SCHEMA = 1;
 
@@ -89,6 +94,15 @@ export function validateStationsData(input) {
 /** true, якщо дані придатні для цієї версії застосунку. */
 export function isValidStationsData(data) {
   return validateStationsData(data).length === 0;
+}
+
+/**
+ * Чи є вже новіший формат даних, ніж уміє цей застосунок (тоді варто оновитися).
+ * @param {unknown} data — розібраний stations.json
+ */
+export function newerSchemaAvailable(data) {
+  const d = /** @type {any} */ (data);
+  return Math.max(Number(d?.schema) || 0, Number(d?.newest_schema) || 0) > SUPPORTED_SCHEMA;
 }
 
 /** Номер версії даних як число (для порівняння); невідома — 0. */

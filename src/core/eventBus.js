@@ -45,6 +45,7 @@ export const bus = {
 // є тут і що в кожної є і відправник, і слухач.
 // 'data:stations-hydrated'   { stationsData }  — дані станцій готові (старт або оновлення)
 // 'stations:updated'         { version }       — завантажено новішу версію stations.json
+// 'stations:app-outdated'    void              — дані вже в новішому форматі: варто оновити застосунок
 // 'station:open'             { slug }
 // 'station:refresh'          void              — перемалювати відкриту картку станції
 // 'station:clock-settings'   void              — змінились налаштування годин/інтервалів
