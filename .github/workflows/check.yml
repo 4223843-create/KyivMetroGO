@@ -25,6 +25,16 @@ jobs:
       - name: Validate stations.json
         run: npm run validate:data
 
+      # Зміна stations.json без підняття version не дійде до Android-застосунків
+      - name: Data version bumped
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE_SHA" ] && ! echo "$BASE_SHA" | grep -qE '^0+$'; then
+            git fetch -q --depth=1 origin "$BASE_SHA" || true
+          fi
+          node scripts/check-data-version.mjs "$BASE_SHA"
+
       - name: Lint
         run: npm run lint
 
