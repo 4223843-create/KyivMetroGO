@@ -15,6 +15,19 @@ export const SUPPORTED_SCHEMA = 1;
 
 const LINES = new Set(['red', 'blue', 'green']);
 
+/** Нижня межа кількості станцій: менше — файл, найімовірніше, обрізаний або зіпсований. */
+export const MIN_STATIONS = 40;
+
+/** «05:46», «24:00» — час доби у форматі ГГ:ХХ. */
+const HHMM_RE = /^([01]\d|2[0-4]):[0-5]\d$/;
+/** Вагон і двері в даних: «2», «2-3», «1–3», «4, 5». */
+const WAGON_DOORS_RE = /^\d+(\s*[,\-–]\s*\d+)*$/;
+
+const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const isTime = v => typeof v === 'string' && HHMM_RE.test(v);
+/** Пара секунд інтервалу [мін, макс]. */
+const isIntervalPair = v => Array.isArray(v) && v.length === 2 && v.every(n => Number.isFinite(n) && n > 0) && v[0] <= v[1];
+
 /**
  * Перевіряє структуру, від якої залежить запуск (hydrateStations, обхід позицій).
  * @param {unknown} input — розібраний stations.json
@@ -32,12 +45,15 @@ export function validateStationsData(input) {
   if (!Number.isInteger(schema) || schema < 1) fail(`schema має бути цілим числом ≥ 1, а не ${JSON.stringify(data.schema)}`);
   else if (schema > SUPPORTED_SCHEMA) fail(`schema ${schema} новіша за підтримувану (${SUPPORTED_SCHEMA})`);
 
-  if (!/^\d+$/.test(String(data.version ?? ''))) fail(`version має бути числом РРРРММДД, а не ${JSON.stringify(data.version)}`);
+  if (!/^\d{8}$/.test(String(data.version ?? ''))) fail(`version має бути числом РРРРММДД (8 цифр), а не ${JSON.stringify(data.version)}`);
+
+  validateLineIntervals(data.line_intervals, fail);
 
   if (!Array.isArray(data.stations) || data.stations.length === 0) {
     fail('немає непорожнього масиву stations');
     return errors;
   }
+  if (data.stations.length < MIN_STATIONS) fail(`станцій лише ${data.stations.length}, очікується щонайменше ${MIN_STATIONS}`);
 
   const slugs = new Set();
   data.stations.forEach((s, i) => {
@@ -49,9 +65,24 @@ export function validateStationsData(input) {
     else slugs.add(s.slug);
     if (typeof s.name !== 'string' || !s.name) fail(`${where}: немає name`);
     if (!LINES.has(s.line)) fail(`${where}: невідома лінія ${JSON.stringify(s.line)}`);
-    if (s.exits_catalog != null && (typeof s.exits_catalog !== 'object' || Array.isArray(s.exits_catalog))) {
+    if (s.exits_catalog != null && !isObj(s.exits_catalog)) {
       fail(`${where}: exits_catalog має бути об'єктом`);
     }
+    const catalog = isObj(s.exits_catalog) ? s.exits_catalog : {};
+    for (const [id, ex] of Object.entries(catalog)) {
+      const cWhere = `${where}.exits_catalog.${id}`;
+      if (!isObj(ex)) { fail(`${cWhere}: не об'єкт`); continue; }
+      if (ex.label != null && typeof ex.label !== 'string') fail(`${cWhere}: label має бути рядком`);
+      if (ex.exit_numbers != null) {
+        if (!Array.isArray(ex.exit_numbers)) fail(`${cWhere}: exit_numbers має бути масивом`);
+        else ex.exit_numbers.forEach((n, k) => {
+          if (!isObj(n)) fail(`${cWhere}.exit_numbers[${k}]: не об'єкт`);
+          else if (n.text != null && typeof n.text !== 'string') fail(`${cWhere}.exit_numbers[${k}]: text має бути рядком`);
+        });
+      }
+    }
+    validateSchedule(s.schedule, where, fail);
+    validateConnections(s.connections, where, fail);
     if (s.directions == null) return;
     if (!Array.isArray(s.directions)) { fail(`${where}: directions має бути масивом`); return; }
     s.directions.forEach((d, j) => {
@@ -62,6 +93,9 @@ export function validateStationsData(input) {
       d.exits.forEach((ex, k) => {
         const eWhere = `${dWhere}.exits[${k}]`;
         if (!ex || typeof ex !== 'object') { fail(`${eWhere}: не об'єкт`); return; }
+        if (s.exits_catalog != null && !Object.prototype.hasOwnProperty.call(catalog, String(ex.id))) {
+          fail(`${eWhere}: вихід ${JSON.stringify(ex.id)} відсутній в exits_catalog`);
+        }
         if (ex.positions != null && !Array.isArray(ex.positions)) fail(`${eWhere}: positions має бути масивом`);
         (ex.positions || []).forEach((p, m) => {
           const pWhere = `${eWhere}.positions[${m}]`;
@@ -70,6 +104,11 @@ export function validateStationsData(input) {
           if (typeof p.id !== 'string' || !p.id) fail(`${pWhere}: немає id (запустіть scripts/assign-position-ids.py)`);
           else if (positionIds.has(p.id)) fail(`${pWhere}: id ${p.id} повторюється на станції`);
           else positionIds.add(p.id);
+          for (const field of ['wagon', 'doors']) {
+            if (typeof p[field] !== 'string' || !WAGON_DOORS_RE.test(p[field].trim())) {
+              fail(`${pWhere}: ${field} має бути рядком із цифр («2», «2-3», «4, 5»), а не ${JSON.stringify(p[field])}`);
+            }
+          }
         });
       });
     });
@@ -89,6 +128,64 @@ export function validateStationsData(input) {
   });
 
   return errors;
+}
+
+/** Розклад станції: години входу й перший/останній поїзд у кожен бік. */
+function validateSchedule(sch, where, fail) {
+  if (sch == null) return;
+  const w = `${where}.schedule`;
+  if (!isObj(sch)) { fail(`${w}: має бути об'єктом`); return; }
+  for (const f of ['open', 'close']) {
+    if (!isTime(sch[f])) fail(`${w}.${f}: має бути час ГГ:ХХ, а не ${JSON.stringify(sch[f])}`);
+  }
+  if (sch.trains == null) return;
+  if (!isObj(sch.trains)) { fail(`${w}.trains: має бути об'єктом`); return; }
+  for (const [terminal, t] of Object.entries(sch.trains)) {
+    if (!isObj(t)) { fail(`${w}.trains.${terminal}: не об'єкт`); continue; }
+    for (const f of ['first', 'last']) {
+      if (!isTime(t[f])) fail(`${w}.trains.${terminal}.${f}: має бути час ГГ:ХХ, а не ${JSON.stringify(t[f])}`);
+    }
+  }
+}
+
+/** Інтервали руху: { лінія: [{ from, to, weekday: { кінцева: [мін, макс] }, holiday }] }. */
+function validateLineIntervals(li, fail) {
+  if (li == null) return;
+  if (!isObj(li)) { fail('line_intervals має бути об\'єктом'); return; }
+  for (const [line, periods] of Object.entries(li)) {
+    const w = `line_intervals.${line}`;
+    if (!LINES.has(line)) fail(`${w}: невідома лінія`);
+    if (!Array.isArray(periods)) { fail(`${w}: має бути масивом`); continue; }
+    periods.forEach((p, i) => {
+      const pw = `${w}[${i}]`;
+      if (!isObj(p)) { fail(`${pw}: не об'єкт`); return; }
+      if (!isTime(p.from) || !isTime(p.to)) fail(`${pw}: from/to мають бути часом ГГ:ХХ`);
+      for (const day of ['weekday', 'holiday']) {
+        if (p[day] == null) continue;
+        if (!isObj(p[day])) { fail(`${pw}.${day}: має бути об'єктом`); continue; }
+        for (const [terminal, pair] of Object.entries(p[day])) {
+          if (!isIntervalPair(pair)) fail(`${pw}.${day}.${terminal}: має бути пара секунд [мін, макс]`);
+        }
+      }
+    });
+  }
+}
+
+/** Пересадки й наземний транспорт: форми, від яких залежить рендер картки. */
+function validateConnections(c, where, fail) {
+  if (c == null) return;
+  const w = `${where}.connections`;
+  if (!isObj(c)) { fail(`${w}: має бути об'єктом`); return; }
+  for (const f of ['stops', 'hubs']) {
+    if (c[f] == null) continue;
+    if (!Array.isArray(c[f])) { fail(`${w}.${f}: має бути масивом`); continue; }
+    c[f].forEach((x, i) => {
+      if (!isObj(x) || typeof x.name !== 'string') fail(`${w}.${f}[${i}]: має бути об'єктом із name`);
+    });
+  }
+  for (const f of ['ground', 'city_train', 'funicular']) {
+    if (c[f] != null && !isObj(c[f])) fail(`${w}.${f}: має бути об'єктом`);
+  }
 }
 
 /** true, якщо дані придатні для цієї версії застосунку. */

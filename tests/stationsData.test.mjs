@@ -32,6 +32,30 @@ test('перевірка ловить зламані дані', () => {
   assert.ok(validateStationsData(dup).some(e => e.includes('повторюється')));
 });
 
+test('перевірка ловить дані, на яких падає картка станції (рев\'ю Fable)', () => {
+  const broken = (mutate, needle) => {
+    const d = clone();
+    mutate(d);
+    const errors = validateStationsData(d);
+    assert.ok(errors.some(e => e.includes(needle)), `очікувалась помилка «${needle}», є: ${errors.join('; ')}`);
+  };
+  const pos = d => d.stations[0].directions[0].exits[0].positions[0];
+  broken(d => { delete d.stations[0].schedule.open; }, 'schedule.open');
+  broken(d => { d.stations[0].schedule.close = '25:99'; }, 'schedule.close');
+  broken(d => { Object.values(d.stations[0].schedule.trains)[0].first = 551; }, '.first');
+  broken(d => { delete pos(d).wagon; }, 'wagon');
+  broken(d => { delete pos(d).doors; }, 'doors');
+  broken(d => { pos(d).doors = '<b>3</b>'; }, 'doors');
+  broken(d => { d.stations[0].directions[0].exits[0].id = '999'; }, 'відсутній в exits_catalog');
+  broken(d => { Object.values(d.stations[0].exits_catalog)[0].label = 5; }, 'label');
+  broken(d => { d.line_intervals = 'x'; }, 'line_intervals');
+  broken(d => { d.line_intervals.red[0].weekday = { 'Лісова': 300 }; }, 'пара секунд');
+  broken(d => { d.stations.find(s => s.connections?.stops).connections.stops = {}; }, 'stops');
+  broken(d => { d.stations.length = 10; }, 'щонайменше');
+  broken(d => { d.version = '007'; }, 'version');
+  broken(d => { d.version = 2026111; }, 'version');
+});
+
 test('id позицій: формат «<id виходу>-<n>» і пошук за id', () => {
   for (const station of data.stations) {
     traversePositions(station, ({ exit, position }) => {
