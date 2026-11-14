@@ -11,7 +11,7 @@
 // тап по затемненню шукає станцію під ним через elementFromPoint.
 
 import { animateSheetClose } from './animations.js';
-import { pushSheetHistory }  from './system.js';
+import { pushSheetHistory, popSheetHistory } from './system.js';
 import { resetPageZoom }     from './motion.js';
 
 const _overlay = () => document.getElementById('sheetOverlay');
@@ -135,5 +135,7 @@ export function hideSheet(sheetEl, { removeClasses = [], onClosed } = {}) {
     }
     releaseSheetFocus();
     onClosed?.();
+    // onClosed міг одразу відкрити іншу шторку (налаштування → форма правок) — тоді запис лишаємо
+    if (!hasOpenSheet()) popSheetHistory();
   });
 }

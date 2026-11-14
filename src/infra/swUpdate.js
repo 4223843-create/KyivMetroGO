@@ -62,20 +62,29 @@ function _dateLabel(version) {
   return m ? ` від ${m[3]}.${m[2]}.${m[1]}` : '';
 }
 
-let _applying = false;
+// Нові дані прийшли, поки застосовуються попередні: не відкидаємо, а застосовуємо
+// ще раз одразу після (reloadStationsData візьме найновішу копію).
+/** @type {Promise<boolean>|null} */
+let _applying = null;
+let _again    = false;
 async function applyStationsUpdate() {
-  if (_applying) return;
-  _applying = true;
-  try {
-    await reloadStationsData();
-    bus.emit('station:refresh');
-    return true;
-  } catch (err) {
-    console.error('[swUpdate] не вдалося застосувати нові дані:', err);
-    return false;
-  } finally {
-    _applying = false;
-  }
+  if (_applying) { _again = true; return _applying; }
+  _applying = (async () => {
+    let ok = false;
+    do {
+      _again = false;
+      try {
+        await reloadStationsData();
+        bus.emit('station:refresh');
+        ok = true;
+      } catch (err) {
+        console.error('[swUpdate] не вдалося застосувати нові дані:', err);
+        ok = false;
+      }
+    } while (_again);
+    return ok;
+  })();
+  try { return await _applying; } finally { _applying = null; }
 }
 
 function onStationsUpdated(version) {

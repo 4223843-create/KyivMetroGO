@@ -2,7 +2,7 @@
 import { Capacitor }                      from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
-import { state, startupSlug } from '../core/state.js';
+import { state, startupSlug, hasStation } from '../core/state.js';
 import { bus }                from '../core/eventBus.js';
 import { traversePositions } from './positions.js';
 import { validateStationsData, isValidStationsData, stationsVersion, newerSchemaAvailable, SUPPORTED_SCHEMA } from './validateStations.js';
@@ -552,7 +552,7 @@ let _startupStationHandled = false;
 function handleStartupStation(data) {
   if (_startupStationHandled) return;
   _startupStationHandled = true;
-  if (startupSlug && data[startupSlug]) {
+  if (startupSlug && hasStation(startupSlug)) {
     requestAnimationFrame(() => bus.emit('station:open', { slug: startupSlug }));
   }
 }
