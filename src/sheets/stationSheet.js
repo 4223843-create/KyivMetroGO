@@ -1,4 +1,4 @@
-import { state }                   from '../core/state.js';
+import { state, hasStation }       from '../core/state.js';
 import { heartSvg, lineTextColor } from '../ui/components.js';
 import { isFav }                   from '../features/favorites/index.js';
 import { renderHintSlot, useHint, initHintGestures } from '../features/hints.js';
@@ -89,7 +89,7 @@ export function openStation(slug) {
 }
 
 function actualOpenStation(slug) {
-  if (!state.stationsData?.[slug]) return;
+  if (!hasStation(slug)) return;
 
   const s     = state.stationsData[slug];
   const color = stationColor(s);

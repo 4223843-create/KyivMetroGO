@@ -69,3 +69,13 @@ export function pushSheetHistory() {
     history.pushState({ isSheetOpen: true }, '');
   }
 }
+
+/**
+ * Знімає запис pushSheetHistory(), коли останню шторку закрили не кнопкою «Назад»
+ * (✕, свайп, затемнення). Інакше на Android-PWA перше «Назад» після цього нічого не робить.
+ * Після «Назад» запис уже знято (popstate), і history.state його не містить — тоді нічого.
+ */
+export function popSheetHistory() {
+  if (Capacitor.isNativePlatform() || IS_IOS) return;
+  if (history.state?.isSheetOpen) history.back();
+}

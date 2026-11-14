@@ -57,6 +57,14 @@ test('Уночі завжди показує інтервал після від�
   assert.doesNotMatch(renderStationClock(st, new Date(2026, 9, 5, 12, 0)), /після відкриття/);
 });
 
+test('Інтервал є й поза таблицею міста: о 05:50 і після півночі', () => {
+  for (const [slug, at] of [['R.Khreshchatyk', new Date(2026, 9, 5, 5, 58)], ['R.Zhytomyrska', new Date(2026, 9, 6, 0, 3)]]) {
+    const html = renderStationClock(state.stationsData[slug], at);
+    assert.match(html, /хв/, String(at));
+    assert.doesNotMatch(html, /Немає даних|після відкриття/, String(at));
+  }
+});
+
 test('Напрямок інтервалу — за наступною станцією', () => {
   const html = renderStationClock(state.stationsData['R.Khreshchatyk'], new Date(2026, 9, 5, 8, 0));
   assert.match(html, /у бік Арсенальної/);

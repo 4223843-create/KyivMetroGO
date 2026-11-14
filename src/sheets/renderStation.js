@@ -192,13 +192,15 @@ function toMin(hhmm) {
 }
 
 /** Поточний інтервал (пара секунд [мін, макс]) у бік кінцевої або null.
- *  firstHour: до першої години таблиці (06:00) брати її значення — для ранку. */
-function currentInterval(line, terminal, now, firstHour = false) {
+ *  Таблиці міста — з 06:00 до 24:00, а поїзди ходять з ~05:40 до ~00:10: поза
+ *  таблицею беремо найближчий період (ранок — перший, після півночі — останній). */
+function currentInterval(line, terminal, now) {
   const periods = state.lineIntervals?.[line];
-  if (!periods) return null;
+  if (!periods?.length) return null;
   const hh = String(now.getHours()).padStart(2, '0');
+  const afterMidnight = now.getHours() < 3;
   const p = periods.find(x => x.from.startsWith(hh))
-    ?? (firstHour && periods[0] && hh < periods[0].from ? periods[0] : null);
+    ?? (afterMidnight ? periods[periods.length - 1] : hh < periods[0].from ? periods[0] : null);
   if (!p) return null;
   // Після півночі (до 03:00) поїзди ще ходять за розкладом попереднього дня:
   // ніч із п'ятниці на суботу — будній, із неділі на понеділок — вихідний
@@ -215,7 +217,7 @@ function morningIntervals(s, now) {
       const [h, m] = t.first.split(':').map(Number);
       const at = new Date(morning);
       at.setHours(h, m, 0, 0);
-      return [terminal, currentInterval(s.line, terminal, at, true)];
+      return [terminal, currentInterval(s.line, terminal, at)];
     })
     .filter(([, iv]) => iv);
 }

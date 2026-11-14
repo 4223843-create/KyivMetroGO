@@ -28,7 +28,7 @@ import { initVestibuleReports }           from './domain/vestibules.js';
 import { initFeedbackOutbox }             from './services/feedbackOutbox.js';
 import { takeCardToRestore }              from './infra/restoreCard.js';
 import { openStation, initStationSheet }  from './sheets/stationSheet.js';
-import { state, startupSlug }             from './core/state.js';
+import { startupSlug, hasStation }        from './core/state.js';
 import { bus }                            from './core/eventBus.js';
 
 // Явний запуск модулів: при імпорті вони нічого не вмикають. Виклики — до
@@ -100,7 +100,7 @@ async function bootstrap() {
     // Телефон вивантажив застосунок у фоні — повертаємо картку, яка була відкрита
     const saved   = takeCardToRestore(); // забираємо завжди, щоб не спрацював пізніше
     const restore = action || startupSlug ? null : saved;
-    const restoreSlug = restore && state.stationsData?.[restore.slug] ? restore.slug : null;
+    const restoreSlug = restore && hasStation(restore.slug) ? restore.slug : null;
 
     if      (action === 'search') openSearchSheet();
     else if (action === 'fav')    openFavSheet();
