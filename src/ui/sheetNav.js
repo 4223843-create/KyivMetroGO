@@ -12,6 +12,7 @@
 
 import { animateSheetClose } from './animations.js';
 import { pushSheetHistory }  from './system.js';
+import { resetPageZoom }     from './motion.js';
 
 const _overlay = () => document.getElementById('sheetOverlay');
 
@@ -128,7 +129,10 @@ export function hideSheet(sheetEl, { removeClasses = [], onClosed } = {}) {
   if (!sheetEl) return;
   animateSheetClose(sheetEl, () => {
     sheetEl.classList.remove('sheet-open', ...removeClasses);
-    if (!hasOpenSheet()) _overlay()?.classList.remove('overlay-visible');
+    if (!hasOpenSheet()) {
+      _overlay()?.classList.remove('overlay-visible');
+      resetPageZoom();
+    }
     releaseSheetFocus();
     onClosed?.();
   });

@@ -4,6 +4,7 @@
   "webDir": "dist",
   "android": {
     "backgroundColor": "#000000",
-    "minWebViewVersion": 90
+    "minWebViewVersion": 90,
+    "zoomEnabled": true
   }
 }
