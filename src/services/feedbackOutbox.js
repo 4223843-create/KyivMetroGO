@@ -4,6 +4,7 @@
 // з'явиться мережа, — як і обіцяє повідомлення у формі правок.
 
 import { Storage, STORAGE_KEYS } from '../core/storage.js';
+import { bus }                   from '../core/eventBus.js';
 import { FORM_STATION_EDITS }    from '../core/forms.js';
 import { postForm, retryDelay, MAX_QUEUE_AGE_MS } from './formPost.js';
 
@@ -55,7 +56,11 @@ export async function flushFeedbackOutbox() {
       if (!(Date.now() - at < MAX_QUEUE_AGE_MS)) { drop(); continue; }
       const result = await sendStationEdit(body);
       if (result === 'retry') { _failures++; break; }
-      if (result === 'rejected') console.warn('[outbox] Formspree відхилив правку, її прибрано з черги');
+      if (result === 'rejected') {
+        console.warn('[outbox] Formspree відхилив правку, її прибрано з черги');
+        // Людина думає, що лист піде сам, — кажемо, що ні (тост: features/feedback/index.js)
+        bus.emit('form:rejected', { station: body.station });
+      }
       _failures = 0;
       drop();
     }

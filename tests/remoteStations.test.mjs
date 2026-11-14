@@ -57,3 +57,23 @@ test('обидві адреси недоступні — null', async () => {
   const { result } = await withFetch(() => { throw new TypeError('offline'); }, () => _fetchRemoteStations(2000));
   assert.equal(result, null);
 });
+
+test('тайм-аут рахується на кожен запит: 404 на файлі зі схемою не забирає час у stations.json', async () => {
+  const { _fetchRemoteStations } = await import('../src/data/stations.js');
+  const real = globalThis.fetch;
+  const calls = [];
+  // Кожна відповідь з GitHub Pages — за 60 мс; запит, який не встиг, обривається сигналом
+  globalThis.fetch = (url, { signal } = {}) => new Promise((resolve, reject) => {
+    calls.push(String(url));
+    const t = setTimeout(() => resolve(String(url).endsWith('/stations.json') ? ok(data) : notFound), 60);
+    signal?.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('aborted', 'AbortError')); });
+  });
+  try {
+    // Два запити по 60 мс: із загальним тайм-аутом 100 мс на адресу другий обірвався б
+    const result = await _fetchRemoteStations(100);
+    assert.equal(result?.version, data.version);
+    assert.ok(calls.every(u => u.includes('github.io')));
+  } finally {
+    globalThis.fetch = real;
+  }
+});

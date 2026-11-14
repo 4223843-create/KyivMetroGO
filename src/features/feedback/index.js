@@ -8,6 +8,7 @@ import { submitFeedback }                        from './fbApi.js';
 import { bindFeedbackSheet, markFeedbackDirty }  from './fbEvents.js';
 import { getPref } from '../../core/prefs.js';
 import { showSheet }                     from '../../ui/sheetNav.js';
+import { showToast }                     from '../../ui/toast.js';
 
 export { renderFeedbackPositions }               from './fbRenderer.js';
 
@@ -111,6 +112,11 @@ export function initFeedback() {
   bus.on('feedback:dirty-changed', ({ isDirty }) => { appState.hasUnsavedFeedback = isDirty; });
   bus.on('feedback:submit-silent', () => submitFeedback(true));
 
+  // Formspree відхилив лист (вимкнена форма, вичерпаний ліміт) — повтор не допоможе
+  bus.on('form:rejected', ({ station } = {}) => {
+    showToast(`Не вдалося надіслати лист розробнику${station ? ` (${station})` : ''}`, 5000);
+  });
+
   bus.on('feedback:submit-ui', ({ status, background }) => {
     if (background) return;
 
@@ -137,6 +143,9 @@ export function initFeedback() {
       resultEl.innerHTML =
         '<p class="fb-note fb-warn">Немає зʼєднання з інтернетом. Зміни збережено на пристрої, ' +
         'їх буде надіслано, щойно зʼявиться мережа</p>';
+    } else if (status === 'rejected') {
+      resultEl.innerHTML =
+        '<p class="fb-note fb-warn">Зміни збережено на пристрої, але надіслати їх розробнику не вдалося</p>';
     } else if (status === 'local-only') {
       resultEl.innerHTML =
         '<p class="fb-note fb-success">✓ Зміни збережено локально</p>';

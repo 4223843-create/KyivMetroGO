@@ -9,6 +9,7 @@
 // станції): сіра на карті й у картці, «Станція запрацювала? Повідомте розробника».
 
 import { Storage, STORAGE_KEYS } from '../core/storage.js';
+import { bus } from '../core/eventBus.js';
 import { LINE_COLOR, CLOSED_STATION_COLOR } from '../core/constants.js';
 
 import { FORM_STATION_EDITS as FORMSPREE_URL } from '../core/forms.js';
@@ -120,8 +121,10 @@ export async function flushVestibuleReports() {
     const due = _readReports().filter(r => Date.now() - r.at >= REPORT_DELAY_MS);
     for (const report of due) {
       // Лист старший за 14 днів чи відхилений Formspree (4xx) — викидаємо
-      const result = Date.now() - report.at >= MAX_QUEUE_AGE_MS ? 'rejected' : await _send(report);
+      const expired = Date.now() - report.at >= MAX_QUEUE_AGE_MS;
+      const result = expired ? 'rejected' : await _send(report);
       if (result === 'retry') { _failures++; continue; }
+      if (result === 'rejected' && !expired) bus.emit('form:rejected', { station: report.station });
       _failures = 0;
       // Перечитуємо: поки йшов запит, людина могла скасувати чи відкрити ще раз
       _saveReports(_readReports().filter(r => !(r.key === report.key && r.at === report.at)));
@@ -143,9 +146,32 @@ function _scheduleFlush() {
   _timer = setTimeout(flushVestibuleReports, wait);
 }
 
+/**
+ * Прибирає «відкриті в себе» вестибюлі й станції, які за даними вже не закриті.
+ * Інакше, коли вестибюль колись закриють знову, старий запис приховав би нове закриття.
+ * @param {Record<string, any>} stationsData — slug → станція
+ */
+export function pruneReopened(stationsData) {
+  const slugs = Object.keys(stationsData || {});
+  if (!slugs.length) return;
+  const reopened = _readReopened();
+  const stillClosed = key => {
+    const sep = key.lastIndexOf('|');
+    const slug = key.slice(0, sep), id = key.slice(sep + 1);
+    const s = Object.prototype.hasOwnProperty.call(stationsData, slug) ? stationsData[slug] : null;
+    if (!s) return false;
+    if (id === STATION_KEY) return !!s.temporarily_closed;
+    const cat = s.exits_catalog || {};
+    return Object.prototype.hasOwnProperty.call(cat, id) && !!cat[id]?.vestibule_closed;
+  };
+  const left = reopened.filter(stillClosed);
+  if (left.length !== reopened.length) _saveReopened(left);
+}
+
 /** Після Storage.init(): дослати те, що лишилося з минулого запуску. */
 export function initVestibuleReports() {
   flushVestibuleReports();
+  bus.on('data:stations-hydrated', ({ stationsData }) => pruneReopened(stationsData));
   window.addEventListener('online', () => { _failures = 0; flushVestibuleReports(); });
 }
 
