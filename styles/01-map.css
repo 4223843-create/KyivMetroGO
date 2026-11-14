@@ -148,6 +148,12 @@ html, body {
      сторінка перезавантажується і відкривається з нуля. */
   overscroll-behavior: none;
 }
+/* «Доступність → Збільшення двома пальцями»: pan-x pan-y забороняє щипок,
+   manipulation його дозволяє (без збільшення подвійним тапом). Карта має свій
+   touch-action: none, тож над нею щипок і далі масштабує лише карту. */
+html.page-zoom, html.page-zoom body {
+  touch-action: manipulation;
+}
 
 *, *::before, *::after { box-sizing: border-box; }
 input, textarea { -webkit-user-select: text; user-select: text; font-family: inherit; }

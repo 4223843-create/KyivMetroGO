@@ -12,7 +12,17 @@ export function initKinematicSwipe(sheet, bodyOrGetter, closeCallback) {
   const getBody = typeof bodyOrGetter === 'function' ? bodyOrGetter : () => bodyOrGetter;
   let startY = 0, currentY = 0, isDragging = false;
 
+  function _cancelDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+    currentY = 0;
+    sheet.style.transition = '';
+    sheet.style.transform  = '';
+  }
+
   sheet.addEventListener('touchstart', e => {
+    // Другий палець — це щипок (збільшення сторінки), а не змах шторки вниз
+    if (e.touches.length > 1) { _cancelDrag(); return; }
     const body = getBody();
     const isHandle  = !!e.target.closest('.sheet-handle-bar');
     const isAtTop   = body ? body.scrollTop <= 0 : true;
@@ -26,6 +36,7 @@ export function initKinematicSwipe(sheet, bodyOrGetter, closeCallback) {
 
   sheet.addEventListener('touchmove', e => {
     if (!isDragging) return;
+    if (e.touches.length > 1) { _cancelDrag(); return; }
     const y = e.touches[0].clientY;
     currentY = y - startY;
     if (currentY > 0) sheet.style.transform = `translateY(${currentY}px)`;
