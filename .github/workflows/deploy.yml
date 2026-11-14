@@ -2,6 +2,8 @@ name: Deploy to GitHub Pages
 
 # Деплой лише після зеленої перевірки Check на main: зламаний коміт (дані,
 # тести, збірка) не потрапляє на сайт, а звідти — і в застосунок Android.
+# Vercel (запасна адреса даних для Android) теж оновлюється звідси, через Deploy Hook
+# (секрет VERCEL_DEPLOY_HOOK); автоматичний деплой main у Vercel вимкнено у vercel.json.
 on:
   workflow_run:
     workflows: ["Check"]
@@ -56,3 +58,14 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # Запасна адреса даних — лише після того самого зеленого Check
+      - name: Deploy to Vercel
+        env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK" ]; then
+            echo "::warning::Немає секрету VERCEL_DEPLOY_HOOK — Vercel не оновлено"
+            exit 0
+          fi
+          curl -fsS -X POST "$VERCEL_DEPLOY_HOOK" > /dev/null && echo "Vercel: деплой запущено"

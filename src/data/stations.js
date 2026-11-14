@@ -23,16 +23,16 @@ import { appFileUrl }          from '../core/appUrl.js';
 // поки сайт ще не має файла зі схемою.
 // Vercel — запасна адреса: адреси вшиті у встановлені APK, тож якщо GitHub Pages
 // стане недоступним (перейменування, переїзд), дані й далі приходитимуть.
-// Vercel публікує main без чекання Check, але файл однаково перевіряється
-// isValidStationsData перед записом у кеш.
+// Vercel теж оновлюється лише після зеленого Check (deploy.yml → Deploy Hook),
+// а файл однаково перевіряється isValidStationsData перед записом у кеш.
 const REMOTE_BASES = [
   'https://4223843-create.github.io/KyivMetroGO/',
   'https://kyiv-metro-go.vercel.app/',
 ];
 const remoteStationsUrls = base => [`${base}stations.v${SUPPORTED_SCHEMA}.json`, `${base}stations.json`];
 const NATIVE_CACHE_PATH   = 'stations_cache.json';
-const FETCH_TIMEOUT_MS    = 4000;
-const BACKGROUND_FETCH_TIMEOUT_MS = 20000;
+const FETCH_TIMEOUT_MS    = 3000;   // на кожен запит
+const BACKGROUND_FETCH_TIMEOUT_MS = 15000;   // на кожен запит
 
 // ══ ПРИВАТНІ СЛОВНИКИ (closure) ══════════════════════════════
 // Заповнюються у hydrateStations(), читаються через slugByName() / getSlugByLower().
@@ -334,26 +334,39 @@ async function _readLocalStations() {
   return bundled;
 }
 
-/** Завантажує stations.json з сайту (основна адреса, потім запасна); null — якщо ніде не вдалося. Експорт — для тесту. */
+/**
+ * Завантажує stations.json з сайту (основна адреса, потім запасна); null — якщо ніде не вдалося.
+ * timeoutMs — на кожен запит окремо: 404 на файлі зі схемою не з'їдає час загального stations.json,
+ * а повільна основна адреса не забирає весь час у запасної. Експорт — для тесту.
+ */
 export async function _fetchRemoteStations(timeoutMs) {
-  const perBase = Math.ceil(timeoutMs / REMOTE_BASES.length);
   for (const base of REMOTE_BASES) {
-    const data = await _fetchFromBase(base, perBase);
+    const data = await _fetchFromBase(base, timeoutMs);
     if (data) return data;
   }
   return null;
 }
 
-async function _fetchFromBase(base, timeoutMs) {
+/** fetch з власним тайм-аутом на цей один запит (разом із читанням тіла). */
+async function _fetchJsonWithTimeout(url, timeoutMs) {
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    if (!response.ok) return { status: response.status, data: null };
+    // Перевіряємо вміст, а не content-type: проксі чи дзеркало можуть віддати text/plain.
+    return { status: response.status, data: await response.json() };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function _fetchFromBase(base, timeoutMs) {
+  try {
     for (const url of remoteStationsUrls(base)) {
-      const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
-      if (response.status === 404) continue;   // файла зі схемою ще немає — беремо загальний
-      if (!response.ok) return null;
-      // Перевіряємо вміст, а не content-type: проксі чи дзеркало можуть віддати text/plain.
-      const data = await response.json();
+      const { status, data } = await _fetchJsonWithTimeout(url, timeoutMs);
+      if (status === 404) continue;   // файла зі схемою ще немає — беремо загальний
+      if (!data) return null;
       // Дані вже в новішому форматі — цей застосунок їх не прочитає; просимо оновитися
       if (newerSchemaAvailable(data)) bus.emit('stations:app-outdated');
       // Зіпсований або несумісний файл не потрапляє в кеш і не ламає запуск.
@@ -362,8 +375,6 @@ async function _fetchFromBase(base, timeoutMs) {
     return null;
   } catch {
     return null;
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 

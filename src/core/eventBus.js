@@ -57,7 +57,8 @@ export const bus = {
 // 'feedback:close'           void              — закрити форму правок (з питанням, якщо є зміни)
 // 'feedback:dirty-changed'   { isDirty }
 // 'feedback:submit-silent'   void              — зберегти правки без показу результату
-// 'feedback:submit-ui'       { status: 'sending'|'local-only'|'success'|'network-error', background }
+// 'form:rejected'            { station? }      — Formspree відхилив лист (4xx), повтор не допоможе
+// 'feedback:submit-ui'       { status: 'sending'|'local-only'|'success'|'network-error'|'rejected', background }
 // 'hint:used'                { id }            — людина скористалася функцією з підказки
 // 'fav:updated'              void
 // 'fav:externally-updated'   { key }

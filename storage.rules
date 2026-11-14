@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Правила Cloud Storage для KyivMetroGO. Копія того, що має стояти в консолі Firebase
+// (Storage → Rules); там і публікувати після змін.
+// Застосунок зберігає лише фото режиму розробника: dev_photos/{uid}/{photoId}.jpg
+// (src/services/firebaseSync.js). Доступ — лише власнику теки; лише зображення до 20 МБ.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /dev_photos/{uid}/{fileName} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+    // Усе інше закрито
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -9,7 +9,7 @@ import { getPref } from '../../core/prefs.js';
 import { removeLocalEdit, saveLocalEdit, saveExitLabel,
          clearAllLocalEdits,
          applyLocalLayer }                   from '../../data/localEdits.js';
-import { fbState, computeIsDirty } from './fbState.js';
+import { fbState, computeIsDirty, resetFbState } from './fbState.js';
 import { getAdjacentDoors, getOppositeDoors }           from './fbUtils.js';
 import { renderFeedbackPositions, renderResetBtn,
          stationListHtml }                              from './fbRenderer.js';
@@ -81,6 +81,24 @@ export function bindFeedbackSheet(sheet, { onClose, onSubmit }) {
   const stationList   = document.getElementById('fbStationList');
 
   const afterRender = () => markFeedbackDirty();
+
+  // ── Нові дані станцій під час відкритої форми ─────────
+  // Індекси позицій (posIdx) у fbState — від старих даних. Якщо в нових даних на
+  // станції додали чи переставили позиції, наступна правка лягла б на іншу позицію.
+  // Незбережене вже збережено чи відкинуто (withUnsavedCheck перед оновленням),
+  // тож форму просто будуємо наново з нових даних.
+  bus.on('data:stations-hydrated', () => {
+    const slug = stationHidden.value;
+    if (!slug || !fbState.slug) return;
+    closeAllHints();
+    resetFbState();
+    if (!appState.stationsData?.[slug]) {
+      // Станції більше немає в даних — повертаємось до вибору станції
+      document.getElementById('fbChangeStation')?.click();
+      return;
+    }
+    renderFeedbackPositions(slug, { onAfterRender: afterRender });
+  });
 
   // ── Вибір лінії ──────────────────────────────────────
   lineFilter.addEventListener('click', e => {

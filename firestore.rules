@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Правила Firestore для KyivMetroGO. Копія того, що має стояти в консолі Firebase
+// (Firestore Database → Rules); там і публікувати після змін.
+// Застосунок пише лише dev_data/{uid} — нотатки й підтвердження режиму розробника
+// (src/services/firebaseSync.js). Доступ — лише власнику документа.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /dev_data/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // Усе інше закрито
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

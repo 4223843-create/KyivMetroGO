@@ -22,24 +22,65 @@ on:
       - "scripts/refresh-schedule.py"
       - ".github/workflows/schedule-refresh.yml"
 
+# Права запису — лише завданню refresh (розклад або ручний запуск з main).
+# Пробний запуск від пуша в claude/** — окреме завдання з правом лише на читання.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: schedule-refresh
   cancel-in-progress: false
 
 jobs:
-  refresh:
+  # Пробний запуск зі змінами скрипта з гілки: нічого не комітить, токен лише на читання
+  dry-run:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      DRY_RUN: ${{ github.event_name == 'push' || inputs.dry_run == true }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Download from city GIS and update stations.json (dry run)
+        run: |
+          python scripts/refresh-schedule.py --summary changes.md
+          {
+            echo "## Розклад з міського ГІС (пробний запуск)"
+            if [ -s changes.md ]; then cat changes.md; else echo "Без змін"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -s changes.md ]; then
+            git diff --stat
+            npm ci
+            npm run validate:data
+            npm test
+            npm run build
+          fi
+
+  refresh:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: write
+    env:
+      DRY_RUN: ${{ inputs.dry_run == true }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
